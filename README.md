@@ -8,7 +8,11 @@ The hackathon MVP is deliberately narrow: describe a channel, generate a structu
 
 ## Current gate
 
-FireLaunch is at **0.0.0 bootstrap**. The active implementation plan is the staged **P0 FireLaunch Hackathon MVP Prompt Stack** in `docs/tasks/p0`.
+FireLaunch's P1 product kernel is at **0.0.1**. The active implementation plan is the staged **P0 FireLaunch Hackathon MVP Prompt Stack** in `docs/tasks/p0`.
+
+P1 provides a local Node API and no Studio UI yet. With Node 24 and npm 12, run `npm install`, `npm run check`, and `npm run dev` (or `npm start` for compiled output). It listens on `127.0.0.1:4174` by default. Set `PORT` and `FIRELAUNCH_DATA_DIR` to override the port and local data root. Project data under `.firelaunch-data/projects/<channel-id>/project.json` is excluded from Git.
+
+`POST /api/projects` accepts `{ "title": "Wild Earth" }` and optional `slug`; `GET /api/projects` lists projects, `GET /api/projects/:id` reads one, `PUT /api/projects/:id` accepts `{ "expectedRevision": 1, "spec": { ... } }`, and `POST /api/projects/:id/mutations` accepts `{ "expectedRevision": 1, "mutation": { ... } }`. Writes return the full project with an incremented revision; stale writes return 409. Invalid input returns 400. Only ChannelSpec v1 is accepted; no migration from older or future schema versions is implemented yet. The server binds loopback only and has no authentication or cloud access.
 
 P0 uses six bounded GPT-6 Sol High implementation checkpoints followed by one independent browser/Vega qualification closeout:
 

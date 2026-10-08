@@ -1,6 +1,6 @@
 {
   "name": "firelaunch",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "packageManager": "npm@12.2.0",
@@ -8,9 +8,22 @@
     "node": ">=24.15 <25",
     "npm": ">=12 <13"
   },
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
+    "start": "npm run build && node apps/server/dist/index.js",
+    "dev": "tsx watch apps/server/src/index.ts",
+    "build": "npm run build -w @firelaunch/contracts && npm run build -w @firelaunch/channel-engine && npm run build -w @firelaunch/server",
+    "typecheck": "npm run typecheck -w @firelaunch/contracts && npm run typecheck -w @firelaunch/channel-engine && npm run typecheck -w @firelaunch/server",
+    "test:kernel": "npm run build && node --import tsx --test packages/contracts/test/*.test.ts packages/channel-engine/test/*.test.ts apps/server/test/*.test.ts",
+    "test": "npm run test:kernel && npm run test:runner",
+    "check": "npm run typecheck && npm run test",
     "codex:stack": "node scripts/codex-stack.mjs",
     "codex:stack:validate": "node scripts/validate-codex-stack.mjs",
     "test:runner": "node --test test/unit/codex-stack-prompt-grammar.test.ts test/unit/codex-stack-runner.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
   }
 }

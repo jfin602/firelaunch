@@ -1,0 +1,8 @@
+{
+  "name": "@firelaunch/server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "start": "node dist/index.js" },
+  "dependencies": { "@firelaunch/contracts": "0.0.1", "@firelaunch/channel-engine": "0.0.1", "zod": "^4.0.0" }
+}
