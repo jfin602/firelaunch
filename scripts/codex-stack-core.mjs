@@ -625,7 +625,7 @@ export function stripAnsi(value) {
 }
 
 function colorizeDashboardLine(line) {
-  if (line === 'PETRI - CODEX TASK STACK RUNNER')
+  if (line === 'FIRELAUNCH - CODEX PROMPT STACK RUNNER')
     return style(line, ANSI.boldCyan);
   if (/^[-=]+$/.test(line)) return style(line, ANSI.dim);
   if (line.startsWith('Agent:')) return style(line, ANSI.magenta);
@@ -739,7 +739,7 @@ export function renderDashboard({
   closeoutAutoRun = false,
 }) {
   const lines = [
-    'PETRI - CODEX TASK STACK RUNNER',
+    'FIRELAUNCH - CODEX PROMPT STACK RUNNER',
     '-'.repeat(60),
     '',
     ...(plan.mode === 'correction'
@@ -799,8 +799,8 @@ export function renderDashboard({
         : `CURRENT - P${current.number} / ${plan.implementations.length}`,
       current.title,
       '',
-      `Model:         ${current.recommendation.split(' ')[0]}`,
-      `Reasoning:     ${current.recommendation.split(' ')[1]}`,
+      `Model:         ${current.recommendation.split(' ').slice(0, -1).join(' ')}`,
+      `Reasoning:     ${current.recommendation.split(' ').at(-1)}`,
       `${current.mode === 'correction' ? 'Version:' : 'Target:'}        ${promptVersionLabel(current)}`,
       `Elapsed:       ${formatElapsed(now - startedAt)}`,
       '',
@@ -925,7 +925,7 @@ export function renderFailureSummary({ plan, states, failedPrompt, reason }) {
     '='.repeat(60),
     plan?.mode === 'correction'
       ? `CORRECTION STACK ${plan.folderName} STOPPED`
-      : 'PHASE RUN STOPPED',
+      : 'PROMPT STACK RUN STOPPED',
     '='.repeat(60),
     '',
   ];

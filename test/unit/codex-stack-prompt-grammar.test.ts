@@ -680,6 +680,7 @@ test('documented runner model labels stay explicit and finite', () => {
     'GPT-6 Sol Medium',
     'GPT-6 Sol High',
     'GPT-6 Sol XHigh',
+    'GPT-6 Astra High',
   ]);
 });
 

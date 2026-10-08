@@ -857,7 +857,7 @@ test('execution contract decorates normal roadmap and correction task text', () 
     'TASK: Correction 8 / P1 — bounded repair',
   ]) {
     const executionPrompt = buildCodexExecutionPrompt(taskText);
-    assert.match(executionPrompt, /^PHASE RUNNER EXECUTION CONTRACT\r?\n/);
+    assert.match(executionPrompt, /^PROMPT STACK RUNNER EXECUTION CONTRACT\r?\n/);
     assert.match(executionPrompt, /Do not create Git commits\./);
     assert.match(executionPrompt, /runner-owned Git commit boundary\./);
     assert.ok(executionPrompt.endsWith(taskText));
@@ -943,9 +943,9 @@ test('runCodex sends the preflight snapshot and uses native final-response captu
       resolution.launcher.prefixArguments[0],
     );
     assert.equal(shell, false);
-    assert.match(stdinText, /^PHASE RUNNER EXECUTION CONTRACT\r?\n/);
+    assert.match(stdinText, /^PROMPT STACK RUNNER EXECUTION CONTRACT\r?\n/);
     assert.match(stdinText, /Do not create Git commits\./);
-    assert.match(stdinText, /The phase runner exclusively owns:/);
+    assert.match(stdinText, /The Prompt Stack runner exclusively owns:/);
     assert.ok(stdinText.endsWith(originalText));
     assert.equal(stdinText, buildCodexExecutionPrompt(originalText));
     assert.notEqual(stdinText, await readFile(taskFile, 'utf8'));
@@ -1201,7 +1201,7 @@ test('interactive dashboard colors semantic states while disabled output stays p
     colorEnabled: true,
   });
   const escape = String.fromCharCode(27);
-  assert.ok(colored.includes(`${escape}[1;36mPETRI`));
+  assert.ok(colored.includes(`${escape}[1;36mFIRELAUNCH`));
   assert.ok(colored.includes(`${escape}[32m  [+] PASSED`));
   assert.ok(colored.includes(`${escape}[36m  [>] RUNNING`));
   assert.ok(colored.includes(`${escape}[31m  [X] FAILED`));
@@ -1735,7 +1735,7 @@ test('phase loop commits each prompt before the next starts with exact multiline
     );
     assert.match(output.read(), /P1 passed - commit [0-9a-f]{7}/);
     assert.match(output.read(), /P2 passed - commit [0-9a-f]{7}/);
-    assert.doesNotMatch(output.read(), /PETRI - CODEX PHASE RUNNER/);
+    assert.doesNotMatch(output.read(), /FIRELAUNCH - CODEX PHASE RUNNER/);
   } finally {
     await rm(rootDirectory, { recursive: true, force: true });
   }
@@ -2029,7 +2029,7 @@ test('a synthetic post-2.0 repository resumes P1 by its exact semantic-version s
     assert.equal(validation.status, 0, String(validation.stderr));
     assert.match(
       String(validation.stdout),
-      /Post-2\.0 Phase 1 prompt grammar: VALID/,
+      /Post-2\.0 Phase 1 Prompt Stack grammar: VALID/,
     );
 
     const firstSha = await commitPost2RoadmapCompletion(rootDirectory, 1);
@@ -2912,7 +2912,7 @@ test('empty and interrupted prompt changes fail closed without a commit', async 
         },
         { rootDirectory, isInterrupted: () => true },
       ),
-      /commit boundary failed: Phase run was interrupted/,
+      /commit boundary failed: Prompt Stack run was interrupted/,
     );
     assert.equal(gitResult(rootDirectory, ['rev-parse', 'HEAD']), baseline);
   } finally {

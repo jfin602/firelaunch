@@ -406,7 +406,7 @@ Do not reset, revert, checkout, discard, or otherwise erase those uncommitted ch
 Inspect the current working tree and continue the same task from the existing partial state.
 The original prompt-stack-runner Git ownership contract still applies.`;
 
-const PHASE_RUNNER_EXECUTION_CONTRACT = `PHASE RUNNER EXECUTION CONTRACT
+const PHASE_RUNNER_EXECUTION_CONTRACT = `PROMPT STACK RUNNER EXECUTION CONTRACT
 
 You are being executed by the FireLaunch Prompt Stack runner.
 
