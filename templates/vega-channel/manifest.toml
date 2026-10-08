@@ -1,0 +1,9 @@
+[package]
+id = FIRELAUNCH_APP_ID
+version = "0.0.2"
+title = FIRELAUNCH_APP_NAME
+
+[[components.interactive]]
+id = FIRELAUNCH_COMPONENT_ID
+runtime-module = "/com.amazon.kepler.runtime.react_native_kepler_4@IReactNativeKepler_0"
+categories = ["com.amazon.category.main"]

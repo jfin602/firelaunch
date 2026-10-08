@@ -78,6 +78,19 @@ Run runner regressions:
 
 `npm run test:runner`
 
+P2 television kernel: `@firelaunch/tv` projects validated ChannelSpec into ordered page/module/content
+semantics and pure D-pad/Back transitions. `@firelaunch/generator` writes a new, non-overwriting
+React Native for Vega source tree from that projection. The checked-in template is at
+`templates/vega-channel/`; `firelaunch.json` records its fingerprint and unresolved local
+artwork paths. An `assets/` path is not embedded automatically; supply licensed artwork
+before a real build. The generated tree is not a build artifact.
+
+Run `npm run doctor:vega` to inspect local Node/npm, ADBT context, SDK path, CLI, adb and
+device visibility. It never asserts build readiness. This checkpoint has not performed a
+Vega SDK build or device/simulator run; those require installed platform tooling and P7
+qualification. P3 should consume `@firelaunch/tv` rather than implement separate preview
+navigation semantics.
+
 Canonical vocabulary: **Prompt Stack** is the common name for phase and correction stacks.
 
 ## External platform references
