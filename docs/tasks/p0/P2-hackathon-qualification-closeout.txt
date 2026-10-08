@@ -1,4 +1,4 @@
-TASK: Phase 0 / P2 — Qualify FireLaunch on browser and real Vega runtime
+TASK: Phase 0 / P2 — Hackathon browser and Vega qualification closeout
 
 MODEL / REASONING / USAGE
 - Recommended configuration: `GPT-6 Sol High`.
