@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="Original abstract savanna concept artwork">
+  <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#2b293c"/><stop offset=".72" stop-color="#db754c"/><stop offset="1" stop-color="#efbb6a"/></linearGradient></defs>
+  <path fill="url(#sky)" d="M0 0h960v540H0z"/><circle cx="700" cy="260" r="103" fill="#f8d487"/><path d="M0 380q195-56 400 1t560-41v200H0z" fill="#705344"/><path d="M0 445q185-48 360 6t600-15v104H0z" fill="#333b37"/>
+  <path d="M230 422V196m0 48q-72-40-116 13m116-13q82-59 146-11m-146-5q-15-66-85-78m85 78q36-78 97-72" stroke="#283333" stroke-width="18" fill="none" stroke-linecap="round"/>
+  <text x="64" y="499" fill="#fff2d1" font-family="sans-serif" font-size="55" font-weight="700" letter-spacing="5">GOLDEN HOUR</text>
+</svg>

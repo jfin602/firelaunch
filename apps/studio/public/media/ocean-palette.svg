@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="Original abstract ocean concept artwork">
+  <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#071b32"/><stop offset="1" stop-color="#146e89"/></linearGradient><linearGradient id="sea" x2="0" y2="1"><stop stop-color="#1d8297"/><stop offset="1" stop-color="#052b45"/></linearGradient></defs>
+  <path fill="url(#sky)" d="M0 0h960v540H0z"/><circle cx="720" cy="130" r="72" fill="#c6e8d2" opacity=".8"/>
+  <path fill="url(#sea)" d="M0 312q130-55 260 2t250-4 240-9 210 7v232H0z"/><path d="M0 370q130-44 260 8t250-3 240-12 210 7M0 454q160-40 310 8t280-11 370 0" fill="none" stroke="#95d8d4" stroke-width="7" opacity=".5"/>
+  <text x="64" y="478" fill="#f2f6e9" font-family="sans-serif" font-size="55" font-weight="700" letter-spacing="5">OCEAN PALETTE</text>
+</svg>

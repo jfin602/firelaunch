@@ -25,8 +25,10 @@ test('Studio Code edit, blocked Build and Publish bundle remain truthful', async
   globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => nativeFetch(new URL(String(input), `http://127.0.0.1:${address.port}`), init)) as typeof fetch;
   try {
     render(createElement(App));
-    fireEvent.click(await screen.findByRole('button', { name: /Code/ }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate source' }));
+    await screen.findByText('REV 1 · LOCAL');
+    fireEvent.click(screen.getByRole('button', { name: /Code/ }));
+    await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Generate source' }) as HTMLButtonElement).disabled, false));
+    fireEvent.click(screen.getByRole('button', { name: 'Generate source' }));
     await waitFor(() => assert.ok(screen.getByRole('button', { name: 'src/App.js' })));
     fireEvent.click(screen.getByRole('button', { name: 'src/App.js' }));
     const editor = await screen.findByLabelText('Generated source') as HTMLTextAreaElement;
@@ -40,6 +42,7 @@ test('Studio Code edit, blocked Build and Publish bundle remain truthful', async
     fireEvent.click(screen.getByRole('button', { name: /Publish/ }));
     await waitFor(() => assert.ok(screen.getByText('Submission handoff')));
     assert.ok(screen.getByText(/No Amazon Developer Console action has occurred/));
+    await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Create local submission bundle' }) as HTMLButtonElement).disabled, false));
     fireEvent.click(screen.getByRole('button', { name: 'Create local submission bundle' }));
     await waitFor(() => assert.ok(screen.getByText(/readiness, copy, assets, checklist; not submitted/)));
     const bundle = await import('node:fs/promises').then(fs => fs.readdir(path.join(directory, 'projects', project.id)));

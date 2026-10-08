@@ -82,6 +82,12 @@ test('blocked and simulated build evidence requires exit success, fresh release 
     assert.equal(evidence.artifact?.bytes, 29);
     assert.match(evidence.artifact?.sha256 ?? '', /^[a-f0-9]{64}$/);
     assert.equal((await success.buildStatus(id)).status, 'succeeded');
+    const current = await repository.read(id);
+    await repository.update(id, current.revision, { ...current.spec, title: 'Revised Earth' });
+    assert.equal((await success.buildStatus(id)).status, 'blocked');
+    assert.match((await success.build(id)).reason ?? '', /stale/);
+    assert.equal((await success.readiness(id)).checks.find(check => check.group === 'Build artifact')?.ready, false);
+    await success.generate(id);
     assert.equal((await failure.build(id)).status, 'failed');
     const source = await success.read(id, 'src/App.js');
     await success.save(id, source.path, `${source.content}\nmodified`, source.sha256);

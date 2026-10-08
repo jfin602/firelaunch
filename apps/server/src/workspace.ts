@@ -200,7 +200,8 @@ export class WorkspaceService {
     const { directory, root } = await this.location(id);
     const toolchain = this.inspect();
     const generated = await regular(root, true);
-    const missing = [!generated && 'Generate the Vega source first', !toolchain.node.available && toolchain.node.detail,
+    const stale = generated && (await this.overview(id)).stale;
+    const missing = [!generated && 'Generate the Vega source first', stale && 'Generated source is stale; regenerate from the current ChannelSpec before building', !toolchain.node.available && toolchain.node.detail,
       !toolchain.npm.available && toolchain.npm.detail, !toolchain.vegaSdk.available && toolchain.vegaSdk.detail,
       !toolchain.vegaCli.available && toolchain.vegaCli.detail].filter(Boolean).map(String);
     if (missing.length) return { status: 'blocked', reason: missing.join('; '), toolchain };
@@ -232,6 +233,7 @@ export class WorkspaceService {
     const previous = await record<BuildRecord>(path.join(directory, 'build.json'));
     const toolchain = this.inspect();
     if (!previous || previous.status !== 'succeeded' || !previous.artifact) return previous ?? { status: 'blocked', reason: 'No build has run', toolchain };
+    if ((await this.overview(id)).stale) return { ...previous, status: 'blocked', reason: 'Generated source is stale; regenerate and rebuild', artifact: undefined };
     if (!(await regular(root, true)) || digest(await sourceFiles(root)) !== previous.sourceHash ||
       !(await releaseArtifacts(root)).some(item => item.path === previous.artifact!.path && item.sha256 === previous.artifact!.sha256)) {
       return { ...previous, status: 'blocked', reason: 'Source or artifact changed since verified build', artifact: undefined };
@@ -258,8 +260,8 @@ export class WorkspaceService {
       { group: 'Channel/schema', ready: true, detail: `ChannelSpec revision ${project.revision} validates` },
       { group: 'TV experience', ready: false, detail: 'Preview is not simulator/device navigation and playback evidence; verify on Vega hardware' },
       { group: 'Manifest/project', ready: code.generated && !code.stale && manifestReady, detail: code.generated ? code.stale ? 'Regenerate to match current channel' : manifestReady ? 'Generated manifest contains the main category; inspect unresolved local assets' : 'Manifest or project metadata changed; verify before submission' : 'Generate Vega source' },
-      { group: 'Build artifact', ready: build.status === 'succeeded', detail: build.status === 'succeeded' ? `${build.artifact?.path} SHA-256 ${build.artifact?.sha256}` : build.reason ?? 'Run a real release build' },
-      { group: 'Store assets/copy', ready: false, detail: `Review draft copy and rights for ${artwork.length} artwork reference(s); supply icon and device screenshots` },
+      { group: 'Build artifact', ready: build.status === 'succeeded' && !code.stale, detail: code.stale ? 'Verified artifact, if any, is for older ChannelSpec source; regenerate and rebuild' : build.status === 'succeeded' ? `${build.artifact?.path} SHA-256 ${build.artifact?.sha256}` : build.reason ?? 'Run a real release build' },
+      { group: 'Store assets/copy', ready: false, detail: `Review draft copy and rights for ${artwork.length} artwork reference(s); supply icon and device screenshots${spec.content.some(item => /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::|\/)/.test(item.mediaUrl)) ? '; replace loopback demo media URLs with device-reachable licensed media' : ''}` },
       { group: 'Support/privacy metadata', ready: false, detail: 'Creator must provide support contact, privacy policy and content-rights declarations' },
       { group: 'Device evidence', ready: false, detail: 'Run on Vega simulator and physical Fire TV; retain independent test evidence' },
       { group: 'Human Amazon steps', ready: false, detail: 'Creator signs into Developer Console, uploads release VPKG, selects devices, fills listing, reviews and submits' }

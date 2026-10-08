@@ -27,7 +27,7 @@ test('Studio agent request persists and immediately updates TV Preview; hand edi
     render(createElement(App));
     fireEvent.change(await screen.findByPlaceholderText('e.g. Wild Earth'), { target: { value: 'Nature' } });
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }));
-    fireEvent.click(screen.getByRole('checkbox', { name: /Add original sample/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Add rights-safe demo/ }));
     fireEvent.change(screen.getByPlaceholderText('e.g. Add page Explore'), { target: { value: 'add page Explore' } });
     fireEvent.click(screen.getByRole('button', { name: /Create channel/ }));
     await screen.findByText(/Deterministic mock/);
