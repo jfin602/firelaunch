@@ -76,7 +76,7 @@ Do not substitute provider command output for FireLaunch-owned validation.
 
 ## Git
 
-When executed by `scripts/codex-stack.mjs`, Codex runs explicitly with the `workspace-write` sandbox, no interactive approvals, and workspace network access so implementation prompts can edit the repository and install declared dependencies. The sandbox/runner contract still protects Git ownership and out-of-workspace mutation.
+When executed by `scripts/codex-stack.mjs`, Codex runs with explicit config overrides for `sandbox_mode="workspace-write"`, `approval_policy="never"`, and workspace network access so implementation prompts can edit the repository and install declared dependencies. The sandbox/runner contract still protects Git ownership and out-of-workspace mutation.
 
 - do not create commits;
 - do not rewrite/move HEAD;

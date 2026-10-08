@@ -954,12 +954,13 @@ test('runCodex sends the preflight snapshot and uses native final-response captu
     const outputIndex = invocationArguments.indexOf('--output-last-message');
     assert.notEqual(outputIndex, -1);
     assert.equal(invocationArguments.includes('--json'), true);
-    assert.deepEqual(
-      invocationArguments.slice(
-        invocationArguments.indexOf('--sandbox'),
-        invocationArguments.indexOf('--sandbox') + 4,
-      ),
-      ['--sandbox', 'workspace-write', '--ask-for-approval', 'never'],
+    assert.equal(
+      invocationArguments.includes('sandbox_mode="workspace-write"'),
+      true,
+    );
+    assert.equal(
+      invocationArguments.includes('approval_policy="never"'),
+      true,
     );
     assert.equal(
       invocationArguments.includes('sandbox_workspace_write.network_access=true'),
@@ -1025,15 +1026,15 @@ test('Codex arguments retain JSON events and exact model efforts', () => {
     'C:\\repo',
     'C:\\run\\final.txt',
   );
-  assert.deepEqual(lunaArguments.slice(0, 12), [
+  assert.deepEqual(lunaArguments.slice(0, 14), [
     'exec',
     '--json',
     '--model',
     'gpt-5.6-luna',
-    '--sandbox',
-    'workspace-write',
-    '--ask-for-approval',
-    'never',
+    '-c',
+    'sandbox_mode="workspace-write"',
+    '-c',
+    'approval_policy="never"',
     '-c',
     'sandbox_workspace_write.network_access=true',
     '-c',
@@ -1046,21 +1047,21 @@ test('Codex arguments retain JSON events and exact model efforts', () => {
     'C:\\repo',
     'C:\\run\\final.txt',
   );
-  assert.deepEqual(ultraArguments.slice(0, 12), [
+  assert.deepEqual(ultraArguments.slice(0, 14), [
     'exec',
     '--json',
     '--model',
     'gpt-5.6-sol',
-    '--sandbox',
-    'workspace-write',
-    '--ask-for-approval',
-    'never',
+    '-c',
+    'sandbox_mode="workspace-write"',
+    '-c',
+    'approval_policy="never"',
     '-c',
     'sandbox_workspace_write.network_access=true',
     '-c',
     'model_reasoning_effort="ultra"',
   ]);
-  assert.deepEqual(ultraArguments.slice(12, 14), [
+  assert.deepEqual(ultraArguments.slice(14, 16), [
     '--output-last-message',
     'C:\\run\\final.txt',
   ]);

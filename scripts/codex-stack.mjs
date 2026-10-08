@@ -336,10 +336,10 @@ export function buildCodexArguments(prompt, rootDirectory, finalFile) {
     '--json',
     '--model',
     prompt.model,
-    '--sandbox',
-    'workspace-write',
-    '--ask-for-approval',
-    'never',
+    '-c',
+    'sandbox_mode="workspace-write"',
+    '-c',
+    'approval_policy="never"',
     '-c',
     'sandbox_workspace_write.network_access=true',
     '-c',
@@ -1134,6 +1134,14 @@ export async function runCli(argv = process.argv.slice(2), dependencies = {}) {
       stopActiveRedraw = undefined;
     }
     if (interrupted || result.signal) throw new Error(interruptionMessage);
+    if (result.code !== 0) {
+      const stderr = String(result.stderr ?? '').trim();
+      const finalResponse = String(result.finalResponse ?? '').trim();
+      const detail = stderr || finalResponse;
+      throw new Error(
+        `Codex exited with status ${result.code}${detail ? `: ${detail}` : ''}.`,
+      );
+    }
     record.finalResponseFile =
       result.finalResponseFile ?? `P${prompt.number}.final.txt`;
     const conflicts = runGit(['diff', '--check']);
