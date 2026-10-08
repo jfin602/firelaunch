@@ -1026,7 +1026,7 @@ test('Codex arguments retain JSON events and exact model efforts', () => {
     'C:\\repo',
     'C:\\run\\final.txt',
   );
-  assert.deepEqual(lunaArguments.slice(0, 14), [
+  assert.deepEqual(lunaArguments.slice(0, 12), [
     'exec',
     '--json',
     '--model',
@@ -1047,7 +1047,7 @@ test('Codex arguments retain JSON events and exact model efforts', () => {
     'C:\\repo',
     'C:\\run\\final.txt',
   );
-  assert.deepEqual(ultraArguments.slice(0, 14), [
+  assert.deepEqual(ultraArguments.slice(0, 12), [
     'exec',
     '--json',
     '--model',
@@ -1061,7 +1061,7 @@ test('Codex arguments retain JSON events and exact model efforts', () => {
     '-c',
     'model_reasoning_effort="ultra"',
   ]);
-  assert.deepEqual(ultraArguments.slice(14, 16), [
+  assert.deepEqual(ultraArguments.slice(12, 14), [
     '--output-last-message',
     'C:\\run\\final.txt',
   ]);
