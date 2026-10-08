@@ -1,0 +1,42 @@
+TASK: Phase 0 / P2 — Qualify FireLaunch on browser and real Vega runtime
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+The assigned project version is `0.0.2`.
+
+GOAL
+Independently qualify the FireLaunch P0 candidate. Do not turn closeout into another broad implementation prompt. Preserve failed evidence and report NOT GREEN if the real television path is not proven.
+
+PREFLIGHT
+Review P1 checkpoint/final response, current source, BOOT.md, AGENTS.md, docs/tasks/p0/README.md, docs/hackathon-requirements.md, docs/demo-plan.md and docs/publishing.md.
+
+QUALIFICATION
+1. Start FireLaunch from a clean checkout using README instructions.
+2. In a real browser, create a new Wild Earth-style channel from natural language and verify persisted ChannelSpec state.
+3. Exercise Design and Content edits and confirm the preview updates from the same state.
+4. Navigate preview using keyboard and virtual remote. Verify visible focus, hero/rails, detail, back and playback.
+5. Reload/restart and verify project restoration.
+6. Exercise agent. If claiming Bedrock/AWS Builder integration, require a real Bedrock-backed request; mock alone cannot qualify that claim.
+7. Generate Vega project. Inspect source and verify manifest main category.
+8. Edit generated source, verify dirty/custom state, and prove regeneration does not silently destroy it.
+9. Run toolchain doctor.
+10. Build generated Vega app with the real installed toolchain. Verify a real VPKG exists.
+11. Launch generated app on Vega simulator or Fire TV. Exercise the same recognizable channel and D-pad navigation.
+12. Verify Build/Publish report exact real evidence and do not imply Developer Console submission.
+13. Generate/read submission bundle.
+14. Run full root aggregate check and git diff --check.
+15. Rehearse docs/demo-plan.md within the sub-three-minute story without fake platform footage.
+16. Update docs/feedback-log.md with actual ADBT/Vega/Bedrock observations.
+
+CLOSEOUT
+Create docs/tasks/p0/closeout.md with exact candidate HEAD/version, automated counts, browser evidence, Bedrock evidence, Vega tool versions, VPKG path/hash, simulator/device evidence, publishing evidence, gaps and final GREEN / QUALIFIED or NOT GREEN.
+
+If a source defect blocks qualification, do not hide a repair inside a Green closeout. Report NOT GREEN and recommend a bounded c0-* correction Prompt Stack.
+
+Do not claim Amazon Appstore submission unless it actually occurred.
+
+FINAL RESPONSE
+Report evidence concisely, including whether Prompt -> Product -> Real Television is proven.

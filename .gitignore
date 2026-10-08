@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.*
+!.env.example
+coverage/
+dist/
+build/
+artifacts/
+*.vpkg
+.firelaunch-data/
+.generated/
+.codex-runs/
+.tmp/
+.tmp*
+*.log
+.DS_Store
