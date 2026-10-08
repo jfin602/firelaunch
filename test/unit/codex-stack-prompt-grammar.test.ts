@@ -11,7 +11,7 @@ function prompt(
   number: number,
   {
     closeout = false,
-    config = 'GPT-6 Sol High',
+    config = 'Terra High',
     version = `0.9.${number}`,
     body = 'Implement the task.',
     phase = 9,
@@ -39,7 +39,7 @@ function correctionPrompt(
   number: number,
   {
     closeout = false,
-    config = 'GPT-6 Sol High',
+    config = 'Terra High',
     version = '0.10.0',
     body = 'Implement the correction.',
     phase = 10,
@@ -206,8 +206,8 @@ test('phase plan grammar fails closed on malformed parsed metadata', () => {
   );
 
   const duplicateRecommendation = p1.text.replace(
-    '- Recommended configuration: `GPT-6 Sol High`.',
-    '- Recommended configuration: `GPT-6 Sol High`.\n- Recommended configuration: `Sol Light`.',
+    '- Recommended configuration: `Terra High`.',
+    '- Recommended configuration: `Terra High`.\n- Recommended configuration: `Sol Light`.',
   );
   assert.throws(
     () => parsePrompt(p1.filename, duplicateRecommendation),
@@ -215,8 +215,8 @@ test('phase plan grammar fails closed on malformed parsed metadata', () => {
   );
 
   const malformedRecommendation = p1.text.replace(
-    '- Recommended configuration: `GPT-6 Sol High`.',
-    'Recommended configuration: `GPT-6 Sol High`',
+    '- Recommended configuration: `Terra High`.',
+    'Recommended configuration: `Terra High`',
   );
   assert.throws(
     () => parsePrompt(p1.filename, malformedRecommendation),
@@ -671,7 +671,7 @@ test('documented runner model labels stay explicit and finite', () => {
     'Luna Medium',
     'Luna High',
     'Terra Medium',
-    'GPT-6 Sol High',
+    'Terra High',
     'Terra Ultra',
     'Sol Light',
     'Sol Medium',

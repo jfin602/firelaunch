@@ -77,14 +77,14 @@ const directTestLauncher = Object.freeze({
   type: 'test',
   identity: 'injected test launcher',
 });
-const compatibleCodexVersion = 'codex-cli 0.155.0';
+const compatibleCodexVersion = 'codex-cli 0.147.0';
 
 const resolveTestNpmLauncher = (
   checkLauncher: (launcher: {
     command: string;
     prefixArguments: readonly string[];
     type: string;
-  }) => string = () => 'codex-cli 0.155.0',
+  }) => string = () => 'codex-cli 0.147.0',
 ) => {
   const shimRoot = 'C:\\npm';
   const shim = `${shimRoot}\\codex.cmd`;
@@ -123,7 +123,7 @@ interface PromptOptions {
 const prompt = (
   number: number,
   {
-    config = 'GPT-6 Sol High',
+    config = 'Terra High',
     version = `0.8.${number}`,
     closeout = false,
     browserRequired,
@@ -185,7 +185,7 @@ const continuationPrompt = (
 const correctionPrompt = (
   number: number,
   {
-    config = 'GPT-6 Sol High',
+    config = 'Terra High',
     version = '0.10.0',
     closeout = false,
     title = closeout
@@ -224,7 +224,7 @@ const commitMessage = (rootDirectory: string, revision = 'HEAD') => {
 
 const createPhaseRepository = async (
   implementationCount = 2,
-  config = 'GPT-6 Sol High',
+  config = 'Terra High',
 ) => {
   const rootDirectory = await mkdtemp(
     path.join(tmpdir(), 'dope-phase-git-test-'),
@@ -390,9 +390,9 @@ test('resolves every repository recommendation to its verified concrete CLI conf
   const expected: Record<string, { model: string; reasoning: string }> = {
     'Luna Medium': { model: 'gpt-5.6-luna', reasoning: 'medium' },
     'Luna High': { model: 'gpt-5.6-luna', reasoning: 'high' },
-    'Terra Medium': { model: 'gpt-6-sol', reasoning: 'medium' },
-    'GPT-6 Sol High': { model: 'gpt-6-sol', reasoning: 'high' },
-    'Terra Ultra': { model: 'gpt-6-sol', reasoning: 'ultra' },
+    'Terra Medium': { model: 'gpt-5.6-terra', reasoning: 'medium' },
+    'Terra High': { model: 'gpt-5.6-terra', reasoning: 'high' },
+    'Terra Ultra': { model: 'gpt-5.6-terra', reasoning: 'ultra' },
     'Sol Light': { model: 'gpt-5.6-sol', reasoning: 'low' },
     'Sol Medium': { model: 'gpt-5.6-sol', reasoning: 'medium' },
     'Sol High': { model: 'gpt-5.6-sol', reasoning: 'high' },
@@ -400,6 +400,7 @@ test('resolves every repository recommendation to its verified concrete CLI conf
     'GPT-6 Sol Medium': { model: 'gpt-6-sol', reasoning: 'medium' },
     'GPT-6 Sol High': { model: 'gpt-6-sol', reasoning: 'high' },
     'GPT-6 Sol XHigh': { model: 'gpt-6-sol', reasoning: 'xhigh' },
+    'GPT-6 Astra High': { model: 'gpt-6-astra', reasoning: 'high' },
   };
 
   assert.deepEqual(Object.keys(MODEL_CONFIGS), Object.keys(expected));
@@ -525,14 +526,14 @@ test('resolves an invocable Windows native codex.exe before npm shims', async ()
     findWindowsCommands: () => ['C:\\npm\\codex.cmd', nativeExecutable],
     checkLauncher: (launcher: unknown) => {
       checked.push(launcher);
-      return 'codex-cli 0.155.0';
+      return 'codex-cli 0.147.0';
     },
   });
 
   assert.equal(resolution.launcher.command, nativeExecutable);
   assert.deepEqual(resolution.launcher.prefixArguments, []);
   assert.equal(resolution.launcher.type, 'windows-native');
-  assert.equal(resolution.version, 'codex-cli 0.155.0');
+  assert.equal(resolution.version, 'codex-cli 0.147.0');
   assert.equal(checked[0], resolution.launcher);
 });
 
@@ -557,10 +558,10 @@ test('resolves a Windows npm shim to Node plus its verified package entrypoint',
         options: { shell: boolean },
       ) => {
         invocation = { command, arguments: arguments_, shell: options.shell };
-        return { status: 0, stdout: 'codex-cli 0.155.0\n', stderr: '' };
+        return { status: 0, stdout: 'codex-cli 0.147.0\n', stderr: '' };
       },
     }),
-    'codex-cli 0.155.0',
+    'codex-cli 0.147.0',
   );
   assert.deepEqual(invocation, {
     command: process.execPath,
@@ -584,7 +585,7 @@ test('native and Unix preflight invocations remain direct and shell-free', async
     options: { shell: boolean },
   ) => {
     invocations.push({ command, arguments: arguments_, shell: options.shell });
-    return { status: 0, stdout: 'codex-cli 0.155.0\n', stderr: '' };
+    return { status: 0, stdout: 'codex-cli 0.147.0\n', stderr: '' };
   };
   const native = await resolveCodexLauncher({
     platform: 'win32',
@@ -596,8 +597,8 @@ test('native and Unix preflight invocations remain direct and shell-free', async
     spawnSyncProcess,
   });
 
-  assert.equal(native.version, 'codex-cli 0.155.0');
-  assert.equal(unix.version, 'codex-cli 0.155.0');
+  assert.equal(native.version, 'codex-cli 0.147.0');
+  assert.equal(unix.version, 'codex-cli 0.147.0');
   assert.deepEqual(invocations, [
     {
       command: 'C:\\Tools\\codex.exe',
@@ -658,7 +659,7 @@ test('failed native discovery falls back to one usable npm launcher', async () =
     checkLauncher: (launcher: { type: string }) => {
       checkedTypes.push(launcher.type);
       if (launcher.type === 'windows-native') throw new Error('access denied');
-      return 'codex-cli 0.155.0';
+      return 'codex-cli 0.147.0';
     },
   });
 
@@ -877,7 +878,7 @@ test('runCodex sends the preflight snapshot and uses native final-response captu
     await writeFile(taskFile, originalText);
     const parsedPrompt = {
       number: 1,
-      model: 'gpt-6-sol',
+      model: 'gpt-5.6-terra',
       reasoning: 'high',
       text: await readFile(taskFile, 'utf8'),
     };
@@ -886,7 +887,7 @@ test('runCodex sends the preflight snapshot and uses native final-response captu
     let preflightLauncher: unknown;
     const resolution = await resolveTestNpmLauncher((launcher) => {
       preflightLauncher = launcher;
-      return 'codex-cli 0.155.0';
+      return 'codex-cli 0.147.0';
     });
     let stdinText = '';
     let invocationCommand = '';
@@ -1486,8 +1487,8 @@ test('parse-only validator identifies browser-required prompts without writes', 
     await writeFile(
       promptFile,
       entry.replace(
-        '- Recommended configuration: `GPT-6 Sol High`.',
-        '- Recommended configuration: `GPT-6 Sol High`.\n- Browser required: yes.',
+        '- Recommended configuration: `Terra High`.',
+        '- Recommended configuration: `Terra High`.\n- Browser required: yes.',
       ),
     );
     const result = spawnSync(process.execPath, [validator, 'p8'], {
@@ -3190,7 +3191,7 @@ test('auto-run closeout executes after implementation commits and ends terminal 
               childArgs: [],
             };
           }
-          assert.equal(parsedPrompt.model, 'gpt-6-sol');
+          assert.equal(parsedPrompt.model, 'gpt-5.6-terra');
           assert.equal(parsedPrompt.reasoning, 'high');
           assert.match(parsedPrompt.text, /Perform Phase 8 closeout/);
           assert.equal(
@@ -3603,7 +3604,7 @@ test('auto-run rendering and CLI validation distinguish review-required closeout
     ['p8', '--verbose', '--verbose'],
     ['--closeout'],
   ]) {
-    await assert.rejects(runCli(argv), /Usage: yarn codex:stack/);
+    await assert.rejects(runCli(argv), /Usage: npm run codex:phase/);
   }
   const runnerSource = await readFile(
     path.join(process.cwd(), 'scripts', 'codex-stack.mjs'),
