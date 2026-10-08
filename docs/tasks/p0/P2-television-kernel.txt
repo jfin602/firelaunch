@@ -1,0 +1,48 @@
+TASK: Phase 0 / P2 — Establish shared television semantics and Vega generation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.0.2`.
+
+GOAL
+Build the television-specific kernel on top of the P1 domain so FireLaunch can deterministically project ChannelSpec into shared TV semantics and a real React Native for Vega source project before Studio polish or AI is added.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/ARCHITECTURE.md, docs/hackathon-requirements.md, ADR 0002, this stack README/assessment/plan, inspect P1 contracts/source/tests, and preserve the 0.0.1 checkpoint.
+
+IMPLEMENT
+Follow the P2 section of docs/tasks/p0/implementation-plan.md.
+
+Add:
+- bounded semantic TV model derived from ChannelSpec;
+- page/module/content resolution;
+- stable focusable identities;
+- directional navigation commands and deterministic focus/back transitions;
+- page/detail/playback state contracts;
+- packages/generator;
+- checked-in templates/vega-channel;
+- deterministic generated-project layout and metadata/fingerprint;
+- React Native for Vega source generation from ChannelSpec;
+- Vega manifest with `com.amazon.category.main`;
+- generator parity/contract tests;
+- toolchain doctor contract and implementation.
+
+PLATFORM DISCOVERY
+Use current repository docs, Amazon Devices Builder Tools context if available, and installed command help/version output. Detect the real local Vega/ADBT prerequisites and record exact available/missing tooling. Do not invent commands or mark a build path Green without evidence. Update docs/feedback-log.md only with actual observed friction.
+
+DO NOT IMPLEMENT
+Polished Studio UI, ChannelAgent/Bedrock, generated-source editor, arbitrary build execution UI, publish workflow or deferred SaaS features.
+
+VALIDATION
+Run focused TV semantic/focus contract tests, generator determinism/manifest tests, doctor tests, affected build/typecheck and git diff --check. Generation must be real source output even if the local Vega SDK is unavailable.
+
+DONE WHEN
+A persisted ChannelSpec can deterministically produce a credible self-contained Vega source tree with correct manifest semantics, and FireLaunch can truthfully report local platform-tooling state.
+
+Do not create Git commits manually; the Prompt Stack runner owns the checkpoint.
+
+FINAL RESPONSE
+Report TV semantic boundaries, generated project/template structure, manifest evidence, detected toolchain state, focused tests/counts and P3 handoff.

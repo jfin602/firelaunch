@@ -1,0 +1,47 @@
+TASK: Phase 0 / P1 — Establish the FireLaunch product kernel
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.0.1`.
+
+GOAL
+Create the coherent FireLaunch repository/application foundation and make ChannelSpec, channel-engine behavior, local persistence and the server/API boundary real before any Studio, Vega, or AI work.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/VISION.md, docs/PRINCIPLES.md, docs/PRODUCT-MODEL.md, docs/ARCHITECTURE.md, docs/workflow.md, ADR 0001, this stack README/assessment/plan, and inspect current HEAD.
+
+IMPLEMENT
+Follow the P1 section of docs/tasks/p0/implementation-plan.md.
+
+Create the Yarn/TypeScript workspace and the smallest source tree needed for:
+- root build/typecheck/test/check workflow;
+- apps/server;
+- packages/contracts;
+- packages/channel-engine;
+- strict versioned ChannelSpec v1;
+- stable IDs and bounded domain contracts;
+- pure validated mutations/selectors;
+- schema migration seam;
+- safe local ChannelProject persistence under the configured data root;
+- atomic writes, project/path containment and symlink-escape protection where applicable;
+- create/list/read/update project API;
+- test fixtures/helpers suitable for P2+.
+
+Keep the server local-first and simple. No database.
+
+DO NOT IMPLEMENT
+Studio UI, TV rendering, Vega generation, Bedrock/agent behavior, code editing, build execution, publish readiness, auth, billing, multi-user or cloud infrastructure.
+
+VALIDATION
+Run focused contracts/channel-engine/persistence/API tests, affected build/typecheck, runner regressions if runner/package changes are touched, and git diff --check. Do not run platform/browser/device qualification.
+
+DONE WHEN
+A FireLaunch project can be created, validated, mutated, persisted and reopened through deterministic domain/server interfaces from a clean repository at 0.0.1. Later prompts have stable contracts to consume.
+
+Do not create Git commits manually; the Prompt Stack runner owns the checkpoint.
+
+FINAL RESPONSE
+Report workspace shape, ChannelSpec/persistence/API contracts, exact focused validation commands/counts, and any assumptions P2 must preserve.

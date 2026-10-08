@@ -1,0 +1,48 @@
+TASK: Phase 0 / P6 — Converge FireLaunch into the hackathon candidate
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.0.6`.
+
+GOAL
+Integrate and polish the P1-P5 systems into one coherent hackathon candidate without introducing new product architecture.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/demo-plan.md, docs/hackathon-requirements.md, docs/publishing.md, this stack README/assessment/plan, all P1-P5 checkpoint evidence, and inspect current source before changing anything.
+
+IMPLEMENT
+Follow the P6 section of docs/tasks/p0/implementation-plan.md.
+
+Converge:
+- a polished rights-safe Wild Earth demo fixture;
+- New Channel -> deterministic edit/Preview -> agent refinement -> Code -> Build -> Publish;
+- persistent reload/restart behavior;
+- coherent loading/empty/error/blocked states;
+- obvious mock-vs-Bedrock status;
+- no dead navigation or placeholder controls in the golden path;
+- TV Preview readability/focus polish;
+- generated project/source consistency;
+- truthful build/readiness evidence propagation;
+- demo reliability and concise UX suitable for the three-minute story.
+
+Fix bounded integration defects encountered while joining P1-P5, but do not pull deferred auth/billing/cloud/cross-platform work into P0.
+
+DOCUMENTATION
+Update README with exact install/start/test/generate/toolchain instructions.
+Create/update MODULES.md from implemented source.
+Align docs/demo-plan.md if actual UI names changed without changing the core story.
+Update docs/feedback-log.md only with Amazon tool behavior actually observed.
+
+VALIDATION
+Run the first full aggregate root check: typecheck, deterministic tests and production builds as configured. Also run focused golden-path/headless browser automation where available and git diff --check. Preserve all failures; do not weaken tests merely to converge.
+
+DONE WHEN
+0.0.6 is a coherent candidate that can be handed to P7 for independent real-browser and Vega runtime qualification without requiring new architecture.
+
+Do not create Git commits manually; the Prompt Stack runner owns the checkpoint.
+
+FINAL RESPONSE
+Report the final golden path, aggregate validation commands/counts, current Bedrock/Vega evidence, any remaining external/manual prerequisites and exact P7 handoff.

@@ -15,7 +15,7 @@ Before implementation:
 ## Repository behavior
 
 - Inspect current source before editing.
-- Keep changes inside the active prompt scope.
+- Keep changes inside the active prompt scope; do not pull later P0 work forward merely because the interface is visible.
 - Prefer TypeScript and explicit contracts.
 - Fail closed on malformed ChannelSpec, unsafe paths, missing toolchains and false build claims.
 - Never commit secrets, AWS credentials, Amazon credentials, private developer-console data or generated user media.
@@ -23,9 +23,19 @@ Before implementation:
 - Never fabricate external validation.
 - Preserve creator ownership: generated projects must be ordinary source trees usable outside FireLaunch.
 
-## P0 implementation constraints
+## P0 sequencing
 
-P0/P1 may create the complete source tree because it is the approved Astra one-shot.
+P0 is deliberately staged:
+
+- P1 owns contracts/channel engine/persistence/API foundation.
+- P2 owns shared TV semantics/Vega generation/toolchain discovery.
+- P3 owns Studio/Preview/focus/playback.
+- P4 owns ChannelAgent/tools/mock/Bedrock.
+- P5 owns Code/Build/Publish.
+- P6 owns cross-system convergence/polish.
+- P7 owns final real browser/Vega qualification only.
+
+Later prompts build on prior checkpoints. Do not use a prompt to redesign earlier Green boundaries unless direct evidence proves a blocker and the current prompt explicitly owns that repair.
 
 Preserve ChannelSpec, preview/source parity, Vega-first output, provider-neutral agent boundary and truthful validation.
 
@@ -56,13 +66,17 @@ Bedrock is the primary real hackathon provider. Mock mode is deterministic and t
 
 ## Validation
 
-P0 should include ChannelSpec/mutation, generator, navigation/focus, persistence/path containment, agent mock and readiness tests plus an aggregate check.
+Each implementation prompt runs the smallest sufficient focused tests plus affected build/typecheck and `git diff --check`.
 
-P2 owns real browser and Vega simulator/device evidence.
+P6 owns aggregate pre-closeout convergence validation.
+
+P7 owns real browser and Vega simulator/device evidence plus the final aggregate closeout.
+
+Do not substitute provider command output for FireLaunch-owned validation.
 
 ## Git
 
-When executed by scripts/codex-stack.mjs:
+When executed by `scripts/codex-stack.mjs`:
 - do not create commits;
 - do not rewrite/move HEAD;
 - read-only Git inspection is allowed;

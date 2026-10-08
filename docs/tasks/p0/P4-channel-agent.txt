@@ -1,0 +1,49 @@
+TASK: Phase 0 / P4 — Add the validated Channel Agent and Bedrock integration
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.0.4`.
+
+GOAL
+Add natural-language channel creation/refinement as another safe controller of the already-working deterministic FireLaunch domain.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/PRODUCT-MODEL.md, docs/ARCHITECTURE.md, ADR 0003, this stack README/assessment/plan, inspect P1-P3 source/tests, and preserve ChannelSpec/TV/Studio authority boundaries.
+
+IMPLEMENT
+Follow the P4 section of docs/tasks/p0/implementation-plan.md.
+
+Create the provider-neutral ChannelAgent and integrate it into server + Studio.
+
+Implement:
+- bounded agent request/response contracts;
+- structured validated tool schemas over channel-engine;
+- inspect channel;
+- set/update brand;
+- add/update/remove/reorder pages/modules/content;
+- a narrowly validated patch operation only if it reduces tool duplication without weakening schema safety;
+- deterministic mock provider for tests/offline fallback;
+- real Amazon Bedrock Converse/tool-use adapter using normal AWS credential resolution and configured BEDROCK_MODEL_ID;
+- provider selection/status;
+- user-visible agent transcript/activity/errors;
+- explicit validation/refusal behavior for malformed/unsupported tool calls;
+- immediate persistence + Preview refresh after successful mutations.
+
+AUTHORITY
+The model does not receive direct filesystem mutation, arbitrary shell execution or unvalidated JSON replacement authority. Agent tools call the same channel-engine used by deterministic Studio editing.
+
+VALIDATION
+Run focused agent/tool/mock/provider tests and channel/server/Studio integration tests, affected build/typecheck and git diff --check. Tests must not require AWS credentials.
+
+If credentials/model configuration are available, make one minimal real Bedrock request and record truthful evidence without exposing credentials. If not available, report Bedrock as unqualified rather than failing deterministic P4.
+
+DONE WHEN
+Natural-language requests can reproducibly modify ChannelSpec through validated tools and the Studio Preview reflects those changes, while deterministic operation remains fully usable without cloud access.
+
+Do not create Git commits manually; the Prompt Stack runner owns the checkpoint.
+
+FINAL RESPONSE
+Report tool surface/authority, mock evidence, real Bedrock evidence or explicit gap, integration tests/counts and P5 handoff.

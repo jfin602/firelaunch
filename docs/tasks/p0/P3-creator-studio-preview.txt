@@ -1,0 +1,49 @@
+TASK: Phase 0 / P3 — Build the Creator Studio and interactive TV Preview
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.0.3`.
+
+GOAL
+Turn the stable P1/P2 domain and television semantics into the deterministic creator experience: progressive channel onboarding, Design/Content editing and an interactive 10-foot Preview with remote navigation and playback.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/PRODUCT-MODEL.md, docs/ARCHITECTURE.md, this stack README/assessment/plan, inspect P1/P2 source/tests, and preserve their contracts instead of creating parallel state.
+
+IMPLEMENT
+Follow the P3 section of docs/tasks/p0/implementation-plan.md.
+
+Create apps/studio with a polished dark React + TypeScript + Vite creator shell.
+
+Implement:
+- progressive New Channel onboarding;
+- persistent project/channel identity;
+- primary surfaces for Create/Agent, Design, Content, Code, Build and Publish, with later-phase surfaces honest/disabled/placeheld as needed;
+- central 16:9 TV Preview on creator surfaces;
+- Design controls over brand/theme fields;
+- Content editing over the canonical catalog/pages/modules;
+- hero, rail, grid, detail and playback projections using P2 semantics;
+- keyboard Arrow keys + Enter + Escape/back;
+- virtual remote using the exact same navigation command abstraction;
+- obvious TV focus treatment;
+- deterministic initial focus/back behavior;
+- rights-safe sample media/assets suitable for development.
+
+The Create/Agent surface may present the future conversational area but must not fake real agent behavior before P4.
+
+BOUNDARY
+Do not create a Studio-only channel representation or separate focus model. All changes flow through P1 domain APIs and P2 TV semantics.
+
+VALIDATION
+Run focused Studio/component/state/navigation tests, deterministic headless browser/component tests if practical, affected builds/typechecks and git diff --check. Do not require a manual browser gate yet.
+
+DONE WHEN
+A creator can create/edit/reload a channel without AI and navigate the resulting TV experience entirely by keyboard/virtual remote through hero/content/detail/playback paths.
+
+Do not create Git commits manually; the Prompt Stack runner owns the checkpoint.
+
+FINAL RESPONSE
+Report Studio surfaces, Preview/navigation behavior, parity with P2 semantics, exact tests/build evidence and P4 handoff.

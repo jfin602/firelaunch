@@ -46,21 +46,27 @@ Exactly one final closeout prompt is required by the runner.
 ## Model policy
 
 - GPT-6 Sol Medium: default bounded implementation.
-- GPT-6 Sol High: difficult/risky work and independent qualification.
+- GPT-6 Sol High: difficult/risky work, P0 implementation and independent qualification.
 - GPT-6 Sol XHigh: exceptional repair/review only.
-- GPT-6 Astra High: exceptional long-horizon greenfield implementation.
+- GPT-6 Astra High: exceptional long-horizon escalation when a cross-system blocker justifies the added cost.
 
-P0/P1 is intentionally GPT-6 Astra High.
+Do not default to Astra for ordinary UI, CRUD, persistence, tests or bounded integration work.
 
-## One-shot policy
+## Staged implementation policy
 
-One-shot means one implementation prompt owns the approved MVP. It does not remove qualification.
+A phase should prefer a dependency-ordered sequence of bounded checkpoints when the product spans multiple independently testable systems.
 
-P0 therefore contains:
-- P1 implementation: Astra
-- P2 closeout: independent browser/Vega evidence
+Each prompt should:
+- begin from a coherent prior checkpoint;
+- own one architectural slice;
+- run focused validation;
+- leave explicit handoff facts for the next prompt;
+- avoid repeating work that an earlier checkpoint already established.
 
-If P2 finds blockers, close Not Green and create a correction stack.
+P0 follows:
+domain -> TV/runtime -> Studio -> agent -> deployment -> convergence -> qualification.
+
+If final qualification finds blockers, close Not Green and create a bounded correction stack rather than silently broadening closeout.
 
 ## Runner
 
@@ -69,6 +75,9 @@ yarn codex:stack:validate p0
 
 Run:
 yarn codex:stack p0
+
+Runner regressions:
+yarn test:runner
 
 The runner validates grammar/versioning, resumes completed checkpoints, asks before dirty-tree continuation, invokes Codex, retries bounded model-capacity failures, owns implementation commits, stops at browser-required gates and stores evidence under .codex-runs/.
 
@@ -86,9 +95,9 @@ Use Green / Qualified only when closeout criteria pass.
 
 ## Time discipline
 
-Ordinary corrections target about 8 minutes and avoid exceeding 15 minutes without reason.
+Implementation prompts should normally target a bounded work unit rather than a whole product.
 
-P0/P1 is an owner-approved exception because Astra is being used for a bounded whole-MVP one-shot. Do not carry the exception into later corrections.
+Focused validation belongs inside each implementation prompt. Full aggregate checks and manual browser/device proof belong near convergence/closeout so the stack does not repeatedly pay for global validation.
 
 ## Closeout
 

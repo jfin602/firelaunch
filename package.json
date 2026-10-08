@@ -7,6 +7,7 @@
   "engines": { "node": ">=24 <25" },
   "scripts": {
     "codex:stack": "node scripts/codex-stack.mjs",
-    "codex:stack:validate": "node scripts/validate-codex-stack.mjs"
+    "codex:stack:validate": "node scripts/validate-codex-stack.mjs",
+    "test:runner": "node --test test/unit/codex-stack-prompt-grammar.test.ts test/unit/codex-stack-runner.test.ts"
   }
 }

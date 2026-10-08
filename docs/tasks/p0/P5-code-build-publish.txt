@@ -1,0 +1,56 @@
+TASK: Phase 0 / P5 — Complete Code, Vega Build, and Publish readiness workflows
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.0.5`.
+
+GOAL
+Connect FireLaunch's generated Vega project to creator-controlled source editing, evidence-backed local build execution and truthful Amazon submission readiness.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/ARCHITECTURE.md, docs/publishing.md, docs/hackathon-requirements.md, this stack README/assessment/plan, inspect P1-P4 source/tests and the actual P2 toolchain doctor/generator behavior.
+
+IMPLEMENT
+Follow the P5 section of docs/tasks/p0/implementation-plan.md.
+
+CODE
+- generated-project file tree;
+- safe bounded text-file read/edit/save;
+- containment/symlink protection;
+- changed/custom state;
+- clear generate/regenerate action;
+- explicit protection against silently overwriting custom edits;
+- preserve creator ownership and ordinary source-tree usability.
+
+BUILD
+- surface P2 toolchain doctor evidence;
+- execute only real detected/documented Vega commands;
+- argv-based bounded child processes with generated-project cwd;
+- no arbitrary command endpoint or shell interpolation;
+- captured status/output/duration;
+- verify actual artifact existence before success;
+- record artifact path/hash/identity where practical;
+- if tooling is absent, show exact blocked prerequisites.
+
+PUBLISH
+- grouped readiness checks for channel/schema, TV experience, manifest/project, build artifact, store assets/copy, support/privacy metadata, device evidence and human Amazon steps;
+- generate useful app/store copy and release notes from channel state;
+- create local submission bundle containing readiness data/copy/checklists/artifact reference when real;
+- never capture Amazon Developer credentials;
+- never claim Developer Console submission when it did not occur.
+
+VALIDATION
+Run focused code-edit/regeneration-protection, path/process safety, build-evidence, readiness and submission-bundle tests, affected build/typecheck and git diff --check.
+
+If the real Vega toolchain is available, exercise the real build path and verify the artifact. Otherwise preserve the blocked state for P7.
+
+DONE WHEN
+The creator can inspect/edit generated source without accidental destruction, Build reports only real evidence, and Publish gives an actionable creator-owned handoff to Amazon.
+
+Do not create Git commits manually; the Prompt Stack runner owns the checkpoint.
+
+FINAL RESPONSE
+Report code/regeneration policy, real-vs-blocked build evidence, readiness/submission behavior, exact validation counts and P6 handoff.

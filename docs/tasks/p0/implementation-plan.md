@@ -1,124 +1,229 @@
 # p0 — Source-aware implementation plan
 
-Status: Greenfield plan at repository 0.0.0.
+Status: Approved staged implementation plan at bootstrap `0.0.0`.
 
-P1 must inspect the current repo because bootstrap files/runner are already source.
+The repository currently contains documentation and the Prompt Stack runner but no product implementation. Every prompt must inspect current HEAD before editing because prior P0 checkpoints will progressively create the source tree.
 
-## A. Repository/application shell
+## P1 — Product kernel / 0.0.1
 
-Create a Yarn workspace TypeScript monorepo matching docs/ARCHITECTURE.md.
+### Owns
 
-Expected:
-- apps/studio
-- apps/server
-- packages/contracts
-- packages/channel-engine
-- packages/agent
-- packages/generator
-- packages/readiness
-- templates/vega-channel
+Repository/application shell:
+- Yarn workspace
+- TypeScript configuration
+- root start/build/typecheck/test/check commands
+- `apps/server`
+- `packages/contracts`
+- `packages/channel-engine`
 
-Provide a simple root developer flow and aggregate check.
+Channel domain:
+- strict ChannelSpec v1
+- stable IDs
+- brand/navigation/page/module/content contracts
+- pure validated mutations/selectors
+- schema migration seam
 
-## B. Contracts and persistence
+Persistence/API:
+- local project repository under `.firelaunch-data/`
+- atomic writes
+- project/path containment and symlink safety
+- create/list/read/update project API
+- bounded error contracts
+- fixture helpers for later prompts
 
-Define strict ChannelSpec v1 and API contracts.
+### Does not own
 
-Implement stable IDs, pure validated mutations, atomic local persistence, path containment, schema migration seam and sample project creation.
+Studio UI, TV renderer, Vega generation, AI, code editor, build execution or publish readiness.
 
-No database.
+### Validation
 
-## C. Channel agent
+Focused contract/channel-engine/persistence/API tests, affected build/typecheck and `git diff --check`.
 
-Create provider-neutral tool-driven ChannelAgent.
+## P2 — Television kernel / 0.0.2
 
-Implement deterministic mock adapter and Bedrock Converse adapter using AWS SDK.
+### Owns
 
-Tools cover brand/navigation/pages/modules/content.
+Shared television semantics:
+- bounded TV module semantic model from ChannelSpec
+- content resolution
+- navigation commands
+- focus identity/order/transitions
+- page/detail/playback state contracts
 
-No arbitrary filesystem/shell authority from model output.
+Vega generator:
+- `packages/generator`
+- `templates/vega-channel`
+- deterministic generation from ChannelSpec + template/runtime version
+- manifest with `com.amazon.category.main`
+- generated-project metadata/fingerprint
+- generation contract/snapshot tests
 
-Show provider/status clearly in Studio.
+Platform discovery:
+- inspect current Amazon Devices Builder Tools context and installed Vega tooling
+- toolchain doctor contract
+- exact detected/missing prerequisites
+- no guessed build command
+- record actionable friction in `docs/feedback-log.md`
 
-## D. Studio
+### Does not own
 
-Build a polished dark creator UI.
+Polished Studio, Bedrock agent, source editor, build execution or publish UI.
 
-Surfaces:
-- Create/Agent
+### Validation
+
+Generator determinism/manifest, TV semantic/focus contract tests, doctor tests, affected build/typecheck and `git diff --check`.
+
+## P3 — Creator Studio / 0.0.3
+
+### Owns
+
+`apps/studio` React + TypeScript + Vite creator application:
+- progressive new-channel onboarding
+- project/channel shell
+- Create/Agent placeholder surface without real agent behavior
 - Design
 - Content
-- Code
-- Build
-- Publish
+- central 16:9 TV Preview
 
-TV Preview stays visually central.
+Preview:
+- hero/rail/grid/detail/playback projection
+- keyboard arrows/Enter/Escape
+- virtual remote using the same command abstraction
+- obvious focus treatment
+- deterministic back/initial focus
+- rights-safe sample media
+- responsive creator shell without treating TV preview as a web page
 
-Onboarding reveals complexity progressively.
+### Boundary
 
-## E. TV Preview
+Preview must consume P2 TV semantics; do not create a second independent channel/runtime model.
 
-Render 16:9 ChannelSpec with hero, rails, detail, playback, visible focus, keyboard arrows/Enter/Escape and virtual remote using the same navigation commands.
+### Validation
 
-Use rights-safe sample media/assets.
+Focused Studio/component/navigation tests, browser automation where deterministic/headless, studio build/typecheck and `git diff --check`.
 
-## F. Generator/code
+## P4 — Channel Agent / 0.0.4
 
-Generate a real source tree from ChannelSpec + checked-in Vega template/runtime.
+### Owns
 
-Code surface includes tree, read/edit/save safe files, changed state and regenerate.
+`packages/agent` and server/UI integration:
+- provider-neutral ChannelAgent
+- structured tool schemas over channel-engine
+- deterministic mock adapter
+- real Amazon Bedrock Converse/tool-use adapter
+- environment/config provider selection
+- bounded user-visible transcript/status/errors
+- safe handling of malformed/refused tool calls
+- Studio agent interaction
 
-Protect custom edits from destructive regeneration.
+Tools cover:
+- inspect channel
+- set brand
+- add/update/remove/reorder pages/modules/content
+- validated bounded patch where useful
 
-Generated manifest includes com.amazon.category.main.
+### Boundaries
 
-## G. Vega build
+- model never writes project files directly;
+- model cannot run shell commands;
+- model output is validated before mutation;
+- tests do not require AWS credentials;
+- real Bedrock evidence is recorded only when an actual call succeeds.
 
-Implement server-side toolchain doctor and bounded build wrapper.
+### Validation
 
-Do not invent commands.
+Tool schema/mutation/mock/provider adapter tests, integration with persisted projects/Studio, affected build/typecheck and `git diff --check`.
 
-During P1 inspect current Amazon Devices Builder Tools/Vega context available to the environment and installed tool help/version output.
+## P5 — Code, Build and Publish / 0.0.5
 
-If toolchain absent, return exact missing prerequisites.
+### Owns
 
-Build success requires artifact existence.
+Code:
+- generated-project file tree
+- safe text read/edit/save
+- project containment
+- changed/custom state
+- explicit regeneration behavior that cannot silently overwrite custom edits
 
-## H. Publishing
+Build:
+- server-side toolchain doctor integration
+- bounded argv-based process execution in generated project
+- use detected/documented real Vega commands only
+- captured output/status
+- artifact existence verification
+- artifact metadata/hash where practical
 
-Generate grouped readiness checks and local submission bundle.
+Publish:
+- grouped readiness model
+- build/experience/store/compliance/device/human groups
+- store copy/release-note preparation
+- submission bundle files
+- clear Amazon Developer Console human handoff
+- no credential capture or fake submission
 
-Write useful store copy.
+### Validation
 
-Separate automated Green checks, missing external evidence, creator questions and human Developer Console steps.
+Generated edit/regeneration protection, process safety, readiness and submission bundle tests; real build if tooling is available; affected build/typecheck and `git diff --check`.
 
-## I. Tests
+## P6 — Hackathon convergence / 0.0.6
 
-Use Vitest/node tests and browser tests where useful.
+### Owns
 
-Cover:
-- ChannelSpec parse/mutate/migrate
-- persistence/path containment
-- agent tool application/mock behavior
-- generator determinism/manifest
-- custom-edit protection
-- focus/navigation
-- readiness
-- API happy/error paths
-- creator golden path
+Cross-system integration rather than new architecture:
+- polished rights-safe Wild Earth fixture
+- full deterministic golden path
+- Create -> Preview -> Design/Content -> Agent -> Code -> Build -> Publish
+- restart/reload coherence
+- edge/error-state cleanup
+- UX/readability polish
+- aggregate test/build/typecheck/check
+- README exact setup/run commands
+- `MODULES.md` reflecting implemented source
+- demo-plan alignment
+- feedback-log updates from actual Amazon tooling
 
-Root check builds/typechecks/tests the workspace.
+P6 may fix bounded integration defects discovered while joining P1-P5. It must not broaden scope into deferred SaaS/platform features.
 
-## J. Docs/evidence
+### Validation
 
-Update README exact setup/run commands.
+Root aggregate `check`, focused golden-path/browser automation where available, `git diff --check`.
 
-Create MODULES.md from implemented source.
+## P7 — Real platform qualification / 0.0.7
 
-Update docs/feedback-log.md for actual Amazon-tool friction.
+P7 is the sole final closeout/manual browser prompt.
 
-Do not mark external platform steps complete without evidence.
+It owns evidence, not broad implementation:
+- clean-start README flow
+- real browser golden path
+- persistence/restart
+- Bedrock proof if claimed
+- generated Vega source/manifest inspection
+- custom-code preservation
+- real Vega toolchain identity
+- real VPKG artifact/hash
+- simulator or Fire TV launch/navigation
+- truthful Publish/submission bundle
+- aggregate check
+- three-minute demo rehearsal
+- final `closeout.md`
 
-## P2 handoff
+A remaining source defect => NOT GREEN + bounded correction stack.
 
-P1 reports exact validation commands/counts, whether Bedrock was called, whether Vega tooling was available, whether VPKG was actually produced and exact P2-required external steps.
+## Cross-cutting invariants
+
+- ChannelSpec remains canonical.
+- Preview and generated runtime share semantic contracts.
+- No credentials in project/repository state.
+- No unbounded arbitrary command endpoint.
+- No fabricated external validation.
+- No silent overwrite of custom generated code.
+- Creator owns generated project and Amazon account.
+- Deferred features stay deferred.
+
+## Validation economy
+
+P1-P5 run focused validation only.
+P6 owns the first full aggregate convergence check.
+P7 owns final aggregate + manual browser/device proof.
+
+This keeps checkpoint evidence useful without repeatedly paying for whole-repository validation.

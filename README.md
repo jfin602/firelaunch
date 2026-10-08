@@ -8,11 +8,19 @@ The hackathon MVP is deliberately narrow: describe a channel, generate a structu
 
 ## Current gate
 
-FireLaunch is at **0.0.0 bootstrap**. The first implementation is a deliberate **GPT-6 Astra one-shot** in `docs/tasks/p0`.
+FireLaunch is at **0.0.0 bootstrap**. The active implementation plan is the staged **P0 FireLaunch Hackathon MVP Prompt Stack** in `docs/tasks/p0`.
 
-- P1: Astra builds the complete hackathon MVP.
-- P2: independent browser/Vega qualification and closeout.
-- Any remaining defects become bounded `c0-*` correction Prompt Stacks rather than silently expanding P1.
+P0 uses six bounded GPT-6 Sol High implementation checkpoints followed by one independent browser/Vega qualification closeout:
+
+- P1: repository foundation, ChannelSpec, persistence, API skeleton
+- P2: shared TV semantics, Vega generator, manifest and toolchain discovery
+- P3: creator Studio, TV Preview, D-pad/focus and playback
+- P4: ChannelAgent, structured tools, deterministic mock and Bedrock
+- P5: Code, Build and Publish/readiness
+- P6: golden-path integration, Wild Earth fixture, regression and polish
+- P7: real browser + VPKG + Vega simulator/Fire TV qualification
+
+Astra remains available only as an exceptional escalation option for a genuinely cross-system blocker.
 
 Read `BOOT.md` before substantial repository-aware work.
 
@@ -42,7 +50,7 @@ Submission deadline: **October 23, 2026 at 12:00 PM PDT**.
 - `docs/publishing.md`
 - `docs/hackathon-requirements.md`
 - `docs/roadmap/mvp-roadmap.md`
-- `docs/tasks/p0/` - Astra one-shot Prompt Stack
+- `docs/tasks/p0/` - staged Sol Prompt Stack
 
 ## Prompt Stack workflow
 
@@ -61,6 +69,10 @@ Local execution:
 Validate prompt grammar:
 
 `yarn codex:stack:validate p0`
+
+Run runner regressions:
+
+`yarn test:runner`
 
 Canonical vocabulary: **Prompt Stack** is the common name for phase and correction stacks.
 

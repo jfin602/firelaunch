@@ -23,9 +23,19 @@ FireLaunch is not merely an AI code generator and not a generic website builder.
 
 Repository baseline: 0.0.0.
 
-The active Prompt Stack is docs/tasks/p0.
+The active Prompt Stack is `docs/tasks/p0`.
 
-P1 is a deliberate GPT-6 Astra one-shot that owns the complete hackathon MVP implementation. P2 is the only final qualification/closeout prompt. If P2 is Not Green, create bounded c0-* correction Prompt Stacks. Do not silently turn the one-shot into an indefinite implementation loop.
+P0 is a staged Sol implementation stack with six runner-owned implementation checkpoints and one final manual/browser qualification gate:
+
+1. P1 / 0.0.1 - repository foundation, ChannelSpec, channel engine, persistence and API skeleton
+2. P2 / 0.0.2 - shared TV semantics, Vega generator, manifest and toolchain discovery
+3. P3 / 0.0.3 - Creator Studio, TV Preview, D-pad/focus and playback
+4. P4 / 0.0.4 - ChannelAgent, validated tools, mock provider and real Bedrock adapter
+5. P5 / 0.0.5 - Code, regeneration protection, Build and Publish/readiness
+6. P6 / 0.0.6 - golden-path integration, Wild Earth fixture, regression and polish
+7. P7 / 0.0.7 - independent browser + real Vega qualification and closeout
+
+If P7 is Not Green, create bounded `c0-*` correction Prompt Stacks from observed blockers rather than rerunning P0 wholesale.
 
 ## Locked product decisions
 
@@ -71,12 +81,13 @@ Prompt Stack is the canonical name for both phase and correction stacks.
 
 Plan richly; prompt sparsely; validate rigorously.
 
-P0 is an explicit exception to the ordinary small-prompt preference because the owner chose an Astra greenfield one-shot. The exception applies only to P1 scope. Subsequent repairs should be small and evidence-driven.
+Each successful implementation prompt is a checkpoint and should make the next prompt easier to reason about. Prefer bounded work with focused tests over paying a stronger model to repeatedly rediscover the whole project.
 
 Model policy:
-- GPT-6 Astra High: exceptional greenfield whole-product implementation, currently P0/P1.
-- GPT-6 Sol High: qualification, difficult corrections and architecture-sensitive repairs.
-- GPT-6 Sol Medium: routine bounded work.
+- GPT-6 Sol Medium: default bounded routine work.
+- GPT-6 Sol High: P0 implementation, qualification and architecture-sensitive corrections.
+- GPT-6 Sol XHigh: exceptional review/repair only.
+- GPT-6 Astra High: exceptional escalation for a genuinely cross-system blocker where the long-horizon advantage justifies the cost.
 
 The Prompt Stack runner owns implementation commits. Agents executed by the runner must not commit manually.
 
@@ -96,4 +107,4 @@ Green requires direct evidence that:
 - repository setup/run instructions are sufficient for judging;
 - the three-minute demo path is rehearsable.
 
-If real Vega build/device evidence is unavailable, P2 must be Not Green even if the browser studio is polished.
+If real Vega build/device evidence is unavailable, P7 must be Not Green even if the browser studio is polished.
