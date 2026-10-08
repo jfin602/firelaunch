@@ -4,8 +4,10 @@ import { applyMutation, mutationSchema } from '@firelaunch/channel-engine';
 import { createProjectSchema, updateProjectSchema } from '@firelaunch/contracts';
 import { agentRequestSchema, BedrockProvider, ChannelAgent, MockProvider, providerStatus, type AgentProvider } from '@firelaunch/agent';
 import { ProjectRepository, RepositoryError } from './repository.js';
+import { WorkspaceService } from './workspace.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
+const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
 const MAX_BODY_BYTES = 1_000_000;
 
 async function body(request: IncomingMessage): Promise<unknown> {
@@ -29,11 +31,12 @@ function respond(response: ServerResponse, status: number, value: unknown): void
 export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider) {
   const status = selectedProvider ? { provider: selectedProvider.name, configured: true, message: selectedProvider.name === 'mock' ? 'Deterministic mock; no cloud request.' : 'Bedrock configured; credentials and model access checked on request.' } : providerStatus(process.env);
   const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : new BedrockProvider(process.env.BEDROCK_MODEL_ID!))) : null;
+  const workspace = new WorkspaceService(repository);
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? '', 'http://localhost');
       const segments = url.pathname.split('/').filter(Boolean);
-      if (url.search || segments[0] !== 'api' || segments[1] !== 'projects') {
+      if ((url.search && !(segments.length === 5 && segments[3] === 'code' && segments[4] === 'file' && request.method === 'GET')) || segments[0] !== 'api' || segments[1] !== 'projects') {
         respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return;
       }
       if (segments.length === 2 && request.method === 'POST') {
@@ -44,6 +47,27 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
       }
       if (segments.length === 3 && request.method === 'GET') {
         respond(response, 200, await repository.read(segments[2]!)); return;
+      }
+      if (segments.length === 4 && ['code', 'build', 'readiness', 'bundle'].includes(segments[3]!)) {
+        const id = segments[2]!;
+        const action = segments[3];
+        if (action === 'code' && request.method === 'GET') { respond(response, 200, await workspace.overview(id)); return; }
+        if (action === 'code' && request.method === 'POST') { z.strictObject({}).parse(await body(request)); respond(response, 200, await workspace.generate(id)); return; }
+        if (action === 'build' && request.method === 'GET') { respond(response, 200, await workspace.buildStatus(id)); return; }
+        if (action === 'build' && request.method === 'POST') { z.strictObject({}).parse(await body(request)); respond(response, 200, await workspace.build(id)); return; }
+        if (action === 'readiness' && request.method === 'GET') { respond(response, 200, await workspace.readiness(id)); return; }
+        if (action === 'bundle' && request.method === 'POST') { z.strictObject({}).parse(await body(request)); respond(response, 201, await workspace.bundle(id)); return; }
+      }
+      if (segments.length === 5 && segments[3] === 'code' && segments[4] === 'file') {
+        if (request.method === 'POST') {
+          const input = saveSourceSchema.parse(await body(request));
+          respond(response, 200, await workspace.save(segments[2]!, input.path, input.content, input.expectedHash)); return;
+        }
+        if (request.method === 'GET') {
+          const name = url.searchParams.get('path');
+          if (url.searchParams.size !== 1 || !name) throw new ZodError([{ code: 'custom', path: [], message: 'Expected path' }]);
+          respond(response, 200, await workspace.read(segments[2]!, name)); return;
+        }
       }
       if (segments.length === 4 && segments[3] === 'agent-status' && request.method === 'GET') {
         await repository.read(segments[2]!);
@@ -70,7 +94,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
       respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } });
     } catch (error) {
       if (error instanceof ZodError) respond(response, 400, { error: { code: 'INVALID_INPUT', message: error.issues.map(issue => issue.message).join('; ').slice(0, 500) } });
-      else if (error instanceof RepositoryError) respond(response, error.code === 'NOT_FOUND' ? 404 : error.code === 'CONFLICT' ? 409 : 500, { error: { code: error.code, message: error.message } });
+      else if (error instanceof RepositoryError) respond(response, error.code === 'NOT_FOUND' ? 404 : error.code === 'CONFLICT' ? 409 : error.code === 'INVALID_INPUT' ? 400 : 500, { error: { code: error.code, message: error.message } });
       else if (error instanceof Error && (error as NodeJS.ErrnoException).code) respond(response, 500, { error: { code: 'STORAGE_ERROR', message: 'Storage operation failed' } });
       else if (error instanceof Error) respond(response, 400, { error: { code: 'INVALID_INPUT', message: error.message.slice(0, 500) } });
       else respond(response, 500, { error: { code: 'STORAGE_ERROR', message: 'Internal error' } });

@@ -43,3 +43,16 @@ export async function askAgent(project: ChannelProject, message: string): Promis
   const result = await request(`/${project.id}/agent`, json({ expectedRevision: project.revision, message })) as AgentResponse;
   return { ...result, project: projectSchema.parse(result.project) };
 }
+
+export type CodeOverview = { generated: boolean; files: string[]; changed: string[]; stale: boolean; path: string };
+export type SourceFile = { path: string; content: string; sha256: string };
+export type BuildEvidence = { status: 'blocked' | 'failed' | 'succeeded'; reason?: string; command?: string[]; exitCode?: number | null; durationMs?: number; output?: string; artifact?: { path: string; sha256: string; bytes: number }; toolchain: { missing: string[]; node: { detail: string }; npm: { detail: string }; vegaSdk: { detail: string }; vegaCli: { detail: string }; device: { detail: string } } };
+export type Readiness = { checks: { group: string; ready: boolean; detail: string }[]; copy: { appName: string; shortDescription: string; longDescription: string; releaseNotes: string }; assets: { artwork: string[]; unresolvedLocal: string[]; screenshots: string[] }; build: BuildEvidence; submitted: false };
+export const codeOverview = (id: string) => request(`/${id}/code`) as Promise<CodeOverview>;
+export const generateCode = (id: string) => request(`/${id}/code`, json({})) as Promise<CodeOverview>;
+export const readSource = (id: string, path: string) => request(`/${id}/code/file?path=${encodeURIComponent(path)}`) as Promise<SourceFile>;
+export const saveSource = (id: string, file: SourceFile, content: string) => request(`/${id}/code/file`, json({ path: file.path, expectedHash: file.sha256, content })) as Promise<SourceFile>;
+export const buildStatus = (id: string) => request(`/${id}/build`) as Promise<BuildEvidence>;
+export const runBuild = (id: string) => request(`/${id}/build`, json({})) as Promise<BuildEvidence>;
+export const readiness = (id: string) => request(`/${id}/readiness`) as Promise<Readiness>;
+export const createBundle = (id: string) => request(`/${id}/bundle`, json({})) as Promise<{ path: string; files: string[]; submitted: false }>;

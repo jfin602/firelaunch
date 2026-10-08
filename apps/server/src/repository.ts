@@ -7,7 +7,7 @@ import { migrateChannel, newId, starterChannel } from '@firelaunch/channel-engin
 import { z } from 'zod';
 
 export class RepositoryError extends Error {
-  constructor(public readonly code: 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_ERROR', message: string) { super(message); }
+  constructor(public readonly code: 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_ERROR' | 'INVALID_INPUT', message: string) { super(message); }
 }
 
 async function directoryNoLink(directory: string): Promise<void> {
@@ -61,6 +61,8 @@ export class ProjectRepository {
     if (path.dirname(resolved) !== await realpath(await this.base())) throw new RepositoryError('STORAGE_ERROR', 'Project escapes data root');
     return directory;
   }
+
+  async workspace(id: string): Promise<string> { return this.guardedDirectory(id); }
 
   private async locked<T>(id: string, action: () => Promise<T>): Promise<T> {
     const previous = this.locks.get(id) ?? Promise.resolve();
