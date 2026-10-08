@@ -1,6 +1,6 @@
 {
   "name": "@firelaunch/studio",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@firelaunch/channel-engine": "0.0.1",
+    "@firelaunch/agent": "0.0.4",
     "@firelaunch/contracts": "0.0.1",
     "@firelaunch/tv": "0.0.2",
     "react": "^19.0.0",

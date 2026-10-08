@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { ChannelMutation } from '@firelaunch/channel-engine';
 import type { ChannelProject, ContentItem, Module, Page } from '@firelaunch/contracts';
-import { ApiError, createProject, getProject, listProjects, mutateProject } from './api.js';
+import type { AgentEvent } from '@firelaunch/agent';
+import { ApiError, askAgent, createProject, getProject, listProjects, mutateProject } from './api.js';
 import { Preview } from './Preview.js';
+import { AgentPanel } from './AgentPanel.js';
 import { SAMPLE_ART, SAMPLE_MEDIA, sampleMutations } from './sample.js';
 
 function newId(kind: 'page' | 'mod' | 'item'): string {
@@ -17,14 +19,15 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="field"><span>{label}</span>{children}</label>;
 }
 
-function Intro({ onCreate, busy }: { onCreate: (title: string, sample: boolean) => Promise<void>; busy: boolean }) {
+function Intro({ onCreate, busy }: { onCreate: (title: string, sample: boolean, request: string) => Promise<void>; busy: boolean }) {
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState('');
   const [sample, setSample] = useState(true);
+  const [request, setRequest] = useState('');
   return <div className="welcome"><div className="welcome-symbol">✳</div><span className="eyebrow">YOUR CHANNEL STARTS HERE</span><h1>Stories belong<br/><em>on the big screen.</em></h1><p>Shape your brand, curate a collection, and explore the TV experience before writing a line of code.</p>
     <div className="welcome-form"><div className="steps"><span className={step === 0 ? 'current' : ''}>01 Identity</span><span className={step === 1 ? 'current' : ''}>02 First look</span></div>
       {step === 0 ? <form onSubmit={event => { event.preventDefault(); if (title.trim()) setStep(1); }}><Field label="CHANNEL NAME"><input autoFocus required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} placeholder="e.g. Wild Earth" /></Field><button className="primary" type="submit">Continue <span>→</span></button></form>
-        : <div><h2>{title}</h2><p>Start with an original sample clip, or begin with a blank channel. You can change everything later.</p><label className="check"><input type="checkbox" checked={sample} onChange={event => setSample(event.target.checked)} /> Add original sample media and TV modules</label><div className="button-row"><button onClick={() => setStep(0)}>← Back</button><button className="primary" disabled={busy} onClick={() => void onCreate(title.trim(), sample)}>{busy ? 'Creating…' : 'Create channel →'}</button></div></div>}
+        : <div><h2>{title}</h2><p>Start with an original sample clip, or begin with a blank channel. Optionally describe what the agent should add after creation.</p><label className="check"><input type="checkbox" checked={sample} onChange={event => setSample(event.target.checked)} /> Add original sample media and TV modules</label><Field label="INITIAL AGENT REQUEST (OPTIONAL)"><textarea maxLength={2000} value={request} onChange={event => setRequest(event.target.value)} placeholder="e.g. Add page Explore" /></Field><div className="button-row"><button onClick={() => setStep(0)}>← Back</button><button className="primary" disabled={busy} onClick={() => void onCreate(title.trim(), sample, request.trim())}>{busy ? 'Creating…' : 'Create channel →'}</button></div></div>}
     </div></div>;
 }
 
@@ -100,7 +103,9 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [newChannel, setNewChannel] = useState(false);
+  const [agentEvents, setAgentEvents] = useState<Record<string, AgentEvent[]>>({});
   const select = (next: ChannelProject) => { projectRef.current = next; setProject(next); window.history.replaceState(null, '', `?project=${next.id}`); };
+  const acceptProject = (next: ChannelProject) => { select(next); setProjects(previous => previous.map(item => item.id === next.id ? next : item)); };
   useEffect(() => {
     void listProjects().then(items => {
       setProjects(items);
@@ -128,22 +133,27 @@ export default function App() {
       return false;
     } finally { setBusy(false); }
   };
-  const create = async (title: string, sample: boolean) => {
+  const create = async (title: string, sample: boolean, request: string) => {
     setBusy(true); setError('');
     try {
       const created = await createProject(title);
       select(created); setProjects(previous => [...previous, created]); setNewChannel(false); setSurface('Create');
       if (sample) for (const mutation of sampleMutations(created, newId('item'), [newId('mod'), newId('mod'), newId('mod')])) if (!(await commit(mutation))) break;
+      if (request && projectRef.current?.id === created.id) {
+        const result = await askAgent(projectRef.current, request);
+        acceptProject(result.project);
+        setAgentEvents(previous => ({ ...previous, [created.id]: result.events }));
+      }
     } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
     finally { setBusy(false); }
   };
-  const placeholder = surface === 'Create' ? { eyebrow: 'CREATE / AGENT', title: 'A space for your ideas.', copy: 'Your channel is ready to shape by hand. Conversational editing arrives in P4; no AI request is sent from this screen.', icon: '✳' } : { eyebrow: `${surface.toUpperCase()} / COMING IN P5`, title: `${surface} is on its way.`, copy: surface === 'Code' ? 'Generated Vega source inspection and editing arrives in P5. Preview reflects the current ChannelSpec, not editable generated code.' : surface === 'Build' ? 'No build has run. Vega toolchain execution and verified artifacts arrive in P5.' : 'No submission has been made. Evidence-backed readiness and a human Amazon Console handoff arrive in P5.', icon: icons[surface] };
+  const placeholder = { eyebrow: `${surface.toUpperCase()} / COMING IN P5`, title: `${surface} is on its way.`, copy: surface === 'Code' ? 'Generated Vega source inspection and editing arrives in P5. Preview reflects the current ChannelSpec, not editable generated code.' : surface === 'Build' ? 'No build has run. Vega toolchain execution and verified artifacts arrive in P5.' : 'No submission has been made. Evidence-backed readiness and a human Amazon Console handoff arrive in P5.', icon: icons[surface] };
   return <div className="app-shell"><aside className="sidebar"><div className="wordmark"><span className="mark">✳</span><span>firelaunch<small>CREATOR STUDIO</small></span></div><div className="sidebar-label">WORKSPACE</div><button className="project-switch" onClick={() => setNewChannel(true)}><span className="project-avatar">{project?.spec.title[0] ?? '+'}</span><span>{project?.spec.title ?? 'New channel'}<small>{project ? `REV ${project.revision} · LOCAL` : 'GET STARTED'}</small></span><span>＋</span></button>{projects.length > 1 && <select className="project-select" aria-label="Switch project" value={project?.id ?? ''} onChange={event => { const next = projects.find(item => item.id === event.target.value); if (next) select(next); }}>{projects.map(item => <option key={item.id} value={item.id}>{item.spec.title}</option>)}</select>}
-    <div className="sidebar-label">CHANNEL WORKSPACE</div><nav className="sidebar-nav" aria-label="Studio surfaces">{surfaces.map(target => <button key={target} className={surface === target ? 'active' : ''} onClick={() => setSurface(target)}><span>{icons[target]}</span>{target}{['Code', 'Build', 'Publish'].includes(target) && <small>SOON</small>}</button>)}</nav><div className="sidebar-footer">✧ &nbsp; Vega-first creation<br/><small>Version 0.0.3 · Local studio</small></div></aside>
+    <div className="sidebar-label">CHANNEL WORKSPACE</div><nav className="sidebar-nav" aria-label="Studio surfaces">{surfaces.map(target => <button key={target} className={surface === target ? 'active' : ''} onClick={() => setSurface(target)}><span>{icons[target]}</span>{target}{['Code', 'Build', 'Publish'].includes(target) && <small>SOON</small>}</button>)}</nav><div className="sidebar-footer">✧ &nbsp; Vega-first creation<br/><small>Version 0.0.4 · Local studio</small></div></aside>
     <main><header className="topbar"><div><span className="eyebrow">STUDIO / {surface.toUpperCase()}</span><h1>{project?.spec.title ?? 'Your next channel'}</h1></div><div className="topbar-right"><span className="status"><i/> {busy ? 'SAVING' : project ? 'SAVED LOCALLY' : 'READY'}</span><button onClick={() => setNewChannel(previous => !previous)}>{newChannel && project ? '← Current channel' : '＋ New channel'}</button></div></header>
       {error && <div className="error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></div>}
       {loading ? <div className="loading">Loading local projects…</div> : (!project || newChannel) ? <Intro busy={busy} onCreate={create} /> : <div className="workspace"><div className="workspace-main"><Preview key={project.id} spec={project.spec}/><div className="under-preview"><div><span className="eyebrow">THE REAL TV EXPERIENCE</span><h2>From idea to living room.</h2><p>Navigate every tile with the remote. Changes you save on the right appear here immediately.</p></div><span className="signal">◉ &nbsp; P2 SEMANTIC PREVIEW</span></div></div><aside className="inspector" key={`${project.id}:${surface}`}>
-        {surface === 'Design' ? <Design project={project} commit={commit}/> : surface === 'Content' ? <Content project={project} commit={commit}/> : <div className="panel-content placeholder"><span className="eyebrow">{placeholder.eyebrow}</span><div className="placeholder-icon">{placeholder.icon}</div><h2>{placeholder.title}</h2><p>{placeholder.copy}</p>{surface === 'Create' && <button className="primary" onClick={() => setSurface('Content')}>Edit content →</button>}</div>}
+        {surface === 'Design' ? <Design project={project} commit={commit}/> : surface === 'Content' ? <Content project={project} commit={commit}/> : surface === 'Create' ? <AgentPanel key={project.id} project={project} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <div className="panel-content placeholder"><span className="eyebrow">{placeholder.eyebrow}</span><div className="placeholder-icon">{placeholder.icon}</div><h2>{placeholder.title}</h2><p>{placeholder.copy}</p></div>}
       </aside></div>}
     </main></div>;
 }

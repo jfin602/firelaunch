@@ -8,11 +8,11 @@ The hackathon MVP is deliberately narrow: describe a channel, generate a structu
 
 ## Current gate
 
-FireLaunch's Creator Studio checkpoint is at **0.0.3**. The active implementation plan is the staged **P0 FireLaunch Hackathon MVP Prompt Stack** in `docs/tasks/p0`.
+FireLaunch's Channel Agent checkpoint is at **0.0.4**. The active implementation plan is the staged **P0 FireLaunch Hackathon MVP Prompt Stack** in `docs/tasks/p0`.
 
 P1 provides the local Node API; P3 adds a separate Studio UI. With Node 24 and npm 12, run `npm install`, `npm run build`, then `npm run dev` and `npm run dev:studio` in separate terminals. The API listens on `127.0.0.1:4174` and Studio on `127.0.0.1:4173` by default. Set `PORT` and `FIRELAUNCH_DATA_DIR` to override the API port and local data root (and update the Studio proxy if changing the API port). Project data under `.firelaunch-data/projects/<channel-id>/project.json` is excluded from Git.
 
-`POST /api/projects` accepts `{ "title": "Wild Earth" }` and optional `slug`; `GET /api/projects` lists projects, `GET /api/projects/:id` reads one, `PUT /api/projects/:id` accepts `{ "expectedRevision": 1, "spec": { ... } }`, and `POST /api/projects/:id/mutations` accepts `{ "expectedRevision": 1, "mutation": { ... } }`. Writes return the full project with an incremented revision; stale writes return 409. Invalid input returns 400. Only ChannelSpec v1 is accepted; no migration from older or future schema versions is implemented yet. The server binds loopback only and has no authentication or cloud access.
+`POST /api/projects` accepts `{ "title": "Wild Earth" }` and optional `slug`; `GET /api/projects` lists projects, `GET /api/projects/:id` reads one, `PUT /api/projects/:id` accepts `{ "expectedRevision": 1, "spec": { ... } }`, and `POST /api/projects/:id/mutations` accepts `{ "expectedRevision": 1, "mutation": { ... } }`. Writes return the full project with an incremented revision; stale writes return 409. Invalid input returns 400. Only ChannelSpec v1 is accepted; no migration from older or future schema versions is implemented yet. The server binds loopback only and has no authentication.
 
 P0 uses six bounded GPT-6 Sol High implementation checkpoints followed by one independent browser/Vega qualification closeout:
 
@@ -100,9 +100,11 @@ Escape (except while typing in a form), or the on-screen remote. The sample clip
 generated specifically for this repository and served by the local Vite Studio; its
 `127.0.0.1:4173` URL is a development fixture, not a deployable Vega media host.
 Replace that URL and any `assets/` artwork with rights-cleared, reachable media before
-building a standalone TV project. The Create agent area is informational until P4;
+building a standalone TV project. The Create agent area is active in P4;
 Code, Build and Publish are informational until P5 and claim no generated artifact.
 Run `npm run test -w @firelaunch/studio` for focused Preview and sample tests.
+
+P4 Channel Agent: onboarding accepts an optional initial request, then Create offers refinement and a bounded activity transcript. By default `FIRELAUNCH_AGENT_PROVIDER=mock` gives deterministic offline behavior (for example, `add page Explore`, `primary color to #aabbcc`, or `add text module About with body Hello`). For real tool use set `FIRELAUNCH_AGENT_PROVIDER=bedrock`, `BEDROCK_MODEL_ID` to an accessible Converse-capable model and `AWS_REGION` to its region; the AWS SDK uses its normal credential resolution chain. `GET /api/projects/:id/agent-status` reports configuration, not model access or credential verification. `POST /api/projects/:id/agent` accepts `{ "expectedRevision": 1, "message": "add page Explore" }`, persists each validated mutation and returns `{ provider, status, project, events }`. Malformed/unsupported tools refuse; partially saved operations remain visible and revisioned. No AWS credentials are required for tests. The model has no filesystem, shell or arbitrary JSON-replacement tool. P5 still owns Code, Build and Publish.
 
 Canonical vocabulary: **Prompt Stack** is the common name for phase and correction stacks.
 

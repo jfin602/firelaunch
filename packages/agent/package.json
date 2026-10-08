@@ -1,0 +1,9 @@
+{
+  "name": "@firelaunch/agent",
+  "version": "0.0.4",
+  "private": true,
+  "type": "module",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "dependencies": { "@firelaunch/channel-engine": "0.0.1", "@firelaunch/contracts": "0.0.1", "@aws-sdk/client-bedrock-runtime": "^3.0.0", "zod": "^4.0.0" }
+}

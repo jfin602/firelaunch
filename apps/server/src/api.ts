@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { ZodError, z } from 'zod';
 import { applyMutation, mutationSchema } from '@firelaunch/channel-engine';
 import { createProjectSchema, updateProjectSchema } from '@firelaunch/contracts';
+import { agentRequestSchema, BedrockProvider, ChannelAgent, MockProvider, providerStatus, type AgentProvider } from '@firelaunch/agent';
 import { ProjectRepository, RepositoryError } from './repository.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
@@ -25,7 +26,9 @@ function respond(response: ServerResponse, status: number, value: unknown): void
   response.end(JSON.stringify(value));
 }
 
-export function createApi(repository: ProjectRepository) {
+export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider) {
+  const status = selectedProvider ? { provider: selectedProvider.name, configured: true, message: selectedProvider.name === 'mock' ? 'Deterministic mock; no cloud request.' : 'Bedrock configured; credentials and model access checked on request.' } : providerStatus(process.env);
+  const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : new BedrockProvider(process.env.BEDROCK_MODEL_ID!))) : null;
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? '', 'http://localhost');
@@ -41,6 +44,17 @@ export function createApi(repository: ProjectRepository) {
       }
       if (segments.length === 3 && request.method === 'GET') {
         respond(response, 200, await repository.read(segments[2]!)); return;
+      }
+      if (segments.length === 4 && segments[3] === 'agent-status' && request.method === 'GET') {
+        await repository.read(segments[2]!);
+        respond(response, 200, status); return;
+      }
+      if (segments.length === 4 && segments[3] === 'agent' && request.method === 'POST') {
+        const input = agentRequestSchema.parse(await body(request));
+        const current = await repository.read(segments[2]!);
+        if (current.revision !== input.expectedRevision) throw new RepositoryError('CONFLICT', 'Project revision changed');
+        if (!agent) { respond(response, 503, { error: { code: 'PROVIDER_UNAVAILABLE', message: status.message } }); return; }
+        respond(response, 200, await agent.run(current, input.message, (spec, revision) => repository.update(current.id, revision, spec))); return;
       }
       if (segments.length === 3 && request.method === 'PUT') {
         const input = updateProjectSchema.parse(await body(request));
