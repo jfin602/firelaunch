@@ -418,7 +418,6 @@ export function assertPostPrompt({
   exitCode,
   version,
   prompt,
-  packageLockExists,
   coherent = true,
 }) {
   if (exitCode !== 0) throw new Error(`Codex exited with status ${exitCode}.`);
@@ -431,7 +430,6 @@ export function assertPostPrompt({
       `Expected ${prompt.mode === 'correction' ? 'unchanged ' : ''}package version ${expectedVersion}; found ${version}.`,
     );
   }
-  if (packageLockExists) throw new Error('package-lock.json was created.');
   if (!coherent)
     throw new Error('Repository state is not coherent enough to continue.');
 }

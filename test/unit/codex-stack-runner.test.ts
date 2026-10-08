@@ -238,7 +238,7 @@ const createPhaseRepository = async (
   );
   await writeFile(
     path.join(rootDirectory, '.gitignore'),
-    '.codex-runs/\npackage-lock.json\n.env*\n',
+    '.codex-runs/\n.env*\n',
   );
   for (let number = 1; number <= implementationCount; number += 1) {
     const entry = prompt(number, { config });
@@ -274,7 +274,7 @@ const createCorrectionRepository = async (implementationCount = 2) => {
   );
   await writeFile(
     path.join(rootDirectory, '.gitignore'),
-    '.codex-runs/\npackage-lock.json\n.env*\n',
+    '.codex-runs/\n.env*\n',
   );
   for (let number = 1; number <= implementationCount; number += 1) {
     const entry = correctionPrompt(number);
@@ -312,7 +312,7 @@ const createPost2PhaseRepository = async (implementationCount = 1) => {
   );
   await writeFile(
     path.join(rootDirectory, '.gitignore'),
-    '.codex-runs/\npackage-lock.json\n.env*\n',
+    '.codex-runs/\n.env*\n',
   );
   for (let number = 1; number <= implementationCount; number += 1) {
     const entry = post2Prompt(number);
@@ -738,7 +738,7 @@ test('requires exactly one unambiguous final closeout', () => {
   assert.equal(plan.closeout.number, 2);
 });
 
-test('version and package-lock invariants fail closed', () => {
+test('version invariants fail closed while npm package-lock is allowed', () => {
   const parsed = parsePrompt(prompt(1).filename, prompt(1).text);
   assert.equal(parsed.mode, 'phase');
   if (parsed.mode !== 'phase') {
@@ -748,15 +748,12 @@ test('version and package-lock invariants fail closed', () => {
     () => assertVersionCompatible('0.8.9', parsed, '0.8.0'),
     /expected package version/i,
   );
-  assert.throws(
-    () =>
-      assertPostPrompt({
-        exitCode: 0,
-        version: '0.8.1',
-        prompt: parsed,
-        packageLockExists: true,
-      }),
-    /package-lock/,
+  assert.doesNotThrow(() =>
+    assertPostPrompt({
+      exitCode: 0,
+      version: '0.8.1',
+      prompt: parsed,
+    }),
   );
   assert.throws(
     () =>
@@ -764,7 +761,6 @@ test('version and package-lock invariants fail closed', () => {
         exitCode: 0,
         version: '0.8.0',
         prompt: parsed,
-        packageLockExists: false,
       }),
     /Expected package version/,
   );
@@ -3073,12 +3069,12 @@ test('commit verification and dirty-tree failures prevent every later prompt', a
   }
 });
 
-test('package-lock creation fails before commit and prevents later prompts', async () => {
+test('npm package-lock creation is committed and does not block later prompts', async () => {
   const rootDirectory = await createPhaseRepository(2);
   const codexCalls: number[] = [];
   try {
-    await assert.rejects(
-      runCli(['p8'], {
+    assert.equal(
+      await runCli(['p8'], {
         rootDirectory,
         stdout: testOutput(false),
         resolveLauncher: async () => ({
@@ -3093,7 +3089,7 @@ test('package-lock creation fails before commit and prevents later prompts', asy
           );
           await writeFile(
             path.join(rootDirectory, 'package-lock.json'),
-            '{}\n',
+            `${JSON.stringify({ name: 'phase-test', version: `0.8.${parsedPrompt.number}`, lockfileVersion: 3, requires: true, packages: {} }, null, 2)}\n`,
           );
           return {
             code: 0,
@@ -3104,12 +3100,16 @@ test('package-lock creation fails before commit and prevents later prompts', asy
           };
         },
       }),
-      /package-lock\.json was created/,
+      0,
     );
-    assert.deepEqual(codexCalls, [1]);
+    assert.deepEqual(codexCalls, [1, 2]);
     assert.equal(
       gitResult(rootDirectory, ['log', '-1', '--format=%s']),
-      'baseline',
+      '0.8.2',
+    );
+    assert.equal(
+      gitResult(rootDirectory, ['ls-files', 'package-lock.json']),
+      'package-lock.json',
     );
   } finally {
     await rm(rootDirectory, { recursive: true, force: true });
@@ -3429,8 +3429,8 @@ test('auto-run closeout enforces normalized phase and correction version boundar
   }
 });
 
-test('auto-run closeout rejects HEAD drift, lockfiles, invalid versions, and incoherent diffs', async () => {
-  for (const failure of ['head', 'lockfile', 'version', 'diff'] as const) {
+test('auto-run closeout rejects HEAD drift, invalid versions, and incoherent diffs', async () => {
+  for (const failure of ['head', 'version', 'diff'] as const) {
     const rootDirectory = await createPhaseRepository(1);
     try {
       await assert.rejects(
@@ -3463,11 +3463,7 @@ test('auto-run closeout rejects HEAD drift, lockfiles, invalid versions, and inc
                 '-m',
                 'self commit',
               ]);
-            } else if (failure === 'lockfile') {
-              await writeFile(
-                path.join(rootDirectory, 'package-lock.json'),
-                '{}\n',
-              );
+
             } else if (failure === 'version') {
               await writeFile(
                 path.join(rootDirectory, 'package.json'),
@@ -3488,7 +3484,7 @@ test('auto-run closeout rejects HEAD drift, lockfiles, invalid versions, and inc
             };
           },
         }),
-        /HEAD changed|package-lock|not allowed|diff --check/,
+        /HEAD changed|not allowed|diff --check/,
       );
     } finally {
       await rm(rootDirectory, { recursive: true, force: true });
@@ -3604,7 +3600,7 @@ test('auto-run rendering and CLI validation distinguish review-required closeout
     ['p8', '--verbose', '--verbose'],
     ['--closeout'],
   ]) {
-    await assert.rejects(runCli(argv), /Usage: npm run codex:phase/);
+    await assert.rejects(runCli(argv), /Usage: npm run codex:stack/);
   }
   const runnerSource = await readFile(
     path.join(process.cwd(), 'scripts', 'codex-stack.mjs'),

@@ -16,7 +16,7 @@ Read BOOT.md, AGENTS.md, docs/VISION.md, docs/PRINCIPLES.md, docs/PRODUCT-MODEL.
 IMPLEMENT
 Follow the P1 section of docs/tasks/p0/implementation-plan.md.
 
-Create the Yarn/TypeScript workspace and the smallest source tree needed for:
+Create the npm workspaces/TypeScript repository and the smallest source tree needed for:
 - root build/typecheck/test/check workflow;
 - apps/server;
 - packages/contracts;

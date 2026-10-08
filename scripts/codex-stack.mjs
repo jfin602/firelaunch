@@ -660,9 +660,6 @@ export async function commitPromptChanges(
 
     assertNotInterrupted();
     successfulGit(runGit(['add', '-A']), 'Git staging failed');
-    if (await exists(path.join(rootDirectory, 'package-lock.json'))) {
-      throw new Error('package-lock.json was created.');
-    }
     const staged = runGit(['diff', '--cached', '--quiet', '--']);
     if (staged.error)
       throw new Error(
@@ -747,9 +744,6 @@ export async function commitPromptChanges(
         `Package version changed during commit verification; expected ${expectedVersion}.`,
       );
     }
-    if (await exists(path.join(rootDirectory, 'package-lock.json'))) {
-      throw new Error('package-lock.json exists after commit.');
-    }
     const remaining = successfulGit(
       runGit(['status', '--porcelain=v1', '--untracked-files=all']),
       'Unable to verify clean working tree',
@@ -833,18 +827,18 @@ export async function runCli(argv = process.argv.slice(2), dependencies = {}) {
     if (argument === '--verbose') {
       if (verbose)
         throw new Error(
-          'Usage: yarn codex:stack -- <task-folder> [--verbose] [--closeout]',
+          'Usage: npm run codex:stack -- <task-folder> [--verbose] [--closeout]',
         );
       verbose = true;
     } else if (argument === '--closeout') {
       if (closeoutAutoRun)
         throw new Error(
-          'Usage: yarn codex:stack -- <task-folder> [--verbose] [--closeout]',
+          'Usage: npm run codex:stack -- <task-folder> [--verbose] [--closeout]',
         );
       closeoutAutoRun = true;
     } else if (argument.startsWith('-')) {
       throw new Error(
-        'Usage: yarn codex:stack -- <task-folder> [--verbose] [--closeout]',
+        'Usage: npm run codex:stack -- <task-folder> [--verbose] [--closeout]',
       );
     } else {
       positional.push(argument);
@@ -852,7 +846,7 @@ export async function runCli(argv = process.argv.slice(2), dependencies = {}) {
   }
   if (positional.length !== 1) {
     throw new Error(
-      'Usage: yarn codex:stack -- <task-folder> [--verbose] [--closeout]',
+      'Usage: npm run codex:stack -- <task-folder> [--verbose] [--closeout]',
     );
   }
 
@@ -879,8 +873,6 @@ export async function runCli(argv = process.argv.slice(2), dependencies = {}) {
 
   if (!(await exists(path.join(rootDirectory, 'package.json'))))
     throw new Error('package.json does not exist.');
-  if (await exists(path.join(rootDirectory, 'package-lock.json')))
-    throw new Error('package-lock.json exists before the run.');
   const initialStatus = runGit(['status', '--porcelain=v1']);
   if (initialStatus.status !== 0)
     throw new Error(
@@ -1143,9 +1135,6 @@ export async function runCli(argv = process.argv.slice(2), dependencies = {}) {
       exitCode: result.code,
       version: await packageVersion(rootDirectory),
       prompt,
-      packageLockExists: await exists(
-        path.join(rootDirectory, 'package-lock.json'),
-      ),
       coherent: conflicts.status === 0,
     });
     if (interrupted) throw new Error(interruptionMessage);
@@ -1193,8 +1182,6 @@ export async function runCli(argv = process.argv.slice(2), dependencies = {}) {
     );
     if (preCloseoutStatus)
       throw new Error('Repository has uncommitted changes before closeout.');
-    if (await exists(path.join(rootDirectory, 'package-lock.json')))
-      throw new Error('package-lock.json exists before closeout.');
     const preCloseoutHead = successfulGit(
       runGit(['rev-parse', 'HEAD']),
       'Unable to read HEAD before closeout',
@@ -1295,8 +1282,6 @@ export async function runCli(argv = process.argv.slice(2), dependencies = {}) {
         'HEAD changed during closeout; closeout changes require human review and must not self-commit.',
       );
     }
-    if (await exists(path.join(rootDirectory, 'package-lock.json')))
-      throw new Error('package-lock.json was created.');
     const conflicts = runGit(['diff', '--check']);
     if (conflicts.status !== 0)
       throw new Error('Closeout changes fail git diff --check.');

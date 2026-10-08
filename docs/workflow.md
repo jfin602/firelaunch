@@ -71,13 +71,13 @@ If final qualification finds blockers, close Not Green and create a bounded corr
 ## Runner
 
 Validate:
-yarn codex:stack:validate p0
+npm run codex:stack:validate -- p0
 
 Run:
-yarn codex:stack p0
+npm run codex:stack -- p0
 
 Runner regressions:
-yarn test:runner
+npm run test:runner
 
 The runner validates grammar/versioning, resumes completed checkpoints, asks before dirty-tree continuation, invokes Codex, retries bounded model-capacity failures, owns implementation commits, stops at browser-required gates and stores evidence under .codex-runs/.
 

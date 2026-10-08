@@ -64,15 +64,15 @@ Implementation:
 
 Local execution:
 
-`yarn codex:stack p0`
+`npm run codex:stack -- p0`
 
 Validate prompt grammar:
 
-`yarn codex:stack:validate p0`
+`npm run codex:stack:validate -- p0`
 
 Run runner regressions:
 
-`yarn test:runner`
+`npm run test:runner`
 
 Canonical vocabulary: **Prompt Stack** is the common name for phase and correction stacks.
 

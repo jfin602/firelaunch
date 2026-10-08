@@ -9,7 +9,7 @@ The repository currently contains documentation and the Prompt Stack runner but 
 ### Owns
 
 Repository/application shell:
-- Yarn workspace
+- npm workspaces
 - TypeScript configuration
 - root start/build/typecheck/test/check commands
 - `apps/server`
