@@ -8,9 +8,9 @@ The hackathon MVP is deliberately narrow: describe a channel, generate a structu
 
 ## Current gate
 
-FireLaunch's P1 product kernel is at **0.0.1**. The active implementation plan is the staged **P0 FireLaunch Hackathon MVP Prompt Stack** in `docs/tasks/p0`.
+FireLaunch's Creator Studio checkpoint is at **0.0.3**. The active implementation plan is the staged **P0 FireLaunch Hackathon MVP Prompt Stack** in `docs/tasks/p0`.
 
-P1 provides a local Node API and no Studio UI yet. With Node 24 and npm 12, run `npm install`, `npm run check`, and `npm run dev` (or `npm start` for compiled output). It listens on `127.0.0.1:4174` by default. Set `PORT` and `FIRELAUNCH_DATA_DIR` to override the port and local data root. Project data under `.firelaunch-data/projects/<channel-id>/project.json` is excluded from Git.
+P1 provides the local Node API; P3 adds a separate Studio UI. With Node 24 and npm 12, run `npm install`, `npm run build`, then `npm run dev` and `npm run dev:studio` in separate terminals. The API listens on `127.0.0.1:4174` and Studio on `127.0.0.1:4173` by default. Set `PORT` and `FIRELAUNCH_DATA_DIR` to override the API port and local data root (and update the Studio proxy if changing the API port). Project data under `.firelaunch-data/projects/<channel-id>/project.json` is excluded from Git.
 
 `POST /api/projects` accepts `{ "title": "Wild Earth" }` and optional `slug`; `GET /api/projects` lists projects, `GET /api/projects/:id` reads one, `PUT /api/projects/:id` accepts `{ "expectedRevision": 1, "spec": { ... } }`, and `POST /api/projects/:id/mutations` accepts `{ "expectedRevision": 1, "mutation": { ... } }`. Writes return the full project with an incremented revision; stale writes return 409. Invalid input returns 400. Only ChannelSpec v1 is accepted; no migration from older or future schema versions is implemented yet. The server binds loopback only and has no authentication or cloud access.
 
@@ -90,6 +90,19 @@ device visibility. It never asserts build readiness. This checkpoint has not per
 Vega SDK build or device/simulator run; those require installed platform tooling and P7
 qualification. P3 should consume `@firelaunch/tv` rather than implement separate preview
 navigation semantics.
+
+P3 Creator Studio: in two terminals run `npm run dev` for the local API and
+`npm run dev:studio` for the React UI, then open `http://127.0.0.1:4173`.
+New Channel creates a persisted project, optionally with original procedural sample media;
+Design and Content edits use the revision-checked channel mutation API. The TV Preview
+uses the shared `@firelaunch/tv` projection and transitions. Use arrow keys, Enter and
+Escape (except while typing in a form), or the on-screen remote. The sample clip is
+generated specifically for this repository and served by the local Vite Studio; its
+`127.0.0.1:4173` URL is a development fixture, not a deployable Vega media host.
+Replace that URL and any `assets/` artwork with rights-cleared, reachable media before
+building a standalone TV project. The Create agent area is informational until P4;
+Code, Build and Publish are informational until P5 and claim no generated artifact.
+Run `npm run test -w @firelaunch/studio` for focused Preview and sample tests.
 
 Canonical vocabulary: **Prompt Stack** is the common name for phase and correction stacks.
 
