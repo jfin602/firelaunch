@@ -954,6 +954,17 @@ test('runCodex sends the preflight snapshot and uses native final-response captu
     const outputIndex = invocationArguments.indexOf('--output-last-message');
     assert.notEqual(outputIndex, -1);
     assert.equal(invocationArguments.includes('--json'), true);
+    assert.deepEqual(
+      invocationArguments.slice(
+        invocationArguments.indexOf('--sandbox'),
+        invocationArguments.indexOf('--sandbox') + 4,
+      ),
+      ['--sandbox', 'workspace-write', '--ask-for-approval', 'never'],
+    );
+    assert.equal(
+      invocationArguments.includes('sandbox_workspace_write.network_access=true'),
+      true,
+    );
     assert.equal(
       await readFile(path.join(temporaryDirectory, 'P1.events.jsonl'), 'utf8'),
       '{"type":"turn.completed","usage":{"input_tokens":3}}\n',
@@ -1014,11 +1025,17 @@ test('Codex arguments retain JSON events and exact model efforts', () => {
     'C:\\repo',
     'C:\\run\\final.txt',
   );
-  assert.deepEqual(lunaArguments.slice(0, 6), [
+  assert.deepEqual(lunaArguments.slice(0, 12), [
     'exec',
     '--json',
     '--model',
     'gpt-5.6-luna',
+    '--sandbox',
+    'workspace-write',
+    '--ask-for-approval',
+    'never',
+    '-c',
+    'sandbox_workspace_write.network_access=true',
     '-c',
     'model_reasoning_effort="medium"',
   ]);
@@ -1029,15 +1046,21 @@ test('Codex arguments retain JSON events and exact model efforts', () => {
     'C:\\repo',
     'C:\\run\\final.txt',
   );
-  assert.deepEqual(ultraArguments.slice(0, 6), [
+  assert.deepEqual(ultraArguments.slice(0, 12), [
     'exec',
     '--json',
     '--model',
     'gpt-5.6-sol',
+    '--sandbox',
+    'workspace-write',
+    '--ask-for-approval',
+    'never',
+    '-c',
+    'sandbox_workspace_write.network_access=true',
     '-c',
     'model_reasoning_effort="ultra"',
   ]);
-  assert.deepEqual(ultraArguments.slice(6, 8), [
+  assert.deepEqual(ultraArguments.slice(12, 14), [
     '--output-last-message',
     'C:\\run\\final.txt',
   ]);

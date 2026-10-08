@@ -79,7 +79,7 @@ npm run codex:stack -- p0
 Runner regressions:
 npm run test:runner
 
-The runner validates grammar/versioning, resumes completed checkpoints, asks before dirty-tree continuation, invokes Codex, retries bounded model-capacity failures, owns implementation commits, stops at browser-required gates and stores evidence under .codex-runs/.
+The runner validates grammar/versioning, resumes completed checkpoints, asks before dirty-tree continuation, invokes Codex with an explicit `workspace-write` sandbox, no interactive approvals, and workspace network access for dependency/tooling installation, retries bounded model-capacity failures, owns implementation commits, stops at browser-required gates and stores evidence under .codex-runs/.
 
 Agents must not commit when runner-owned.
 
