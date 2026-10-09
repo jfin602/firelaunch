@@ -1,6 +1,6 @@
 # p0 — FireLaunch Hackathon MVP
 
-Status: APPROVED DOCUMENTED PHASE / NOT EXECUTED
+Status: EXECUTED / P7 NOT GREEN (see [closeout](closeout.md))
 Phase: 0
 Mode: Phase
 Baseline version: `0.0.0`

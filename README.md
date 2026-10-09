@@ -1,6 +1,6 @@
 # FireLaunch
 
-FireLaunch is a local, code-optional studio for designing a TV channel and generating a creator-owned React Native for Vega project. **0.0.6 is a hackathon candidate, not a qualified VPKG or Amazon submission.** P7 independently qualifies the real browser, Vega build, and simulator/device path.
+FireLaunch is a local, code-optional studio for designing a TV channel and generating a creator-owned React Native for Vega project. **0.0.7 is NOT GREEN:** the browser Studio was exercised, but no real Vega build or simulator/device run was possible in the qualification environment. See [P7 closeout](docs/tasks/p0/closeout.md). No VPKG or Amazon submission is claimed.
 
 ## Prerequisites and start
 
