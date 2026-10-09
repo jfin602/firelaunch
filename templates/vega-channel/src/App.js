@@ -1,11 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BackHandler, Image, Pressable, ScrollView, StyleSheet, Text, TVEventHandler, View } from 'react-native';
-import { Video } from '@amazon-devices/react-native-w3cmedia';
+import { KeplerVideoSurfaceView, VideoPlayer } from '@amazon-devices/react-native-w3cmedia';
 import channel from './channel.json';
 import { activeItem, initialState, itemFocusId, navFocusId, transition } from './tv-runtime';
 
 function Playback({ item, muted }) {
-  return <Video style={styles.video} src={item.mediaUrl} muted={muted} autoplay controls />;
+  const player = useRef(null);
+  if (!player.current) player.current = new VideoPlayer();
+  const onSurfaceViewCreated = async handle => {
+    await player.current.initialize();
+    player.current.setSurfaceHandle(handle);
+    player.current.muted = muted;
+    player.current.autoplay = true;
+    player.current.src = item.mediaUrl;
+  };
+  const onSurfaceViewDestroyed = async handle => {
+    player.current.clearSurfaceHandle(handle);
+    await player.current.deinitialize();
+  };
+  return <KeplerVideoSurfaceView style={styles.video} onSurfaceViewCreated={onSurfaceViewCreated}
+    onSurfaceViewDestroyed={onSurfaceViewDestroyed} />;
 }
 
 export default function App() {
@@ -14,7 +28,8 @@ export default function App() {
   useEffect(() => {
     const handler = new TVEventHandler();
     handler.enable(null, (_, event) => {
-      const command = { up: 'up', down: 'down', left: 'left', right: 'right', select: 'select', back: 'back' }[event?.eventType];
+      if (event?.eventKeyAction !== 0) return;
+      const command = { up: 'up', down: 'down', left: 'left', right: 'right', select: 'select', enter: 'select' }[event?.eventType];
       if (command) dispatch(command);
     });
     const back = BackHandler.addEventListener('hardwareBackPress', () => { dispatch('back'); return true; });
@@ -28,6 +43,7 @@ export default function App() {
     {state.screen === 'page' ? <>
       {brand.showTitle !== false && <Text style={[styles.heading, { color: brand.textColor }]}>{channel.title}</Text>}
       <View style={styles.nav}>{channel.pages.map(target => <Pressable key={target.id}
+        focusable={false}
         onPress={() => setState({ screen: 'page', pageId: target.id, focusId: navFocusId(target.id) })}
         style={[styles.navItem, state.focusId === navFocusId(target.id) && [styles.focused, focusStyle]]}>
         <Text style={{ color: brand.textColor }}>{target.title}</Text>
@@ -37,7 +53,7 @@ export default function App() {
         {module.kind === 'text' ? <Text style={{ color: brand.textColor }}>{module.body}</Text> :
           <View style={module.kind === 'grid' ? styles.grid : styles.rail}>{module.items.map(content => {
             const focusId = itemFocusId(page.id, module.id, content.id);
-            return <Pressable key={focusId} onPress={() => setState(transition(channel,
+            return <Pressable key={focusId} focusable={false} onPress={() => setState(transition(channel,
               { screen: 'page', pageId: page.id, focusId }, 'select'))}
               style={[styles.card, module.kind === 'hero' && styles.hero,
                 state.focusId === focusId && [styles.focused, focusStyle]]}>
@@ -51,11 +67,11 @@ export default function App() {
       <Text style={[styles.heading, { color: brand.textColor }]}>{item?.title}</Text>
       {state.screen === 'detail' ? <>
         <Text style={{ color: brand.textColor }}>{item?.description}</Text>
-        <Pressable style={[styles.card, styles.focused, focusStyle]} onPress={() => dispatch('select')}>
+        <Pressable focusable={false} style={[styles.card, styles.focused, focusStyle]} onPress={() => dispatch('select')}>
           <Text style={{ color: brand.textColor }}>Play</Text>
         </Pressable>
       </> : item && <Playback item={item} muted={channel.playback.startMuted} />}
-      <Pressable onPress={() => dispatch('back')}><Text style={{ color: brand.textColor }}>Back</Text></Pressable>
+      <Pressable focusable={false} onPress={() => dispatch('back')}><Text style={{ color: brand.textColor }}>Back</Text></Pressable>
     </>}
   </View>;
 }

@@ -67,12 +67,15 @@ test('blocked and simulated build evidence requires exit success, fresh release 
     const report = { ...detected, node: { available: true, detail: 'v24.15.0' }, npm: { available: true, detail: '12.2.0' },
       vegaSdk: { available: true, detail: 'test SDK' }, vegaCli: { available: true, detail: 'test CLI' } };
     const projectRoot = path.join(directory, 'generated');
+    const reactNative = path.join(projectRoot, 'node_modules/.bin/react-native');
+    await mkdir(path.dirname(reactNative), { recursive: true });
+    await writeFile(reactNative, 'fake React Native CLI');
     const artifact = path.join(projectRoot, 'build/armv7-release/channel_armv7.vpkg');
     const failure = new WorkspaceService(repository, () => report, async () => ({ exitCode: 0, output: 'claimed success', durationMs: 10 }));
     assert.equal((await failure.build(id)).status, 'failed');
     assert.equal((await failure.buildStatus(id)).status, 'failed');
     const success = new WorkspaceService(repository, () => report, async (command, args, cwd) => {
-      assert.equal(command, cli); assert.deepEqual(args, ['build', '-b', 'Release']); assert.equal(cwd, projectRoot);
+      assert.equal(command, reactNative); assert.deepEqual(args, ['build-vega', '--build-type', 'Release']); assert.equal(cwd, projectRoot);
       await mkdir(path.dirname(artifact), { recursive: true });
       await writeFile(artifact, 'real bytes from test executor');
       return { exitCode: 0, output: 'built', durationMs: 10 };
@@ -88,6 +91,8 @@ test('blocked and simulated build evidence requires exit success, fresh release 
     assert.match((await success.build(id)).reason ?? '', /stale/);
     assert.equal((await success.readiness(id)).checks.find(check => check.group === 'Build artifact')?.ready, false);
     await success.generate(id);
+    await mkdir(path.dirname(reactNative), { recursive: true });
+    await writeFile(reactNative, 'fake React Native CLI');
     assert.equal((await failure.build(id)).status, 'failed');
     const source = await success.read(id, 'src/App.js');
     await success.save(id, source.path, `${source.content}\nmodified`, source.sha256);

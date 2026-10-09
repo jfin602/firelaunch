@@ -1,9 +1,38 @@
+schema-version = 1
+
 [package]
 id = FIRELAUNCH_APP_ID
 version = "0.0.2"
 title = FIRELAUNCH_APP_NAME
 
+[os.version]
+min = "1.2"
+target = "1.2"
+
+[needs]
+[[needs.module]]
+id = "/com.amazon.vega.os@IVega_1_2"
+
+[wants]
+[[wants.service]]
+id = "com.amazon.mediametrics.service"
+[[wants.privilege]]
+id = "com.amazon.devconf.privilege.accessibility"
+[[wants.service]]
+id = "com.amazon.mediabuffer.service"
+[[wants.service]]
+id = "com.amazon.mediatransform.service"
+[[wants.service]]
+id = "com.amazon.audio.stream"
+[[wants.service]]
+id = "com.amazon.audio.control"
+[[wants.service]]
+id = "com.amazon.media.server"
+[[wants.service]]
+id = "com.amazon.media.playersession.service"
+
 [[components.interactive]]
 id = FIRELAUNCH_COMPONENT_ID
 runtime-module = "/com.amazon.kepler.runtime.react_native_kepler_4@IReactNativeKepler_0"
+launch-type = "singleton"
 categories = ["com.amazon.category.main"]

@@ -38,11 +38,14 @@ export async function generateProject(spec: ChannelSpec): Promise<GeneratedProje
   const packageName = `firelaunch-${valid.slug}`;
   const applicationId = `com.firelaunch.channel.${valid.id}`;
   files.set('package.json', json({ name: packageName, version: TEMPLATE_VERSION, private: true, scripts: {
-    start: 'react-native start'
-  }, dependencies: { 'react-native': 'npm:@amazon-devices/react-native-kepler@4.0.1', react: '19.2.0',
-    '@amazon-devices/kepler-cli-platform': '0.22.14',
-    '@amazon-devices/react-native-w3cmedia': '2.3.2' }, devDependencies: { '@types/react': '^19.1.1',
-      '@react-native/babel-preset': '0.83.0', '@react-native/metro-config': '0.83.0' } }));
+    start: 'react-native start', 'build:release': 'react-native build-vega --build-type Release'
+  }, dependencies: { 'react-native': '0.83.0', '@amazon-devices/react-native-kepler': '~4.0.0',
+    react: '19.2.0', '@amazon-devices/react-native-w3cmedia': '~2.3.2' },
+  devDependencies: { '@amazon-devices/kepler-cli-platform': '^0', '@types/react': '^19.2.0',
+    '@react-native-community/cli': '20.0.0', '@react-native/babel-preset': '0.83.0',
+    '@react-native/metro-config': '0.83.0' },
+  kepler: { projectType: 'application', appName: packageName, targets: ['tv'] } }));
+  files.set('app.json', json({ name: `${applicationId}.main`, displayName: appName }));
   files.set('manifest.toml', files.get('manifest.toml')!
     .replaceAll('FIRELAUNCH_APP_ID', JSON.stringify(applicationId))
     .replaceAll('FIRELAUNCH_COMPONENT_ID', JSON.stringify(`${applicationId}.main`))

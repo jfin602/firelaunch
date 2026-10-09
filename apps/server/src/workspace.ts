@@ -81,12 +81,14 @@ async function record<T>(file: string): Promise<T | null> {
   try { return JSON.parse(await readFile(file, 'utf8')) as T; }
   catch { throw new RepositoryError('STORAGE_ERROR', 'Invalid workspace evidence'); }
 }
-async function run(command: string, args: string[], cwd: string): Promise<{ exitCode: number | null; output: string; durationMs: number }> {
+async function run(command: string, args: string[], cwd: string, vegaDirectory?: string): Promise<{ exitCode: number | null; output: string; durationMs: number }> {
   const start = Date.now();
   return new Promise(resolve => {
     let output = '';
     let done = false;
-    const child = spawn(command, args, { cwd, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, CI: '1' } });
+    const child = spawn(command, args, { cwd, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: {
+      ...process.env, CI: '1', PATH: vegaDirectory ? `${vegaDirectory}${path.delimiter}${process.env.PATH ?? ''}` : process.env.PATH
+    } });
     const append = (chunk: Buffer) => { output = (output + chunk.toString('utf8')).slice(-MAX_OUTPUT); };
     child.stdout.on('data', append); child.stderr.on('data', append);
     const timer = setTimeout(() => child.kill('SIGKILL'), BUILD_TIMEOUT);
@@ -212,8 +214,13 @@ export class WorkspaceService {
     if (!cli || !path.isAbsolute(cli)) return { status: 'blocked', reason: 'Set VEGA_CLI_PATH to a verified absolute Vega executable', toolchain };
     const resolvedCli = await realpath(cli).catch(() => '');
     if (!resolvedCli || !(await regular(resolvedCli))) return { status: 'blocked', reason: 'Vega CLI executable is missing or unsafe', toolchain };
-    const command = [resolvedCli, 'build', '-b', 'Release'];
-    const result = await this.execute(command[0]!, command.slice(1), root);
+    const reactNative = await realpath(path.join(root, 'node_modules/.bin/react-native')).catch(() => '');
+    const nativeRelative = reactNative && path.relative(root, reactNative);
+    if (!reactNative || !nativeRelative || nativeRelative.startsWith('..') || path.isAbsolute(nativeRelative) || !(await regular(reactNative))) {
+      return { status: 'blocked', reason: 'Install generated-project dependencies with npm install before building', toolchain };
+    }
+    const command = [reactNative, 'build-vega', '--build-type', 'Release'];
+    const result = await this.execute(command[0]!, command.slice(1), root, path.dirname(resolvedCli));
     const after = result.exitCode === 0 ? await releaseArtifacts(root) : [];
     const artifact = (await Promise.all(after.map(async item => ({ item, modified: (await stat(await guarded(root, item.path))).mtimeMs })))).find(candidate =>
       candidate.modified >= started - 2000 && (!before.has(candidate.item.path) || before.get(candidate.item.path)!.modified !== candidate.modified || before.get(candidate.item.path)!.sha256 !== candidate.item.sha256))?.item;

@@ -16,6 +16,9 @@ test('deterministic tree contains true shared runtime, manifest and projected co
   assert.deepEqual(JSON.parse(first.files.get('src/channel.json')!), televisionFromSpec(spec));
   assert.match(first.files.get('manifest.toml')!, /categories = \["com\.amazon\.category\.main"\]/);
   assert.match(first.files.get('manifest.toml')!, /runtime-module = "\/com\.amazon\.kepler\.runtime\.react_native_kepler_4@IReactNativeKepler_0"/);
+  assert.match(first.files.get('manifest.toml')!, /\[os\.version\]\nmin = "1\.2"\ntarget = "1\.2"/);
+  assert.equal(JSON.parse(first.files.get('package.json')!).dependencies['react-native'], '0.83.0');
+  assert.equal(JSON.parse(first.files.get('app.json')!).name, `com.firelaunch.channel.${spec.id}.main`);
   assert.match(first.files.get('src/tv-runtime.js')!, /function transition\(/);
   const generatedRuntime = await import(`data:text/javascript,${encodeURIComponent(first.files.get('src/tv-runtime.js')!)}`);
   const projected = JSON.parse(first.files.get('src/channel.json')!);
