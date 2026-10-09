@@ -90,7 +90,7 @@ If an explicitly accepted dirty tree exists, inspect and continue it rather than
 
 The P0 sequencing and explicit "do not add authentication/billing/cloud" restriction above apply to historical P0 and the bounded `c0-real-tv-qualification` correction **only**. They do not forbid the approved post-P0 P1–P8 launch roadmap. Preserve P0's NOT GREEN closeout and the active correction's narrow scope; do not rewrite its evidence or silently move SaaS work into that stack.
 
-During post-P0 implementation, read [the launch roadmap](docs/roadmap/mvp-roadmap.md) and ADRs 0004–0007 alongside `VISION.md`, `PRODUCT-MODEL.md` and `ARCHITECTURE.md`.
+During post-P0 implementation, read [the launch roadmap](docs/roadmap/mvp-roadmap.md) and ADRs 0004–0008 alongside `VISION.md`, `PRODUCT-MODEL.md` and `ARCHITECTURE.md`.
 
 Hard invariants for P1–P8:
 
@@ -103,3 +103,14 @@ Hard invariants for P1–P8:
 - Enforce per-creator API/data/asset/credential access. Protect secrets and private data from published TV manifests and exported projects; plan backups, deletion and operational diagnostics.
 - Each phase is an independently scoped Prompt Stack. Target bounded implementation prompts (normally <=8 minutes), focused checks during implementation, aggregate testing and browser/device evidence at closeout. External approval and device statuses must be factual.
 - Keep the `/docs-review` -> approval -> `/docs-apply` -> `/prompt-ass` -> `/prompt-plan` -> `/prompt-write` gates. The runner owns commits inside executable stacks.
+
+## SaaS kickoff and P7 repair carry-forward (2026-10-09)
+
+The c0 qualification/repair loop executed three cycles and closed BLOCKED / NOT GREEN. It did verify a release VPKG and Vega VirtualDevice navigation/detail/playback/Back on a tested candidate. Historical P0/P7 and correction closeouts remain unchanged and must not be relabeled GREEN.
+
+- Start post-P0 **P1–P3 immediately** on their own contract, hosting and catalog-import gates. AWS/Bedrock, P7 GREEN, formal Mint support, physical Fire TV and Appstore approval are **not** prerequisites. Check the committed repairs and any local worktree changes before implementing.
+- Post-P0 **P4** requires a real, supported **non-mock AI provider** with catalog-grounded validated/persisted channel mutations and usable Preview. Do not require Bedrock; keep deterministic tests offline. Qualify the affected real-browser/editor regression and integrated aggregate checks.
+- **P5** independently verifies installed-app remote manifest updates and fallback; **P6** verifies supported feed/source sync to TV; **P7** (the later SaaS publishing phase) verifies live Publish readiness and creator-owned submission; **P8** requires production-compatible toolchain, physical Fire TV, rights-safe media/artwork, operations/security, full regressions and real Appstore approval.
+- Track P0-only Bedrock, original default demo loopback/artwork, supported host, browser/Publish/aggregate and physical-device blockers honestly without holding unrelated early SaaS work hostage. Later successful provider work does not retroactively qualify P0 Bedrock.
+
+See [ADR 0008](docs/decisions/0008-launch-ai-provider-policy.md) and [the launch roadmap](docs/roadmap/mvp-roadmap.md).

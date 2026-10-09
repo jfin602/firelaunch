@@ -204,4 +204,12 @@ Enforce per-creator authorization on all APIs, queue jobs, build/download routes
 
 P1 defines contracts and Amazon connector feasibility; P2 hosts accounts/data; P3 imports catalog; P4 adds catalog-grounded generation; P5 implements remote manifests; P6 adds sync; P7 supports creator-owned release/limited SaaS operations; P8 qualifies creator pilots, security, physical TV and actual Appstore approval.
 
-The existing `c0-real-tv-qualification` correction must still produce direct SDK/VPKG/device evidence before real Vega execution is claimed. P5/P8 remote-refresh and physical TV evidence are additional—not substitutes for P0 qualification.
+The 2026-10-09 `c0-real-tv-qualification` correction **did** directly prove an actual VPKG and Vega VirtualDevice navigation/playback for a tested candidate, but remained BLOCKED / NOT GREEN overall. P1–P3 can proceed without P0 Bedrock or full P7 GREEN. P5 must independently demonstrate real installed-app remote manifest updates; P8 still requires a supported production build environment, physical Fire TV and Appstore approval. Neither changes historical P7 status.
+
+### Live AI provider boundary (post-P0)
+
+P0's Bedrock-first demonstration is historical; the SaaS `ChannelAgent` remains provider-neutral. P1 defines provider capabilities and model/tool contracts without choosing AWS infrastructure. P2/P3 hosting and catalog import are independent of AI provider credentials.
+
+P4 GREEN requires a live **non-mock** supported provider (OpenAI, Gemini, Bedrock or another suitable adapter) receiving actual imported catalog context, returning bounded validated mutations, persisting them in ChannelSpec and rendering a usable Preview. Mock tests remain deterministic and cannot substitute for real-provider evidence. Keep tokens and private catalog data out of public TV manifests and exported source. See [ADR 0008](decisions/0008-launch-ai-provider-policy.md).
+
+Track final browser/editor regression and aggregate checks by P4, remotely updated installed Vega by P5, Publish evidence by P7 and supported production build host, physical Fire TV, default/demo asset replacement, content rights and Appstore approval by P8. This is a carry-forward of unresolved P0 evidence, not a reclassification of P7 as GREEN.

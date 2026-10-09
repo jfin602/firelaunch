@@ -1,16 +1,24 @@
 # c0-real-tv-qualification — FireLaunch real Vega qualification correction
 
-Status: DOCS APPLIED / AWAITING PROMPT ASSESSMENT AND PLAN (not executed)
+Status: REPAIR LOOP EXECUTED — BLOCKED / NOT GREEN (2026-10-09; 3/5 cycles)
 Type: Bounded P0 correction Prompt Stack
 Baseline: `0.0.7` / P7 NOT GREEN (no version increment assigned by this documentation gate)
 Model: GPT-6 Sol High by default; only escalate for a demonstrated cross-system need
-Source evidence: [P7 closeout](../p0/closeout.md) and [feedback log](../../feedback-log.md)
+Source evidence: [P7 closeout](../p0/closeout.md), [repair-loop closeout](qualification-loop/qualification-closeout.md), and [feedback log](../../feedback-log.md)
+
+## Actual repair-loop disposition (2026-10-09)
+
+The real Vega toolchain (CLI 1.4.4, SDK 0.24.12112) generated and built a fresh release VPKG. The exact artifact was installed on a Vega VirtualDevice (OS 1.2, x86_64), with visible artwork, focus, detail, video playback, Back and Home focus restoration. These are **direct tested-candidate successes**, not claims of physical Fire TV or Appstore success. See [closeout](qualification-loop/qualification-closeout.md) and cycle reports.
+
+**Full qualification remains BLOCKED / NOT GREEN.** Live Bedrock was unavailable; formal Linux Mint support was unverified; a final Studio browser/editor pass, Publish readiness and aggregate validation were not completed. Default Wild Earth demo localhost media and local artwork remain unresolved. Original P7 closeout remains historical.
+
+**New roadmap sequencing:** These remaining c0 gates do not prevent SaaS P1–P3. SaaS P4 must qualify a real provider-neutral live AI path (Bedrock optional); P5–P8 must directly qualify installed-TV remote delivery, sync, real Publish, physical Fire TV and Appstore readiness. Do not relax historical P7 acceptance to manufacture GREEN.
 
 ## Purpose
 
 Close the evidence gap between a working local Studio and **Prompt -> Product -> Real Television** without rebuilding the passing P0 foundation. P7 proved persisted Design/Content changes, browser keyboard/remote focus, detail/playback, restart recovery, Vega source with `com.amazon.category.main`, and custom-code preservation. P7 did **not** prove general natural-language channel creation, a successful live Bedrock call, an actual Vega release VPKG/hash or simulator/Fire TV execution.
 
-This stack consolidates the P7 suggestions `c0-vega-real-tv` and `c0-prompt-first` under one owner. Preserve P7's NOT GREEN closeout as immutable historical evidence. There is no claim that any SDK, device or AWS account is currently available.
+This stack originally consolidated the P7 suggestions `c0-vega-real-tv` and `c0-prompt-first`. The scope below describes the **original plan**, retained for provenance; the later observed results above supersede its initial assumptions. Preserve original P7 and repair closeouts.
 
 ## Scope and prerequisite gates
 
@@ -20,7 +28,7 @@ This stack consolidates the P7 suggestions `c0-vega-real-tv` and `c0-prompt-firs
 - Preserve ChannelSpec as canonical, existing Studio surfaces and shared TV semantics, creator-owned project source, custom edit protection, build/process safety, and the human Amazon Console boundary.
 - Live Bedrock is required to claim arbitrary creator prose works through the real agent. If credentials/model/region are unavailable or the broad Wild Earth request fails, document that truthfully; do not substitute supported mock phrases or configured provider labels. Do not let this optional AWS Builder evidence displace the primary real-TV integration work.
 
-## Proposed prompt ownership (implementation prompts not authored yet)
+## Original planned prompt ownership (historical)
 
 | Prompt | Owner and objective | Exit evidence |
 | --- | --- | --- |
@@ -46,7 +54,7 @@ If P1 cannot access a build host or target, stop and report the specific externa
 
 ## Constraints and workflow
 
-- No code changes are authorized by this docs-apply gate. Proceed through `/prompt-ass` -> `/prompt-plan` -> `/prompt-write c0-real-tv-qualification` before running the stack.
+- Original docs-only planning gate did not authorize code changes. The repair loop subsequently ran; any further work needs its own bounded authorization and must follow Git/runner ownership rules.
 - Exactly one final closeout prompt; runner owns implementation checkpoint commits. No duplicate P0 stack or broad retest after every correction prompt.
 - Outside scope: authentication, billing, multi-user/cloud hosting, other TV platforms, an arbitrary IDE, automatic Developer Console submission or credential handling.
 - Amazon SDK and device access are environment prerequisites, not issues solvable by passing unit tests. Log *observed* friction in `docs/feedback-log.md`.

@@ -49,15 +49,15 @@ P0 Green requires Prompt -> Product -> Real Television.
 
 P7 closed **NOT GREEN** at version `0.0.7` on 2026-10-08. Browser Studio, persistence, Preview and generated source were exercised, but no real Bedrock call, verified VPKG or simulator/Fire TV run was available; see `docs/tasks/p0/closeout.md`.
 
-### Active: `c0-real-tv-qualification` (documentation/planning gate)
+### `c0-real-tv-qualification` — executed repair loop: BLOCKED / NOT GREEN (2026-10-09)
 
-One bounded correction stack combines the P7 proposals `c0-vega-real-tv` and `c0-prompt-first` to avoid competing remediation ownership. Preserve the passing P0 product and historical closeout.
+The steps below record the **original correction plan**, not its current status. The [repair-loop closeout](../tasks/c0-real-tv-qualification/qualification-loop/qualification-closeout.md) documents 3/5 executed cycles and BLOCKED / NOT GREEN. Preserve the historical P0 closeout and the repair-loop disposition.
 
 1. **P1 — Platform prerequisites and compatibility:** identify a supported, accessible build host and real installed Vega SDK/CLI plus an actual VVD/Fire TV target; inspect generated manifest/dependency compatibility, replace device-inaccessible loopback demo media, and package TV-compatible rights-cleared artwork. Stop with an explicit blocker if prerequisites are unavailable.
 2. **P2 — Real build and provider evidence:** validate/repair only source defects found by the actual toolchain, produce a fresh release VPKG with path, SHA-256, exact toolchain identity and logs; exercise a live Bedrock natural-language request if making the broad agent claim. A configured adapter or mock success is not live proof.
 3. **P3 — Independent device qualification and closeout:** install the same artifact on the supported target, capture real launcher/focus/detail/playback/Back evidence, verify truthful Publish readiness and rehearse the under-three-minute demo. Perform one final aggregate check and write GREEN or NOT GREEN with specific evidence.
 
-New Vega SDK 0.24 tooling requires explicit OS target/minimum version in the manifest (OS 1.2 in that release); inspect the *installed* SDK version and dependencies before selecting the compatible configuration. No installed SDK or chosen TV test target is claimed by this planning document.
+New Vega SDK 0.24 tooling requires explicit OS target/minimum version in the manifest (OS 1.2 in that release); inspect the *installed* SDK version and dependencies before selecting the compatible configuration. That earlier planning statement has since been superseded by the repair-loop evidence: Vega CLI 1.4.4, SDK 0.24.12112, an actual release VPKG and successful focus/detail/visible video/Back on Vega VirtualDevice OS 1.2. This does not qualify the default Studio demo, physical Fire TV, or Appstore.
 
 Completion target: Prompt -> Product -> Real Television, with provider claims separately evidenced, and no false artifact/device/Console qualification. No redesign of ChannelSpec, Studio, runner, or deferred SaaS features. Use focused tests in implementation prompts; reserve global suite/device acceptance for closeout.
 
@@ -84,9 +84,9 @@ P0's historical post-hackathon deferrals remain true for P0 and the active `c0-r
 
 **Golden path:** Sign in -> identify/import permitted catalog -> review provenance, rights and playable media -> generate creator-specific TV experience -> refine Preview/agent/editor -> build/creator-owned submission -> publish immutable live manifest -> automatically synchronize authorized catalog changes.
 
-**P0 predecessor gate:** `0.0.7` / P7 was NOT GREEN; `c0-real-tv-qualification` remains responsible for real SDK/VPKG/target proof. The new roadmap does not alter that correction or falsely qualify the old P0. P1 contracts/provider approvals can be investigated in parallel, but P5/P8 television claims depend on genuine platform evidence.
+**Historical P7 is not a SaaS entry gate:** P0/P7 remained NOT GREEN at `0.0.7`. The 2026-10-09 correction also ended BLOCKED / NOT GREEN, though the tested Vega package and VirtualDevice path passed. **SaaS P1–P3 may start and qualify without full P7 GREEN, an AWS account, Bedrock, a certified Linux Mint host, a physical Fire TV, or Appstore approval.** Their own security/contracts/import gates still apply. Unresolved browser, Publish, aggregate and platform checks transfer to the affected later phase; nothing is retroactively called GREEN.
 
-**Estimated engineering horizon:** 12–16 weeks after hardware/toolchain prerequisites are available, for a solo developer using bounded AI prompt stacks. Amazon provider approval and Appstore review are external schedule risks. Version bands and durations are planning targets, not completed releases. Focus implementation prompts on <=8-minute bounded work, with focused checks; closeout owns aggregate suites/browser/device gates.
+**Estimated engineering horizon:** 12–16 engineering weeks from SaaS development kickoff, for a solo developer using bounded AI prompt stacks. Amazon provider approval and Appstore review are external schedule risks. Version bands and durations are planning targets, not completed releases. Focus implementation prompts on <=8-minute bounded work, with focused checks; closeout owns aggregate suites/browser/device gates.
 
 ### P1 — Product contracts and integration feasibility (0.1.x, week 1)
 
@@ -110,13 +110,13 @@ Build normalized catalog and source identity, provenance, stable external IDs, d
 
 Generate differentiated video, audio and writing TV experiences using the existing ChannelSpec/ChannelAgent. Provide meaningful content, collections, media previews, beginner-friendly progressive editing, live D-pad Preview and safe creator overrides. Prompt-first and Code are advanced alternatives.
 
-**GREEN:** Three representative catalogs result in distinctly appropriate, polished, navigable TV previews; regeneration cannot erase manual customization.
+**GREEN:** Three representative catalogs result in distinctly appropriate, polished, navigable TV previews; regeneration cannot erase manual customization. At least one real non-mock provider must take a representative imported catalog through grounded ChannelAgent calls, validated ChannelSpec mutations, persistence and usable Preview. **Bedrock is optional**; AWS is not a P4 requirement. Mock-only runs cannot qualify this gate.
 
 ### P5 — Live Channel Delivery (0.5.x, weeks 8–9)
 
 Introduce approved immutable PublishedManifest revisions, HTTPS deployment resolver, draft/live separation, schema validation, TV cache, rollback and compatibility. Remote layout/catalog changes require no VPKG rebuild; native/runtime changes still do.
 
-**GREEN:** On a real qualified TV target, the same installed VPKG receives a new approved channel revision and recovers from network/incompatible-manifest failures.
+**GREEN:** On a real qualified Vega target (VirtualDevice accepted for P5), the same installed VPKG receives an approved remote channel revision and safely recovers from network/incompatible-manifest failures. Actual physical Fire TV remains a P8 release gate.
 
 ### P6 — Automatic Catalog Synchronization (0.6.x, weeks 10–11)
 
@@ -135,6 +135,18 @@ Implement unique app/release identity, build/readiness provenance, screenshots/s
 Pilot video/audio/writing creators and repair onboarding, accessible remote focus, actual media playback, performance, network/restart/rollback, sync failure recovery, privacy and operational issues. Validate at least one real creator-owned Amazon Appstore **approval**, not just submission. Qualify a physical Fire TV, not only browser Preview or simulated artifacts. Only evidenced launch-blocking fixes during closeout.
 
 **GREEN / launch:** All launch acceptance gates below are directly proven; otherwise NOT GREEN with blockers and recovery path.
+
+## SaaS phase entry and carried-forward P7 gates
+
+- **P1 entry (immediate):** Contracts, architecture, provider-access feasibility and source-rights work can begin using the committed c0 repairs. No AWS credentials, Bedrock call, full P7 GREEN or real physical TV is required.
+- **P2 entry:** P1 contracts accepted; hosted accounts, isolation and persistence can be qualified independently of AI credentials or television.
+- **P3 entry:** P2 account/project authorization available; creator-controlled feeds/files work without Amazon API approval.
+- **P4 GREEN:** Live provider-neutral (non-mock) catalog-grounded generation, persisted validated mutations and usable Studio Preview; new real-browser editor regression and suitable aggregate checks on the integrated candidate.
+- **P5 GREEN:** Same actual installed Vega package receives compatible remotely published manifests and recovers safely; direct on-target device proof required, supported production build host verified before claiming production readiness.
+- **P6 GREEN:** Real permitted external feed/source changes reach an installed app without a new binary; errors and overrides are handled.
+- **P7 GREEN (SaaS phase, distinct from historical P0/P7):** Studio Publish readiness, package provenance and creator-owned Amazon Developer Console submission/handoff are directly exercised.
+- **P8 LAUNCH:** Physical Fire TV, rights-safe and device-reachable production/default media and artwork, full aggregate/browser/operational regression, and actual creator-owned Appstore approval. Launch requirements stay intact.
+- **Historical P0/c0:** Both closeouts remain NOT GREEN. Outstanding P0 Bedrock, Mint host support, default demo assets/loopback, current Studio editor and Publish evidence, aggregate check and physical hardware must stay traceable; a successful future P4 provider does not retroactively prove an untested P0 Bedrock request.
 
 ## MVP launch acceptance gates
 

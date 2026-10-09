@@ -23,3 +23,9 @@ Provider independence keeps channel logic testable and replaceable. Bedrock crea
 - AWS credentials stay in the normal AWS credential chain/environment;
 - mock mode is clearly labeled;
 - mini-challenge claims require actual Bedrock evidence.
+
+## Post-P0 clarification (2026-10-09)
+
+The original Bedrock-first decision belongs to the historical P0 hackathon demonstration. The c0 repair-loop closeout remains BLOCKED / NOT GREEN with no live Bedrock proof; do not rewrite it. The launch SaaS is deliberately **AWS-independent** for P1–P3 and provider-neutral for P4 and later. Any supported non-mock provider may qualify P4 with an actual catalog-grounded, validated, persisted ChannelSpec result and usable TV Preview; mocks alone never meet this gate.
+
+See [ADR 0008](0008-launch-ai-provider-policy.md) for the accepted post-P0 policy. This addendum does not revoke the original P0 Bedrock adapter or its evidence requirements.
