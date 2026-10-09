@@ -21,9 +21,9 @@ FireLaunch is not merely an AI code generator and not a generic website builder.
 
 ## Current gate
 
-Current package version: `0.0.7`. The P0 implementation stack executed, and P7 closed **NOT GREEN** on 2026-10-08. Its browser evidence is preserved in `docs/tasks/p0/closeout.md`.
+Current phase root version: `0.1.0` (post-P0 SaaS P1 baseline). P0 finished at 0.0.7 with historical P7 NOT GREEN. The c0 repair loop ended BLOCKED / NOT GREEN on 2026-10-09, and its evidence is preserved in docs/tasks/c0-real-tv-qualification/qualification-loop/qualification-closeout.md.
 
-Active correction: `docs/tasks/c0-real-tv-qualification/`. This correction is scoped to real Vega toolchain/package/device proof and a separately evidenced real Bedrock request if the broad natural-language claim is retained. No VPKG, device pass, or successful Bedrock call is yet claimed.
+Observed c0 correction: a real release VPKG and Vega VirtualDevice focus/detail/playback/Back were proven for a tested candidate. Live Bedrock, formal Linux Mint host support, final Studio browser/Publish/aggregate checks, default demo media and physical Fire TV remain unqualified. P1-P3 SaaS may proceed independently. P4 requires a real non-mock supported provider; later phases retain physical TV/Appstore gates.
 
 P0 is a staged Sol implementation stack with six runner-owned implementation checkpoints and one final manual/browser qualification gate:
 
@@ -90,6 +90,10 @@ Model policy:
 - GPT-6 Astra High: exceptional escalation for a genuinely cross-system blocker where the long-horizon advantage justifies the cost.
 
 The Prompt Stack runner owns implementation commits. Agents executed by the runner must not commit manually.
+
+## Post-P0 SaaS kickoff
+
+P1 is the creator-owned contracts and Amazon feasibility phase at docs/tasks/p1/. No AWS/Bedrock is needed for P1. Follow the updated roadmap and ADR 0008; the historical P0 sections below are unchanged in meaning.
 
 ## Definition of hackathon Green
 

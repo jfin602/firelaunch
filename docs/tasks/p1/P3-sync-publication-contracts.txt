@@ -1,0 +1,33 @@
+TASK: Phase 1 / P3 — Sync and publication contracts
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.1.3`.
+
+GOAL
+Define strict source synchronization and safe public TV manifest contracts without implementing workers or live publishing.
+
+PREFLIGHT
+Read P1/P2 source/tests and final responses, docs/tasks/p1/implementation-plan.md, docs/ARCHITECTURE.md, ADRs 0005-0006. Confirm root 0.1.2, current HEAD and clean prior checkpoint.
+
+IMPLEMENT
+Follow plan P3. Introduce SyncPolicy and SyncObservation schemas/types covering source-owned versus creator-owned fields, default review of new items, missing-item grace, conflicts, revocation and idempotent event identity. Introduce PublishedManifest TV-safe versioned envelope with deployment reference, approved content revision, client schema compatibility and immutable release identity. Enforce separate draft/approved states. Reject source tokens, private account records, arbitrary executable fields, invalid/unlicensed media references and incompatible versions. A bounded pure validator/projector is acceptable if it adds real contract guarantees. No actual HTTP endpoint, database, scheduler, rollback service, Vega runtime changes or paid provider calls.
+
+Export contracts and write positive/negative tests including deliberate malicious fields and creator override policies. Keep the existing ChannelSpec v1 / projectSchema valid. Advance root package and lockfile root version metadata to 0.1.3.
+
+OUT OF SCOPE
+Postgres, jobs, source synchronization, import API, published HTTPS service, TV caching, subscriptions, Appstore submission.
+
+VALIDATION
+Focused sync/publication and P0 contract tests, affected contracts build/typecheck, git diff --check. Do not repeat full npm run check.
+
+DONE WHEN
+P5/P6 have explicit versioned safe release/sync contracts and tested private/public boundaries.
+
+No manual Git commits under runner.
+
+FINAL RESPONSE
+Report tests, safety gates, compatibility assumptions and P4 handoff.

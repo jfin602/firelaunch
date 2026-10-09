@@ -1,0 +1,35 @@
+TASK: Phase 1 / P4 — Amazon feasibility and creator onboarding
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.1.4`.
+
+GOAL
+Document credible Amazon source access/rights constraints and a nontechnical catalog-first creator flow with no Amazon approval dependency.
+
+PREFLIGHT
+Read docs/tasks/p1/implementation-plan.md, completed contracts, ADRs 0004-0008, docs/VISION.md, PRODUCT-MODEL.md, publishing.md and roadmap. Inspect official provider documentation and note source date; verify links when internet access exists.
+
+IMPLEMENT
+Follow plan P4. Write docs/integrations/amazon-catalog-feasibility.md: a dated matrix covering Seller Central SP-API public developer registration, OAuth/roles, Listings Items, Catalog Items and Notifications; KDP/Author Central; Audible; Associates/Creators/PA-API; and creator-controlled CSV/JSON/HTTPS feed/uploads. For each distinguish discovery, technical API ability, actual authorization, import/sync, TV redistribution/media rights, FireLaunch implementation status, blockers and explicit human approval actions. Cite relevant official URLs. Unknown must be marked unknown; do not assume a publicly visible name/URL/ASIN authorizes retrieval. No affiliate catalog/product-link reuse on TV without applicable permission. Never claim FireLaunch is approved or KDP/Audible exposes a universal supported API.
+
+Write docs/creator-onboarding.md with stepwise no-code journey: identity/source input -> ownership and rights review -> import/match -> curate -> attach licensed media -> video/audio/writing channel generation -> Preview. Include ambiguous match, empty catalog, unsupported integration, unsafe media and creator-controlled fallback; map future P2 account/P3 ingestion/P4 AI/P5 delivery work. Use only synthetic rights-safe examples.
+
+Advance root package and lockfile root version to 0.1.4. Update related product docs only for a demonstrated direct contradiction.
+
+OUT OF SCOPE
+Live API requests/credentials, seller OAuth, scraping, login, database, Studio, publishing, paid AI and live TV.
+
+VALIDATION
+Verify date and official citation links where accessible, internal decision alignment and git diff --check. Do not fake external verification. No aggregate npm run check here.
+
+DONE WHEN
+Integration matrix independently separates documented technical support, pending permissions, TV policy, implementation, and creator-supplied fallback. P2 handoff is precise.
+
+No manual Git commits under runner.
+
+FINAL RESPONSE
+Summarize supported/unknown/blocked paths, reviewed sources, draft UX and outstanding human actions.

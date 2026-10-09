@@ -1,0 +1,35 @@
+TASK: Phase 1 / P2 — Catalog media and provenance contracts
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.1.2`.
+
+GOAL
+Represent a creator's existing works/products separately from licensed playable television content.
+
+PREFLIGHT
+Read the P1 checkpoint and docs/tasks/p1/implementation-plan.md, docs/PRODUCT-MODEL.md, ADR 0005 and 0007, contracts index.ts and P0 contentSchema. Confirm root 0.1.1 and preserve completed work.
+
+IMPLEMENT
+Follow plan P2. Add versioned CatalogSource, CatalogItem, MediaAsset, Collection and provenance/rights schemas/types under packages/contracts/src/catalog.ts (or coherent equivalent); export through public index.ts. Define namespaced provider external identifiers such as ASIN/SKU, separate source matching from permission, and discovered/verified/syncing states. CatalogItem must be able to represent a book or listing with no playable media. MediaAsset is a separately rights-qualified resource, with creator-asserted permissions distinct from a listing. Include creator-controlled CSV/JSON/HTTPS feed/upload as supported source *types* without implementing ingestion. Protect creator metadata overrides and association to original source records.
+
+Add strict Zod bounds and negative tests for unknown fields, wrong source/account references, duplicate IDs, revoked/unknown media rights and unsafe URLs. Add positive synthetic video/audio/writing fixtures. Do not broaden P0 ChannelSpec or import copyrighted Amazon product records.
+
+Advance root package.json and package-lock.json root version fields to 0.1.2.
+
+OUT OF SCOPE
+SP-API, KDP, Audible connectors; OAuth; web scraping; content import jobs; video playback; Studio; database; agent changes.
+
+VALIDATION
+Focused catalog, creator and old contract tests, contracts build/typecheck and git diff --check. Reserve aggregate check for closeout.
+
+DONE WHEN
+Validated typed inventory and media rights/provenance records are available to future P3 imports without assuming Amazon access or playback licensing.
+
+No manual Git commits under runner.
+
+FINAL RESPONSE
+Report source/provenance invariants, tests/counts and P3 handoff.

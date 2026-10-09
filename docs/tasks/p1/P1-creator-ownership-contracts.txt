@@ -1,0 +1,33 @@
+TASK: Phase 1 / P1 — Creator ownership contracts
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.1.1`.
+
+GOAL
+Introduce strict, tested creator-owned app identity and deployment contracts while preserving P0 ChannelSpec and local project compatibility.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/tasks/p1/README.md, prompt-assessment.md and implementation-plan.md, ADRs 0001 and 0004, docs/PRODUCT-MODEL.md and packages/contracts/src/index.ts and tests. Check HEAD, root 0.1.0 baseline and worktree before editing.
+
+IMPLEMENT
+Follow P1 of docs/tasks/p1/implementation-plan.md. Add versioned CreatorAccount, CreatorProfile, ChannelOwnership and ChannelDeployment schemas/types under packages/contracts/src/creator.ts (or bounded equivalent), export from index.ts. Represent one creator controlling several distinct branded app identities with explicit account -> project/channel -> deployment references. Preserve P0 ch_ ID and projectSchema; do not rewrite ChannelSpec or force project migration. No Amazon credentials/signing secrets in records. Real authorization and global identity uniqueness remain responsibilities of P2 storage/auth; make this boundary clear.
+
+Add focused tests with valid IDs, separate creator apps, inconsistent ownership and hostile/oversized fields, and old P0 ChannelSpec fixture compatibility. Advance only root package.json/root lockfile version metadata to 0.1.1.
+
+OUT OF SCOPE
+Auth/UI, Postgres, hosting, OAuth, Amazon API, AI provider, sync, Vega changes, source export redesign, billing, Appstore claims. Historic P7 remains NOT GREEN.
+
+VALIDATION
+Run focused creator and P0 contract tests, affected contracts typecheck/build, git diff --check. No global npm run check here.
+
+DONE WHEN
+Stable strict creator/app contracts compile, negative cases are covered, and P0 source semantics remain unchanged.
+
+Do not create Git commits; the Prompt Stack runner owns checkpoint commits.
+
+FINAL RESPONSE
+Report schema boundaries, exact focused tests/counts and P2 handoff.

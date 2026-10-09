@@ -1,0 +1,32 @@
+TASK: Phase 1 / P5 — Independent P1 qualification closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.1.5`.
+
+GOAL
+Independently qualify post-P0 SaaS Phase 1 contracts, Amazon feasibility and creator onboarding. This is the single final closeout prompt. Do not conceal failures or turn closeout into broad implementation.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, roadmap and docs/tasks/p1/{README.md,prompt-assessment.md,implementation-plan.md}, completed P1-P4 runner outputs and commits, current code/tests, P0 closeout and c0 repair-loop closeout. Confirm exact version, HEAD, root package/lock metadata and worktree before reviewing.
+
+QUALIFICATION
+1. Inspect creator-owned app identity and account/project/deployment associations; note schema checks vs actual P2 authorization obligations.
+2. Check CatalogItem permits non-playable products, source IDs retain namespace/provenance, and MediaAsset separately enforces rights.
+3. Exercise positive/negative tests for malformed IDs, ownership, creator overrides, review-by-default, missing-item grace, secrets in public manifest, draft state and client compatibility.
+4. Check backward compatibility with historical ChannelSpec v1/P0 project fixtures and generator assumptions.
+5. Audit official, dated primary sources in docs/integrations/amazon-catalog-feasibility.md: SP-API registration/roles/OAuth, independent TV use rights, KDP/Author Central/Audible uncertainty, Associates/Creators restrictions, first-party feed fallback. No unapproved access reported as working.
+6. Review docs/creator-onboarding.md for a practical no-code path for video/audio/writing creators and explicit blocked/no-API scenarios.
+7. Run npm run codex:stack:validate -- p1, ONE root npm run check with supported Node/npm, git diff --check and any focused negative tests needed. Record actual counts and environment; no fake skipped test success.
+8. Verify original P7 and c0 NOT GREEN outcomes remain unchanged. AWS access/physical Fire TV are not P1 gates.
+9. Advance root package.json and lockfile root metadata to 0.1.5, then write docs/tasks/p1/closeout.md with SHA, version, evidence, passes/failures, policy questions, P2 handoff and GREEN / QUALIFIED or NOT GREEN.
+
+Failure policy: unsafe contracts, broken P0 regression, misleading rights claims or failing checks require NOT GREEN and a bounded c1-* correction recommendation. Lack of Amazon credentials/approval alone does not block P1 if correctly documented. No browser or physical TV required because this phase has no new runtime UI.
+
+No manual Git commit when runner-managed; leave closeout edits for owner review.
+
+FINAL RESPONSE
+Report independent disposition, exact checks/counts, contract compatibility, provider/source permissions, P2 readiness and outstanding limits.
