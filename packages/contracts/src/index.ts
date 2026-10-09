@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export * from './creator.js';
+
 export const SCHEMA_VERSION = 1 as const;
 export const idSchema = z.string().regex(/^(ch|page|mod|item)_[a-f0-9]{32}$/, 'Invalid stable ID');
 const channelIdSchema = idSchema.refine(value => value.startsWith('ch_'), 'Expected channel ID');
