@@ -32,14 +32,14 @@ Build:
 - generated project exists
 - Vega manifest parses
 - main category present
-- release build actually succeeded
-- VPKG exists
+- release build actually succeeded against a verified installed Vega SDK/CLI and target-compatible manifest
+- fresh, nonempty VPKG exists with exact artifact path, SHA-256, build log/exit status, source/spec revision and toolchain identity
 
 Experience:
 - ChannelSpec valid
 - focus/navigation tests pass
 - content/detail/playback fixture passes
-- simulator/device evidence status
+- simulator/device evidence status (separately identified target, installed artifact and observed launch/D-pad/detail/playback/Back results; never inferred from Preview tests)
 
 Store:
 - app name
@@ -67,8 +67,9 @@ Generate:
 - store-copy.md/json
 - screenshot references
 - required-asset checklist
-- build artifact reference/hash if present
-- exact remaining human steps
+- build artifact reference/hash and provenance only if a real build succeeded
+- separately recorded simulator/device proof only when directly observed
+- exact missing SDK/device prerequisites for blocked states, plus remaining human steps
 
 Never copy credentials into the bundle.
 

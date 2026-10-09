@@ -122,9 +122,11 @@ Provide a toolchain doctor that reports Node, ADBT context where detectable, Veg
 Generated manifest must include:
 com.amazon.category.main
 
+For a target using Vega SDK 0.24, the generated `manifest.toml` must also include `[os.version]` with compatible `target` and `min` (both `1.2` for Vega OS 1.2 in SDK 0.24), and matching package/runtime dependencies. Verify these requirements against the *installed* SDK; do not assume that the currently generated template or a declared npm dependency has been qualified. The `c0-real-tv-qualification` correction owns any compatibility repair demonstrated by real SDK validation.
+
 Do not invent Vega CLI commands. Inspect installed tooling and current Amazon documentation/ADBT context during implementation.
 
-Build execution is explicit, project-contained, bounded, captures output, and verifies artifact existence.
+Build execution is explicit, project-contained, bounded, captures output, and verifies artifact existence. Real qualification must record SDK/CLI version, target/runtime compatibility, exact invoked command and exit status, fresh nonempty `.vpkg` path and SHA-256, and evidence that the *same artifact* was installed on the target. Build output or generated source alone is insufficient. The current build wrapper command must be checked against the installed SDK before claiming compatibility.
 
 ## Publish/readiness
 
@@ -158,4 +160,4 @@ T2 integration: persistence, API, agent tool execution, generator, custom-edit p
 
 T3 product: browser golden path and actual Vega simulator/device evidence.
 
-P2 owns T3 closeout.
+P7 originally owned T3 final browser/platform closeout; after its NOT GREEN disposition, `c0-real-tv-qualification` owns targeted real Vega and device requalification. P2 owns only the earlier TV semantics/generator/toolchain discovery foundation.

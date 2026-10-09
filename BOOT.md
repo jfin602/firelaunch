@@ -21,9 +21,9 @@ FireLaunch is not merely an AI code generator and not a generic website builder.
 
 ## Current gate
 
-Repository baseline: 0.0.0.
+Current package version: `0.0.7`. The P0 implementation stack executed, and P7 closed **NOT GREEN** on 2026-10-08. Its browser evidence is preserved in `docs/tasks/p0/closeout.md`.
 
-The active Prompt Stack is `docs/tasks/p0`.
+Active correction: `docs/tasks/c0-real-tv-qualification/`. This correction is scoped to real Vega toolchain/package/device proof and a separately evidenced real Bedrock request if the broad natural-language claim is retained. No VPKG, device pass, or successful Bedrock call is yet claimed.
 
 P0 is a staged Sol implementation stack with six runner-owned implementation checkpoints and one final manual/browser qualification gate:
 
@@ -35,7 +35,7 @@ P0 is a staged Sol implementation stack with six runner-owned implementation che
 6. P6 / 0.0.6 - golden-path integration, Wild Earth fixture, regression and polish
 7. P7 / 0.0.7 - independent browser + real Vega qualification and closeout
 
-If P7 is Not Green, create bounded `c0-*` correction Prompt Stacks from observed blockers rather than rerunning P0 wholesale.
+P7 was Not Green. The active bounded correction is `c0-real-tv-qualification`; it does not rerun P0 or erase the original P7 disposition. Platform prerequisites must be proven before build/runtime qualification, and qualification must stop truthfully if external tools or a test target cannot be provisioned.
 
 ## Locked product decisions
 

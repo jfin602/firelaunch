@@ -47,15 +47,21 @@ P0 Green requires Prompt -> Product -> Real Television.
 
 ## Correction window — c0-*
 
-Only if P7 is Not Green.
+P7 closed **NOT GREEN** at version `0.0.7` on 2026-10-08. Browser Studio, persistence, Preview and generated source were exercised, but no real Bedrock call, verified VPKG or simulator/Fire TV run was available; see `docs/tasks/p0/closeout.md`.
 
-Create small correction stacks such as:
-- c0-vega-build
-- c0-focus-navigation
-- c0-agent-tools
-- c0-demo-polish
+### Active: `c0-real-tv-qualification` (documentation/planning gate)
 
-Astra may be selected exceptionally for a correction that is truly cross-system and resists bounded Sol repair, but it is not the default.
+One bounded correction stack combines the P7 proposals `c0-vega-real-tv` and `c0-prompt-first` to avoid competing remediation ownership. Preserve the passing P0 product and historical closeout.
+
+1. **P1 — Platform prerequisites and compatibility:** identify a supported, accessible build host and real installed Vega SDK/CLI plus an actual VVD/Fire TV target; inspect generated manifest/dependency compatibility, replace device-inaccessible loopback demo media, and package TV-compatible rights-cleared artwork. Stop with an explicit blocker if prerequisites are unavailable.
+2. **P2 — Real build and provider evidence:** validate/repair only source defects found by the actual toolchain, produce a fresh release VPKG with path, SHA-256, exact toolchain identity and logs; exercise a live Bedrock natural-language request if making the broad agent claim. A configured adapter or mock success is not live proof.
+3. **P3 — Independent device qualification and closeout:** install the same artifact on the supported target, capture real launcher/focus/detail/playback/Back evidence, verify truthful Publish readiness and rehearse the under-three-minute demo. Perform one final aggregate check and write GREEN or NOT GREEN with specific evidence.
+
+New Vega SDK 0.24 tooling requires explicit OS target/minimum version in the manifest (OS 1.2 in that release); inspect the *installed* SDK version and dependencies before selecting the compatible configuration. No installed SDK or chosen TV test target is claimed by this planning document.
+
+Completion target: Prompt -> Product -> Real Television, with provider claims separately evidenced, and no false artifact/device/Console qualification. No redesign of ChannelSpec, Studio, runner, or deferred SaaS features. Use focused tests in implementation prompts; reserve global suite/device acceptance for closeout.
+
+Astra may be selected exceptionally for a cross-system blocker that resists bounded Sol repair, not as the default.
 
 ## Submission window
 

@@ -1,6 +1,6 @@
 # Amazon AppDev 2026 Hackathon Requirements
 
-Snapshot reviewed: 2026-10-08.
+Challenge/rules snapshot reviewed: 2026-10-08. Vega SDK 0.24 compatibility guidance checked: 2026-10-09. Platform documentation does not replace verification against the installed SDK.
 
 Official challenge:
 https://amazonappdev2026.devpost.com/
@@ -68,6 +68,8 @@ npx -y @amazon-devices/amazon-devices-buildertools-mcp@latest init-context
 Current docs:
 https://developer.amazon.com/docs/app-submission/submitting-apps-to-amazon-appstore.html
 https://www.developer.amazon.com/docs/vega/0.22/app-submission
+https://developer.amazon.com/docs/vega/0.24/target-os-version
+https://www.developer.amazon.com/docs/vega/0.24/continuous-integration
 
 A Vega submission uses a VPKG.
 
@@ -75,6 +77,12 @@ The Vega manifest must register:
 com.amazon.category.main
 
 Without it the app cannot launch from the Fire TV home launcher and fails submission.
+
+For Vega SDK 0.24, Amazon requires an `[os.version]` manifest section: `target = "1.2"` and `min = "1.2"` for the documented Vega OS 1.2 target, with compatible dependencies. Earlier pinned template packages are not proof of SDK compatibility. Use `vega project doctor` and the build command of the *installed* SDK; validate the current FireLaunch wrapper's arguments against that toolchain.
+
+Amazon's SDK 0.24 build-host guidance lists Ubuntu 20.04/22.04/24.04 x86_64 and macOS arm64/x86_64. The Linux Mint development host must not be presumed officially supported. The qualification environment must be explicitly identified and tested; a separately provisioned supported host or device may be necessary.
+
+Capture the exact installed SDK/CLI identity, OS target, device/simulator identity, actual VPKG path/hash, and launcher/navigation/playback evidence. A browser preview, source output or mock does not replace that evidence.
 
 Amazon also calls physical-device testing an essential pre-submission step. Hackathon qualification may use the simulator per challenge rules, but final production readiness should still flag physical-device testing until performed.
 

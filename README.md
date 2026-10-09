@@ -1,6 +1,6 @@
 # FireLaunch
 
-FireLaunch is a local, code-optional studio for designing a TV channel and generating a creator-owned React Native for Vega project. **0.0.7 is NOT GREEN:** the browser Studio was exercised, but no real Vega build or simulator/device run was possible in the qualification environment. See [P7 closeout](docs/tasks/p0/closeout.md). No VPKG or Amazon submission is claimed.
+FireLaunch is a local, code-optional studio for designing a TV channel and generating a creator-owned React Native for Vega project. **0.0.7 is NOT GREEN:** the browser Studio was exercised, but no real Vega build or simulator/device run was possible in the qualification environment. See [P7 closeout](docs/tasks/p0/closeout.md) and the [active real-TV qualification correction](docs/tasks/c0-real-tv-qualification/README.md). No VPKG, live Bedrock success, device pass, or Amazon submission is claimed.
 
 ## Prerequisites and start
 
@@ -33,7 +33,7 @@ The demo clip URL is `http://127.0.0.1:4173/media/field-notes.mp4`: this works i
 
 ## Vega/toolchain and generated project
 
-`npm run doctor:vega` reports Node/npm, `ADBT_CONTEXT_PATH`, `VEGA_SDK_PATH`, absolute `VEGA_CLI_PATH`, `adb`, and visible device/simulator state where detectable. Install the matching Vega SDK/dev tools separately, configure these environment paths, and run the doctor again. The Build action executes only the configured executable with fixed `build -b Release` arguments inside the generated project; it requires an actual fresh nonempty release `.vpkg` and records its SHA-256. No arbitrary server command is exposed. The generated manifest requires `com.amazon.category.main`.
+`npm run doctor:vega` reports Node/npm, `ADBT_CONTEXT_PATH`, `VEGA_SDK_PATH`, absolute `VEGA_CLI_PATH`, `adb`, and visible device/simulator state where detectable. Install the matching Vega SDK/dev tools separately on a supported and verified build host, configure these environment paths, and run the doctor again. Vega SDK 0.24 requires an `[os.version]` section in `manifest.toml` (with `target = "1.2"` and `min = "1.2"` for OS 1.2); check the installed SDK and generated dependencies before any manifest/template repair. Amazon's published host list for SDK 0.24 does not explicitly include Linux Mint. The existing Build wrapper's CLI arguments must be verified against the installed SDK, not assumed compatible from source or package pins. The Build action executes only the configured executable with fixed `build -b Release` arguments inside the generated project; it requires an actual fresh nonempty release `.vpkg` and records its SHA-256. No arbitrary server command is exposed. The generated manifest requires `com.amazon.category.main`.
 
 For a deterministic source export without using the UI, build first, then call the local API: `POST /api/projects` with `{"title":"Wild Earth"}`, apply `POST /api/projects/<id>/mutations` with the current `expectedRevision`, then `POST /api/projects/<id>/code` with `{}`. `GET /api/projects/<id>/code` gives its path and stale/custom-edit status; `GET /api/projects/<id>/code/file?path=src%2Fchannel.json` returns the projection. Source generation is explicit and does not install dependencies or build the generated app. The generated project is an ordinary source tree owned by the creator; see `templates/vega-channel/README.md` for template details.
 

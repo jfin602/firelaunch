@@ -2,6 +2,8 @@
 
 The video should prove the whole thesis, not tour every control.
 
+**Qualification hold (P7 NOT GREEN, 2026-10-08):** the browser portions were exercised, but no VPKG or real simulator/Fire TV proof exists. This script is a target, not an executable or filmed demonstration until `c0-real-tv-qualification` clears those gates. Do not splice browser Preview in as device footage.
+
 ## Story
 
 A wildlife filmmaker wants a channel named Wild Earth.
@@ -22,7 +24,7 @@ Use virtual remote/keyboard to navigate hero, rails, detail and playback. Focus 
 
 1:05-1:30
 Ask:
-In default mock mode ask: `primary color to #224466`. Show the `MOCK` provider label, validated change activity and refreshed preview. For an Oceans-first rail, reorder it in Content; do not imply the mock understood unsupported free-form prose. If a real Bedrock request succeeds, show its actual provider evidence separately.
+In default mock mode ask: `primary color to #224466`. Show the `MOCK` provider label, validated change activity and refreshed preview. For an Oceans-first rail, reorder it in Content; do not imply the mock understood unsupported free-form prose. If a real Bedrock request succeeds, show its actual provider evidence separately and use only the scope the live request actually proves; never label a mock interaction as broad natural-language generation.
 
 Show preview update and change activity.
 
@@ -33,7 +35,7 @@ Open Code. Show an ordinary React Native for Vega project and editable source.
 Open Build. Show toolchain/readiness checks. Show a successful VPKG only if a real release build produced a verified artifact; otherwise explicitly show the blocked state and the missing prerequisites.
 
 2:15-2:40
-After replacing loopback sample media and unresolved local artwork, run the generated app on Vega simulator or Fire TV and navigate the same channel. This is P7 qualification, not browser Preview footage.
+After replacing loopback sample media and unresolved local artwork, install the verified release VPKG on the supported Vega simulator or Fire TV, then demonstrate its launch, visible D-pad focus, detail, video playback and Back navigation. Capture the actual device/simulator session and correlate it to the recorded artifact hash. This is real-platform qualification, not browser Preview footage.
 
 2:40-2:55
 Open Publish. Show submission assets/checklist and remaining human Amazon Console step.
