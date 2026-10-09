@@ -85,3 +85,21 @@ When executed by `scripts/codex-stack.mjs`, Codex runs with explicit config over
 - the runner owns the checkpoint commit.
 
 If an explicitly accepted dirty tree exists, inspect and continue it rather than resetting it.
+
+## Post-P0 creator-owned launch roadmap (accepted 2026-10-09)
+
+The P0 sequencing and explicit "do not add authentication/billing/cloud" restriction above apply to historical P0 and the bounded `c0-real-tv-qualification` correction **only**. They do not forbid the approved post-P0 P1–P8 launch roadmap. Preserve P0's NOT GREEN closeout and the active correction's narrow scope; do not rewrite its evidence or silently move SaaS work into that stack.
+
+During post-P0 implementation, read [the launch roadmap](docs/roadmap/mvp-roadmap.md) and ADRs 0004–0007 alongside `VISION.md`, `PRODUCT-MODEL.md` and `ARCHITECTURE.md`.
+
+Hard invariants for P1–P8:
+
+- Every creator owns an independently published branded Vega app, Developer Console account/listing, generated source and media. Do not create a shared multi-creator FireLaunch viewer application.
+- Default to catalog-first onboarding with prompt-first as an optional alternative. Build meaningful video/audio/writing experiences, not just product cards.
+- Preserve `ChannelSpec` as presentation truth, its validated mutation/agent path, TV semantics parity and protected code export. CatalogSource/CatalogItem/MediaAsset and PublishedManifest have distinct responsibilities.
+- Discovery by Amazon name/URL/ASIN does not authorize source import, TV reuse or playback. Never promise a universal Amazon author/seller connector. Document and test permissions/rights before enabling specific adapters.
+- Imported field provenance, creator-owned overrides, review-by-default new items and grace state for removals protect creator work.
+- Publish immutable versioned live manifests with compatibility checks, last-known-good cache, safe refresh and rollback. Native changes require real qualified packages.
+- Enforce per-creator API/data/asset/credential access. Protect secrets and private data from published TV manifests and exported projects; plan backups, deletion and operational diagnostics.
+- Each phase is an independently scoped Prompt Stack. Target bounded implementation prompts (normally <=8 minutes), focused checks during implementation, aggregate testing and browser/device evidence at closeout. External approval and device statuses must be factual.
+- Keep the `/docs-review` -> approval -> `/docs-apply` -> `/prompt-ass` -> `/prompt-plan` -> `/prompt-write` gates. The runner owns commits inside executable stacks.

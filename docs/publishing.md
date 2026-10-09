@@ -82,3 +82,40 @@ Each creator submits through their own Amazon Developer account and owns the app
 If Amazon exposes an official API that supports required Vega submission operations, add it behind a separate authenticated adapter and explicit final confirmation.
 
 Do not implement browser automation that scrapes Developer Console as a substitute.
+
+## Launch-MVP publishing extension (planned P5–P8)
+
+The preceding P0 local build/Console sequence remains historical. Production adds **distinct creator-owned app identities** and **remote published content** without changing ownership.
+
+### Creator app ownership and independence
+
+Each ChannelDeployment retains its own app/package identifier, release lineage, store copy/assets, verified artifact/hash, signed build metadata and manifest endpoint. The creator owns their Amazon Developer account, listing, source, content rights and final release decisions. FireLaunch must never silently combine creator channels inside one FireLaunch viewer app or request developer passwords/automate undocumented Console browser behavior.
+
+### Publish data versus release a binary
+
+| Change | Correct path |
+| --- | --- |
+| Approved TV-compatible titles, descriptions, collections, artwork/media URLs, remote layout options | New immutable PublishedManifest revision; installed Vega app fetches over HTTPS |
+| Native code, installed permissions, dependency/runtime, package identity, incompatible schema or bundled native resources | New qualified VPKG, real TV test and any required Amazon Console submission/review |
+
+A draft is not public. Publish snapshots rights-cleared, schema-valid state and updates a release pointer; the previous healthy manifest remains rollback-capable. The TV client validates the new schema and caches last-known-good content. A missing network connection must not blank the channel.
+
+### Guided creator flow
+
+1. Verify import rights, playable licensed media, quality, app identity, store/legal/support information.
+2. Preview on TV semantics; explicitly review/approve manifest and publish remote content.
+3. Generate a distinct Vega source project and creator-specific Appstore assets; preserve code overrides.
+4. Produce truthful release VPKG/toolchain/hash evidence and physical TV navigation/playback results.
+5. Guide creator through their own Developer Console; record actual submission/approval status separately.
+6. Continue permitted sync/review, status, retries and rollback without resubmitting for compatible data updates.
+
+Amazon product data access, media distribution and TV commerce are separate permissions: public ASIN/storefront identity is not a license; SP-API seller approval does not confer universal KDP/Audible rights; affiliate links/program content on television may be restricted. P1 and P7 must check current official policies for each use before treating a flow as publishable.
+
+Relevant official references:
+- https://developer.amazon.com/docs/app-submission/submitting-apps-to-amazon-appstore.html
+- https://developer.amazon.com/sp-api/
+- https://affiliate-program.amazon.com/
+
+### Real launch gate
+
+At least one creator-owned Appstore **approval**, verified physical Fire TV package/navigation/playback and installed-app remote catalog refresh; plus source export, tenant isolation, backup and support qualification. A submitted app or draft bundle alone does not satisfy launch Green.

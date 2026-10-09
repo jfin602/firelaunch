@@ -161,3 +161,47 @@ T2 integration: persistence, API, agent tool execution, generator, custom-edit p
 T3 product: browser golden path and actual Vega simulator/device evidence.
 
 P7 originally owned T3 final browser/platform closeout; after its NOT GREEN disposition, `c0-real-tv-qualification` owns targeted real Vega and device requalification. P2 owns only the earlier TV semantics/generator/toolchain discovery foundation.
+
+## Launch-MVP hosted architecture extension (planned P1-P8)
+
+The preceding local-file, loopback API and P0 repository descriptions remain historical. Post-P0 extends the deterministic ChannelSpec/TV engine rather than replacing them.
+
+### Logical data path
+
+```text
+Authenticated creator -> project-scoped Studio/API
+  -> permitted CatalogSource adapters (authorized Amazon, feed, file, upload)
+  -> CatalogItem + MediaAsset + Collection + provenance
+  -> ChannelAgent / visual editor -> validated ChannelSpec draft
+  -> publish authorization + rights/compatibility checks
+  -> immutable PublishedManifest + atomic deployment release pointer
+                                       |
+Creator-owned installed Vega application
+  -> HTTPS deployment resolver -> versioned manifest -> approved media URLs
+```
+
+`ChannelSpec` is canonical for TV presentation; catalog records are canonical for inventory, source IDs and rights. Sync observations record external changes and apply only through validated catalog/editor services. A publish transaction snapshots *approved* state. A draft edit never directly updates live television.
+
+### Persistent service boundaries
+
+- Hosted relational persistence with schema migrations, revision/CAS writes, secure backups and recovery. Every project, catalog source, media asset, release and credential is scoped to a CreatorAccount.
+- Private-by-default object storage for uploads; media delivery uses valid permitted TV-reachable HTTPS URLs, not loopback Studio fixtures.
+- Secrets/token storage isolated from ChannelSpec, export, server logs, TV manifest and generated source.
+- Connector adapters define required permissions, terms, supported data, rate limits, refresh cursor and revocation behavior. No claim of universal Amazon, KDP or Audible catalog access.
+- Sync workers are idempotent, retry/backoff aware, support checkpoints and reconciliation polling, detect conflicts/missing items and queue creator review. Optional provider notifications accelerate but do not replace recovery polling.
+- Creator-owned ChannelDeployment holds an app/package identity and live release pointer, independent of other creators' apps.
+- Keep agent writes behind strict schema-validated tools and retain custom-code regeneration protection.
+
+### Remote manifest contract
+
+Published manifests are immutable, versioned, signed or integrity-verifiable where appropriate, and contain only TV-safe public data. The deployed Vega app fetches the compatible current release over HTTPS, validates it before activation, caches last-known-good state across restarts, and rolls back on bad releases or failed refresh. Private account data, drafts, source tokens or unlicensed media never ship in a manifest.
+
+Ordinary compatible catalog, collection and layout updates are remote data changes. Native executable changes, installed dependencies, package identity, capabilities, permissions or incompatible schemas require a new qualified VPKG and applicable Appstore review. Verify Preview versus physical TV semantics independently.
+
+### Authorization, recovery and evidence
+
+Enforce per-creator authorization on all APIs, queue jobs, build/download routes and storage access. Include account export/deletion, data retention, revocation, backups, audit of source changes/publications and monitoring of failed sync/refresh. Provide rollback of an immutable published revision, not silent live mutation.
+
+P1 defines contracts and Amazon connector feasibility; P2 hosts accounts/data; P3 imports catalog; P4 adds catalog-grounded generation; P5 implements remote manifests; P6 adds sync; P7 supports creator-owned release/limited SaaS operations; P8 qualifies creator pilots, security, physical TV and actual Appstore approval.
+
+The existing `c0-real-tv-qualification` correction must still produce direct SDK/VPKG/device evidence before real Vega execution is claimed. P5/P8 remote-refresh and physical TV evidence are additional—not substitutes for P0 qualification.

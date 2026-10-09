@@ -1,48 +1,40 @@
 # FireLaunch Vision
 
-## Problem
+## Problem and audience
 
-Launching a branded television channel is still specialized software work. Creators can produce video more easily than ever, but shipping a coherent TV application means learning a 10-foot design system, focus navigation, media behavior, platform tooling, packaging and store submission.
+Video, audio, and writing professionals who already sell work in the Amazon ecosystem want a branded television destination without learning Fire TV development, focus navigation, packaging, or Appstore submission.
 
-FireLaunch compresses that work into a creator workflow without hiding the resulting software.
+## Product promise
 
-## Vision
+**Your Amazon catalog. Your own Fire TV channel.**
 
-A creator describes the channel they want.
+FireLaunch turns a creator's existing, authorized catalog and licensed media into a television-native channel. It offers AI-assisted generation, a visual TV editor and Preview, creator-owned Vega source and publishing guidance, and ongoing remote content synchronization.
 
-FireLaunch turns that intent into a structured channel, shows the result immediately in an interactive television preview, lets the creator refine it conversationally or visually, and keeps the complete generated Vega source available for direct editing.
+**Individual ownership is non-negotiable.** Each channel is a distinct branded application submitted and controlled through its creator's Amazon Developer account. FireLaunch is the builder/management service, not a single viewer app aggregating creators. Creator assets, content, app identity, listing, code and release decisions remain independently owned and exportable.
 
-The finish line is not generated code. The finish line is a channel that can run on a television.
+## Default creator journey (post-P0 launch MVP)
 
-## North-star experience
+1. Create an account and a channel project.
+2. Supply an Amazon seller/author identity or URL as a discovery clue, or directly import a creator-controlled feed/file. Public identity is not proof of ownership and does not guarantee supported Amazon data access.
+3. Review imported works, provenance and rights. Attach playable video/audio or other appropriate, licensed television material.
+4. Generate a meaningful design tailored to video, audio or writing: films and trailers; albums, audio samples and episodes; or an author bookshelf with readings, interviews and companion media.
+5. Customize and approve through the Studio, Preview or ChannelAgent. Prompt-first creation remains available as an alternate entry. The ordinary workflow does not require code.
+6. Export/build a creator-specific Vega project, qualify it on television and submit through the creator's own Amazon Developer Console.
+7. Publish an approved, versioned channel manifest and synchronize supported source changes to the installed app, without a new binary for ordinary compatible catalog/layout updates.
 
-A wildlife filmmaker starts with an empty FireLaunch project and says:
+A product listing is not a playback license. A sparse list of product cards is not a sufficient television experience. Separate rights, quality and integration-permission gates apply to every source.
 
-"Build Wild Earth. Make it cinematic. Put the newest film in a large hero, then Nature, Oceans and Africa rails."
+## Product boundaries
 
-Within the same workflow the creator can:
-- see the branded TV home screen;
-- navigate it with a virtual remote;
-- play demo content;
-- ask for a design/content change;
-- inspect or edit the source;
-- generate the Vega project;
-- run readiness checks;
-- build the release artifact when the Vega toolchain is available;
-- prepare the Amazon Appstore submission package.
+- `ChannelSpec` remains canonical for TV layout and navigation; catalog/source/sync state is a separate, versioned domain.
+- Vega is the launch target; exported source and direct code editing remain available for advanced creators.
+- Only approved integrations may import/display Amazon data on TV. KDP, Audible, Seller Central and affiliate data are different ecosystems; no universal connector is promised.
+- Publish is separate from drafts; content rolls out via immutable manifests with caching, compatibility checks, rollback and guarded creator overrides.
+- New app permissions, native code or incompatible runtime changes still require a qualified new package and the applicable Appstore review.
+- No shared FireLaunch viewer app, team workspaces, multi-TV platform exports, viewer purchases or advertising in launch MVP.
 
-## Product boundary
+## Historical P0 hackathon scope
 
-FireLaunch is a channel builder with a code escape hatch, not a general-purpose AI IDE.
+P0 demonstrated a prompt-first Wild Earth product concept built around **Prompt -> Product -> Real Television**. P7 closed NOT GREEN at version `0.0.7`: browser Preview and source output were tested, but live Vega VPKG/device execution and broad live Bedrock requests were not established. The active `c0-real-tv-qualification` correction owns that evidence gap and is separate from the new launch-MVP roadmap.
 
-The stable product model is the channel and its content/navigation/design state. The agent is one interface to that state. Generated code is a first-class output and customization surface.
-
-## Hackathon thesis
-
-The submission demonstrates not one Fire TV channel but a system that lets creators build many of them.
-
-The strongest demo story is:
-
-Prompt -> Product -> Real Television.
-
-The MVP should optimize for that proof rather than SaaS completeness.
+See [MVP roadmap](roadmap/mvp-roadmap.md).

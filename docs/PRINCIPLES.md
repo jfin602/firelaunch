@@ -35,3 +35,32 @@ Mock agent behavior is reproducible. Bedrock integration is verified separately 
 
 12. Preserve the escape hatch.
 Structured regeneration must not silently destroy deliberate code customization.
+
+## Post-P0 launch-MVP principles (accepted 2026-10-09)
+
+13. Individual creator app ownership.
+Every creator's channel has an independent application identity, developer account/listing, artifacts and exportable source. FireLaunch is not a shared creator viewer app.
+
+14. Catalog-first, never connector-dependent.
+The normal journey starts from an authorized content catalog; blank/prompt-first creation remains available. A creator-controlled import must work when Amazon API access is unavailable.
+
+15. Discovery is not authorization.
+Seller names, author pages, storefront URLs and ASINs are discovery clues, not permission to import, redistribute or sync. Distinguish discovered, verified and actively syncing states.
+
+16. Rights and real TV value are required.
+A listing does not grant playback rights. Audio, video and writing creators need substantive television-native playback, navigation and presentation.
+
+17. Creator edits survive synchronization.
+Field-level provenance and ownership prevent blind overwrites. New items default to review and missing ones receive a grace/review state.
+
+18. Approved manifests are immutable.
+Draft is not live. The Vega app validates published revisions, caches last known-good state, and supports rollback without blanking the channel on refresh failure.
+
+19. Ordinary content updates do not trigger binary rebuilds.
+Compatible catalog and TV-safe layout changes can publish remotely; native permissions, executable changes and incompatible schemas require a new app release.
+
+20. Production trust is not deferred.
+MVP includes authentication, per-creator authorization, secure tokens/assets, backups, account deletion/export, operational monitoring, rights controls and reliable sync.
+
+21. Evidence beats optimistic status.
+No Amazon connector, real-TV execution, remote sync, Appstore approval or VPKG is qualified by a mock, browser Preview or generated source alone.
