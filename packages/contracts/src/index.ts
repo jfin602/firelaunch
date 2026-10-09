@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 export * from './creator.js';
 export * from './catalog.js';
+export * from './sync.js';
+export * from './publication.js';
 
 export const SCHEMA_VERSION = 1 as const;
 export const idSchema = z.string().regex(/^(ch|page|mod|item)_[a-f0-9]{32}$/, 'Invalid stable ID');
