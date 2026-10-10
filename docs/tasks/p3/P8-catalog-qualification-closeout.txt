@@ -1,0 +1,29 @@
+TASK: Phase 3 / P8 — Independent catalog qualification closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+The assigned project version is `0.3.8`.
+
+GOAL
+Independently qualify Phase 3 catalog and inherited local security and record release-gate limitations.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p3/README.md, prompt-assessment.md, implementation-plan.md, carried-forward-gates.md, and security-preflight.md. Check current source, exact HEAD, root version, worktree and previous checkpoint before editing.
+
+INDEPENDENT QUALIFICATION
+Inspect all prior checkpoint SHAs, actual two-profile Google preflight evidence and P2/c2 NOT GREEN. Use two independent live Google browser profiles, local PostgreSQL and real S3 MinIO to test catalog import, review, duplicates, Collections, rights, media, restart, export, CSRF and foreign API denial. Check preserved TV behavior. External HTTPS Google callback/secure cookies and independent HTTPS S3 source/restore can pass only with authorized staging; otherwise leave S4/S5 OPEN and hosted release NOT QUALIFIED. Run stack validator, ONE npm run check and git diff --check; record exact counts, skips, HEAD and evidence in docs/tasks/p3/closeout.md. Advance root metadata to 0.3.8 and do not self-commit. Distinguish bounded CATALOG GREEN / HOSTED RELEASE NOT QUALIFIED from NOT GREEN on core catalog/security failures.
+
+OUT OF SCOPE
+Invented test results, new features, premature hosted production GREEN and rewriting historical closeouts.
+
+VALIDATION
+Run prompt-specific focused tests, affected typechecks and builds, and git diff --check. P8 alone runs the final root aggregate, browser qualification and stack validation. Report actual pass, failure and skipped counts.
+
+GIT
+Do not create commits or change HEAD. Runner owns implementation commits. Only update root package and lockfile version metadata to 0.3.8; do not change internal workspace versions without an evidenced need.
+
+FINAL RESPONSE
+Report exact changed boundaries, observed evidence, tests and counts, candidate HEAD/version and remaining gate status.

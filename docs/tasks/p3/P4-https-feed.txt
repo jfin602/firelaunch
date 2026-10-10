@@ -1,0 +1,29 @@
+TASK: Phase 3 / P4 — HTTPS feed snapshot
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.3.4`.
+
+GOAL
+Implement one-shot creator-controlled HTTPS feed import through the review pipeline.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p3/README.md, prompt-assessment.md, implementation-plan.md, carried-forward-gates.md, and security-preflight.md. Check current source, exact HEAD, root version, worktree and previous checkpoint before editing.
+
+IMPLEMENT
+Document and parse a bounded RSS/Atom or JSON Feed subset. Validate public HTTPS destinations and each redirect, including resolved connection address protections against local/private/network metadata targets and DNS changes. Bound bytes, time, redirects, decompression and items. Reject unsafe XML constructs. Reuse preview/approval, maintain source provenance. Test with a controlled feed harness and advance root version.
+
+OUT OF SCOPE
+Recurring polling, Amazon API, unsafe TLS bypass and automatic channel publication.
+
+VALIDATION
+Run prompt-specific focused tests, affected typechecks and builds, and git diff --check. P8 alone runs the final root aggregate, browser qualification and stack validation. Report actual pass, failure and skipped counts.
+
+GIT
+Do not create commits or change HEAD. Runner owns implementation commits. Only update root package and lockfile version metadata to 0.3.4; do not change internal workspace versions without an evidenced need.
+
+FINAL RESPONSE
+Report exact changed boundaries, observed evidence, tests and counts, candidate HEAD/version and remaining gate status.

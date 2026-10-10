@@ -1,0 +1,29 @@
+TASK: Phase 3 / P6 — Catalog first Studio
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.3.6`.
+
+GOAL
+Build a progressive catalog-first workflow while preserving existing Studio and TV Preview.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p3/README.md, prompt-assessment.md, implementation-plan.md, carried-forward-gates.md, and security-preflight.md. Check current source, exact HEAD, root version, worktree and previous checkpoint before editing.
+
+IMPLEMENT
+Add catalog entry: creator type, source selection, file/feed/manual first item, preview and approve, Collections and overrides, private media rights readiness and informative errors. Preserve prompt-first alternative and existing ChannelSpec Design/Content/Code/Build/Preview. Nonplayable books/listings remain valid draft inventory. Add focused UI/API tests and advance root version.
+
+OUT OF SCOPE
+Live AI generation, source sync scheduling, Amazon scraping and broad Studio redesign.
+
+VALIDATION
+Run prompt-specific focused tests, affected typechecks and builds, and git diff --check. P8 alone runs the final root aggregate, browser qualification and stack validation. Report actual pass, failure and skipped counts.
+
+GIT
+Do not create commits or change HEAD. Runner owns implementation commits. Only update root package and lockfile version metadata to 0.3.6; do not change internal workspace versions without an evidenced need.
+
+FINAL RESPONSE
+Report exact changed boundaries, observed evidence, tests and counts, candidate HEAD/version and remaining gate status.

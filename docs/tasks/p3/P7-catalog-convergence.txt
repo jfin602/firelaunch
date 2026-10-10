@@ -1,0 +1,29 @@
+TASK: Phase 3 / P7 — Catalog integration convergence
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.3.7`.
+
+GOAL
+Integrate import, media, Studio and security behavior before independent browser qualification.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p3/README.md, prompt-assessment.md, implementation-plan.md, carried-forward-gates.md, and security-preflight.md. Check current source, exact HEAD, root version, worktree and previous checkpoint before editing.
+
+IMPLEMENT
+Run video/audio/writing fixtures, repeat file/feed import, duplicate/override/Collection rights cases, restart and export, malicious input and owner/foreign API tests for every new route. Confirm protected private assets, hosted build blocked and P0 ChannelSpec/Vega regressions pass. Repair only direct defects; reserve full aggregate check for P8. Advance root version.
+
+OUT OF SCOPE
+Unrelated features, TV manifest delivery, background sync, Amazon connectors and fabricated staging evidence.
+
+VALIDATION
+Run prompt-specific focused tests, affected typechecks and builds, and git diff --check. P8 alone runs the final root aggregate, browser qualification and stack validation. Report actual pass, failure and skipped counts.
+
+GIT
+Do not create commits or change HEAD. Runner owns implementation commits. Only update root package and lockfile version metadata to 0.3.7; do not change internal workspace versions without an evidenced need.
+
+FINAL RESPONSE
+Report exact changed boundaries, observed evidence, tests and counts, candidate HEAD/version and remaining gate status.

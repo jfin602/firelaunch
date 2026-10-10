@@ -1,0 +1,29 @@
+TASK: Phase 3 / P1 — Local security handoff
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.3.1`.
+
+GOAL
+Verify the mandatory two-profile real Google security preflight before implementing import APIs.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p3/README.md, prompt-assessment.md, implementation-plan.md, carried-forward-gates.md, and security-preflight.md. Check current source, exact HEAD, root version, worktree and previous checkpoint before editing.
+
+IMPLEMENT
+Read docs/tasks/p3/security-preflight.md and the actual redacted preflight evidence after two concurrent browser logins. Confirm owner-success and foreign-denial for project, code, agent, export, Build, private objects and capabilities with valid CSRF. Check logout, restart and source export. Run focused hosted API, auth and SQL tests and fix only reproduced defects. If local S1/S2 evidence is missing or failed, stop without changing the version or successfully completing this checkpoint. Otherwise document the security gate and advance root version.
+
+OUT OF SCOPE
+Catalog code, artificial sign-in, waiving security, production staging claims.
+
+VALIDATION
+Run prompt-specific focused tests, affected typechecks and builds, and git diff --check. P8 alone runs the final root aggregate, browser qualification and stack validation. Report actual pass, failure and skipped counts.
+
+GIT
+Do not create commits or change HEAD. Runner owns implementation commits. Only update root package and lockfile version metadata to 0.3.1; do not change internal workspace versions without an evidenced need.
+
+FINAL RESPONSE
+Report exact changed boundaries, observed evidence, tests and counts, candidate HEAD/version and remaining gate status.
