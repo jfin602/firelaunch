@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { OidcVerifier, randomToken, type AuthenticatedPrincipal } from './oidc.js';
 import { audit } from '../operations.js';
+import { localHostedHttp } from '../local-hosted.js';
 
 const SESSION_MS = 8 * 60 * 60_000;
 const LOGIN_MS = 5 * 60_000;
@@ -33,14 +34,14 @@ export class HostedAuth {
   private readonly stateCookie: string;
 
   constructor(readonly verifier: OidcVerifier, publicOrigin: string,
-    private readonly resolveAccount: (principal: AuthenticatedPrincipal) => Promise<string>) {
+    private readonly resolveAccount: (principal: AuthenticatedPrincipal) => Promise<string>, env: NodeJS.ProcessEnv = process.env) {
     const origin = new URL(publicOrigin);
-    if (origin.origin !== publicOrigin || (origin.protocol !== 'https:' && !(process.env.NODE_ENV === 'test' && origin.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(origin.hostname)))) throw new Error('Hosted public origin must be HTTPS');
+    if (origin.origin !== publicOrigin || (origin.protocol !== 'https:' && !(env.NODE_ENV === 'test' && origin.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(origin.hostname)) && !localHostedHttp(origin, env))) throw new Error('Hosted public origin must be HTTPS');
     if (new URL(verifier.config.redirectUri).origin !== publicOrigin) throw new Error('OIDC callback origin mismatch');
     this.publicOrigin = publicOrigin;
     this.secure = origin.protocol === 'https:';
-    this.sessionCookie = this.secure ? '__Host-firelaunch_session' : 'firelaunch_test_session';
-    this.stateCookie = this.secure ? '__Host-firelaunch_state' : 'firelaunch_test_state';
+    this.sessionCookie = this.secure ? '__Host-firelaunch_session' : 'firelaunch_local_session';
+    this.stateCookie = this.secure ? '__Host-firelaunch_state' : 'firelaunch_local_state';
   }
 
   private cookie(name: string, value: string, age: number): string {

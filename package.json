@@ -27,7 +27,11 @@
     "ops": "node --import tsx apps/server/src/operations-cli.ts",
     "codex:stack": "node scripts/codex-stack.mjs",
     "codex:stack:validate": "node scripts/validate-codex-stack.mjs",
-    "test:runner": "node --test test/unit/codex-stack-prompt-grammar.test.ts test/unit/codex-stack-runner.test.ts"
+    "test:runner": "node --test test/unit/codex-stack-prompt-grammar.test.ts test/unit/codex-stack-runner.test.ts",
+    "hosted:local:setup": "node scripts/local-hosted.mjs setup",
+    "hosted:local:start": "node scripts/local-hosted.mjs start",
+    "hosted:local:check": "node scripts/local-hosted.mjs check",
+    "hosted:local:minio": "bash scripts/local-hosted-minio.sh"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

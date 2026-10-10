@@ -92,7 +92,7 @@ test('hosted OIDC validates code flow, tokens, session rotation, CSRF and logout
     const valid = await begin(); token = await sign(valid.nonce);
     const completed = await finish(valid);
     assert.equal(completed.status, 302);
-    const sessionCookie = completed.headers.get('set-cookie')!.match(/firelaunch_test_session=[^;]+/)![0];
+    const sessionCookie = completed.headers.get('set-cookie')!.match(/firelaunch_local_session=[^;]+/)![0];
     assert.match(completed.headers.get('set-cookie')!, /HttpOnly/);
     assert.match(completed.headers.get('set-cookie')!, /SameSite=Lax/);
     assert.equal((await finish(valid)).status, 400);
@@ -113,14 +113,14 @@ test('hosted OIDC validates code flow, tokens, session rotation, CSRF and logout
     const rotated = await finish(rotation, `${rotation.stateCookie}; ${sessionCookie}`);
     assert.equal(rotated.status, 302);
     assert.equal((await fetch(`${origin}/api/auth/session`, { headers: { cookie: sessionCookie } })).status, 401);
-    const nextCookie = rotated.headers.get('set-cookie')!.match(/firelaunch_test_session=[^;]+/)![0];
+    const nextCookie = rotated.headers.get('set-cookie')!.match(/firelaunch_local_session=[^;]+/)![0];
     assert.notEqual(nextCookie, sessionCookie);
     const nextSession = await (await fetch(`${origin}/api/auth/session`, { headers: { cookie: nextCookie } })).json();
     assert.equal((await fetch(`${origin}/api/auth/logout`, { method: 'POST', headers: { cookie: nextCookie, origin, 'x-csrf-token': nextSession.csrfToken } })).status, 204);
     assert.equal((await fetch(`${origin}/api/auth/session`, { headers: { cookie: nextCookie } })).status, 401);
     const expiring = await begin(); token = await sign(expiring.nonce);
     const expiringResponse = await finish(expiring);
-    const expiringCookie = expiringResponse.headers.get('set-cookie')!.match(/firelaunch_test_session=[^;]+/)![0];
+    const expiringCookie = expiringResponse.headers.get('set-cookie')!.match(/firelaunch_local_session=[^;]+/)![0];
     const present = Date.now;
     Date.now = () => present() + 9 * 60 * 60_000;
     try { assert.equal((await fetch(`${origin}/api/auth/session`, { headers: { cookie: expiringCookie } })).status, 401); }
@@ -142,6 +142,31 @@ test('production configuration rejects fixture origins and missing Google secret
     assert.throws(() => serverModeFromEnv({ FIRELAUNCH_MODE: 'local-legacy', HOST: '0.0.0.0' }));
     assert.throws(() => serverModeFromEnv({ FIRELAUNCH_MODE: 'local-legacy', NODE_ENV: 'production' }));
   } finally { process.env.NODE_ENV = oldEnvironment; }
+});
+
+test('local hosted development accepts only explicit loopback Google callback', () => {
+  const previous = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'development';
+  const account = async () => 'cr_local';
+  const base = { FIRELAUNCH_MODE: 'hosted', DATABASE_URL: 'postgresql://local@127.0.0.1/firelaunch_c2_source',
+    FIRELAUNCH_OIDC_CLIENT_ID: 'google-client', FIRELAUNCH_OIDC_CLIENT_SECRET: 'secret', FIRELAUNCH_LOCAL_HOSTED: '1' };
+  try {
+    for (const host of ['localhost', '127.0.0.1']) {
+      const origin = `http://${host}:4173`;
+      const mode = serverModeFromEnv({ ...base, NODE_ENV: 'development', FIRELAUNCH_PUBLIC_ORIGIN: origin }, account);
+      assert.equal(mode.mode, 'hosted');
+      if (mode.mode === 'hosted') {
+        assert.equal(mode.auth.verifier.config.redirectUri, `${origin}/api/auth/callback`);
+        assert.equal(mode.auth.verifier.config.issuer, 'https://accounts.google.com');
+        assert.match(mode.auth.verifier.authorizationUrl('s', 'n', 'v'), /code_challenge_method=S256/);
+      }
+    }
+    for (const origin of ['http://evil.example:4173', 'http://127.0.0.2:4173', 'http://localhost.evil.example:4173'])
+      assert.throws(() => serverModeFromEnv({ ...base, NODE_ENV: 'development', FIRELAUNCH_PUBLIC_ORIGIN: origin }, account), /HTTPS/);
+    assert.throws(() => serverModeFromEnv({ ...base, NODE_ENV: 'development', FIRELAUNCH_PUBLIC_ORIGIN: 'http://localhost:4173', FIRELAUNCH_LOCAL_HOSTED: '0' }, account), /HTTPS/);
+    process.env.NODE_ENV = 'production';
+    assert.throws(() => serverModeFromEnv({ ...base, NODE_ENV: 'production', FIRELAUNCH_PUBLIC_ORIGIN: 'http://localhost:4173' }, account), /HTTPS/);
+  } finally { process.env.NODE_ENV = previous; }
 });
 
 test('HTTPS hosted login sets secure host-only cookies behind a matching proxy', async () => {

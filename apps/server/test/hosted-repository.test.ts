@@ -132,7 +132,7 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
         const finish = await fetch(`${origin}/api/auth/callback?state=${authUrl.searchParams.get('state')}&code=code`, {
           headers: { cookie: start.headers.get('set-cookie')!.split(';')[0]! }, redirect: 'manual' });
         assert.equal(finish.status, 302);
-        const cookie = finish.headers.get('set-cookie')!.match(/firelaunch_test_session=[^;]+/)![0];
+        const cookie = finish.headers.get('set-cookie')!.match(/firelaunch_local_session=[^;]+/)![0];
         const session = await (await fetch(`${origin}/api/auth/session`, { headers: { cookie } })).json();
         return { cookie, session };
       };
@@ -258,7 +258,7 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       }
       assert.equal((await fetch(`${endpoint}/..%2f..%2fetc%2fpasswd/code/file?path=manifest.toml`, { headers: { cookie: firstLogin.cookie } })).status, 404);
       assert.equal((await fetch(`${ownedPath}/code/file?path=..%2fproject.json`, { headers: { cookie: firstLogin.cookie } })).status, 400);
-      assert.equal((await fetch(`${endpoint}`, { headers: { cookie: 'firelaunch_test_session=stale' } })).status, 401);
+      assert.equal((await fetch(`${endpoint}`, { headers: { cookie: 'firelaunch_local_session=stale' } })).status, 401);
       assert.equal((await fetch(`${ownedPath}/agent`, { method: 'POST', headers: { ...foreignHeaders, 'x-csrf-token': 'bad' }, body: JSON.stringify({ expectedRevision: 1, message: 'probe' }) })).status, 403);
     } finally {
       await new Promise<void>(resolve => api.close(() => resolve()));

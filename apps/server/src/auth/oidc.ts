@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createRemoteJWKSet, customFetch, jwtVerify } from 'jose';
+import { localHostedHttp } from '../local-hosted.js';
 
 export type AuthenticatedPrincipal = Readonly<{
   accountId: string;
@@ -23,10 +24,11 @@ export const randomToken = () => randomBytes(32).toString('base64url');
 
 export class OidcVerifier {
   private readonly jwks;
-  constructor(readonly config: OidcConfiguration, private readonly request: typeof fetch = fetch) {
+  constructor(readonly config: OidcConfiguration, private readonly request: typeof fetch = fetch, env: NodeJS.ProcessEnv = process.env) {
     for (const endpoint of [config.issuer, config.authorizationEndpoint, config.tokenEndpoint, config.jwksUri, config.redirectUri]) {
       const url = new URL(endpoint);
-      if (url.protocol !== 'https:' && !(process.env.NODE_ENV === 'test' && url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) {
+      if (url.protocol !== 'https:' && !(process.env.NODE_ENV === 'test' && url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))
+        && !(endpoint === config.redirectUri && localHostedHttp(url, env))) {
         throw new Error('OIDC endpoints must use HTTPS');
       }
       if (url.username || url.password || url.hash) throw new Error('Unsafe OIDC endpoint');

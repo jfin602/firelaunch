@@ -8,6 +8,7 @@ import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { RepositoryError } from './repository.js';
 import { audit, cleanOrphans } from './operations.js';
+import { localHostedHttp } from './local-hosted.js';
 
 export interface PrivateObjectStore {
   put(key: string, content: Buffer, contentType: string): Promise<void>;
@@ -43,11 +44,11 @@ export class IsolatedObjectStore implements PrivateObjectStore {
 
 export class S3PrivateObjectStore implements PrivateObjectStore {
   private readonly client: S3Client;
-  constructor(private readonly bucket: string, options: { region: string; endpoint?: string; accessKeyId: string; secretAccessKey: string }) {
+  constructor(private readonly bucket: string, options: { region: string; endpoint?: string; accessKeyId: string; secretAccessKey: string; allowLocalHttp?: boolean }) {
     if (!/^[a-z0-9][a-z0-9.-]{2,62}$/.test(bucket) || !options.region || !options.accessKeyId || !options.secretAccessKey) throw new Error('Private S3 configuration incomplete');
     if (options.endpoint) {
       const endpoint = new URL(options.endpoint);
-      if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) throw new Error('Private S3 endpoint must be HTTPS');
+      if ((endpoint.protocol !== 'https:' && !(options.allowLocalHttp && process.env.NODE_ENV === 'development' && ['localhost', '127.0.0.1'].includes(endpoint.hostname) && endpoint.protocol === 'http:' && endpoint.pathname === '/')) || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) throw new Error('Private S3 endpoint must be HTTPS');
     }
     this.client = new S3Client({ region: options.region, ...(options.endpoint ? { endpoint: options.endpoint } : {}), forcePathStyle: Boolean(options.endpoint),
       credentials: { accessKeyId: options.accessKeyId, secretAccessKey: options.secretAccessKey } });
@@ -66,8 +67,9 @@ export class S3PrivateObjectStore implements PrivateObjectStore {
 
 export function privateObjectStoreFromEnv(env: NodeJS.ProcessEnv): PrivateObjectStore {
   if (env.FIRELAUNCH_OBJECT_STORE !== 's3') throw new Error('Hosted private S3 object storage is required');
+  const endpoint = env.FIRELAUNCH_OBJECT_ENDPOINT;
   return new S3PrivateObjectStore(env.FIRELAUNCH_OBJECT_BUCKET ?? '', {
-    region: env.FIRELAUNCH_OBJECT_REGION ?? '', ...(env.FIRELAUNCH_OBJECT_ENDPOINT ? { endpoint: env.FIRELAUNCH_OBJECT_ENDPOINT } : {}),
+    region: env.FIRELAUNCH_OBJECT_REGION ?? '', ...(endpoint ? { endpoint, allowLocalHttp: localHostedHttp(new URL(endpoint), env) } : {}),
     accessKeyId: env.FIRELAUNCH_OBJECT_ACCESS_KEY_ID ?? '', secretAccessKey: env.FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY ?? ''
   });
 }

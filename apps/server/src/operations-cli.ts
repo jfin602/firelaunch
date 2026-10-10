@@ -2,6 +2,7 @@ import { HostedProjectRepository } from './hosted-repository.js';
 import { privateObjectStoreFromEnv, S3PrivateObjectStore } from './private-objects.js';
 import { audit, cleanOrphans, deleteAccount, exportAccount, health } from './operations.js';
 import { createRecoveryArchive, inspectRecoveryArchive, loadRecoveryArchive, openPrivatePayload, restoreRecoveryArchive, saveRecoveryArchive, sealPrivatePayload } from './recovery.js';
+import { localHostedHttp } from './local-hosted.js';
 
 function args(): Map<string, string> {
   const parts = process.argv.slice(2);
@@ -20,7 +21,7 @@ function destinationStore() {
   const env = process.env;
   if (!env.FIRELAUNCH_RESTORE_OBJECT_BUCKET || env.FIRELAUNCH_RESTORE_OBJECT_BUCKET === env.FIRELAUNCH_OBJECT_BUCKET) throw new Error('Separate restore bucket required');
   return new S3PrivateObjectStore(env.FIRELAUNCH_RESTORE_OBJECT_BUCKET, { region: env.FIRELAUNCH_OBJECT_REGION ?? '',
-    ...(env.FIRELAUNCH_OBJECT_ENDPOINT ? { endpoint: env.FIRELAUNCH_OBJECT_ENDPOINT } : {}),
+    ...(env.FIRELAUNCH_OBJECT_ENDPOINT ? { endpoint: env.FIRELAUNCH_OBJECT_ENDPOINT, allowLocalHttp: localHostedHttp(new URL(env.FIRELAUNCH_OBJECT_ENDPOINT), env) } : {}),
     accessKeyId: env.FIRELAUNCH_OBJECT_ACCESS_KEY_ID ?? '', secretAccessKey: env.FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY ?? '' });
 }
 

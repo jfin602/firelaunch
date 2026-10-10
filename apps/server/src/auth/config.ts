@@ -1,6 +1,7 @@
 import { HostedAuth } from './sessions.js';
 import { OidcVerifier } from './oidc.js';
 import type { AuthenticatedPrincipal } from './oidc.js';
+import { localHostedHttp } from '../local-hosted.js';
 
 export type ServerMode = { mode: 'local-legacy' } | { mode: 'hosted'; auth: HostedAuth };
 
@@ -16,14 +17,16 @@ export function serverModeFromEnv(env: NodeJS.ProcessEnv, resolveAccount?: (prin
   const clientId = env.FIRELAUNCH_OIDC_CLIENT_ID;
   const clientSecret = env.FIRELAUNCH_OIDC_CLIENT_SECRET;
   if (!origin || !clientId || !clientSecret || env.FIRELAUNCH_OIDC_ISSUER && env.FIRELAUNCH_OIDC_ISSUER !== 'https://accounts.google.com') throw new Error('Hosted Google OIDC configuration incomplete');
-  if (new URL(origin).protocol !== 'https:') throw new Error('Hosted public origin must be HTTPS');
+  const publicUrl = new URL(origin);
+  if (publicUrl.origin !== origin || publicUrl.username || publicUrl.password || publicUrl.hash ||
+    (publicUrl.protocol !== 'https:' && !localHostedHttp(publicUrl, env))) throw new Error('Hosted public origin must be HTTPS');
   const verifier = new OidcVerifier({
     issuer: 'https://accounts.google.com', clientId, clientSecret,
     authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenEndpoint: 'https://oauth2.googleapis.com/token',
     jwksUri: 'https://www.googleapis.com/oauth2/v3/certs',
     redirectUri: `${origin}/api/auth/callback`
-  });
+  }, fetch, env);
   if (!resolveAccount) throw new Error('Hosted account resolver is required');
-  return { mode: 'hosted', auth: new HostedAuth(verifier, origin, resolveAccount) };
+  return { mode: 'hosted', auth: new HostedAuth(verifier, origin, resolveAccount, env) };
 }

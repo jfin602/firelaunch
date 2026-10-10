@@ -16,6 +16,22 @@ test('private S3 configuration fails closed without server-only credentials or H
     FIRELAUNCH_OBJECT_ACCESS_KEY_ID: 'test', FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY: 'test', FIRELAUNCH_OBJECT_ENDPOINT: 'http://example.com' }), /HTTPS/);
 });
 
+test('local S3 HTTP requires explicit development and loopback', () => {
+  const previous = process.env.NODE_ENV;
+  const base = { FIRELAUNCH_OBJECT_STORE: 's3', FIRELAUNCH_OBJECT_BUCKET: 'firelaunch-source', FIRELAUNCH_OBJECT_REGION: 'us-east-1',
+    FIRELAUNCH_OBJECT_ACCESS_KEY_ID: 'test', FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY: 'test', FIRELAUNCH_LOCAL_HOSTED: '1' };
+  try {
+    process.env.NODE_ENV = 'development';
+    for (const host of ['localhost', '127.0.0.1'])
+      assert.ok(privateObjectStoreFromEnv({ ...base, NODE_ENV: 'development', FIRELAUNCH_OBJECT_ENDPOINT: `http://${host}:9000` }));
+    for (const endpoint of ['http://evil.example:9000', 'http://127.0.0.2:9000', 'http://localhost:9000/path'])
+      assert.throws(() => privateObjectStoreFromEnv({ ...base, NODE_ENV: 'development', FIRELAUNCH_OBJECT_ENDPOINT: endpoint }), /HTTPS/);
+    assert.throws(() => privateObjectStoreFromEnv({ ...base, NODE_ENV: 'development', FIRELAUNCH_LOCAL_HOSTED: '0', FIRELAUNCH_OBJECT_ENDPOINT: 'http://localhost:9000' }), /HTTPS/);
+    process.env.NODE_ENV = 'production';
+    assert.throws(() => privateObjectStoreFromEnv({ ...base, NODE_ENV: 'production', FIRELAUNCH_OBJECT_ENDPOINT: 'http://localhost:9000' }), /HTTPS/);
+  } finally { process.env.NODE_ENV = previous; }
+});
+
 const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
 (baseUrl ? test : test.skip)('private object ownership, expiry, revocation, deletion and orphan cleanup on real Postgres', async () => {
   const admin = new Pool({ connectionString: baseUrl });
