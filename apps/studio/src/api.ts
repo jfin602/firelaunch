@@ -76,3 +76,32 @@ export const buildStatus = (id: string) => request(`/${id}/build`) as Promise<Bu
 export const runBuild = (id: string) => request(`/${id}/build`, json({})) as Promise<BuildEvidence>;
 export const readiness = (id: string) => request(`/${id}/readiness`) as Promise<Readiness>;
 export const createBundle = (id: string) => request(`/${id}/bundle`, json({})) as Promise<{ path?: string; files?: string[]; status?: 'blocked'; reason?: string; submitted: false }>;
+
+import { catalogInventorySchema, type CatalogSource, type CatalogItem, type Collection, type MediaAsset } from '@firelaunch/contracts';
+export type CatalogSnapshot = ReturnType<typeof catalogInventorySchema.parse> & { revision: number };
+export type ImportPreview = { sourceId: string; format: 'csv' | 'json' | 'feed'; revision: number; fingerprint: string; content?: string; rows: { line: number; externalId: string; kind: CatalogItem['kind']; metadata: { title: string }; action: 'create' | 'update' | 'unchanged' | 'ambiguous' }[]; issues: { line: number; code: string; message: string }[] };
+export const readCatalog = async (id: string): Promise<CatalogSnapshot> => {
+  const data = await request(`/${id}/catalog`) as CatalogSnapshot;
+  const { revision, ...inventory } = data;
+  return { ...catalogInventorySchema.parse(inventory), revision };
+};
+export type CatalogKind = 'sources' | 'items' | 'collections' | 'media-assets';
+export async function writeCatalog(id: string, kind: CatalogKind, revision: number, record: object, recordId?: string): Promise<{ revision: number; record: CatalogSource | CatalogItem | Collection | MediaAsset }> {
+  return await request(`/${id}/catalog/${kind}${recordId ? `/${recordId}` : ''}`, { ...json({ expectedRevision: revision, record }), method: recordId ? 'PUT' : 'POST' }) as { revision: number; record: CatalogSource | CatalogItem | Collection | MediaAsset };
+}
+export async function previewCatalogImport(id: string, sourceId: string, format: 'csv' | 'json' | 'feed', content?: string): Promise<ImportPreview> {
+  return await request(`/${id}/catalog/imports/${format === 'feed' ? 'feed-preview' : 'preview'}`, json(format === 'feed' ? { sourceId } : { sourceId, format, content })) as ImportPreview;
+}
+export async function approveCatalogImport(id: string, preview: ImportPreview, content: string): Promise<{ revision: number; created: number; updated: number; unchanged: number }> {
+  return await request(`/${id}/catalog/imports/${preview.format === 'feed' ? 'feed-approve' : 'approve'}`, json({ sourceId: preview.sourceId, ...(preview.format === 'feed' ? {} : { format: preview.format }), content, expectedRevision: preview.revision, fingerprint: preview.fingerprint })) as { revision: number; created: number; updated: number; unchanged: number };
+}
+export async function uploadPrivateMedia(id: string, file: File): Promise<{ id: string; contentType: string }> {
+  if (file.size > 1_000_000 || !['image/png', 'image/jpeg', 'video/mp4', 'audio/mpeg'].includes(file.type)) throw new ApiError('Choose a PNG, JPEG, MP4 or MP3 under 1 MB.', 400);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return await request(`/${id}/private-objects`, json({ kind: 'media', contentType: file.type, contentBase64: btoa(binary) })) as { id: string; contentType: string };
+}
+export async function deletePrivateObject(id: string, objectId: string): Promise<void> {
+  await request(`/${id}/private-objects/${objectId}`, { method: 'DELETE' });
+}

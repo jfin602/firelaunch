@@ -6,29 +6,31 @@ import { ApiError, askAgent, createProject, getProject, getSession, listProjects
 import { Preview } from './Preview.js';
 import { AgentPanel } from './AgentPanel.js';
 import { Delivery } from './Delivery.js';
+import { Catalog } from './Catalog.js';
 import { SAMPLE_ART, SAMPLE_MEDIA, sampleMutations } from './sample.js';
 
 function newId(kind: 'page' | 'mod' | 'item'): string {
   return `${kind}_${crypto.randomUUID().replaceAll('-', '')}`;
 }
 
-type Surface = 'Create' | 'Design' | 'Content' | 'Code' | 'Build' | 'Publish';
-const surfaces: Surface[] = ['Create', 'Design', 'Content', 'Code', 'Build', 'Publish'];
-const icons: Record<Surface, string> = { Create: '✳', Design: '◈', Content: '▦', Code: '⌘', Build: '⬡', Publish: '↗' };
+type Surface = 'Catalog' | 'Create' | 'Design' | 'Content' | 'Code' | 'Build' | 'Publish';
+const surfaces: Surface[] = ['Catalog', 'Create', 'Design', 'Content', 'Code', 'Build', 'Publish'];
+const icons: Record<Surface, string> = { Catalog: '▤', Create: '✳', Design: '◈', Content: '▦', Code: '⌘', Build: '⬡', Publish: '↗' };
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="field"><span>{label}</span>{children}</label>;
 }
 
-function Intro({ onCreate, busy }: { onCreate: (title: string, sample: boolean, request: string) => Promise<void>; busy: boolean }) {
+function Intro({ onCreate, busy, hosted }: { onCreate: (title: string, sample: boolean, request: string, catalog: boolean) => Promise<void>; busy: boolean; hosted: boolean }) {
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState('');
   const [sample, setSample] = useState(true);
   const [request, setRequest] = useState('');
+  const [catalog, setCatalog] = useState(hosted);
   return <div className="welcome"><div className="welcome-symbol">✳</div><span className="eyebrow">YOUR CHANNEL STARTS HERE</span><h1>Stories belong<br/><em>on the big screen.</em></h1><p>Shape your brand, curate a collection, and explore the TV experience before writing a line of code.</p>
     <div className="welcome-form"><div className="steps"><span className={step === 0 ? 'current' : ''}>01 Identity</span><span className={step === 1 ? 'current' : ''}>02 First look</span></div>
       {step === 0 ? <form onSubmit={event => { event.preventDefault(); if (title.trim()) setStep(1); }}><Field label="CHANNEL NAME"><input autoFocus required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} placeholder="e.g. Wild Earth" /></Field><button className="primary" type="submit">Continue <span>→</span></button></form>
-        : <div><h2>{title}</h2><p>Start with original concept artwork and one procedural demo clip reused across Nature, Oceans and Africa, or begin blank. Replace demo media before device testing. The optional agent request uses mock mode unless Bedrock is configured.</p><label className="check"><input type="checkbox" checked={sample} onChange={event => setSample(event.target.checked)} /> Add rights-safe demo collection</label><Field label="INITIAL AGENT REQUEST (OPTIONAL)"><textarea maxLength={2000} value={request} onChange={event => setRequest(event.target.value)} placeholder="e.g. Add page Explore" /></Field><div className="button-row"><button onClick={() => setStep(0)}>← Back</button><button className="primary" disabled={busy} onClick={() => void onCreate(title.trim(), sample, request.trim())}>{busy ? 'Creating…' : 'Create channel →'}</button></div></div>}
+        : <div><h2>{title}</h2>{hosted && <><label className="check"><input type="radio" name="entry" checked={catalog} onChange={() => setCatalog(true)}/> Start with my catalog</label><label className="check"><input type="radio" name="entry" checked={!catalog} onChange={() => setCatalog(false)}/> Start with a prompt or sample channel</label></>}{catalog ? <p>Create a private channel workspace, then add a creator-controlled file, feed snapshot or manual first item. Inventory stays draft until separately approved for TV.</p> : <><p>Start with original concept artwork and one procedural demo clip reused across Nature, Oceans and Africa, or begin blank. Replace demo media before device testing. The optional agent request uses mock mode unless Bedrock is configured.</p><label className="check"><input type="checkbox" checked={sample} onChange={event => setSample(event.target.checked)} /> Add rights-safe demo collection</label><Field label="INITIAL AGENT REQUEST (OPTIONAL)"><textarea maxLength={2000} value={request} onChange={event => setRequest(event.target.value)} placeholder="e.g. Add page Explore" /></Field></>}<div className="button-row"><button onClick={() => setStep(0)}>← Back</button><button className="primary" disabled={busy} onClick={() => void onCreate(title.trim(), !catalog && sample, catalog ? '' : request.trim(), catalog)}>{busy ? 'Creating…' : 'Create channel →'}</button></div></div>}
     </div></div>;
 }
 
@@ -99,7 +101,7 @@ export default function App() {
   const [projects, setProjects] = useState<ChannelProject[]>([]);
   const [project, setProject] = useState<ChannelProject | null>(null);
   const projectRef = useRef<ChannelProject | null>(null);
-  const [surface, setSurface] = useState<Surface>('Create');
+  const [surface, setSurface] = useState<Surface>('Catalog');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -119,7 +121,7 @@ export default function App() {
     window.addEventListener('firelaunch-session-expired', expired);
     window.addEventListener('focus', checkSession);
     const interval = window.setInterval(checkSession, 60_000);
-    void getSession().then(active => { accountRef.current = active?.accountId ?? null; setSession(active); return listProjects(); }).then(items => {
+    void getSession().then(active => { accountRef.current = active?.accountId ?? null; setSession(active); setSurface(active ? 'Catalog' : 'Create'); return listProjects(); }).then(items => {
       setProjects(items);
       const requested = new URLSearchParams(window.location.search).get('project');
       const choice = items.find(item => item.id === requested) ?? items[0];
@@ -154,11 +156,11 @@ export default function App() {
       return false;
     } finally { setBusy(false); }
   };
-  const create = async (title: string, sample: boolean, request: string) => {
+  const create = async (title: string, sample: boolean, request: string, catalog: boolean) => {
     setBusy(true); setError('');
     try {
       const created = await createProject(title);
-      select(created); setProjects(previous => [...previous, created]); setNewChannel(false); setSurface('Create');
+      select(created); setProjects(previous => [...previous, created]); setNewChannel(false); setSurface(catalog ? 'Catalog' : 'Create');
       if (sample) for (const mutation of sampleMutations(created, [newId('item'), newId('item'), newId('item')], [newId('mod'), newId('mod'), newId('mod'), newId('mod')])) if (!(await commit(mutation))) break;
       if (request && projectRef.current?.id === created.id) {
         const result = await askAgent(projectRef.current, request);
@@ -173,8 +175,8 @@ export default function App() {
     <div className="sidebar-label">CHANNEL WORKSPACE</div><nav className="sidebar-nav" aria-label="Studio surfaces">{surfaces.map(target => <button key={target} disabled={!project} className={surface === target ? 'active' : ''} onClick={() => setSurface(target)}><span>{icons[target]}</span>{target}</button>)}</nav><div className="sidebar-footer">✧ &nbsp; Vega-first creation<br/><small>{session ? 'Hosted studio' : 'Local studio'}</small></div></aside>
     <main><header className="topbar"><div><span className="eyebrow">STUDIO / {surface.toUpperCase()}</span><h1>{project?.spec.title ?? 'Your next channel'}</h1></div><div className="topbar-right"><span className="status"><i/> {busy ? 'SAVING' : project ? session ? 'SAVED PRIVATELY' : 'SAVED LOCALLY' : 'READY'}</span><button onClick={() => setNewChannel(previous => !previous)}>{newChannel && project ? '← Current channel' : '＋ New channel'}</button></div></header>
       {error && <div className="error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></div>}
-      {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} onCreate={create} /> : <div className="workspace"><div className="workspace-main"><Preview key={project.id} spec={project.spec}/><div className="under-preview"><div><span className="eyebrow">TV-FIRST INTERACTION</span><h2>From idea to living room.</h2><p>Navigate every tile with the remote. Changes you save on the right appear here immediately. Device playback still needs separate qualification.</p></div><span className="signal">◉ &nbsp; SHARED TV SEMANTICS</span></div></div><aside className="inspector" key={`${project.id}:${surface}`}>
-        {surface === 'Design' ? <Design project={project} commit={commit}/> : surface === 'Content' ? <Content project={project} commit={commit}/> : surface === 'Create' ? <AgentPanel key={project.id} project={project} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery project={project} surface={surface} />}
+      {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : <div className="workspace"><div className="workspace-main"><Preview key={project.id} spec={project.spec}/><div className="under-preview"><div><span className="eyebrow">TV-FIRST INTERACTION</span><h2>From idea to living room.</h2><p>Navigate every tile with the remote. Changes you save on the right appear here immediately. Device playback still needs separate qualification.</p></div><span className="signal">◉ &nbsp; SHARED TV SEMANTICS</span></div></div><aside className="inspector" key={`${project.id}:${surface}`}>
+        {surface === 'Catalog' ? <Catalog projectId={project.id} hosted={!!session}/> : surface === 'Design' ? <Design project={project} commit={commit}/> : surface === 'Content' ? <Content project={project} commit={commit}/> : surface === 'Create' ? <AgentPanel key={project.id} project={project} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery project={project} surface={surface} />}
       </aside></div>}
     </main></div>;
 }
