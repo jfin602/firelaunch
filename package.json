@@ -1,6 +1,6 @@
 {
   "name": "firelaunch",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "private": true,
   "type": "module",
   "packageManager": "npm@12.2.0",
@@ -24,6 +24,7 @@
     "check": "npm run typecheck && npm run test",
     "doctor:vega": "node --import tsx packages/generator/src/doctor-cli.ts",
     "migration:p0": "node --import tsx apps/server/src/migration/legacy-import-cli.ts",
+    "ops": "node --import tsx apps/server/src/operations-cli.ts",
     "codex:stack": "node scripts/codex-stack.mjs",
     "codex:stack:validate": "node scripts/validate-codex-stack.mjs",
     "test:runner": "node --test test/unit/codex-stack-prompt-grammar.test.ts test/unit/codex-stack-runner.test.ts"

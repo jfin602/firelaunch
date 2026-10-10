@@ -7,6 +7,7 @@ import { z } from 'zod';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { RepositoryError } from './repository.js';
+import { audit, cleanOrphans } from './operations.js';
 
 export interface PrivateObjectStore {
   put(key: string, content: Buffer, contentType: string): Promise<void>;
@@ -53,7 +54,7 @@ export class S3PrivateObjectStore implements PrivateObjectStore {
   }
   async put(key: string, content: Buffer, contentType: string): Promise<void> {
     await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: keySchema.parse(key), Body: content,
-      ContentType: contentType, ServerSideEncryption: 'AES256' }));
+      ContentType: contentType, ServerSideEncryption: 'AES256', IfNoneMatch: '*' }));
   }
   async get(key: string): Promise<Buffer> {
     const result = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: keySchema.parse(key) }));
@@ -94,7 +95,8 @@ export class PrivateObjectService {
     const key = `private/${randomBytes(32).toString('hex')}`;
     try { await this.store.put(key, content, contentType); }
     catch {
-      try { await this.store.delete(key); } catch { /* P6 reconciliation handles an unavailable object store. */ }
+      try { await this.store.delete(key); } catch { await this.queueOrphan(key); }
+      await audit(this.pool, 'storage_failed', 'failure', principal.accountId);
       throw new RepositoryError('STORAGE_ERROR', 'Private object write failed');
     }
     try {
@@ -107,7 +109,8 @@ export class PrivateObjectService {
       if (!result.rows[0]) throw missing();
       return publicMetadata(result.rows[0]);
     } catch {
-      try { await this.store.delete(key); } catch { /* P6 operational reconciliation owns persistent cleanup. */ }
+      try { await this.store.delete(key); } catch { await this.queueOrphan(key); }
+      await audit(this.pool, 'storage_failed', 'failure', principal.accountId);
       throw new RepositoryError('STORAGE_ERROR', 'Private object metadata write failed');
     }
   }
@@ -148,7 +151,7 @@ export class PrivateObjectService {
       [digest(capability), objectId, principal.accountId, new Date(this.now()).toISOString()]);
     if (!result.rowCount) throw missing();
     try { return { metadata: publicMetadata(row), content: await this.store.get(row.object_key) }; }
-    catch { throw new RepositoryError('STORAGE_ERROR', 'Private object read failed'); }
+    catch { await audit(this.pool, 'storage_failed', 'failure', principal.accountId); throw new RepositoryError('STORAGE_ERROR', 'Private object read failed'); }
   }
 
   async revoke(principal: AuthenticatedPrincipal, projectId: string, objectId: string): Promise<void> {
@@ -163,12 +166,18 @@ export class PrivateObjectService {
       await client.query('BEGIN');
       const locked = await client.query('SELECT 1 FROM private_objects WHERE id = $1 AND creator_account_id = $2 FOR UPDATE', [objectId, principal.accountId]);
       if (!locked.rowCount) throw missing();
-      await this.store.delete(row.object_key);
+      await client.query('INSERT INTO private_object_garbage(object_key) VALUES ($1) ON CONFLICT DO NOTHING', [row.object_key]);
       await client.query('DELETE FROM private_objects WHERE id = $1 AND creator_account_id = $2', [objectId, principal.accountId]);
       await client.query('COMMIT');
     } catch {
       await client.query('ROLLBACK');
+      await audit(this.pool, 'storage_failed', 'failure', principal.accountId);
       throw new RepositoryError('STORAGE_ERROR', 'Private object delete failed');
     } finally { client.release(); }
+    await cleanOrphans(this.pool, this.store);
+  }
+
+  private async queueOrphan(key: string): Promise<void> {
+    await this.pool.query('INSERT INTO private_object_garbage(object_key) VALUES ($1) ON CONFLICT DO NOTHING', [key]).catch(() => undefined);
   }
 }

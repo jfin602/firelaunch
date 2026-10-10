@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { OidcVerifier, randomToken, type AuthenticatedPrincipal } from './oidc.js';
+import { audit } from '../operations.js';
 
 const SESSION_MS = 8 * 60 * 60_000;
 const LOGIN_MS = 5 * 60_000;
@@ -76,7 +77,7 @@ export class HostedAuth {
   }
 
   begin(request: IncomingMessage, response: ServerResponse): void {
-    if (!this.safeHost(request)) { response.writeHead(400).end(); return; }
+    if (!this.safeHost(request)) { void audit(undefined, 'auth_denied', 'denied'); response.writeHead(400).end(); return; }
     for (const [key, login] of this.logins) if (login.expiresAt <= Date.now()) this.logins.delete(key);
     if (this.logins.size >= 10_000) { response.writeHead(503).end(); return; }
     const state = randomToken(); const nonce = randomToken(); const verifier = randomToken();
@@ -85,12 +86,13 @@ export class HostedAuth {
   }
 
   async callback(request: IncomingMessage, response: ServerResponse, url: URL): Promise<void> {
-    if (!this.safeHost(request) || url.searchParams.getAll('state').length !== 1 || url.searchParams.getAll('code').length !== 1 || url.searchParams.has('error')) { response.writeHead(400).end(); return; }
+    if (!this.safeHost(request) || url.searchParams.getAll('state').length !== 1 || url.searchParams.getAll('code').length !== 1 || url.searchParams.has('error')) { void audit(undefined, 'auth_denied', 'denied'); response.writeHead(400).end(); return; }
     const state = url.searchParams.get('state'); const code = url.searchParams.get('code');
     const cookieState = cookies(request)[this.stateCookie];
     const login = state ? this.logins.get(hash(state)) : undefined;
     if (state) this.logins.delete(hash(state));
     if (!state || !code || !cookieState || !same(state, cookieState) || !login || login.expiresAt <= Date.now()) {
+      void audit(undefined, 'auth_denied', 'denied');
       response.writeHead(400, { 'set-cookie': this.clear(this.stateCookie), 'cache-control': 'no-store' }).end(); return;
     }
     try {
@@ -104,14 +106,15 @@ export class HostedAuth {
       this.sessions.set(hash(token), { principal: { ...identity.principal, accountId }, csrf: randomToken(), expiresAt: Math.min(Date.now() + SESSION_MS, identity.expiresAt) });
       response.writeHead(302, { location: this.publicOrigin + '/', 'set-cookie': [this.clear(this.stateCookie), this.cookie(this.sessionCookie, token, Math.floor(SESSION_MS / 1000))], 'cache-control': 'no-store' }).end();
     } catch {
+      void audit(undefined, 'auth_failed', 'failure');
       response.writeHead(401, { 'set-cookie': this.clear(this.stateCookie), 'cache-control': 'no-store' }).end();
     }
   }
 
   logout(request: IncomingMessage, response: ServerResponse): void {
     const session = this.session(request);
-    if (!session) { response.writeHead(401).end(); return; }
-    if (!this.authorizedMutation(request, session)) { response.writeHead(403).end(); return; }
+    if (!session) { void audit(undefined, 'auth_denied', 'denied'); response.writeHead(401).end(); return; }
+    if (!this.authorizedMutation(request, session)) { void audit(undefined, 'auth_denied', 'denied', session.principal.accountId); response.writeHead(403).end(); return; }
     const token = cookies(request)[this.sessionCookie];
     if (token) this.sessions.delete(hash(token));
     response.writeHead(204, { 'set-cookie': this.clear(this.sessionCookie), 'cache-control': 'no-store' }).end();

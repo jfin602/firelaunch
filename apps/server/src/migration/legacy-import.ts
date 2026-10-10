@@ -7,6 +7,7 @@ import { migrateChannel } from '@firelaunch/channel-engine';
 import { projectSchema, type ChannelProject } from '@firelaunch/contracts';
 import type { Pool } from 'pg';
 import { RepositoryError } from '../repository.js';
+import { audit } from '../operations.js';
 
 const projectId = /^ch_[a-f0-9]{32}$/;
 const accountId = /^cr_[a-f0-9]{32}$/;
@@ -203,6 +204,7 @@ export class LegacyImporter {
   }
 
   private async auditFailure(id: string, reason: string): Promise<void> {
+    await audit(this.pool, 'import_failed', 'failure', this.creatorAccountId);
     await this.pool.query(`INSERT INTO creator_audit_events(creator_account_id,event_type,project_id,details)
       SELECT $1,'legacy_project_import_failed',$2,$3::jsonb FROM creator_accounts WHERE id = $1`, [this.creatorAccountId, id, JSON.stringify({ reason })]).catch(() => undefined);
   }

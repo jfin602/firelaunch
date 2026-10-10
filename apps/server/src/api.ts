@@ -9,6 +9,7 @@ import { HostedWorkspaceService } from './hosted-workspace.js';
 import type { ServerMode } from './auth/config.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import type { PrivateObjectService } from './private-objects.js';
+import { audit } from './operations.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -55,8 +56,8 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
       }
       if (segments[0] === 'api' && segments[1] === 'projects' && mode?.mode === 'hosted') {
         const session = mode.auth.session(request);
-        if (!session) { respond(response, 401, { error: { code: 'UNAUTHENTICATED', message: 'Sign in required' } }); return; }
-        if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? '') && !mode.auth.authorizedMutation(request, session)) { respond(response, 403, { error: { code: 'CSRF', message: 'Invalid request origin or CSRF token' } }); return; }
+        if (!session) { void audit(hostedRepository?.pool, 'auth_denied', 'denied'); respond(response, 401, { error: { code: 'UNAUTHENTICATED', message: 'Sign in required' } }); return; }
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? '') && !mode.auth.authorizedMutation(request, session)) { void audit(hostedRepository?.pool, 'auth_denied', 'denied', session.principal.accountId); respond(response, 403, { error: { code: 'CSRF', message: 'Invalid request origin or CSRF token' } }); return; }
         if (hostedRepository && hostedWorkspace) {
           const principal = session.principal;
           if (segments.length >= 4 && segments[3] === 'private-objects') {

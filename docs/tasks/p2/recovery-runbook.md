@@ -1,0 +1,29 @@
+# P2 recovery and privacy operations
+
+These commands are operator-only CLI operations on an isolated host. There are no public backup, restore, export, deletion or health routes. Use a supported PostgreSQL `pg_dump`/`pg_restore` version and private S3-compatible buckets. The process needs database access, object get/put/delete for private keys, and a 32-byte recovery key. The app listener remains loopback-bound; expose it only behind the reviewed HTTPS proxy.
+
+## Configuration
+
+Set `FIRELAUNCH_DATABASE_URL`, `FIRELAUNCH_OBJECT_STORE=s3`, `FIRELAUNCH_OBJECT_BUCKET`, `FIRELAUNCH_OBJECT_REGION`, `FIRELAUNCH_OBJECT_ACCESS_KEY_ID`, `FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY` and optionally an HTTPS `FIRELAUNCH_OBJECT_ENDPOINT`. Set `FIRELAUNCH_RECOVERY_KEY` to 64 hex characters from a secret manager. Never put the key, database URL or object credentials in the archive path, repository, shell history, logs or support tickets. Give the backup directory mode 0700 and encrypt it at rest; archive files are created exclusively with mode 0600 and use AES-256-GCM. Keep the key separately from the archive, with protected recovery copies. Loss of the key makes the archive unusable.
+
+Run `npm run ops -- health` before backup. It checks migration version 4, a database read and a private object read against an intentionally missing key. Its output is a narrow status; a degraded result requires operator investigation. The object store must return a recognizable missing-key error; authentication or network failures remain degraded.
+
+## Backup and retention
+
+Run `npm run ops -- backup --out /secure/firelaunch-YYYYMMDD.flrec --retain-days 30`. The CLI uses a repeatable-read PostgreSQL snapshot shared with `pg_dump` and reads the matching private-object metadata and bytes. It checks every object's length and SHA-256 before sealing the archive. A missing or changed object fails the backup. The encrypted archive includes its timestamp, retention deadline, database checksum, object checksums and private bytes; it omits raw database credentials. The successful command prints counts and the database checksum only. Store the encrypted file in access-controlled, durable storage separate from the live database and bucket. Keep daily backups for 30 days by policy; an external scheduler must enforce creation, monitoring, deletion at `retainUntil` and periodic restore drills. This command does not implement an automatic retention scheduler.
+
+Do not treat command exit as recovery proof. Exercise a restore in a separate database and separate private bucket at least once per retention cycle. Capture the archive SHA-256, tool versions, counts, and drill outcome in restricted operational records without recording secrets or object keys.
+
+## Isolated restore
+
+Provision a *new* database name `firelaunch_restore_<suffix>` on an isolated PostgreSQL instance or namespace and an empty, separate private bucket. Set `FIRELAUNCH_RESTORE_DATABASE_URL` and `FIRELAUNCH_RESTORE_OBJECT_BUCKET`; the latter must differ from the source bucket. Then run `npm run ops -- restore --in /secure/firelaunch-YYYYMMDD.flrec`. The archive is authenticated and checksummed before a destination database is created. Restore refuses an existing database or a database name outside the disposable prefix. It verifies restored object metadata and bytes, removes old download capabilities, and drops the new database and uploaded objects on failure. Review failures and inspect the destination bucket before retrying; failed network writes may need manual orphan removal. Never point this command at a live database or source bucket. After a successful drill, verify two separate accounts, project revisions, source edits, media/evidence reads and tenant denial through the qualified application path before promoting recovered data. Promotion, DNS cutover and application restart are manual operations; this tooling does not cut over production.
+
+## Account export and deletion
+
+Run `npm run ops -- account-export --account cr_<id> --out /secure/account-<id>.flexport`. The same recovery key seals a bounded account snapshot (maximum 1,000 objects, 100 MB of private object content and 10,000 events per audit stream), including identity mapping, projects, source edits, deployments, import markers, audit history and object bytes. The export omits sessions, capabilities, identity tokens and object keys. Verify secure delivery outside this CLI. Deletion requires the matching encrypted export, `npm run ops -- account-delete --account cr_<id> --confirmed-export /secure/account-<id>.flexport --confirm cr_<id>`. Deletion cascades owned SQL rows and capabilities in one transaction. Object keys enter a durable garbage queue before commit. Run `npm run ops -- cleanup` after any object-store outage until its failed count is zero. Keep the encrypted export under the applicable retention/deletion policy. A stale process-local session can still show its old session metadata until expiry; owner-scoped repository access denies deleted account data.
+
+## Failure and audit
+
+Failed auth, storage, import, restore and orphan cleanup emit structured audit records with fixed event/outcome values and hashed account IDs. The operational audit table has no account FK so deletion does not erase the deletion record. No request body, token, secret, email, SQL error or private path is logged. Send stderr to a restricted sink with retention and access controls. Database audit insertion is best effort during database outages; stderr remains the immediate signal. Recovery errors are redacted on the CLI. Test database access and object permissions independently if health is degraded; do not claim a backup succeeded if either half failed.
+
+P7 owns independent real-browser security and recovery qualification. This P6 runbook and focused tests are implementation evidence, not that closeout.
