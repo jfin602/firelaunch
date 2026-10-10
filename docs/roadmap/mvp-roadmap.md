@@ -96,9 +96,9 @@ Lock CreatorAccount, ChannelDeployment, CatalogSource, CatalogItem, MediaAsset, 
 
 ### P2 — Hosted Creator Platform (0.2.x, weeks 2–3)
 
-Add creator login, private ownership-aware APIs, relational project persistence, media storage, secrets, backups/migrations, deployment monitoring and explicit import from local P0 projects. Preserve standalone source export. No teams.
+**P1 entry satisfied:** P1 contracts and Amazon feasibility are GREEN / QUALIFIED at 0.1.5. Activation uses clean committed root 0.2.0. Add creator login through provider-neutral verified OIDC (Google initial live issuer), private ownership-aware Studio/API routes, Postgres project/revision persistence and unique deployment identities, private object/evidence references, secure token boundaries, explicit no-loss local P0 project import, restart, backup/restore and basic audit/operational diagnostics. Preserve standalone source export. No teams. Hosted build execution is disabled until separate isolation proof; do not expose P0 local Vega CLI to untrusted tenant code. P3 owns full catalog/file/feed ingestion; P5 remote manifests; P7 billing and polished privacy UI.
 
-**GREEN:** Two real creator accounts cannot access each other's projects/media/deployments; restart and backup/restore recover valid state.
+**GREEN:** Two independently authenticated real creator accounts cannot reach each other's projects/media/deployments, agent or code/export/build routes; denied attempts and CSRF/session failure are tested. Valid projects survive API restart; unique identity constraints and revision conflicts are transactional; existing local P0 projects import safely with custom source; database-plus-private-object backup/restore is executed successfully. Browser and route-level evidence must be recorded. A test-only auth bypass is not equivalent to live identity proof.
 
 ### P3 — Catalog Import and Discovery (0.3.x, weeks 4–5)
 
@@ -163,4 +163,4 @@ Pilot video/audio/writing creators and repair onboarding, accessible remote focu
 
 Defer shared teams, Fire OS/Roku/other TV platforms, live TV/EPG, viewer IAP/affiliate-led TV commerce, advertising, deep analytics, general transcoding service, unbounded AI source modification and unofficial Developer Console submission. Amazon approvals and content rights are external hard gates. Preserve real TV and code export as enduring product invariants.
 
-Post-review engineering flow: `/docs-apply` -> `/prompt-ass` -> `/prompt-plan` -> `/prompt-write p1`, while `c0-real-tv-qualification` remains separately owned. No new feature enters a completed/active stack without approved scope.
+Phase 1 closed GREEN / QUALIFIED. Phase 2 documentation alignment is approved; execute `docs/tasks/p2/` with `/prompt-ass` -> `/prompt-plan` -> `/prompt-write p2`, using runner checkpoints from committed root 0.2.0. Historical `c0-real-tv-qualification` remains separately BLOCKED / NOT GREEN. No feature enters an active stack without approved scope.

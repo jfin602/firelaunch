@@ -1,0 +1,28 @@
+TASK: Phase 2 / P7 — Hosted platform qualification closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+The assigned project version is `0.2.7`.
+
+GOAL
+Independently qualify hosted authentication, tenant isolation and recoverability; write a factual Phase 2 closeout.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/tasks/p2/{README.md,prompt-assessment.md,implementation-plan.md}, docs/roadmap/mvp-roadmap.md and relevant current source/tests; inspect HEAD, root version, accepted worktree state and completed earlier phase checkpoints.
+
+INDEPENDENT QUALIFICATION
+Inspect P1–P6 committed runner checkpoints and exact SHA, current code, tests, P1 closeout, P0/c0 historical statuses. Exercise TWO distinct real OIDC identities with live configured issuer in browser and direct HTTP, each creating/editing a project; test all foreign project/file/agent/export/build/deployment/asset routes, CSRF, forged/expired sessions, signout, cookie security and no existence leaks. Qualify Postgres revision/uniqueness concurrency and restart; dry-run/apply a representative local P0 migration with source edits retained and originals unchanged; back up/restore Postgres plus object storage into a disposable namespace and compare content/hash/isolation. Verify hosted build denied absent sandbox, historical ChannelSpec/Preview/Vega tests unchanged. Run `npm run codex:stack:validate -- p2`, ONE root `npm run check`, `git diff --check`, plus targeted security cases. Advance only root version and lock metadata to 0.2.7, record exact browser/tool/env/DB/storage/HEAD/test counts, redacted auth identities, gaps and GREEN/NOT GREEN in `docs/tasks/p2/closeout.md`. If real auth/restore/isolation cannot be evidenced, NOT GREEN with bounded c2-* recommendation.
+
+OUT OF SCOPE
+Do not rewrite implementation to disguise evidence gaps or fabricate Amazon, VPKG/physical TV, external provider or Appstore success. Historical P0/P7/c0 remain NOT GREEN.
+
+VALIDATION
+Single independent closeout with P7 browser evidence, aggregate check, runner validation, diff check and factual status; no manual Git commit when runner-owned.
+
+Do not create Git commits; the Prompt Stack runner owns checkpoint commits.
+
+FINAL RESPONSE
+Report exact changed boundaries, evidence and counts, version/HEAD, remaining blockers and handoff / qualified disposition.

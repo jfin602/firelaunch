@@ -21,7 +21,7 @@ FireLaunch is not merely an AI code generator and not a generic website builder.
 
 ## Current gate
 
-Current phase root version: `0.1.0` (post-P0 SaaS P1 baseline). P0 finished at 0.0.7 with historical P7 NOT GREEN. The c0 repair loop ended BLOCKED / NOT GREEN on 2026-10-09, and its evidence is preserved in docs/tasks/c0-real-tv-qualification/qualification-loop/qualification-closeout.md.
+Current phase root version: `0.2.0` (hosted creator platform P2 activation baseline). P1 contracts/feasibility closed GREEN / QUALIFIED at `0.1.5` on 2026-10-09 (committed 2026-10-10). P0 finished at 0.0.7 with historical P7 NOT GREEN. The c0 repair loop ended BLOCKED / NOT GREEN on 2026-10-09, and its evidence is preserved in docs/tasks/c0-real-tv-qualification/qualification-loop/qualification-closeout.md.
 
 Observed c0 correction: a real release VPKG and Vega VirtualDevice focus/detail/playback/Back were proven for a tested candidate. Live Bedrock, formal Linux Mint host support, final Studio browser/Publish/aggregate checks, default demo media and physical Fire TV remain unqualified. P1-P3 SaaS may proceed independently. P4 requires a real non-mock supported provider; later phases retain physical TV/Appstore gates.
 
@@ -91,9 +91,9 @@ Model policy:
 
 The Prompt Stack runner owns implementation commits. Agents executed by the runner must not commit manually.
 
-## Post-P0 SaaS kickoff
+## Post-P0 SaaS active phase
 
-P1 is the creator-owned contracts and Amazon feasibility phase at docs/tasks/p1/. No AWS/Bedrock is needed for P1. Follow the updated roadmap and ADR 0008; the historical P0 sections below are unchanged in meaning.
+P1 contract/feasibility scope is GREEN / QUALIFIED (docs/tasks/p1/closeout.md), not hosted SaaS qualification. The active phase is P2 at docs/tasks/p2/: authenticated independent CreatorAccounts, Postgres and transaction-safe ownership, tenant-scoped APIs/source/export access, private storage, migration from P0 local projects, backups/recovery and browser security evidence. P2 starts from committed root 0.2.0. Do not confuse the 0.2.0 phase activation baseline with its P7 closeout target 0.2.7. No AWS/Bedrock, Amazon seller credentials, real TV or Appstore approval is a P2 qualification prerequisite. Old P0 local loopback behavior must not accidentally become a public multi-tenant API. The historical P0 paragraphs below remain unchanged in meaning.
 
 ## Definition of hackathon Green
 

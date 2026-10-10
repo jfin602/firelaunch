@@ -7,7 +7,7 @@ FireLaunch is a local, code-optional studio for designing a TV channel and gener
 - Node 24.15+ (24.x) and npm 12.x (`.nvmrc` pins 24). Verify with `node --version` and `npm --version`.
 - Run `npm ci`, then `npm run build` at the repository root. The build compiles all workspaces and creates Studio production assets; it does not build a VPKG.
 - In terminal 1 run `npm run dev` (API on `127.0.0.1:4174`). In terminal 2 run `npm run dev:studio` (Studio on `http://127.0.0.1:4173`). Vite proxies `/api` to the API. `npm start` builds and starts **only** the API, not the Studio UI.
-- Data defaults to `.firelaunch-data/projects/<channel-id>/`; set `FIRELAUNCH_DATA_DIR` for another local data root. The API binds loopback and has no authentication. Set `PORT` only if you also change the Studio proxy in `apps/studio/vite.config.ts`.
+- The historical P0 local application stores data at `.firelaunch-data/projects/<channel-id>/`; set `FIRELAUNCH_DATA_DIR` for another local data root. Its loopback API has no authentication and MUST NOT be exposed as a hosted service. Phase 2 implements authenticated Postgres-backed multi-tenant hosting; see `docs/tasks/p2/` for scope and qualification. Set `PORT` only if you also change the Studio proxy in `apps/studio/vite.config.ts`.
 
 The repository enforces npm 12. This development environment currently has npm 11; local checks can use `npm_config_engine_strict=false` to run already-installed dependencies, but that override does **not** qualify the Vega toolchain.
 

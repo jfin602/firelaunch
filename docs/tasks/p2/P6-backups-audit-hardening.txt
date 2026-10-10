@@ -1,0 +1,28 @@
+TASK: Phase 2 / P6 — Backup and operational hardening
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.2.6`.
+
+GOAL
+Make the creator platform recoverable and privacy-auditable with operational proof.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/tasks/p2/{README.md,prompt-assessment.md,implementation-plan.md}, docs/roadmap/mvp-roadmap.md and relevant current source/tests; inspect HEAD, root version, accepted worktree state and completed earlier phase checkpoints.
+
+IMPLEMENT
+Implement P6 plan: database-plus-private-object backup manifest and restore tooling into isolated namespace with checksums/retention/recovery runbook; add bounded private account export/delete mechanisms, revoke private asset caps on deletion; structured secret-redacted audit for auth/storage/import/recovery; safe health diagnostics and config checks. Exercise real Postgres and object emulator fail/restart/recovery behavior, orphan cleanup, concurrent tenant updates and no admin endpoints on public routes. Reconcile P2 security regressions without adding new product feature categories. Advance root metadata to 0.2.6.
+
+OUT OF SCOPE
+No subscription billing, team roles, hosted build execution, P3 import wizard or final live manifest delivery.
+
+VALIDATION
+Focused backup-restore and negative isolation tests, docs/runbook, affected build/typecheck, git diff --check. Preserve independent P7 qualification ownership.
+
+Do not create Git commits; the Prompt Stack runner owns checkpoint commits.
+
+FINAL RESPONSE
+Report exact changed boundaries, evidence and counts, version/HEAD, remaining blockers and handoff.

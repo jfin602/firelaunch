@@ -1,0 +1,28 @@
+TASK: Phase 2 / P3 — All-route tenant authorization
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.2.3`.
+
+GOAL
+Enforce account ownership across every existing API and safe Studio workflows.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/tasks/p2/{README.md,prompt-assessment.md,implementation-plan.md}, docs/roadmap/mvp-roadmap.md and relevant current source/tests; inspect HEAD, root version, accepted worktree state and completed earlier phase checkpoints.
+
+IMPLEMENT
+Review all `api.ts` branches and `workspace.ts` methods, code read/save, generate, build, bundle, agent; integrate authenticated owner-scoped repository/service access before path resolution or provider invocation. Deny cross-owner and unauthenticated list/read/create/update/mutation/status/agent/source file/readiness/export actions, return no sensitive path or cross-tenant existence. In hosted mode disable unisolated Vega CLI/build and any uncontrolled execution, leaving explicit blocked state, and protect generated file/bundle reads. Update Studio signed-in/signed-out/session expiry/project switch behavior without changing TV preview semantics. Table-driven two-account route negatives, stale cookie, CSRF, hostile path ID, mutation and agent probes. Advance root version to 0.2.3.
+
+OUT OF SCOPE
+No new remote build sandbox or Amazon/provider integration; no redesign of Vega projector or ChannelSpec.
+
+VALIDATION
+Focused all-route denial/API+Studio tests, affected 7-workspace build/typecheck as necessary, git diff --check. List every route family covered.
+
+Do not create Git commits; the Prompt Stack runner owns checkpoint commits.
+
+FINAL RESPONSE
+Report exact changed boundaries, evidence and counts, version/HEAD, remaining blockers and handoff.

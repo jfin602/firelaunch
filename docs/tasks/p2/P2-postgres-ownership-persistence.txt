@@ -1,0 +1,28 @@
+TASK: Phase 2 / P2 — Postgres ownership and persistence
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.2.2`.
+
+GOAL
+Replace hosted project storage with transactional creator-owned PostgreSQL persistence.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/tasks/p2/{README.md,prompt-assessment.md,implementation-plan.md}, docs/roadmap/mvp-roadmap.md and relevant current source/tests; inspect HEAD, root version, accepted worktree state and completed earlier phase checkpoints.
+
+IMPLEMENT
+Read P1 output, current `repository.ts`, CreatorAccount/Ownership/Deployment contracts, P2 plan. Add schema migrations and a DB adapter for provider subject -> CreatorAccount -> projects/spec revision -> separate globally unique deployments, with creator-scoped foreign keys and bound SQL. Require principal for every hosted data operation, transactional revision CAS, real uniqueness on package identity and persisted server-side account mapping. Preserve `ch_*` ChannelSpec v1 and local legacy repository in explicit non-public mode. Test genuine Postgres concurrency, restart persistence, cross-account denied read/update, duplicate package IDs, migration up/down or safe migration failure. Advance root metadata to 0.2.2.
+
+OUT OF SCOPE
+Do not import legacy files yet, build an Amazon connector, upload/catalog processing, sync workers or manifest publishing.
+
+VALIDATION
+Focused DB/API integration tests using real test Postgres, affected build/typecheck, git diff --check; report transaction and constraint evidence.
+
+Do not create Git commits; the Prompt Stack runner owns checkpoint commits.
+
+FINAL RESPONSE
+Report exact changed boundaries, evidence and counts, version/HEAD, remaining blockers and handoff.

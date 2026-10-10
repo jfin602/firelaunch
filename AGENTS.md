@@ -114,3 +114,13 @@ The c0 qualification/repair loop executed three cycles and closed BLOCKED / NOT 
 - Track P0-only Bedrock, original default demo loopback/artwork, supported host, browser/Publish/aggregate and physical-device blockers honestly without holding unrelated early SaaS work hostage. Later successful provider work does not retroactively qualify P0 Bedrock.
 
 See [ADR 0008](docs/decisions/0008-launch-ai-provider-policy.md) and [the launch roadmap](docs/roadmap/mvp-roadmap.md).
+
+## Active hosted phase P2 (2026-10-10)
+
+P1 contracts/rights feasibility qualified at root 0.1.5; the committed P2 activation baseline is 0.2.0. Read docs/tasks/p2/README.md, prompt-assessment.md and implementation-plan.md for this phase.
+- Authenticated creator identity comes from verified sessions, never request-provided owner IDs; deny by default across list/read/write, agent, code, build, bundle, file/media and export surfaces.
+- Hosted mode must not make existing local filesystem/CLI build or arbitrary edited source executable cross-tenant. Disable build (and any unsafe unisolated execution) in hosted mode until a tested isolation boundary exists.
+- Preserve P0 single-user local data as an explicit migration source; no automatic or destructive reinterpretation of project IDs/ChannelSpec.
+- P2 uses real Postgres constraints and owner-scoped transactions; tests must prove cross-account denial, restart persistence and recovery. Schema validation alone is insufficient.
+- P3 owns catalog ingestion; P4 live AI; P5 manifests; P6 sync; P7 creator publishing. Do not add those into P2.
+- P2 implementation uses runner-owned commits (not manual agent commits); Phase 2 P7 is browser/manual qualification and may close NOT GREEN if live identity, independent accounts or restore proof are unavailable.

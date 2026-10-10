@@ -1,0 +1,28 @@
+TASK: Phase 2 / P1 — OIDC authentication and sessions
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.2.1`.
+
+GOAL
+Implement the verified-login/session foundation, with deterministic isolated OIDC tests and no production bypass.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/tasks/p2/{README.md,prompt-assessment.md,implementation-plan.md}, docs/roadmap/mvp-roadmap.md and relevant current source/tests; inspect HEAD, root version, accepted worktree state and P1 closeout.
+
+IMPLEMENT
+Inspect `apps/server/src/index.ts`, `api.ts`, Studio API/client, P1 CreatorAccount contract and P2 plan. Implement the P1 plan slice: pluggable OIDC verifier with Google live configuration; OAuth Authorization Code + PKCE, issuer/audience/signature/time/nonce/state validation, server-issued opaque sessions and CSRF; logout/rotation and secure-cookie/origin/proxy controls. Keep hosted routes unauthenticated requests denied by default; isolate P0 loopback mode. Do not claim a persistent account DB before P2. Add isolated fake-issuer tests for tampered/wrong-audience/replayed/expired credentials, session/CSRF and production fixture rejection. Advance only root version metadata to 0.2.1.
+
+OUT OF SCOPE
+No Postgres schema, hosted database writes, media import, Amazon auth, catalog AI, cloud build, billing or broad Studio redesign.
+
+VALIDATION
+Focused auth/API regression tests, server and affected Studio build/typecheck, git diff --check. Report exact counts and how live OIDC will be qualified in P7.
+
+Do not create Git commits; the Prompt Stack runner owns checkpoint commits.
+
+FINAL RESPONSE
+Report exact changed boundaries, evidence and counts, version/HEAD, remaining blockers and handoff.

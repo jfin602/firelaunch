@@ -185,3 +185,9 @@ Account -> catalog import/rights -> video/audio/writing-specific generation -> v
 Target evidence includes three real creator pilots (video/audio/writing), one creator-owned Appstore-approved app, physical Fire TV navigation/playback and remote refresh, plus tenant isolation, backup/rollback and support readiness. These are not current accomplishments.
 
 Defer team management, more TV platforms, arbitrary code agent autonomy, full transcoding marketplace, live TV/EPG, viewer IAP/advertising and undocumented Developer Console automation.
+
+### Hosted creator ownership semantics (P2)
+
+`CreatorAccount` is the server-side billing/ownership/security principal; an authenticated OIDC subject is a login identity mapped to one account, and an authenticated session is not itself an account ID. A `ChannelProject` has exactly one owning creator for the MVP; one creator can own several projects and separate deployments, but no team membership or shared workspace authority exists. No user-supplied ownership claim can transfer a project or cross the tenant boundary.
+
+An optional `ChannelDeployment` has a globally unique native package ID and release lineage; it is not automatically created merely by importing a local project. Project/spec and imported external catalog identity are separate from account/deployment identity. Private asset/evidence records and credential references must be owned, auditable, revocable and excluded from public TV payloads. P2 implements only private storage foundations, not P3 imports or P5 public manifest publishing. P2 preserves exportable ordinary generated source without giving one creator access to another creator's files or tokens.

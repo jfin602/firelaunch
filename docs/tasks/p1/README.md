@@ -1,9 +1,10 @@
 # p1 — Creator-owned catalog contracts and Amazon feasibility
 
-Status: READY TO RUN / NOT EXECUTED
+Status: GREEN / QUALIFIED — phase closed 2026-10-09; closeout committed 2026-10-10
 Phase: 1 (post-P0 SaaS roadmap)
 Baseline: root 0.1.0; historical P0 version 0.0.7 remains preserved
 Model: GPT-6 Sol High
+Closeout: [closeout.md](closeout.md), root 0.1.5, 167/167 aggregate tests and 7/7 workspace builds/typechecks. P2 is the active hosted phase.
 
 ## Goal
 

@@ -1,0 +1,28 @@
+TASK: Phase 2 / P5 — Safe P0 migration and source portability
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.2.5`.
+
+GOAL
+Import local P0 projects into selected creator accounts without losing source edits.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/tasks/p2/{README.md,prompt-assessment.md,implementation-plan.md}, docs/roadmap/mvp-roadmap.md and relevant current source/tests; inspect HEAD, root version, accepted worktree state and completed earlier phase checkpoints.
+
+IMPLEMENT
+Follow P5 plan: explicit creator-bound CLI/admin-only import with dry-run default, idempotent apply and per-project migration audit. Read historical `repository.ts`, `workspace.ts`, P0 generated file/customization baseline, migrateChannel and strict contracts. Validate symlinks/paths/file sizes/IDs; import spec/revision and bounded customized generated source into owned private storage where supported; never silently discard source overrides. Preserve originals, report duplicate/cross-owner collisions, errors and no inferred Amazon licenses. Support verifiable standalone source export for authorized owner. Test repeated imports, two-account collision, corrupt/symlink, failed transaction, unchanged local original and code preservation. Advance root metadata to 0.2.5.
+
+OUT OF SCOPE
+No automatic directory ownership adoption, no destructive migration, no full P3 feeds/uploads or re-generation over manual code.
+
+VALIDATION
+Focused importer/SQL+storage tests, source export and P0 fixture compatibility, affected build/typecheck, git diff --check.
+
+Do not create Git commits; the Prompt Stack runner owns checkpoint commits.
+
+FINAL RESPONSE
+Report exact changed boundaries, evidence and counts, version/HEAD, remaining blockers and handoff.
