@@ -1,0 +1,29 @@
+TASK: Phase 4 / P8 — Independent catalog generation qualification closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+The assigned project version is `0.4.8`.
+
+GOAL
+Independently qualify three P4 creator experiences, a real catalog-grounded non-mock provider request, validated persistence and usable Preview; record evidence without advancing hosted release claims.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p4/{README.md,prompt-assessment.md,implementation-plan.md}, docs/tasks/p3/closeout.md, ADR 0008 and directly affected source/tests. Inspect actual HEAD, root package version, git status and previous P4 runner checkpoint before any edits. Preserve P2/c2 historical NOT GREEN and P3 catalog-only GREEN / hosted release NOT QUALIFIED.
+
+INDEPENDENT QUALIFICATION
+Read all runner checkpoints and exact HEAD/version, P3 closeout and S1-S6 inherited gate status. In a browser-enabled hosted session, authenticate an approved test creator and use rights-safe video/audio/writing catalog fixtures to generate distinct drafts; verify D-pad focus/Select/Back, book no-play detail, album/audio control, eligible video playback and honest withheld-rights states. Manually edit brand/organization, repeat generation and show retained manual changes and revisions after reload and server restart. Exercise owner/foreign API denial where two isolated real identities/profiles are actually available and identify precisely which checks were not. Make at least one ACTUAL successful non-mock provider request with an imported/selected rights-safe catalog, capture sanitized provider/transport identity, observed grounded tool proposal, schema-validated applied ChannelSpec mutation, saved revision and visible Preview effect. A configured provider, fixture/mock, unchanged call or error is NOT sufficient. If there is no usable live provider or browser evidence, close P4 NOT GREEN with named blocker, do not claim GREEN from deterministic tests. Verify no private token/media/evidence leakage or accidental public delivery claim. Run targeted live smoke if authorized, focused checks, stack validation, ONE final npm run check using the required npm 12, and git diff --check. Record pass/fail/skipped numbers, 7 typechecks/build counts, exact commit/version, browser actions and explicit scope in docs/tasks/p4/closeout.md. Advance only root package.json and two root lockfile version metadata entries to 0.4.8. Do NOT self-commit or move HEAD. Preserve Phase 2/c2 NOT GREEN, Phase 3 bounded GREEN and the open HTTPS auth/S3 preproduction gates; no Appstore/real device/VPKG claim.
+
+OUT OF SCOPE
+Invented live proof, broad feature repair, production hosted/security clearance or Appstore claims.
+
+VALIDATION
+Final evidence must clearly distinguish P4 Green, P4 Not Green, and unrelated hosted release Not Qualified. No broad implementation work in closeout: record bounded correction recommendations if faults are found.
+
+GIT
+Do not create commits or rewrite/move HEAD. This is the manual closeout, not an implementation runner checkpoint. Update only root package.json version and the two root entries of package-lock.json to 0.4.8; keep internal workspace versions unchanged unless a proven compatibility change requires it. Preserve unrelated accepted dirty work.
+
+FINAL RESPONSE
+Report exact changed boundaries, focused test counts, typecheck/build and git diff --check results, actual starting HEAD and final root version, evidence for user-visible behavior, and all still-open qualification gates. Never claim a live provider/device/browser result without direct evidence.
