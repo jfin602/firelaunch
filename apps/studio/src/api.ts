@@ -12,7 +12,7 @@ let csrfToken: string | null = null;
 export async function getSession(): Promise<StudioSession | null> {
   const response = await fetch('/api/auth/session', { credentials: 'same-origin' });
   if (response.status === 404) return null; // Explicit local legacy server.
-  if (response.status === 401) throw new ApiError('Sign in required', 401);
+  if (response.status === 401) { csrfToken = null; window.dispatchEvent(new window.Event('firelaunch-session-expired')); throw new ApiError('Sign in required', 401); }
   if (!response.ok) throw new ApiError('Session unavailable', response.status);
   const session = await response.json() as StudioSession;
   csrfToken = session.csrfToken;
@@ -64,7 +64,7 @@ export async function askAgent(project: ChannelProject, message: string): Promis
   return { ...result, project: projectSchema.parse(result.project) };
 }
 
-export type CodeOverview = { generated: boolean; files: string[]; changed: string[]; stale: boolean; path: string };
+export type CodeOverview = { generated: boolean; files: string[]; changed: string[]; stale: boolean; path: string | null };
 export type SourceFile = { path: string; content: string; sha256: string };
 export type BuildEvidence = { status: 'blocked' | 'failed' | 'succeeded'; reason?: string; command?: string[]; exitCode?: number | null; durationMs?: number; output?: string; artifact?: { path: string; sha256: string; bytes: number }; toolchain: { missing: string[]; node: { detail: string }; npm: { detail: string }; vegaSdk: { detail: string }; vegaCli: { detail: string }; device: { detail: string } } };
 export type Readiness = { checks: { group: string; ready: boolean; detail: string }[]; copy: { appName: string; shortDescription: string; longDescription: string; releaseNotes: string }; assets: { artwork: string[]; unresolvedLocal: string[]; screenshots: string[] }; build: BuildEvidence; submitted: false };
@@ -75,4 +75,4 @@ export const saveSource = (id: string, file: SourceFile, content: string) => req
 export const buildStatus = (id: string) => request(`/${id}/build`) as Promise<BuildEvidence>;
 export const runBuild = (id: string) => request(`/${id}/build`, json({})) as Promise<BuildEvidence>;
 export const readiness = (id: string) => request(`/${id}/readiness`) as Promise<Readiness>;
-export const createBundle = (id: string) => request(`/${id}/bundle`, json({})) as Promise<{ path: string; files: string[]; submitted: false }>;
+export const createBundle = (id: string) => request(`/${id}/bundle`, json({})) as Promise<{ path?: string; files?: string[]; status?: 'blocked'; reason?: string; submitted: false }>;

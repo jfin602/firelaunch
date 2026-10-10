@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { Pool, type PoolClient } from 'pg';
 import { channelDeploymentSchema, channelSpecSchema, createProjectSchema, projectSchema, type ChannelDeployment, type ChannelProject, type ChannelSpec } from '@firelaunch/contracts';
 import { newId, starterChannel } from '@firelaunch/channel-engine';
@@ -11,6 +11,7 @@ type ProjectRow = { id: string; revision: number; spec: unknown; created_at: Dat
 const channelId = z.string().regex(/^ch_[a-f0-9]{32}$/);
 const accountId = z.string().regex(/^cr_[a-f0-9]{32}$/);
 const identityPart = z.string().min(1).max(512);
+function projectId(id: string): void { if (!channelId.safeParse(id).success) throw new RepositoryError('NOT_FOUND', 'Project not found'); }
 
 function project(row: ProjectRow): ChannelProject {
   try {
@@ -45,11 +46,16 @@ export class HostedProjectRepository {
       await client.query('SELECT pg_advisory_xact_lock($1)', [482921]);
       await client.query('CREATE TABLE IF NOT EXISTS firelaunch_schema_migrations (version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
       const result = await client.query<{ version: number }>('SELECT version FROM firelaunch_schema_migrations ORDER BY version');
-      if (result.rows.some(row => row.version !== 1)) throw new Error('Unsupported hosted database migration');
-      if (!result.rows.length) {
+      if (result.rows.some(row => row.version !== 1 && row.version !== 2)) throw new Error('Unsupported hosted database migration');
+      if (!result.rows.some(row => row.version === 1)) {
         const sql = await readFile(new URL('../migrations/001_hosted_ownership.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
         await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [1]);
+      }
+      if (!result.rows.some(row => row.version === 2)) {
+        const sql = await readFile(new URL('../migrations/002_hosted_source.up.sql', import.meta.url), 'utf8');
+        await client.query(sql);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [2]);
       }
       await client.query('COMMIT');
     } catch (error) { await client.query('ROLLBACK'); throw error; }
@@ -107,7 +113,7 @@ export class HostedProjectRepository {
   }
 
   async read(principal: AuthenticatedPrincipal, id: string): Promise<ChannelProject> {
-    channelId.parse(id);
+    projectId(id);
     const client = await this.pool.connect();
     try {
       const owner = await this.owner(principal, client);
@@ -129,7 +135,7 @@ export class HostedProjectRepository {
   }
 
   async update(principal: AuthenticatedPrincipal, id: string, expectedRevision: number, rawSpec: unknown): Promise<ChannelProject> {
-    channelId.parse(id);
+    projectId(id);
     const spec: ChannelSpec = channelSpecSchema.parse(rawSpec);
     if (spec.id !== id) throw new z.ZodError([{ code: 'custom', path: ['spec', 'id'], message: 'Channel ID cannot change' }]);
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) throw new RepositoryError('INVALID_INPUT', 'Invalid revision');
@@ -167,7 +173,7 @@ export class HostedProjectRepository {
   }
 
   async readDeployment(principal: AuthenticatedPrincipal, projectId: string): Promise<ChannelDeployment> {
-    channelId.parse(projectId);
+    if (!channelId.safeParse(projectId).success) throw new RepositoryError('NOT_FOUND', 'Project not found');
     const client = await this.pool.connect();
     try {
       const owner = await this.owner(principal, client);
@@ -176,6 +182,55 @@ export class HostedProjectRepository {
       try { return channelDeploymentSchema.parse(result.rows[0].deployment); }
       catch { throw new RepositoryError('STORAGE_ERROR', 'Invalid deployment record'); }
     } catch (error) { return sqlError(error); }
+    finally { client.release(); }
+  }
+
+  async source(principal: AuthenticatedPrincipal, id: string): Promise<{ specRevision: number; fingerprint: string; files: Record<string, string>; baseline: Record<string, string> } | null> {
+    projectId(id);
+    const client = await this.pool.connect();
+    try {
+      const owner = await this.owner(principal, client);
+      const result = await client.query<{ spec_revision: number; fingerprint: string; files: Record<string, string>; baseline: Record<string, string> }>(
+        'SELECT s.spec_revision, s.fingerprint, s.files, s.baseline FROM hosted_source_projects s JOIN channel_ownerships o ON o.project_id = s.project_id AND o.creator_account_id = s.creator_account_id WHERE s.project_id = $1 AND o.creator_account_id = $2', [id, owner]);
+      const row = result.rows[0];
+      return row ? { specRevision: row.spec_revision, fingerprint: row.fingerprint, files: row.files, baseline: row.baseline } : null;
+    } catch (error) { return sqlError(error); }
+    finally { client.release(); }
+  }
+
+  async generateSource(principal: AuthenticatedPrincipal, id: string, revision: number, fingerprint: string, files: Record<string, string>, baseline: Record<string, string>): Promise<void> {
+    projectId(id);
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const owner = await this.owner(principal, client);
+      const current = await client.query<{ revision: number }>('SELECT revision FROM channel_projects WHERE id = $1 AND creator_account_id = $2 FOR UPDATE', [id, owner]);
+      if (!current.rows[0]) throw new RepositoryError('NOT_FOUND', 'Project not found');
+      if (current.rows[0].revision !== revision) throw new RepositoryError('CONFLICT', 'Project revision changed');
+      const prior = await client.query<{ files: Record<string, string>; baseline: Record<string, string> }>('SELECT files, baseline FROM hosted_source_projects WHERE project_id = $1 AND creator_account_id = $2 FOR UPDATE', [id, owner]);
+      if (prior.rows[0] && Object.keys(prior.rows[0].files).some(name => prior.rows[0]!.files[name] !== prior.rows[0]!.baseline[name]))
+        throw new RepositoryError('CONFLICT', 'Custom generated files exist. Preserve edits before regeneration.');
+      await client.query(`INSERT INTO hosted_source_projects(project_id, creator_account_id, spec_revision, fingerprint, files, baseline)
+        VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb)
+        ON CONFLICT (project_id) DO UPDATE SET spec_revision = EXCLUDED.spec_revision, fingerprint = EXCLUDED.fingerprint,
+          files = EXCLUDED.files, baseline = EXCLUDED.baseline`, [id, owner, revision, fingerprint, JSON.stringify(files), JSON.stringify(baseline)]);
+      await client.query('COMMIT');
+    } catch (error) { await client.query('ROLLBACK'); return sqlError(error); }
+    finally { client.release(); }
+  }
+
+  async saveSource(principal: AuthenticatedPrincipal, id: string, name: string, content: string, expectedHash: string): Promise<void> {
+    projectId(id);
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const owner = await this.owner(principal, client);
+      const result = await client.query<{ files: Record<string, string> }>('SELECT files FROM hosted_source_projects WHERE project_id = $1 AND creator_account_id = $2 FOR UPDATE', [id, owner]);
+      if (!result.rows[0] || !Object.hasOwn(result.rows[0].files, name)) throw new RepositoryError('NOT_FOUND', 'Generated text file not found');
+      if (createHash('sha256').update(result.rows[0].files[name]!).digest('hex') !== expectedHash) throw new RepositoryError('CONFLICT', 'Generated file changed; reload before saving');
+      await client.query('UPDATE hosted_source_projects SET files = jsonb_set(files, $3::text[], to_jsonb($4::text)) WHERE project_id = $1 AND creator_account_id = $2', [id, owner, [name], content]);
+      await client.query('COMMIT');
+    } catch (error) { await client.query('ROLLBACK'); return sqlError(error); }
     finally { client.release(); }
   }
 }

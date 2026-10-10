@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:http';
@@ -15,6 +15,7 @@ import { OidcVerifier } from '../src/auth/oidc.js';
 import { HostedAuth } from '../src/auth/sessions.js';
 import { ProjectRepository } from '../src/repository.js';
 import { createApi } from '../src/api.js';
+import { MockProvider, type AgentProvider } from '@firelaunch/agent';
 
 const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
 const databaseTest = baseUrl ? test : test.skip;
@@ -113,7 +114,10 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     const verifier = new OidcVerifier({ issuer, clientId: 'test-client', authorizationEndpoint: `${issuer}/authorize`,
       tokenEndpoint: `${issuer}/token`, jwksUri: `${issuer}/keys`, redirectUri: `${origin}/api/auth/callback` });
     const auth = new HostedAuth(verifier, origin, principal => restarted.accountForIdentity(principal));
-    const api = createApi(new ProjectRepository(directory), undefined, { mode: 'hosted', auth }, restarted);
+    const mock = new MockProvider();
+    let providerCalls = 0;
+    const provider: AgentProvider = { name: 'mock', next: async turns => { providerCalls++; return mock.next(turns); } };
+    const api = createApi(new ProjectRepository(directory), provider, { mode: 'hosted', auth }, restarted);
     api.listen(address.port, '127.0.0.1'); await once(api, 'listening');
     try {
       const login = async (subject: string) => {
@@ -148,6 +152,85 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
         body: JSON.stringify({ expectedRevision: 1, spec: owned.spec }) });
       assert.equal(hostilePut.status, 404);
       assert.equal((await fetch(`${endpoint}/${owned.id}`, { headers: { cookie: firstLogin.cookie } })).status, 200);
+      const ownedPath = `${endpoint}/${owned.id}`;
+      const ownerHeaders = { cookie: firstLogin.cookie, origin, 'x-csrf-token': firstLogin.session.csrfToken, 'content-type': 'application/json' };
+      const foreignHeaders = { cookie: secondLogin.cookie, origin, 'x-csrf-token': secondLogin.session.csrfToken, 'content-type': 'application/json' };
+      const sourceResponse = await fetch(`${ownedPath}/code`, { method: 'POST', headers: ownerHeaders, body: '{}' });
+      assert.equal(sourceResponse.status, 200);
+      const generated = await sourceResponse.json();
+      assert.ok(generated.files.includes('manifest.toml'));
+      assert.equal(generated.path, null);
+      const file = await (await fetch(`${ownedPath}/code/file?path=manifest.toml`, { headers: { cookie: firstLogin.cookie } })).json();
+      assert.match(file.content, /com\.amazon\.category\.main/);
+      const edit = await fetch(`${ownedPath}/code/file`, { method: 'POST', headers: ownerHeaders,
+        body: JSON.stringify({ path: 'manifest.toml', content: `${file.content}\n# owned edit\n`, expectedHash: file.sha256 }) });
+      assert.equal(edit.status, 200);
+      assert.deepEqual((await (await fetch(`${ownedPath}/code`, { headers: { cookie: firstLogin.cookie } })).json()).changed, ['manifest.toml']);
+      assert.match((await second.source({ accountId: firstLogin.session.accountId, issuer, subject: 'http-a', email: 'http-a@example.com' }, owned.id))!.files['manifest.toml']!, /owned edit/);
+      assert.equal((await fetch(`${ownedPath}/code`, { method: 'POST', headers: ownerHeaders, body: '{}' })).status, 409);
+      assert.equal((await fetch(`${ownedPath}/build`, { method: 'POST', headers: ownerHeaders, body: '{}' })).status, 200);
+      assert.deepEqual(await (await fetch(`${ownedPath}/build`, { headers: { cookie: firstLogin.cookie } })).json(),
+        await (await fetch(`${ownedPath}/build`, { method: 'POST', headers: ownerHeaders, body: '{}' })).json());
+      assert.equal((await (await fetch(`${ownedPath}/build`, { headers: { cookie: firstLogin.cookie } })).json()).status, 'blocked');
+      assert.deepEqual(await readdir(directory), []);
+      assert.equal((await (await fetch(`${ownedPath}/bundle`, { method: 'POST', headers: ownerHeaders, body: '{}' })).json()).status, 'blocked');
+      const agent = await fetch(`${ownedPath}/agent`, { method: 'POST', headers: ownerHeaders,
+        body: JSON.stringify({ expectedRevision: 1, message: 'add page Explore' }) });
+      assert.equal(agent.status, 200);
+      assert.equal((await restarted.read({ accountId: firstLogin.session.accountId, issuer, subject: 'http-a', email: 'http-a@example.com' }, owned.id)).revision, 2);
+      const mutation = await fetch(`${ownedPath}/mutations`, { method: 'POST', headers: ownerHeaders,
+        body: JSON.stringify({ expectedRevision: 2, mutation: { type: 'setIdentity', title: 'Still owned', slug: 'still-owned' } }) });
+      assert.equal(mutation.status, 200);
+      assert.equal((await mutation.json()).revision, 3);
+      assert.equal((await (await fetch(`${ownedPath}/agent-status`, { headers: { cookie: firstLogin.cookie } })).json()).provider, 'mock');
+      assert.equal((await (await fetch(`${ownedPath}/readiness`, { headers: { cookie: firstLogin.cookie } })).json()).build.status, 'blocked');
+
+      const cases: { label: string; suffix: string; method?: string; body?: unknown }[] = [
+        { label: 'project read', suffix: '' },
+        { label: 'project update', suffix: '', method: 'PUT', body: { expectedRevision: 1, spec: owned.spec } },
+        { label: 'mutation', suffix: '/mutations', method: 'POST', body: { expectedRevision: 1, mutation: { type: 'setIdentity', title: 'Stolen', slug: 'stolen' } } },
+        { label: 'agent status', suffix: '/agent-status' },
+        { label: 'agent', suffix: '/agent', method: 'POST', body: { expectedRevision: 1, message: 'add page Stolen' } },
+        { label: 'code overview', suffix: '/code' },
+        { label: 'generate', suffix: '/code', method: 'POST', body: {} },
+        { label: 'file read', suffix: '/code/file?path=manifest.toml' },
+        { label: 'file save', suffix: '/code/file', method: 'POST', body: { path: 'manifest.toml', content: 'stolen', expectedHash: file.sha256 } },
+        { label: 'build status', suffix: '/build' },
+        { label: 'build', suffix: '/build', method: 'POST', body: {} },
+        { label: 'readiness', suffix: '/readiness' },
+        { label: 'bundle', suffix: '/bundle', method: 'POST', body: {} }
+      ];
+      const ownerProviderCalls = providerCalls;
+      for (const probe of cases) {
+        const result = await fetch(`${ownedPath}${probe.suffix}`, { method: probe.method ?? 'GET', headers: foreignHeaders,
+          ...(probe.body === undefined ? {} : { body: JSON.stringify(probe.body) }) });
+        assert.equal(result.status, 404, probe.label);
+        assert.equal((await result.json()).error.message, 'Project not found', probe.label);
+        const missing = await fetch(`${endpoint}/ch_${'f'.repeat(32)}${probe.suffix}`, { method: probe.method ?? 'GET', headers: foreignHeaders,
+          ...(probe.body === undefined ? {} : { body: JSON.stringify(probe.body) }) });
+        assert.equal(missing.status, result.status, `${probe.label} existence`);
+      }
+      assert.equal(providerCalls, ownerProviderCalls, 'foreign agent probe did not invoke provider');
+      assert.equal((await fetch(`${ownedPath}/code/file?path=..%2fprivate`, { headers: foreignHeaders })).status, 404);
+      assert.equal((await fetch(ownedPath, { method: 'PUT', headers: foreignHeaders, body: '{}' })).status, 404);
+      assert.equal((await fetch(`${ownedPath}/agent`, { method: 'POST', headers: foreignHeaders, body: '{}' })).status, 404);
+      for (const probe of cases) {
+        const result = await fetch(`${ownedPath}${probe.suffix}`, { method: probe.method ?? 'GET',
+          headers: { 'content-type': 'application/json' }, ...(probe.body === undefined ? {} : { body: JSON.stringify(probe.body) }) });
+        assert.equal(result.status, 401, `unsigned ${probe.label}`);
+      }
+      assert.equal((await fetch(endpoint)).status, 401);
+      assert.equal((await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: 'Unsigned' }) })).status, 401);
+      assert.equal((await fetch(endpoint, { method: 'POST', headers: { cookie: firstLogin.cookie, origin, 'content-type': 'application/json' }, body: JSON.stringify({ title: 'No CSRF' }) })).status, 403);
+      for (const probe of cases.filter(item => item.method && item.method !== 'GET')) {
+        const result = await fetch(`${ownedPath}${probe.suffix}`, { method: probe.method,
+          headers: { cookie: firstLogin.cookie, origin, 'content-type': 'application/json' }, body: JSON.stringify(probe.body) });
+        assert.equal(result.status, 403, `csrf ${probe.label}`);
+      }
+      assert.equal((await fetch(`${endpoint}/..%2f..%2fetc%2fpasswd/code/file?path=manifest.toml`, { headers: { cookie: firstLogin.cookie } })).status, 404);
+      assert.equal((await fetch(`${ownedPath}/code/file?path=..%2fproject.json`, { headers: { cookie: firstLogin.cookie } })).status, 400);
+      assert.equal((await fetch(`${endpoint}`, { headers: { cookie: 'firelaunch_test_session=stale' } })).status, 401);
+      assert.equal((await fetch(`${ownedPath}/agent`, { method: 'POST', headers: { ...foreignHeaders, 'x-csrf-token': 'bad' }, body: JSON.stringify({ expectedRevision: 1, message: 'probe' }) })).status, 403);
     } finally {
       await new Promise<void>(resolve => api.close(() => resolve()));
       await new Promise<void>(resolve => issuerServer.close(() => resolve()));
@@ -157,7 +240,10 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
 
     // The down script is exercised only in this disposable database after all persistence assertions.
     const down = await readFile(new URL('../migrations/001_hosted_ownership.down.sql', import.meta.url), 'utf8');
+    const sourceDown = await readFile(new URL('../migrations/002_hosted_source.down.sql', import.meta.url), 'utf8');
     await restarted.pool.query('BEGIN');
+    await restarted.pool.query(sourceDown);
+    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 2');
     await restarted.pool.query(down);
     await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 1');
     await restarted.pool.query('COMMIT');
