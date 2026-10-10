@@ -1,0 +1,44 @@
+TASK: Correction 2 / P1 — Hosted qualification repair closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- Required unchanged project version: `0.2.7`.
+
+GOAL
+Execute an independent browser + PostgreSQL + real-Google-OIDC + two-private-S3-bucket qualification/repair loop, maximum five cycles, to resolve the two evidence gaps from the original P2 P7 NOT GREEN closeout. Deliver a truthful, standalone c2 closeout. Stop early if all hard gates pass or an unfixable external prerequisite blocks qualification. This is the sole final closeout prompt; there are no separate implementation prompts.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/tasks/p2/closeout.md (actual local version), docs/tasks/p2/recovery-runbook.md, docs/tasks/c2-hosted-qualification/{README.md,prompt-assessment.md,implementation-plan.md}, the P2 P7 prompt and real source around auth, hosted API/repositories, private objects, operations/recovery and Studio. Check root version 0.2.7, HEAD, clean/owner-approved working tree, existing logs and original P7 security/recovery evidence. Do not run if P2 P7 version/closeout has not been independently committed; never commit P7 yourself. Do not change HEAD or use destructive Git cleanup.
+
+HARD GATES
+G0. Baseline/env: verified OAuth Google issuer/client/callback HTTPS configuration, two **real, authorized, distinct** creator identities, running Postgres and private S3-compatible source+different restore buckets and a disposable restore DB. Check only credential presence, never expose their values; no account/signed-token fabrication.
+G1. Real Google OIDC: independently complete login in two separated browser profiles/sessions using the actual provider and deployed callback, then test session/cookie/CSRF/PKCE/state/nonce, logout, stale/replayed/forged paths via safe authorized probes. Test-only OIDC fixture and spoofed account header do not count.
+G2. Full cross-account isolation: with authenticated A/B, exercise both positive owner and negative foreign requests for project list/read/create/update/mutations, agent/status, code overview/file read/edit/export/generate, build/readiness/bundle, distinct deployments and private evidence/media capabilities. Hosted build must remain explicitly unavailable without a qualified sandbox. Do not leak foreign existence or internal filesystem roots. Use only test resources.
+G3. **Real S3 API** and independent recovery: no filesystem `IsolatedObjectStore`; provision two nonpublic S3-compatible buckets under approved staging, with scoped credentials and HTTPS. Execute documented `npm run ops -- health`, `backup --out` and `restore --in` on source SQL plus private objects, with `FIRELAUNCH_RESTORE_DATABASE_URL` different from source and `FIRELAUNCH_RESTORE_OBJECT_BUCKET` different from source. Confirm archive SHA/checksums, restored data/object SHA and bytes, per-owner access/denial, no source mutation and any cleanup after failure. Never restore over a live bucket/DB.
+G4. Final hosted Studio regression: two live profiles, project create/edit, Design/Content/Preview remote navigation, reload/restart persistence, logout/session-expiration, portable source export and code override preservation. Verify local P0 fixture/ChannelSpec v1 behavior remains unchanged.
+G5. Final verification: focused security/recovery tests for each observed repair, one complete `npm run check`, `npm run codex:stack:validate -- c2-hosted-qualification`, `git diff --check`, precise pass counts/HEAD/version/host/db/object backend and independently observed evidence.
+
+FIVE-CYCLE QUALIFICATION / REPAIR LOOP
+Cycles are iterative **retries of the whole gate matrix**, not five separate feature implementation phases. Run at most five rounds:
+1. At start of cycle N, record current candidate SHA, version, sanitized setup and G0-G5 PASS/FAIL/BLOCKED/NOT TESTED with source evidence (when available). Capture a per-cycle record at `docs/tasks/c2-hosted-qualification/qualification-loop/cycle-N.md`. Create only records for cycles actually attempted.
+2. Run all currently available gates. Reproduce any observed failure precisely. Missing owner-supplied OIDC credentials/two accounts, OAuth approval, real buckets or approved test access is an EXTERNAL BLOCKER; never fill the gap with mocks or relax production security. Perform other independent gates when safe but stop the loop if the blocked prerequisite is not obtainable within this run. Record fewer than five cycles honestly.
+3. If code has a directly demonstrated defect within auth/session, tenant boundary, storage/recovery or the small hosted Studio path, apply the smallest scoped fix (and focused negative test). Preserve explicit mode gates and existing contracts. No speculative rewrite or unauthorized system provisioning; request owner intervention only for actual external resources.
+4. Retest the failed gate on real external systems, then negative authentication/tenant/object isolation and any dependent browser/recovery gates impacted by the fix. Do not claim a test fixture as external proof. Keep modifications in the worktree without committing or changing `0.2.7`; preserve and report all diffs.
+5. If all G0–G5 PASS on one final candidate, early exit GREEN. Otherwise continue only if another bounded source defect could reasonably be repaired. End after max cycle five with NOT GREEN, or stop sooner BLOCKED/NOT GREEN on an inaccessible hard dependency. Do not repeatedly retry a missing credential to consume the budget.
+
+EVIDENCE AND FINAL DISPOSITION
+Record sanitized qualification environment and exact changes in `qualification-loop/README.md`, real cycle records, and final `docs/tasks/c2-hosted-qualification/closeout.md`. Each gate needs direct supporting artifacts/results and clear limitations. Use restricted ignored `.codex-runs/c2-hosted-qualification/` for sensitive raw logs. Do not log identity credentials, emails, OAuth tokens, bucket secrets, real object keys, database URLs or private media. Note the original 179/179 root and 10/10 focused P7 passes as baseline context only, not substitute for current proof.
+
+GREEN / QUALIFIED requires both two live separate real creator identities with demonstrated access boundaries AND a genuine cross-bucket S3-backed Postgres+object backup/restore drill, plus all remaining gates and final checks. A S3 adapter existing in source, a local filesystem store, signed fake ID token, one real account, same source/target bucket, mocked recovery or local-only Preview MUST leave c2 NOT GREEN. Historical P2 P7, P0/P7 and c0 dispositions remain unchanged. If source repair needs architecture redesign, describe a bounded follow-on c2 correction rather than expanding scope.
+
+OUT OF SCOPE
+No Amazon permissions, seller import, billing, P3 catalog workflows, P4 catalog AI, P5 live manifest delivery, P6 sync, P7 creator publishing, native Vega/device/Appstore acceptance. Do not alter OIDC identity checks to make a fixture qualify or expose a shared unisolated build runner. No manual Git commits or HEAD movement from this closeout.
+
+VALIDATION
+Exactly one independent final c2 closeout after up to five evidenced qualification/repair cycles, no version increment, no unverified external success claims.
+
+FINAL RESPONSE
+Return c2 GREEN/QUALIFIED or BLOCKED/NOT GREEN, cycles N/5, actual candidate HEAD and version, gate matrix and exact focused/aggregate test counts, redacted browser/OIDC/S3 proof, repairs left uncommitted, unmet prerequisites and next action.
