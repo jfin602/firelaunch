@@ -1,0 +1,29 @@
+TASK: Phase 4 / P7 — Three-creator generation convergence and qualification handoff
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.4.7`.
+
+GOAL
+Reconcile video, audio and writing generation into a coherent P4 candidate and prepare an exact independent P8 browser/non-mock provider smoke workflow.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p4/{README.md,prompt-assessment.md,implementation-plan.md}, docs/tasks/p3/closeout.md, ADR 0008 and directly affected source/tests. Inspect actual HEAD, root package version, git status and previous P4 runner checkpoint before any edits. Preserve P2/c2 historical NOT GREEN and P3 catalog-only GREEN / hosted release NOT QUALIFIED.
+
+IMPLEMENT
+Exercise three synthetic creator-owned imported catalogs end-to-end (video, audio, writing): explicit approval/selection, cleared or withheld media, deterministic generation, Preview, optional guided agent edit, manual overrides/order, rerun idempotence, logout/relogin, API restart and protected source export. Confirm legacy P0/TV/renderer/Vega regressions remain stable. Verify negative foreign catalog and agent/preview requests and no source/private rights leakage; run only targeted repairs to directly observed regressions. Prepare compact rights-safe local fixture seeds and instructions for real P8 testing, including a live non-mock provider smoke path that captures sanitized provider identity, request success, tool action, persisted ChannelSpec revision and Preview (no credentials). Do not fabricate paid provider success or copy external credentials into test data. Report P2/c2/P3 S1-S6 remaining security evidence honestly.
+
+OUT OF SCOPE
+Amazon scraping/connectors, scheduled catalog synchronization (P6), immutable public TV manifests or approved TV delivery (P5), physical Fire TV/VPKG/Appstore/publishing (P7/P8), unsafe hosted native builds, and new multiuser/team features.
+
+VALIDATION
+Run focused end-to-end creator fixtures, affected builds/typechecks, existing security and TV regression tests and git diff --check. Save handoff evidence location in task docs if needed; reserve ONE root npm run check and stack validator finalization for P8.
+
+GIT
+Do not create commits or rewrite/move HEAD. The runner exclusively owns the implementation checkpoint commit. Update only root package.json version and the two root entries of package-lock.json to 0.4.7; keep internal workspace versions unchanged unless a proven compatibility change requires it. Preserve unrelated accepted dirty work.
+
+FINAL RESPONSE
+Report exact changed boundaries, focused test counts, typecheck/build and git diff --check results, actual starting HEAD and final root version, evidence for user-visible behavior, and all still-open qualification gates. Never claim a live provider/device/browser result without direct evidence.
