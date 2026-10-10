@@ -1,4 +1,4 @@
-TASK: Phase 3 / P1 — Local security handoff
+TASK: Phase 3 / P1 — Automated hosted security baseline
 
 MODEL / REASONING / USAGE
 - Recommended configuration: `GPT-6 Sol High`.
@@ -8,22 +8,22 @@ VERSIONING
 The assigned project version is `0.3.1`.
 
 GOAL
-Verify the mandatory two-profile real Google security preflight before implementing import APIs.
+Establish a focused, runner-compatible baseline for authenticated hosted project isolation before adding catalog storage and APIs, without requiring manual browser preflight.
 
 PREFLIGHT
-Read BOOT.md, AGENTS.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p3/README.md, prompt-assessment.md, implementation-plan.md, carried-forward-gates.md, and security-preflight.md. Check current source, exact HEAD, root version, worktree and previous checkpoint before editing.
+Read BOOT.md, AGENTS.md, docs/tasks/p3/{README.md,prompt-assessment.md,implementation-plan.md,carried-forward-gates.md} and relevant auth, hosted repository, workspace, API, private-object tests. Inspect exact HEAD, root version and worktree. The original Phase 2 P7 and c2 closeouts remain NOT GREEN.
 
 IMPLEMENT
-Read docs/tasks/p3/security-preflight.md and the actual redacted preflight evidence after two concurrent browser logins. Confirm owner-success and foreign-denial for project, code, agent, export, Build, private objects and capabilities with valid CSRF. Check logout, restart and source export. Run focused hosted API, auth and SQL tests and fix only reproduced defects. If local S1/S2 evidence is missing or failed, stop without changing the version or successfully completing this checkpoint. Otherwise document the security gate and advance root version.
+Run existing and, if gaps appear, targeted automated tests using two distinct test principals with legitimate test sessions on the hosted API and actual isolated PostgreSQL when available. Cover project list/read/update/mutation, agent/status, code/file/export, readiness, Build blocked, and private media/evidence metadata and capabilities. Assert owner success and foreign denial with VALID per-session CSRF on mutating requests; test forged owner headers, logout, stale/replayed sessions, server restart and account mapping. Distinguish unavailable environment from a demonstrated authorization bug. Repair only reproducible security defects and add focused regression tests. Do not require a real Google two-profile browser session or docs/tasks/p3/security-preflight-evidence.md; those tests remain deferred to independent P8. Do not present fixture auth as live Google proof. Advance only root package.json and package-lock.json root version metadata to 0.3.1.
 
 OUT OF SCOPE
-Catalog code, artificial sign-in, waiving security, production staging claims.
+New catalog endpoints or features, production identity bypasses, unsafe hosted builds, broad auth refactors or unsupported live qualification claims.
 
 VALIDATION
-Run prompt-specific focused tests, affected typechecks and builds, and git diff --check. P8 alone runs the final root aggregate, browser qualification and stack validation. Report actual pass, failure and skipped counts.
+Run focused auth, PostgreSQL repository, private-object and hosted API negative tests; affected server typecheck/build; git diff --check. Record exact passes, skips, environment limits and unqualified real-browser gates. A real failing foreign-authorization assertion must be corrected before success.
 
 GIT
-Do not create commits or change HEAD. Runner owns implementation commits. Only update root package and lockfile version metadata to 0.3.1; do not change internal workspace versions without an evidenced need.
+Do not create commits or rewrite HEAD. Runner owns the implementation checkpoint commit.
 
 FINAL RESPONSE
-Report exact changed boundaries, observed evidence, tests and counts, candidate HEAD/version and remaining gate status.
+Report source changes, test results/counts, version/HEAD and outstanding S1-S5 live security evidence separately.

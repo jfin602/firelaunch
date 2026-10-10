@@ -10,13 +10,13 @@ Date: 2026-10-10
 
 Deliver a real creator-controlled catalog-first workflow on the existing authenticated hosted foundation. Store tenant-scoped sources, imported items, Collections, rights evidence and media in PostgreSQL/S3; implement bounded CSV/JSON and one-shot HTTPS feed imports, preview/review, deduplication, creator-owned edits, privacy-safe uploads and Studio curation without falsely asserting Amazon permissions or automatically publishing TV media.
 
-Read [carried-forward gates](carried-forward-gates.md) before planning. P2 P7 and c2 closeouts remain historical NOT GREEN. The first implementation checkpoint should qualify two simultaneous local Google creator browser profiles and a live cross-tenant denial matrix before adding catalog endpoints. The final P3 manual qualification separately reports HTTPS staging OIDC/secure cookies/private S3 restore and any other unqualified inherited gates. These cannot be waived by implementation tests.
+Read [carried-forward gates](carried-forward-gates.md) before planning. P2 P7 and c2 closeouts remain historical NOT GREEN. P1 runs focused automated tenant-isolation and authentication regression tests; the unfinished real two-profile browser matrix is deferred to P8 independent qualification, not a pre-run condition. New catalog routes must remain owner-scoped and test cross-tenant denial. HTTPS staging OIDC and private S3 recovery remain unqualified preproduction gates.
 
 ## Approved planned prompt decomposition (not yet executable)
 
 | P3 prompt | Planned responsibility | Assigned version | Browser |
 | --- | --- | --- | --- |
-| P1 | Verify live two-profile security preflight and owner-scope tests | 0.3.1 | no (manual real-browser preflight prerequisite) |
+| P1 | Automated hosted security regression and owner-scope tests | 0.3.1 | no |
 | P2 | Tenant-owned catalog PostgreSQL schema, constraints, CRUD | 0.3.2 | no |
 | P3 | Bounded CSV/JSON parsing, import preview, duplicate resolution | 0.3.3 | no |
 | P4 | One-shot safe creator-controlled HTTPS feed snapshot import | 0.3.4 | no |
@@ -25,7 +25,7 @@ Read [carried-forward gates](carried-forward-gates.md) before planning. P2 P7 an
 | P7 | End-to-end integration and security/edge-case regressions | 0.3.7 | no |
 | P8 | Independent browser/import/security qualification closeout | 0.3.8 | yes |
 
-The eight prompts are executable. The runner cannot execute browser-required implementation prompts, so the two-profile real-Google security check must be performed manually BEFORE P1 (see [security-preflight.md](security-preflight.md)). P1 is non-browser for runner compatibility, but must fail without actual S1/S2 live evidence. P8 is the sole browser-required closeout. This keeps the security requirement intact and avoids an unresumable P1 runner halt.
+The eight prompts are executable without a manual browser gate beforehand. P1 verifies existing authentication and tenant boundaries using focused automated tests with separate test principals and actual PostgreSQL where available. A failing security test is a real blocker to that checkpoint; absence of optional real-browser evidence is not. The inherited real two-profile Google qualification remains OPEN for P8, the only browser-required prompt, and for preproduction.
 
 ## Existing source and contracts
 
@@ -43,4 +43,4 @@ No general Amazon integration, periodic feed synchronization, catalog-grounded A
 
 ## Next workflow
 
-Complete [manual security preflight](security-preflight.md), review [assessment](prompt-assessment.md) and [implementation plan](implementation-plan.md), then run `npm run codex:stack:validate -- p3` and `npm run codex:stack -- p3` from clean root 0.3.0. Runner commits P1-P7; P8 is a separate independent browser closeout. Successful implementation prompts receive runner-owned commits; manual browser closeout writes real evidence and does not self-commit.
+From a clean root 0.3.0 checkout, run `npm run codex:stack:validate -- p3` and `npm run codex:stack -- p3`. No separate browser preflight is required. Runner commits P1-P7; P8 is the independent manual browser/security closeout. See [optional browser-check guide](security-preflight.md). Successful implementation prompts receive runner-owned commits; manual browser closeout writes real evidence and does not self-commit.

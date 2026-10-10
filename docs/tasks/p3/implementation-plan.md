@@ -4,13 +4,13 @@ Status: approved and source-aware
 Root activation: 0.3.0; assigned checkpoint versions: 0.3.1–0.3.8.
 Read BOOT.md, AGENTS.md, roadmap, Product Model, Architecture, creator onboarding, catalog contracts, and carried-forward-gates.md before each prompt.
 
-## Runner and preflight
+## Runner and security validation
 
-The owner completes the two-browser-profile Google security exercise before starting the runner and records genuine, redacted evidence per security-preflight.md. P1 is marked browser-required: no for runner compatibility, but **must fail before changing the version** if real simultaneous two-account isolation evidence is missing or fails. P8 is the only browser-required prompt. Implementation prompts have runner-owned commits, focused tests, affected build/typechecks and git diff --check. P8 owns one root npm run check.
+No manual Google two-profile preflight is required to start P3. P1 is a non-browser automated security regression checkpoint using independently authenticated test principals, actual PostgreSQL where available, CSRF/session negatives and private-object owner/foreign denial. It must repair reproducible failing security tests but must NOT stop merely because real Google browser profiles are unavailable. P8 is the only browser-required prompt and owns real two-profile qualification, including all new import/media endpoints. Implementation prompts have runner-owned commits, focused tests, affected build/typechecks and git diff --check. P8 owns one root npm run check.
 
-## P1 — 0.3.1: Inherited security gate
+## P1 — 0.3.1: Automated security baseline
 
-Inspect authentication/session, hosted API/repository/workspace and private objects. Verify direct positive owner and denied foreign access in real separate Google browser sessions, including saved projects, source export, private media and protected build state. Distinguish access control from missing session or invalid CSRF. Test restart and run focused hosted integration checks. Record actual evidence. Do not proceed without local S1/S2 proof.
+Inspect authentication/session, hosted API/repository/workspace and private objects. Run deterministic positive-owner/denied-foreign tests with two test principals against PostgreSQL-backed routes, using valid CSRF on mutations; include code, agent, source export, private assets and capabilities, restart/session/logout negatives and hosted Build blocked. Fix demonstrated authorization defects. Record exact test counts, skips and any unavailable integration prerequisite. Real live Google browser evidence is deferred to P8; do not claim it passed or require it for P1.
 
 ## P2 — 0.3.2: Catalog persistence
 
