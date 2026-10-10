@@ -38,7 +38,7 @@ const enabled = process.env.FIRELAUNCH_LOCAL_S3_TEST === '1';
     const principal = { issuer: 'urn:firelaunch:c2-storage-drill', subject: suffix, email: 'drill@example.invalid', accountId: '' };
     principal.accountId = await repository.accountForIdentity(principal);
     const project = await repository.create(principal, { title: 'Storage drill' });
-    const bytes = randomBytes(37);
+    const bytes = Buffer.concat([Buffer.from('%PDF-1.4\n'), randomBytes(37), Buffer.from('\n%%EOF')]);
     const item = await new PrivateObjectService(repository, source).put(principal, project.id, 'evidence', 'application/pdf', bytes);
     const row = (await repository.pool.query<{ object_key: string }>('SELECT object_key FROM private_objects WHERE id = $1', [item.id])).rows[0]!;
     keys.push(row.object_key);

@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 import { HostedProjectRepository } from '../src/hosted-repository.js';
 import { CatalogRepository } from '../src/catalog-repository.js';
+import { PrivateObjectService, type PrivateObjectStore } from '../src/private-objects.js';
+import { mediaUseEligible } from '@firelaunch/contracts';
 
 const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
 const databaseTest = baseUrl ? test : test.skip;
@@ -65,6 +67,51 @@ databaseTest('catalog SQL ownership, revisions, references and rollback with two
       { schemaVersion: 1, catalogItemId: aBook.id, kind: 'artwork', location: { type: 'https', url: 'https://example.com/cover.jpg' },
         rights: { status: 'unknown', basis: 'none', permittedUse: 'none' }, deliveryEligible: false })).record!;
     assert.deepEqual((await one.read(a, aProject.id)).items.find(item => item.id === aBook.id)?.mediaAssetIds, [asset.id]);
+    const stored = new Map<string, Buffer>();
+    const store: PrivateObjectStore = { put: async (key, bytes) => { stored.set(key, bytes); },
+      get: async key => stored.get(key)!, delete: async key => { stored.delete(key); } };
+    const privateObjects = new PrivateObjectService(first, store);
+    const png = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.from('creator artwork')]);
+    const upload = await privateObjects.put(a, aProject.id, 'media', 'image/png', png);
+    const audioUpload = await privateObjects.put(a, aProject.id, 'media', 'audio/mpeg', Buffer.from('ID3creator audio'));
+    const evidence = await privateObjects.put(a, aProject.id, 'evidence', 'application/pdf', Buffer.from('%PDF-1.4\ncreator consent\n%%EOF'));
+    const foreignUpload = await privateObjects.put(b, bProject.id, 'media', 'image/png', png);
+    const foreignEvidenceObject = await privateObjects.put(b, bProject.id, 'evidence', 'application/pdf', Buffer.from('%PDF-1.4\nforeign\n%%EOF'));
+    const unknown = { status: 'unknown', basis: 'none', permittedUse: 'none' };
+    const display = { status: 'cleared', basis: 'license_documented', permittedUse: 'television_display',
+      assertedAt: '2026-10-10T00:00:00.000Z', evidenceId: evidence.id };
+    const attachment = { schemaVersion: 1, catalogItemId: aBook.id, kind: 'artwork',
+      location: { type: 'private_object', objectId: upload.id }, tvDisplayRights: display, tvPlaybackRights: unknown, deliveryEligible: true };
+    const mediaRevision = (await one.read(a, aProject.id)).revision;
+    await assert.rejects(one.mutate(a, aProject.id, 'media-assets', 'POST', mediaRevision,
+      { ...attachment, location: { type: 'private_object', objectId: foreignUpload.id } }), { code: 'INVALID_INPUT' });
+    await assert.rejects(one.mutate(a, aProject.id, 'media-assets', 'POST', mediaRevision,
+      { ...attachment, location: { type: 'private_object', objectId: audioUpload.id } }), { code: 'INVALID_INPUT' });
+    await assert.rejects(one.mutate(a, aProject.id, 'media-assets', 'POST', mediaRevision,
+      { ...attachment, tvDisplayRights: { ...display, evidenceId: foreignEvidenceObject.id } }), { code: 'INVALID_INPUT' });
+    assert.equal((await one.read(a, aProject.id)).revision, mediaRevision);
+    const attached = (await one.mutate(a, aProject.id, 'media-assets', 'POST', mediaRevision, attachment)).record!;
+    assert.equal(mediaUseEligible(attached as never, 'television_display'), true);
+    assert.equal(mediaUseEligible(attached as never, 'television_playback'), false);
+    assert.equal(JSON.stringify(attached).includes('private/'), false);
+    assert.equal(JSON.stringify(attached).includes('creator consent'), false);
+    const events = await one.rightsEvents(a, aProject.id, attached.id);
+    assert.equal(events.length, 1);
+    assert.equal(JSON.stringify(events).includes('private/'), false);
+    await assert.rejects(two.rightsEvents(b, aProject.id, attached.id), { code: 'NOT_FOUND' });
+    await assert.rejects(privateObjects.delete(a, aProject.id, upload.id), { code: 'STORAGE_ERROR' });
+    const capability = await privateObjects.issueDownload(a, aProject.id, upload.id);
+    await privateObjects.revoke(a, aProject.id, upload.id);
+    await assert.rejects(privateObjects.download(a, aProject.id, upload.id, capability.capability), { code: 'NOT_FOUND' });
+    const revoked = { ...attachment, tvDisplayRights: { ...display, status: 'revoked' }, deliveryEligible: false };
+    await one.mutate(a, aProject.id, 'media-assets', 'PUT', mediaRevision + 1, revoked, attached.id);
+    const afterRevoke = (await one.read(a, aProject.id)).mediaAssets.find(value => value.id === attached.id)!;
+    assert.equal(mediaUseEligible(afterRevoke, 'television_display'), false);
+    assert.equal((await one.rightsEvents(a, aProject.id, attached.id)).length, 2);
+    const removeRevision = (await one.read(a, aProject.id)).revision;
+    await one.mutate(a, aProject.id, 'media-assets', 'DELETE', removeRevision, undefined, attached.id);
+    await privateObjects.delete(a, aProject.id, upload.id);
+    assert.equal([...stored.values()].some(value => value.equals(png)), true, 'foreign upload remains private');
     await assert.rejects(two.mutate(b, bProject.id, 'media-assets', 'POST', 1,
       { schemaVersion: 1, catalogItemId: aBook.id, kind: 'artwork', location: { type: 'https', url: 'https://example.com/cover.jpg' },
         rights: { status: 'unknown', basis: 'none', permittedUse: 'none' }, deliveryEligible: false }), { code: 'INVALID_INPUT' });
@@ -73,6 +120,8 @@ databaseTest('catalog SQL ownership, revisions, references and rollback with two
     await assert.rejects(second.pool.query('INSERT INTO catalog_item_identifiers(source_id, project_id, creator_account_id, item_id, provider, marketplace, kind, value) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
       [aSource.id, aProject.id, a.accountId, otherBook.id, 'creator', '', 'feed_item_id', 'novel-1']), { code: '23505' });
     const foreignEvidence = `ev_${randomUUID().replaceAll('-', '')}`;
+    await assert.rejects(second.pool.query('INSERT INTO private_objects(id, creator_account_id, project_id, kind, object_key, content_type, byte_size, sha256) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+      [`ev_${randomUUID().replaceAll('-', '')}`, b.accountId, bProject.id, 'media', `private/${'d'.repeat(64)}`, 'image/png', 1, 'c'.repeat(64)]), { code: '23514' });
     await second.pool.query('INSERT INTO private_objects(id, creator_account_id, project_id, kind, object_key, content_type, byte_size, sha256) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
       [foreignEvidence, b.accountId, bProject.id, 'evidence', `private/${'b'.repeat(64)}`, 'application/pdf', 1, 'c'.repeat(64)]);
     const beforeEvidence = (await one.read(a, aProject.id)).revision;

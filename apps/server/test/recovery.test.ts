@@ -42,10 +42,10 @@ integration('real Postgres backup, isolated restore, concurrent update, privacy 
     const aProject = await repository.create(a, { title: 'Private A' });
     const bProject = await repository.create(b, { title: 'Private B' });
     const store = new IsolatedObjectStore(sourceRoot);
-    assert.deepEqual(await health(repository.pool, store), { status: 'ok', database: true, objectStore: true, migration: 5 });
+    assert.deepEqual(await health(repository.pool, store), { status: 'ok', database: true, objectStore: true, migration: 7 });
     const objects = new PrivateObjectService(repository, store);
-    const first = await objects.put(a, aProject.id, 'evidence', 'application/pdf', Buffer.from('a evidence'));
-    await objects.put(b, bProject.id, 'media', 'image/png', Buffer.from('b image'));
+    const first = await objects.put(a, aProject.id, 'evidence', 'application/pdf', Buffer.from('%PDF-1.4\na evidence\n%%EOF'));
+    await objects.put(b, bProject.id, 'media', 'image/png', Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.from('b image')]));
     const capability = await objects.issueDownload(a, aProject.id, first.id);
     let updated = false;
     const concurrentStore: PrivateObjectStore = {

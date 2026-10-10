@@ -29,7 +29,12 @@ function parseRecord(kind: CatalogKind, raw: unknown, owner: string, project: st
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return invalid('Expected catalog record');
   const value = raw as Record<string, unknown>;
   if ('id' in value || 'creatorAccountId' in value || 'projectId' in value) return invalid('Catalog identity is server-owned');
-  if (kind === 'media-assets' && (value.location as { type?: unknown } | undefined)?.type === 'upload') return invalid('Private upload linkage is unavailable');
+  if (kind === 'media-assets') {
+    const locationType = (value.location as { type?: unknown } | undefined)?.type;
+    if (locationType === 'upload') return invalid('Legacy upload keys cannot be attached');
+    if (locationType === 'private_object' && (value.rights !== undefined || !value.tvDisplayRights || !value.tvPlaybackRights))
+      return invalid('Private attachments require separate TV display and playback claims');
+  }
   return schemas[kind].parse({ ...value, id, creatorAccountId: owner, projectId: project }) as RecordType;
 }
 function externalKey(value: CatalogItem['externalIdentifiers'][number]): string {
@@ -98,6 +103,7 @@ export class CatalogRepository {
       const list = snapshot[fields[kind]] as RecordType[];
       const index = rawId ? list.findIndex(record => record.id === rawId) : -1;
       if (method !== 'POST' && index < 0) throw new RepositoryError('NOT_FOUND', 'Catalog record not found');
+      const priorAsset = kind === 'media-assets' && index >= 0 ? snapshot.mediaAssets[index] : undefined;
       const id = method === 'POST' ? `${identifiers[kind]}_${randomUUID().replaceAll('-', '')}` : rawId!;
       let record: RecordType | undefined;
       if (method === 'DELETE') {
@@ -119,6 +125,7 @@ export class CatalogRepository {
           const asset = record as MediaAsset;
           const old = index >= 0 ? snapshot.mediaAssets[index] : undefined;
           if (old && old.catalogItemId !== asset.catalogItemId) invalid('Media item cannot change');
+          await this.validateMediaReferences(client, owner, project.data, asset);
           if (method === 'POST') {
             const item = snapshot.items.find(value => value.id === asset.catalogItemId);
             if (!item) invalid('Catalog item not found');
@@ -131,11 +138,47 @@ export class CatalogRepository {
       const { revision: _revision, ...inventory } = snapshot;
       if (!catalogInventorySchema.safeParse(inventory).success) invalid('Invalid catalog references or identity');
       await this.replace(client, owner, project.data, snapshot);
+      if (kind === 'media-assets') {
+        const asset = (record ?? priorAsset) as MediaAsset;
+        await client.query(`INSERT INTO catalog_media_rights_events(id, project_id, creator_account_id, asset_id, assertion)
+          VALUES ($1,$2,$3,$4,$5::jsonb)`, [randomUUID(), project.data, owner, id, JSON.stringify({
+            action: method === 'DELETE' ? 'deleted' : method === 'POST' ? 'attached' : 'updated',
+            assertedByAccountId: owner,
+            rights: asset?.rights ?? null, tvDisplayRights: asset?.tvDisplayRights ?? null,
+            tvPlaybackRights: asset?.tvPlaybackRights ?? null
+          })]);
+      }
       await client.query('UPDATE catalog_revisions SET revision = revision + 1 WHERE project_id = $1 AND creator_account_id = $2', [project.data, owner]);
       await client.query('COMMIT');
       return { revision: current + 1, ...(record ? { record } : { deleted: true as const }) };
     } catch (error) { await client.query('ROLLBACK').catch(() => undefined); return databaseError(error); }
     finally { client.release(); }
+  }
+
+  async rightsEvents(principal: AuthenticatedPrincipal, rawProjectId: string, assetId: string): Promise<unknown[]> {
+    if (!/^ma_[a-f0-9]{32}$/.test(assetId)) throw new RepositoryError('NOT_FOUND', 'Media asset not found');
+    const snapshot = await this.read(principal, rawProjectId);
+    if (!snapshot.mediaAssets.some(asset => asset.id === assetId)) throw new RepositoryError('NOT_FOUND', 'Media asset not found');
+    const result = await this.projects.pool.query<{ assertion: unknown; recorded_at: Date }>(`SELECT assertion, recorded_at FROM catalog_media_rights_events
+      WHERE project_id = $1 AND creator_account_id = $2 AND asset_id = $3 ORDER BY recorded_at, id`,
+    [rawProjectId, principal.accountId, assetId]);
+    return result.rows.map(row => ({ ...row.assertion as object, recordedAt: row.recorded_at.toISOString() }));
+  }
+
+  private async validateMediaReferences(client: PoolClient, owner: string, project: string, asset: MediaAsset): Promise<void> {
+    if (asset.location.type === 'private_object') {
+      const object = await client.query<{ content_type: string }>(`SELECT content_type FROM private_objects
+        WHERE id = $1 AND project_id = $2 AND creator_account_id = $3 AND kind = 'media' FOR KEY SHARE`,
+      [asset.location.objectId, project, owner]);
+      const expected = asset.kind === 'artwork' ? ['image/png', 'image/jpeg'] : asset.kind === 'video' ? ['video/mp4'] : ['audio/mpeg'];
+      if (!object.rows[0] || !expected.includes(object.rows[0].content_type)) invalid('Owned media object with matching type required');
+    }
+    const evidenceIds = [...new Set([asset.rights?.evidenceId, asset.tvDisplayRights?.evidenceId, asset.tvPlaybackRights?.evidenceId].filter((id): id is string => !!id))];
+    for (const evidenceId of evidenceIds) {
+      const evidence = await client.query(`SELECT 1 FROM private_objects WHERE id = $1 AND project_id = $2
+        AND creator_account_id = $3 AND kind = 'evidence' FOR KEY SHARE`, [evidenceId, project, owner]);
+      if (!evidence.rowCount) invalid('Owned rights evidence required');
+    }
   }
 
   private plan(snapshot: Snapshot, sourceId: string, format: ImportFormat, content: string) {

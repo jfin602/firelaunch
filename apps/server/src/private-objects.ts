@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { mkdir, open, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
@@ -23,6 +23,17 @@ const allowedTypes = {
   evidence: ['image/png', 'image/jpeg', 'application/pdf']
 } as const;
 const maximumBytes = 1_000_000;
+const maximumAccountBytes = 100_000_000;
+const maximumAccountObjects = 1000;
+function matchesContentType(contentType: string, content: Buffer): boolean {
+  if (contentType === 'image/png') return content.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  if (contentType === 'image/jpeg') return content.length >= 4 && content[0] === 0xff && content[1] === 0xd8 && content[2] === 0xff;
+  if (contentType === 'application/pdf') return content.subarray(0, 5).toString('ascii') === '%PDF-';
+  if (contentType === 'video/mp4') return content.length >= 12 && content.readUInt32BE(0) >= 8 && content.subarray(4, 8).toString('ascii') === 'ftyp';
+  if (contentType === 'audio/mpeg') return content.subarray(0, 3).toString('ascii') === 'ID3' ||
+    (content.length >= 4 && content[0] === 0xff && (content[1]! & 0xe0) === 0xe0 && (content[1]! & 0x06) !== 0);
+  return false;
+}
 const digest = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 const missing = () => new RepositoryError('NOT_FOUND', 'Private object not found');
 
@@ -91,7 +102,7 @@ export class PrivateObjectService {
 
   async put(principal: AuthenticatedPrincipal, projectId: string, kind: 'media' | 'evidence', contentType: string, content: Buffer): Promise<PrivateObjectMetadata> {
     await this.repository.read(principal, projectId);
-    if ((kind !== 'media' && kind !== 'evidence') || !allowedTypes[kind].includes(contentType as never) || !Buffer.isBuffer(content) || content.length < 1 || content.length > maximumBytes)
+    if ((kind !== 'media' && kind !== 'evidence') || !allowedTypes[kind].includes(contentType as never) || !Buffer.isBuffer(content) || content.length < 1 || content.length > maximumBytes || !matchesContentType(contentType, content))
       throw new RepositoryError('INVALID_INPUT', 'Unsupported private object type or size');
     const id = `${kind === 'media' ? 'ma' : 'ev'}_${randomUUID().replaceAll('-', '')}`;
     const key = `private/${randomBytes(32).toString('hex')}`;
@@ -101,20 +112,35 @@ export class PrivateObjectService {
       await audit(this.pool, 'storage_failed', 'failure', principal.accountId);
       throw new RepositoryError('STORAGE_ERROR', 'Private object write failed');
     }
+    let client: PoolClient | undefined;
     try {
-      const result = await this.pool.query<ObjectRow>(`INSERT INTO private_objects
+      client = await this.pool.connect();
+      await client.query('BEGIN');
+      // Serialize uploads per account so parallel requests cannot evade the quota.
+      const account = await client.query(`SELECT 1 FROM creator_accounts a JOIN provider_identities i ON i.creator_account_id = a.id
+        WHERE a.id = $1 AND i.issuer = $2 AND i.subject = $3 FOR UPDATE OF a`,
+      [principal.accountId, principal.issuer, principal.subject]);
+      if (!account.rowCount) throw missing();
+      const usage = await client.query<{ object_count: string; total_bytes: string }>(`SELECT count(*)::text AS object_count,
+        COALESCE(sum(byte_size), 0)::text AS total_bytes FROM private_objects WHERE creator_account_id = $1`, [principal.accountId]);
+      if (Number(usage.rows[0]!.object_count) >= maximumAccountObjects || Number(usage.rows[0]!.total_bytes) + content.length > maximumAccountBytes)
+        throw new RepositoryError('INVALID_INPUT', 'Private storage quota exceeded');
+      const result = await client.query<ObjectRow>(`INSERT INTO private_objects
         (id, creator_account_id, project_id, kind, object_key, content_type, byte_size, sha256)
         SELECT $1, o.creator_account_id, o.project_id, $3, $4, $5, $6, $7
         FROM channel_ownerships o JOIN provider_identities i ON i.creator_account_id = o.creator_account_id
         WHERE o.project_id = $2 AND o.creator_account_id = $8 AND i.issuer = $9 AND i.subject = $10
         RETURNING *`, [id, projectId, kind, key, contentType, content.length, digest(content), principal.accountId, principal.issuer, principal.subject]);
       if (!result.rows[0]) throw missing();
+      await client.query('COMMIT');
       return publicMetadata(result.rows[0]);
-    } catch {
+    } catch (error) {
+      await client?.query('ROLLBACK').catch(() => undefined);
       try { await this.store.delete(key); } catch { await this.queueOrphan(key); }
+      if (error instanceof RepositoryError && error.code === 'INVALID_INPUT') throw error;
       await audit(this.pool, 'storage_failed', 'failure', principal.accountId);
       throw new RepositoryError('STORAGE_ERROR', 'Private object metadata write failed');
-    }
+    } finally { client?.release(); }
   }
 
   private async owned(principal: AuthenticatedPrincipal, projectId: string, objectId: string): Promise<ObjectRow> {

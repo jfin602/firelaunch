@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { channelSpecSchema, SCHEMA_VERSION, type ChannelSpec } from './index.js';
-import { catalogInventorySchema, type CatalogInventory, type MediaAsset } from './catalog.js';
+import { catalogInventorySchema, mediaUseEligible, type CatalogInventory, type MediaAsset } from './catalog.js';
 import { channelDeploymentSchema } from './creator.js';
 
 export const PUBLISHED_MANIFEST_SCHEMA_VERSION = 1 as const;
@@ -130,8 +130,7 @@ export function projectApprovedManifest(input: {
   const publicMedia = new Map<string, z.infer<typeof publicMediaSchema>>();
   const addAsset = (id: string, kind: 'playback' | 'artwork', expectedUrl: string, itemId?: string) => {
     const asset: MediaAsset | undefined = assetById.get(id);
-    if (!asset || !asset.deliveryEligible || asset.rights.status !== 'cleared' ||
-      asset.rights.permittedUse !== (kind === 'artwork' ? 'television_display' : 'television_playback') ||
+    if (!asset || !asset.deliveryEligible || !mediaUseEligible(asset, kind === 'artwork' ? 'television_display' : 'television_playback') ||
       (kind === 'artwork' ? asset.kind !== 'artwork' : asset.kind === 'artwork') ||
       (itemId && asset.catalogItemId !== itemId) || asset.location.type !== 'https' || asset.location.url !== expectedUrl) {
       throw new Error('Invalid, unlicensed or unpublished media reference');

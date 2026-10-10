@@ -70,7 +70,10 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
           const principal = session.principal;
           if (segments.length >= 4 && segments[3] === 'catalog' && catalog) {
             const projectId = segments[2]!;
-            if (url.search || segments.length > 6) { respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return; }
+            if (url.search || segments.length > 7) { respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return; }
+            if (segments.length === 7 && segments[4] === 'media-assets' && segments[6] === 'rights-events' && request.method === 'GET') {
+              respond(response, 200, { events: await catalog.rightsEvents(principal, projectId, segments[5]!) }); return;
+            }
             if (segments.length === 4 && request.method === 'GET') { respond(response, 200, await catalog.read(principal, projectId)); return; }
             if (segments.length === 6 && segments[4] === 'imports' && request.method === 'POST') {
               await hostedRepository.read(principal, projectId);

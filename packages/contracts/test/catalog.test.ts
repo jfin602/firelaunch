@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   CATALOG_SCHEMA_VERSION, catalogInventorySchema, catalogItemSchema, catalogSourceSchema,
   collectionSchema, externalIdentifierSchema, mediaAssetSchema, mediaRightsSchema,
+  mediaUseEligible,
   type CatalogInventory
 } from '../src/index.js';
 
@@ -133,6 +134,21 @@ test('unknown or revoked media rights cannot claim TV delivery', () => {
   assert.equal(mediaAssetSchema.safeParse({ ...videoAsset, rights: revoked, deliveryEligible: false }).success, true);
   assert.equal(mediaAssetSchema.safeParse({ ...audioAsset, rights: { ...clearedRights, permittedUse: 'television_display' } }).success, false);
   assert.equal(mediaRightsSchema.safeParse({ ...clearedRights, basis: 'license_documented' }).success, false);
+});
+
+test('separate display and playback claims never inherit permission from each other', () => {
+  const unknown = { status: 'unknown' as const, basis: 'none' as const, permittedUse: 'none' as const };
+  const separate = { ...videoAsset, rights: undefined, tvDisplayRights: { ...clearedRights, permittedUse: 'television_display' as const },
+    tvPlaybackRights: unknown, deliveryEligible: false };
+  assert.equal(mediaAssetSchema.safeParse(separate).success, true);
+  assert.equal(mediaUseEligible(mediaAssetSchema.parse(separate), 'television_display'), true);
+  assert.equal(mediaUseEligible(mediaAssetSchema.parse(separate), 'television_playback'), false);
+  assert.equal(mediaAssetSchema.safeParse({ ...separate, deliveryEligible: true }).success, false);
+  const cleared = { ...separate, tvPlaybackRights: clearedRights, deliveryEligible: true };
+  assert.equal(mediaAssetSchema.safeParse(cleared).success, true);
+  assert.equal(mediaUseEligible(mediaAssetSchema.parse(cleared), 'television_playback'), true);
+  assert.equal(mediaAssetSchema.safeParse({ ...cleared, tvPlaybackRights: { ...clearedRights, status: 'revoked' } }).success, false);
+  assert.equal(mediaAssetSchema.safeParse({ ...cleared, tvPlaybackRights: { ...clearedRights, status: 'revoked' }, deliveryEligible: false }).success, true);
 });
 
 test('source, artwork and media URLs and upload keys reject unsafe locations', () => {

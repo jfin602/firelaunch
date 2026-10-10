@@ -55,7 +55,7 @@ const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
     const store = new IsolatedObjectStore(root);
     let clock = Date.now();
     const service = new PrivateObjectService(repository, store, () => clock);
-    const content = Buffer.from('private license evidence');
+    const content = Buffer.from('%PDF-1.4\nprivate license evidence\n%%EOF');
     const metadata = await service.put(a, aProject.id, 'evidence', 'application/pdf', content);
     assert.match(metadata.id, /^ev_[a-f0-9]{32}$/);
     assert.equal(metadata.byteSize, content.length);
@@ -76,6 +76,7 @@ const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
     await assert.rejects(service.metadata(a, aProject.id, `ev_${'f'.repeat(32)}`), { code: 'NOT_FOUND' });
     await assert.rejects(service.put(b, aProject.id, 'evidence', 'application/pdf', content), { code: 'NOT_FOUND' });
     await assert.rejects(service.put(a, aProject.id, 'evidence', 'text/html', content), { code: 'INVALID_INPUT' });
+    await assert.rejects(service.put(a, aProject.id, 'evidence', 'image/png', content), { code: 'INVALID_INPUT' });
     await assert.rejects(service.put(a, aProject.id, 'evidence', 'application/pdf', Buffer.alloc(1_000_001)), { code: 'INVALID_INPUT' });
     await assert.rejects(service.put(a, aProject.id, 'media', 'application/pdf', content), { code: 'INVALID_INPUT' });
     assert.equal((await readdir(path.join(root, 'private'))).length, 1);
@@ -104,6 +105,11 @@ const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
     };
     await assert.rejects(new PrivateObjectService(repository, partialStore).put(a, aProject.id, 'evidence', 'application/pdf', content), { code: 'STORAGE_ERROR' });
     assert.equal((await readdir(path.join(root, 'private'))).length, 1, 'failed object write removed partial object');
+    await repository.pool.query(`INSERT INTO private_objects(id, creator_account_id, project_id, kind, object_key, content_type, byte_size, sha256)
+      SELECT 'ev_' || md5('quota-' || n::text), $1, $2, 'evidence', 'private/' || repeat(md5('quota-' || n::text), 2),
+      'application/pdf', 1, repeat('a', 64) FROM generate_series(1, 1000) AS n`, [a.accountId, aProject.id]);
+    await assert.rejects(service.put(a, aProject.id, 'evidence', 'application/pdf', content), { code: 'INVALID_INPUT' });
+    assert.equal((await readdir(path.join(root, 'private'))).length, 1, 'quota rejection removed uploaded object');
     await service.delete(a, aProject.id, metadata.id);
     assert.equal((await readdir(path.join(root, 'private'))).length, 0);
     await assert.rejects(service.download(a, aProject.id, metadata.id, fresh.capability), { code: 'NOT_FOUND' });

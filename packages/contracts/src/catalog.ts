@@ -163,17 +163,40 @@ export const mediaAssetSchema = z.strictObject({
   kind: z.enum(['video', 'audio', 'artwork']),
   location: z.discriminatedUnion('type', [
     z.strictObject({ type: z.literal('https'), url: httpsUrlSchema }),
-    z.strictObject({ type: z.literal('upload'), key: uploadKeySchema })
+    z.strictObject({ type: z.literal('upload'), key: uploadKeySchema }),
+    z.strictObject({ type: z.literal('private_object'), objectId: mediaAssetIdSchema })
   ]),
-  rights: mediaRightsSchema,
+  // The original single-use claim remains readable for existing draft inventories.
+  // New attachments record both uses independently; omitted claims mean unknown.
+  rights: mediaRightsSchema.optional(),
+  tvDisplayRights: mediaRightsSchema.optional(),
+  tvPlaybackRights: mediaRightsSchema.optional(),
   deliveryEligible: z.boolean()
 }).superRefine((asset, context) => {
-  if (asset.deliveryEligible && (asset.rights.status !== 'cleared' ||
-    asset.rights.permittedUse !== (asset.kind === 'artwork' ? 'television_display' : 'television_playback'))) {
+  if (asset.rights && (asset.tvDisplayRights || asset.tvPlaybackRights)) {
+    context.addIssue({ code: 'custom', message: 'Use legacy or separate TV rights claims' });
+  }
+  if (!asset.rights && (!asset.tvDisplayRights || !asset.tvPlaybackRights)) {
+    context.addIssue({ code: 'custom', message: 'Separate display and playback rights are required' });
+  }
+  if (asset.tvDisplayRights?.status === 'cleared' && asset.tvDisplayRights.permittedUse !== 'television_display') {
+    context.addIssue({ code: 'custom', message: 'Display rights need television display use' });
+  }
+  if (asset.tvPlaybackRights?.status === 'cleared' && asset.tvPlaybackRights.permittedUse !== 'television_playback') {
+    context.addIssue({ code: 'custom', message: 'Playback rights need television playback use' });
+  }
+  if (asset.deliveryEligible && !mediaUseEligible(asset, asset.kind === 'artwork' ? 'television_display' : 'television_playback')) {
     context.addIssue({ code: 'custom', message: 'Deliverable media needs cleared, kind-specific TV rights' });
   }
 });
 export type MediaAsset = z.infer<typeof mediaAssetSchema>;
+
+export function mediaUseEligible(asset: Pick<MediaAsset, 'rights' | 'tvDisplayRights' | 'tvPlaybackRights'>,
+  use: 'television_display' | 'television_playback'): boolean {
+  const claim = use === 'television_display' ? asset.tvDisplayRights : asset.tvPlaybackRights;
+  const rights = claim ?? asset.rights;
+  return rights?.status === 'cleared' && rights.permittedUse === use;
+}
 
 export const collectionSchema = z.strictObject({
   schemaVersion: z.literal(CATALOG_SCHEMA_VERSION),

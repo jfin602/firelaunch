@@ -210,7 +210,7 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
         'x-csrf-token': secondLogin.session.csrfToken }, body: JSON.stringify({ expectedRevision: 1, spec: owned.spec }) })).status, 403);
       const privatePath = `${ownedPath}/private-objects`;
       const objectResponse = await fetch(privatePath, { method: 'POST', headers: ownerHeaders,
-        body: JSON.stringify({ kind: 'evidence', contentType: 'application/pdf', contentBase64: Buffer.from('private evidence').toString('base64') }) });
+        body: JSON.stringify({ kind: 'evidence', contentType: 'application/pdf', contentBase64: Buffer.from('%PDF-1.4\nprivate evidence\n%%EOF').toString('base64') }) });
       assert.equal(objectResponse.status, 201);
       const privateMetadata = await objectResponse.json();
       assert.equal(privateMetadata.kind, 'evidence');
@@ -218,10 +218,37 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       assert.equal((await fetch(`${privatePath}/${privateMetadata.id}`, { headers: { cookie: secondLogin.cookie } })).status, 404);
       assert.equal((await fetch(`${privatePath}/${privateMetadata.id}`, { headers: { cookie: firstLogin.cookie } })).status, 200);
       const mediaResponse = await fetch(privatePath, { method: 'POST', headers: ownerHeaders,
-        body: JSON.stringify({ kind: 'media', contentType: 'image/png', contentBase64: Buffer.from('private media').toString('base64') }) });
+        body: JSON.stringify({ kind: 'media', contentType: 'image/png', contentBase64: Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.from('private media')]).toString('base64') }) });
       assert.equal(mediaResponse.status, 201);
       const mediaMetadata = await mediaResponse.json();
       assert.equal(mediaMetadata.kind, 'media');
+      const attachedSourceResponse = await fetch(`${catalogPath}/sources`, { method: 'POST', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ expectedRevision: 3, record: sourceBody }) });
+      assert.equal(attachedSourceResponse.status, 201);
+      const attachedSource = (await attachedSourceResponse.json()).record;
+      const externalId = { provider: 'creator', kind: 'feed_item_id', value: 'owned-artwork' };
+      const itemResponse = await fetch(`${catalogPath}/items`, { method: 'POST', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ expectedRevision: 4, record: { schemaVersion: 1, kind: 'book',
+          sourceRecord: { sourceId: attachedSource.id, externalId, observedAt: '2026-10-10T00:00:00.000Z', metadata: { title: 'Owned book' } },
+          externalIdentifiers: [externalId], mediaAssetIds: [] } }) });
+      assert.equal(itemResponse.status, 201);
+      const attachedItem = (await itemResponse.json()).record;
+      const rights = { status: 'cleared', basis: 'license_documented', permittedUse: 'television_display',
+        assertedAt: '2026-10-10T00:00:00.000Z', evidenceId: privateMetadata.id };
+      const attachedResponse = await fetch(`${catalogPath}/media-assets`, { method: 'POST', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ expectedRevision: 5, record: { schemaVersion: 1, catalogItemId: attachedItem.id, kind: 'artwork',
+          location: { type: 'private_object', objectId: mediaMetadata.id }, tvDisplayRights: rights,
+          tvPlaybackRights: { status: 'unknown', basis: 'none', permittedUse: 'none' }, deliveryEligible: true } }) });
+      assert.equal(attachedResponse.status, 201);
+      const attachedAsset = (await attachedResponse.json()).record;
+      const rightsPath = `${catalogPath}/media-assets/${attachedAsset.id}/rights-events`;
+      assert.equal((await fetch(rightsPath, { headers: { cookie: secondLogin.cookie } })).status, 404);
+      const rightsResponse = await fetch(rightsPath, { headers: { cookie: firstLogin.cookie } });
+      assert.equal(rightsResponse.status, 200);
+      assert.equal((await rightsResponse.json()).events.length, 1);
+      assert.equal((await fetch(rightsPath, { headers: { cookie: firstLogin.cookie }, method: 'POST' })).status, 403);
+      assert.equal((await fetch(`${catalogPath}/media-assets/${attachedAsset.id}`, { method: 'DELETE', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ expectedRevision: 6 }) })).status, 200);
       assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}`, { headers: { cookie: secondLogin.cookie } })).status, 404);
       assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}/capability`, { method: 'POST', headers: foreignHeaders, body: '{}' })).status, 404);
       assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}/capability`, { method: 'DELETE', headers: foreignHeaders })).status, 404);
@@ -241,7 +268,7 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       assert.equal((await fetch(`${privatePath}/${privateMetadata.id}/content`, { headers: { cookie: secondLogin.cookie, 'x-private-capability': capability } })).status, 404);
       const contentResponse = await fetch(`${privatePath}/${privateMetadata.id}/content`, { headers: { cookie: firstLogin.cookie, 'x-private-capability': capability } });
       assert.equal(contentResponse.status, 200);
-      assert.equal(await contentResponse.text(), 'private evidence');
+      assert.equal(await contentResponse.text(), '%PDF-1.4\nprivate evidence\n%%EOF');
       assert.equal(contentResponse.headers.get('cache-control'), 'no-store');
       assert.equal((await fetch(`${privatePath}/${privateMetadata.id}/capability`, { method: 'DELETE', headers: ownerHeaders })).status, 200);
       assert.equal((await fetch(`${privatePath}/${privateMetadata.id}/content`, { headers: { cookie: firstLogin.cookie, 'x-private-capability': capability } })).status, 404);
@@ -373,7 +400,10 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     const operationsDown = await readFile(new URL('../migrations/004_operations.down.sql', import.meta.url), 'utf8');
     const catalogDown = await readFile(new URL('../migrations/005_catalog.down.sql', import.meta.url), 'utf8');
     const importDown = await readFile(new URL('../migrations/006_catalog_import_previews.down.sql', import.meta.url), 'utf8');
+    const mediaRightsDown = await readFile(new URL('../migrations/007_catalog_media_rights.down.sql', import.meta.url), 'utf8');
     await restarted.pool.query('BEGIN');
+    await restarted.pool.query(mediaRightsDown);
+    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 7');
     await restarted.pool.query(importDown);
     await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 6');
     await restarted.pool.query(catalogDown);
