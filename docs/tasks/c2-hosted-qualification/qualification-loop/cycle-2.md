@@ -1,0 +1,24 @@
+# Cycle 2 — local hosted qualification
+
+Date: 2026-10-10. Candidate HEAD `eada42fbe2ef5ce70e44c0683d9a4b1671dfa9e3`; root version `0.2.7`; working tree clean at start. P2 P7 NOT GREEN and cycle 1 were committed. Intervening committed changes provided local hosted setup (`6c307cc`) and Google `select_account` (`eada42f`). This cycle made no source repair, commit, or version change.
+
+## Gate matrix
+
+| Gate | Start | End | Evidence / limit |
+| --- | --- | --- | --- |
+| G0 | BLOCKED | BLOCKED | PostgreSQL 16, real Google client, and two distinct private MinIO buckets available. Callback and S3 endpoint use HTTP loopback; no HTTPS staging target or second browser profile. |
+| G1 | NOT TESTED | PARTIAL | Two owner-approved account aliases, **j4c0bsw4p** and **pickuptruck2000**, completed real Google authorization-code browser login and logout sequentially. No simultaneous separated profiles or full negative state/nonce/PKCE, replay, forged, expiry and HTTPS-cookie checks. |
+| G2 | NOT TESTED | PARTIAL | Each account created its own hosted project. B's initial list was empty, and opening A's project-selection URL as B reverted to B's own project. Three unauthenticated spoofed-header probes returned 401. Full live foreign API, deployment and private-capability matrix absent. |
+| G3 | NOT TESTED | PARTIAL | Genuine local S3 API and PostgreSQL backup/restore passed with separate buckets and disposable DB; HTTPS backend and failed-write cleanup on it absent. |
+| G4 | NOT TESTED | PARTIAL | Account A edited Design, opened Content, used Preview remote detail/Back, reloaded revision 9, generated and protected a source edit, and saw hosted Build blocked. Account B created a separate project. Two-profile, server restart, portable export and expiration checks absent. |
+| G5 | NOT TESTED | PARTIAL | Focused, local S3, aggregate, stack and diff checks passed; hard gates incomplete. |
+
+## Observations
+
+- `npm run hosted:local:check` passed. Local config was mode 0600, evidence directory 0700, and anonymous access to both buckets was denied. The real Google account chooser and callback completed for both approved aliases. The in-app browser inventory exposed one profile; Chrome was unavailable. No account email, token or OAuth URL is retained here.
+- Account A's first create request returned a CSRF error. Reload and the identical retry succeeded; the failure was not reproduced or attributed to a source defect. No speculative auth change was made. Direct browser navigation to the project API endpoint was blocked by the browser before an HTTP request could be observed. The three unauthenticated probes of session, project list and project read with a spoofed user header returned 401.
+- The isolated synthetic S3 test passed **1/1**, zero skips, using the real operations CLI and distinct MinIO buckets/databases; it cleaned its own test data. Log SHA-256: `ae18efd5936e28a13ac4b3c5a3cf9e9d9da3ab9b371ea23774ba0496e2647747`.
+- A separate owner-data drill used the documented `npm run ops -- health`, `backup --out`, and `restore --in` commands against the local source with both real logged-in account records and projects. It added one random evidence object under account A before backup. Health returned OK, migration 4. Backup and restore each reported one object and database SHA-256 `1300150b9233553ed6a69d049a4774ae0eeea2dca0af099c1380574240ca591b`. Encrypted archive SHA-256: `00e80fce99e591b542b93ebdd9ceb8185b8178ec39fc1eb6dcda38d2a386c388`. Both restored owner reads succeeded; cross-owner project/object reads returned `NOT_FOUND`. Restored source included A's protected edit. Source and restored object bytes matched SHA-256 `d237387087d4b877432d96610d6f0351e3a5fca5df952d18a56f2666f2237ae5`; source files and object bytes were unchanged across restore. Log SHA-256: `40e6494fb77dad48f023ca0c32a988e5630bb30a9747ed5f6f66991c94fc2a92`. The archive is ignored and mode 0600. This is local HTTP MinIO, not an HTTPS staging backend.
+- Focused security/recovery tests passed **10/10**, zero skip/fail; log SHA-256 `879de29080752cf7aa7e4b66c88c1508ac4ba194cd8f9fdf7c44b57ca7684e18`. One npm 12.2.0 root check passed seven typechecks and seven builds. Kernel: 69 pass/1 skip; Studio: 8/8; runner: 104/104. Total: **181 pass, 1 skip, 0 fail of 182**. The skipped aggregate case is the gated local S3 test run separately. Root log SHA-256 `c56163d4a76e8db77333c7a77fb5576ff5b187dafc3ae9e390084ffa8974ff9d`. Stack validation and `git diff --check` passed. Focused repaired-path count: zero; no repair was made.
+
+Stop at **2/5** cycles because HTTPS staging and separated browser profiles are unavailable. The source test object, disposable restore database/bucket contents and encrypted archive remain in the ignored local test environment for inspection. No historical closeout is relabeled GREEN.
