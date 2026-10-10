@@ -18,6 +18,8 @@ const privatePutSchema = z.strictObject({ kind: z.enum(['media', 'evidence']), c
 const MAX_BODY_BYTES = 1_000_000;
 const catalogWriteSchema = z.strictObject({ expectedRevision: z.number().int().nonnegative(), record: z.record(z.string(), z.unknown()) });
 const catalogDeleteSchema = z.strictObject({ expectedRevision: z.number().int().nonnegative() });
+const filePreviewSchema = z.strictObject({ sourceId: z.string().regex(/^src_[a-f0-9]{32}$/), format: z.enum(['csv', 'json']), content: z.string().max(512_000) });
+const fileApproveSchema = filePreviewSchema.extend({ expectedRevision: z.number().int().nonnegative(), fingerprint: z.string().regex(/^[a-f0-9]{64}$/) });
 
 async function body(request: IncomingMessage): Promise<unknown> {
   if (!request.headers['content-type']?.toLowerCase().startsWith('application/json')) throw new ZodError([{ code: 'custom', path: [], message: 'Expected application/json' }]);
@@ -28,7 +30,7 @@ async function body(request: IncomingMessage): Promise<unknown> {
     if (size > MAX_BODY_BYTES) throw new ZodError([{ code: 'custom', path: [], message: 'Request body too large' }]);
     chunks.push(chunk);
   }
-  try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+  try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
   catch { throw new ZodError([{ code: 'custom', path: [], message: 'Invalid JSON' }]); }
 }
 
@@ -68,6 +70,17 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             const projectId = segments[2]!;
             if (url.search || segments.length > 6) { respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return; }
             if (segments.length === 4 && request.method === 'GET') { respond(response, 200, await catalog.read(principal, projectId)); return; }
+            if (segments.length === 6 && segments[4] === 'imports' && request.method === 'POST') {
+              await hostedRepository.read(principal, projectId);
+              if (segments[5] === 'preview') {
+                const input = filePreviewSchema.parse(await body(request));
+                respond(response, 200, await catalog.previewImport(principal, projectId, input.sourceId, input.format, input.content)); return;
+              }
+              if (segments[5] === 'approve') {
+                const input = fileApproveSchema.parse(await body(request));
+                respond(response, 200, await catalog.approveImport(principal, projectId, input.sourceId, input.format, input.content, input.expectedRevision, input.fingerprint)); return;
+              }
+            }
             const kind = segments[4];
             if (kind && catalogKinds.includes(kind as CatalogKind)) {
               const typedKind = kind as CatalogKind;

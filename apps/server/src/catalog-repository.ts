@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod';
 import type { PoolClient } from 'pg';
 import {
@@ -8,6 +9,7 @@ import {
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { RepositoryError } from './repository.js';
+import { parseCatalogFile, type FileFormat } from './catalog-file-import.js';
 
 export const catalogKinds = ['sources', 'items', 'media-assets', 'collections'] as const;
 export type CatalogKind = typeof catalogKinds[number];
@@ -106,6 +108,7 @@ export class CatalogRepository {
           const old = snapshot.items[index]!;
           const next = record as CatalogItem;
           if (old.sourceRecord.sourceId !== next.sourceRecord.sourceId || externalKey(old.sourceRecord.externalId) !== externalKey(next.sourceRecord.externalId)) invalid('Source identity cannot change');
+          if (!isDeepStrictEqual(old.sourceRecord, next.sourceRecord)) invalid('Observed source fields are import-owned');
           if (JSON.stringify(old.mediaAssetIds) !== JSON.stringify(next.mediaAssetIds)) invalid('Media links are server-owned');
         }
         if (kind === 'items' && method === 'POST' && (record as CatalogItem).mediaAssetIds.length) invalid('Media links are server-owned');
@@ -128,6 +131,98 @@ export class CatalogRepository {
       await client.query('UPDATE catalog_revisions SET revision = revision + 1 WHERE project_id = $1 AND creator_account_id = $2', [project.data, owner]);
       await client.query('COMMIT');
       return { revision: current + 1, ...(record ? { record } : { deleted: true as const }) };
+    } catch (error) { await client.query('ROLLBACK').catch(() => undefined); return databaseError(error); }
+    finally { client.release(); }
+  }
+
+  private plan(snapshot: Snapshot, sourceId: string, format: FileFormat, content: string) {
+    const source = snapshot.sources.find(value => value.id === sourceId);
+    if (!source) throw new RepositoryError('NOT_FOUND', 'Catalog source not found');
+    if (source.type !== `creator_${format}`) invalid('File format does not match catalog source');
+    const parsed = parseCatalogFile(format, content, sourceId);
+    const existing = new Map(snapshot.items.filter(item => item.sourceRecord.sourceId === sourceId)
+      .map(item => [item.sourceRecord.externalId.value, item]));
+    const rows = parsed.rows.map(row => {
+      const prior = existing.get(row.externalId);
+      const action = !prior ? 'create' : prior.kind !== row.kind ? 'ambiguous' :
+        JSON.stringify(prior.sourceRecord.metadata) === JSON.stringify(row.metadata) ? 'unchanged' : 'update';
+      return { ...row, action, itemId: prior?.id };
+    });
+    const issues = [...parsed.issues, ...rows.filter(row => row.action === 'ambiguous').map(row =>
+      ({ line: row.line, code: 'AMBIGUOUS' as const, message: `Kind changed for externalId ${row.externalId}` }))];
+    return { sourceId, format, revision: snapshot.revision, fingerprint: parsed.fingerprint, rows, issues };
+  }
+
+  async previewImport(principal: AuthenticatedPrincipal, rawProjectId: string, sourceId: string, format: FileFormat, content: string) {
+    const snapshot = await this.read(principal, rawProjectId);
+    const plan = this.plan(snapshot, sourceId, format, content);
+    const client = await this.projects.pool.connect();
+    try {
+      await client.query('BEGIN');
+      // A receipt is issued only for an owned source at the revision that was previewed.
+      const recorded = await client.query(`INSERT INTO catalog_import_previews(project_id, creator_account_id, source_id, revision, fingerprint)
+        SELECT s.project_id, s.creator_account_id, s.id, r.revision, $5
+        FROM catalog_sources s JOIN catalog_revisions r ON r.project_id = s.project_id AND r.creator_account_id = s.creator_account_id
+        WHERE s.project_id = $1 AND s.creator_account_id = $2 AND s.id = $3 AND r.revision = $4
+        ON CONFLICT (project_id, creator_account_id, source_id, revision, fingerprint) DO UPDATE SET created_at = now()
+        RETURNING fingerprint`, [rawProjectId, principal.accountId, sourceId, snapshot.revision, plan.fingerprint]);
+      if (!recorded.rowCount) throw new RepositoryError('CONFLICT', 'Catalog revision changed');
+      await client.query('DELETE FROM catalog_import_previews WHERE project_id = $1 AND creator_account_id = $2 AND source_id = $3 AND created_at < now() - interval \'15 minutes\'', [rawProjectId, principal.accountId, sourceId]);
+      await client.query('COMMIT');
+      return plan;
+    } catch (error) { await client.query('ROLLBACK').catch(() => undefined); return databaseError(error); }
+    finally { client.release(); }
+  }
+
+  async approveImport(principal: AuthenticatedPrincipal, rawProjectId: string, sourceId: string, format: FileFormat,
+    content: string, expectedRevision: number, fingerprint: string): Promise<{ revision: number; created: number; updated: number; unchanged: number }> {
+    const project = projectId.safeParse(rawProjectId);
+    if (!project.success) throw new RepositoryError('NOT_FOUND', 'Project not found');
+    revisionSchema.parse(expectedRevision);
+    await this.projects.read(principal, project.data);
+    const client = await this.projects.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const owner = principal.accountId;
+      const owned = await client.query('SELECT 1 FROM channel_ownerships WHERE project_id = $1 AND creator_account_id = $2 FOR UPDATE', [project.data, owner]);
+      if (!owned.rowCount) throw new RepositoryError('NOT_FOUND', 'Project not found');
+      await client.query('INSERT INTO catalog_revisions(project_id, creator_account_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [project.data, owner]);
+      const revision = await client.query<{ revision: number }>('SELECT revision FROM catalog_revisions WHERE project_id = $1 AND creator_account_id = $2 FOR UPDATE', [project.data, owner]);
+      if (revision.rows[0]!.revision !== expectedRevision) throw new RepositoryError('CONFLICT', 'Catalog revision changed');
+      const snapshot = await this.load(client, owner, project.data, expectedRevision);
+      const plan = this.plan(snapshot, sourceId, format, content);
+      if (plan.fingerprint !== fingerprint) throw new RepositoryError('CONFLICT', 'Import preview fingerprint changed');
+      const receipt = await client.query(`SELECT 1 FROM catalog_import_previews
+        WHERE project_id = $1 AND creator_account_id = $2 AND source_id = $3 AND revision = $4 AND fingerprint = $5
+        AND created_at > now() - interval '15 minutes' FOR UPDATE`, [project.data, owner, sourceId, expectedRevision, fingerprint]);
+      if (!receipt.rowCount) throw new RepositoryError('CONFLICT', 'Import preview is missing or expired');
+      if (plan.issues.length) invalid('Resolve all invalid, duplicate and ambiguous rows before approval');
+      let created = 0, updated = 0, unchanged = 0;
+      const observedAt = new Date().toISOString();
+      for (const row of plan.rows) {
+        if (row.action === 'unchanged') { unchanged++; continue; }
+        const externalId = { provider: 'creator' as const, kind: 'feed_item_id' as const, value: row.externalId };
+        if (row.action === 'create') {
+          const item: CatalogItem = { schemaVersion: 1, id: `ci_${randomUUID().replaceAll('-', '')}`, creatorAccountId: owner, projectId: project.data,
+            kind: row.kind, sourceRecord: { sourceId, externalId, observedAt, metadata: row.metadata },
+            externalIdentifiers: [externalId], mediaAssetIds: [] };
+          snapshot.items.push(item); created++;
+        } else {
+          const item = snapshot.items.find(value => value.id === row.itemId)!;
+          item.sourceRecord = { sourceId, externalId: item.sourceRecord.externalId, observedAt, metadata: row.metadata };
+          updated++;
+        }
+      }
+      const result = { revision: expectedRevision + (created || updated ? 1 : 0), created, updated, unchanged };
+      if (created || updated) {
+        const { revision: _revision, ...inventory } = snapshot;
+        if (!catalogInventorySchema.safeParse(inventory).success) invalid('Invalid catalog references or identity');
+        await this.replace(client, owner, project.data, snapshot);
+        await client.query('UPDATE catalog_revisions SET revision = revision + 1 WHERE project_id = $1 AND creator_account_id = $2', [project.data, owner]);
+      }
+      await client.query('DELETE FROM catalog_import_previews WHERE project_id = $1 AND creator_account_id = $2 AND source_id = $3 AND revision = $4 AND fingerprint = $5', [project.data, owner, sourceId, expectedRevision, fingerprint]);
+      await client.query('COMMIT');
+      return result;
     } catch (error) { await client.query('ROLLBACK').catch(() => undefined); return databaseError(error); }
     finally { client.release(); }
   }
