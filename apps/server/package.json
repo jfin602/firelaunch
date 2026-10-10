@@ -3,6 +3,17 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "start": "node dist/index.js" },
-  "dependencies": { "@firelaunch/contracts": "0.0.1", "@firelaunch/channel-engine": "0.0.1", "@firelaunch/agent": "0.0.4", "@firelaunch/generator": "0.0.2", "zod": "^4.0.0" }
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@firelaunch/agent": "0.0.4",
+    "@firelaunch/channel-engine": "0.0.1",
+    "@firelaunch/contracts": "0.0.1",
+    "@firelaunch/generator": "0.0.2",
+    "jose": "^6.2.12",
+    "zod": "^4.0.0"
+  }
 }

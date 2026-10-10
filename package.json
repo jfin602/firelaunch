@@ -1,6 +1,6 @@
 {
   "name": "firelaunch",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "packageManager": "npm@12.2.0",
@@ -8,7 +8,10 @@
     "node": ">=24.15 <25",
     "npm": ">=12 <13"
   },
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "start": "npm run build && node apps/server/dist/index.js",
     "dev": "tsx watch apps/server/src/index.ts",

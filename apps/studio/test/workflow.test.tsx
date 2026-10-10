@@ -18,7 +18,7 @@ const { cleanup, fireEvent, render, screen, waitFor } = await import('@testing-l
 
 test('Studio golden path creates, edits, refines, generates, blocks build, hands off and reloads', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-studio-'));
-  const server = createApi(new ProjectRepository(directory), new MockProvider());
+  const server = createApi(new ProjectRepository(directory), new MockProvider(), { mode: 'local-legacy' });
   let activeServer = server;
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
@@ -67,7 +67,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     render(createElement(App));
     await waitFor(() => assert.ok(screen.getAllByRole('button', { name: 'Open Field Notes' }).length));
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
-    const restarted = createApi(new ProjectRepository(directory), new MockProvider());
+    const restarted = createApi(new ProjectRepository(directory), new MockProvider(), { mode: 'local-legacy' });
     restarted.listen(address.port, '127.0.0.1');
     await new Promise<void>(resolve => restarted.once('listening', resolve));
     activeServer = restarted;

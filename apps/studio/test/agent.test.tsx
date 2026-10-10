@@ -17,7 +17,7 @@ const { cleanup, fireEvent, render, screen, waitFor, within } = await import('@t
 
 test('Studio agent request persists and immediately updates TV Preview; hand editing remains available', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-studio-agent-'));
-  const server = createApi(new ProjectRepository(directory), new MockProvider());
+  const server = createApi(new ProjectRepository(directory), new MockProvider(), { mode: 'local-legacy' });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   assert.ok(address && typeof address !== 'string');

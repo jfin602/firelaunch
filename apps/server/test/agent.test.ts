@@ -11,7 +11,7 @@ import { ProjectRepository } from '../src/repository.js';
 test('API agent uses persistence and optimistic revisions; deterministic editing still works', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-agent-api-'));
   const repository = new ProjectRepository(directory);
-  const server = createApi(repository, new MockProvider());
+  const server = createApi(repository, new MockProvider(), { mode: 'local-legacy' });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const address = server.address();
@@ -44,7 +44,7 @@ test('API refuses unsupported tool calls without mutating persisted project', as
   const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-agent-refusal-'));
   const repository = new ProjectRepository(directory);
   const provider: AgentProvider = { name: 'bedrock', async next() { return { text: '', calls: [{ id: 'bad', name: 'run_shell', input: { command: 'echo no' } }] }; } };
-  const server = createApi(repository, provider);
+  const server = createApi(repository, provider, { mode: 'local-legacy' });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const address = server.address();

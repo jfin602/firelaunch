@@ -5,6 +5,7 @@ import { createProjectSchema, updateProjectSchema } from '@firelaunch/contracts'
 import { agentRequestSchema, BedrockProvider, ChannelAgent, MockProvider, providerStatus, type AgentProvider } from '@firelaunch/agent';
 import { ProjectRepository, RepositoryError } from './repository.js';
 import { WorkspaceService } from './workspace.js';
+import type { ServerMode } from './auth/config.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -28,7 +29,7 @@ function respond(response: ServerResponse, status: number, value: unknown): void
   response.end(JSON.stringify(value));
 }
 
-export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider) {
+export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode) {
   const status = selectedProvider ? { provider: selectedProvider.name, configured: true, message: selectedProvider.name === 'mock' ? 'Deterministic mock; no cloud request.' : 'Bedrock configured; credentials and model access checked on request.' } : providerStatus(process.env);
   const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : new BedrockProvider(process.env.BEDROCK_MODEL_ID!))) : null;
   const workspace = new WorkspaceService(repository);
@@ -36,6 +37,25 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
     try {
       const url = new URL(request.url ?? '', 'http://localhost');
       const segments = url.pathname.split('/').filter(Boolean);
+      if (segments[0] === 'api' && segments[1] === 'auth' && mode?.mode === 'hosted') {
+        const auth = mode.auth;
+        if (segments.length === 3 && segments[2] === 'login' && request.method === 'GET') { auth.begin(request, response); return; }
+        if (segments.length === 3 && segments[2] === 'callback' && request.method === 'GET') { await auth.callback(request, response, url); return; }
+        if (segments.length === 3 && segments[2] === 'session' && request.method === 'GET') {
+          const session = auth.session(request);
+          if (!session) { respond(response, 401, { error: { code: 'UNAUTHENTICATED', message: 'Sign in required' } }); return; }
+          respond(response, 200, { accountId: session.principal.accountId, email: session.principal.email, csrfToken: session.csrf, expiresAt: new Date(session.expiresAt).toISOString() }); return;
+        }
+        if (segments.length === 3 && segments[2] === 'logout' && request.method === 'POST') { auth.logout(request, response); return; }
+      }
+      if (segments[0] === 'api' && segments[1] === 'projects' && mode?.mode === 'hosted') {
+        const session = mode.auth.session(request);
+        if (!session) { respond(response, 401, { error: { code: 'UNAUTHENTICATED', message: 'Sign in required' } }); return; }
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? '') && !mode.auth.authorizedMutation(request, session)) { respond(response, 403, { error: { code: 'CSRF', message: 'Invalid request origin or CSRF token' } }); return; }
+        // P2 owns scoped persistence. Until then, no hosted request may reach P0 filesystem paths.
+        respond(response, 503, { error: { code: 'HOSTED_STORAGE_UNAVAILABLE', message: 'Hosted project storage is not configured' } }); return;
+      }
+      if (mode?.mode !== 'local-legacy') { respond(response, 401, { error: { code: 'UNAUTHENTICATED', message: 'Sign in required' } }); return; }
       if ((url.search && !(segments.length === 5 && segments[3] === 'code' && segments[4] === 'file' && request.method === 'GET')) || segments[0] !== 'api' || segments[1] !== 'projects') {
         respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return;
       }

@@ -48,7 +48,7 @@ test('repository rejects symlink project/file escapes and corrupt records', () =
 }));
 
 test('API creates, lists, reads, mutates and reports bounded failures', () => temporary(async root => {
-  const server = createApi(new ProjectRepository(root));
+  const server = createApi(new ProjectRepository(root), undefined, { mode: 'local-legacy' });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const address = server.address();

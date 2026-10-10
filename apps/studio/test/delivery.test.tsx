@@ -18,7 +18,7 @@ test('Studio Code edit, blocked Build and Publish bundle remain truthful', async
   const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-delivery-'));
   const repository = new ProjectRepository(directory);
   const project = await repository.create({ title: 'Wild Earth' });
-  const server = createApi(repository);
+  const server = createApi(repository, undefined, { mode: 'local-legacy' });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   const address = server.address(); assert.ok(address && typeof address !== 'string');
   const nativeFetch = globalThis.fetch;

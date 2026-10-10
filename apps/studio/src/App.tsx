@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import type { ChannelMutation } from '@firelaunch/channel-engine';
 import type { ChannelProject, ContentItem, Module, Page } from '@firelaunch/contracts';
 import type { AgentEvent } from '@firelaunch/agent';
-import { ApiError, askAgent, createProject, getProject, listProjects, mutateProject } from './api.js';
+import { ApiError, askAgent, createProject, getProject, getSession, listProjects, logout, mutateProject, type StudioSession } from './api.js';
 import { Preview } from './Preview.js';
 import { AgentPanel } from './AgentPanel.js';
 import { Delivery } from './Delivery.js';
@@ -105,15 +105,20 @@ export default function App() {
   const [error, setError] = useState('');
   const [newChannel, setNewChannel] = useState(false);
   const [agentEvents, setAgentEvents] = useState<Record<string, AgentEvent[]>>({});
+  const [session, setSession] = useState<StudioSession | null>(null);
+  const [signedOut, setSignedOut] = useState(false);
   const select = (next: ChannelProject) => { projectRef.current = next; setProject(next); window.history.replaceState(null, '', `?project=${next.id}`); };
   const acceptProject = (next: ChannelProject) => { select(next); setProjects(previous => previous.map(item => item.id === next.id ? next : item)); };
   useEffect(() => {
-    void listProjects().then(items => {
+    const expired = () => { setSignedOut(true); setSession(null); setProjects([]); setProject(null); projectRef.current = null; };
+    window.addEventListener('firelaunch-session-expired', expired);
+    void getSession().then(active => { setSession(active); return listProjects(); }).then(items => {
       setProjects(items);
       const requested = new URLSearchParams(window.location.search).get('project');
       const choice = items.find(item => item.id === requested) ?? items[0];
       if (choice) select(choice);
-    }).catch(reason => setError(String(reason))).finally(() => setLoading(false));
+    }).catch(reason => { if (reason instanceof ApiError && reason.status === 401) expired(); else setError(String(reason)); }).finally(() => setLoading(false));
+    return () => window.removeEventListener('firelaunch-session-expired', expired);
   }, []);
   const commit = async (mutation: ChannelMutation): Promise<boolean> => {
     const current = projectRef.current;
@@ -148,7 +153,8 @@ export default function App() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
     finally { setBusy(false); }
   };
-  return <div className="app-shell"><aside className="sidebar"><div className="wordmark"><span className="mark">✳</span><span>firelaunch<small>CREATOR STUDIO</small></span></div><div className="sidebar-label">WORKSPACE</div><button className="project-switch" onClick={() => setNewChannel(true)}><span className="project-avatar">{project?.spec.title[0] ?? '+'}</span><span>{project?.spec.title ?? 'New channel'}<small>{project ? `REV ${project.revision} · LOCAL` : 'GET STARTED'}</small></span><span>＋</span></button>{projects.length > 1 && <select className="project-select" aria-label="Switch project" value={project?.id ?? ''} onChange={event => { const next = projects.find(item => item.id === event.target.value); if (next) select(next); }}>{projects.map(item => <option key={item.id} value={item.id}>{item.spec.title}</option>)}</select>}
+  if (signedOut) return <div className="welcome"><h1>Sign in to FireLaunch</h1><p>Your session has ended or you have not signed in.</p><a className="primary" href="/api/auth/login">Sign in with Google</a></div>;
+  return <div className="app-shell"><aside className="sidebar"><div className="wordmark"><span className="mark">✳</span><span>firelaunch<small>CREATOR STUDIO</small></span></div>{session && <div className="sidebar-label">{session.email}<button onClick={() => void logout().then(() => { setSignedOut(true); setProjects([]); setProject(null); projectRef.current = null; }).catch(reason => setError(String(reason)))}>Sign out</button></div>}<div className="sidebar-label">WORKSPACE</div><button className="project-switch" onClick={() => setNewChannel(true)}><span className="project-avatar">{project?.spec.title[0] ?? '+'}</span><span>{project?.spec.title ?? 'New channel'}<small>{project ? `REV ${project.revision} · LOCAL` : 'GET STARTED'}</small></span><span>＋</span></button>{projects.length > 1 && <select className="project-select" aria-label="Switch project" value={project?.id ?? ''} onChange={event => { const next = projects.find(item => item.id === event.target.value); if (next) select(next); }}>{projects.map(item => <option key={item.id} value={item.id}>{item.spec.title}</option>)}</select>}
     <div className="sidebar-label">CHANNEL WORKSPACE</div><nav className="sidebar-nav" aria-label="Studio surfaces">{surfaces.map(target => <button key={target} disabled={!project} className={surface === target ? 'active' : ''} onClick={() => setSurface(target)}><span>{icons[target]}</span>{target}</button>)}</nav><div className="sidebar-footer">✧ &nbsp; Vega-first creation<br/><small>Version 0.0.7 · Local studio</small></div></aside>
     <main><header className="topbar"><div><span className="eyebrow">STUDIO / {surface.toUpperCase()}</span><h1>{project?.spec.title ?? 'Your next channel'}</h1></div><div className="topbar-right"><span className="status"><i/> {busy ? 'SAVING' : project ? 'SAVED LOCALLY' : 'READY'}</span><button onClick={() => setNewChannel(previous => !previous)}>{newChannel && project ? '← Current channel' : '＋ New channel'}</button></div></header>
       {error && <div className="error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></div>}

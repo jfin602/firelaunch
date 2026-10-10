@@ -6,10 +6,30 @@ export class ApiError extends Error {
   constructor(message: string, readonly status: number) { super(message); }
 }
 
+export type StudioSession = { accountId: string; email: string; csrfToken: string; expiresAt: string };
+let csrfToken: string | null = null;
+
+export async function getSession(): Promise<StudioSession | null> {
+  const response = await fetch('/api/auth/session', { credentials: 'same-origin' });
+  if (response.status === 404) return null; // Explicit local legacy server.
+  if (response.status === 401) throw new ApiError('Sign in required', 401);
+  if (!response.ok) throw new ApiError('Session unavailable', response.status);
+  const session = await response.json() as StudioSession;
+  csrfToken = session.csrfToken;
+  return session;
+}
+
+export async function logout(): Promise<void> {
+  const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: csrfToken ? { 'x-csrf-token': csrfToken } : {} });
+  if (!response.ok) throw new ApiError('Could not sign out', response.status);
+  csrfToken = null;
+}
+
 async function request(path: string, init?: RequestInit): Promise<unknown> {
-  const response = await fetch(`/api/projects${path}`, init);
+  const response = await fetch(`/api/projects${path}`, { ...init, credentials: 'same-origin', headers: { ...init?.headers, ...(csrfToken && init?.method && init.method !== 'GET' ? { 'x-csrf-token': csrfToken } : {}) } });
   const data: unknown = await response.json();
   if (!response.ok) {
+    if (response.status === 401) { csrfToken = null; window.dispatchEvent(new window.Event('firelaunch-session-expired')); }
     const error = data as { error?: { message?: string } };
     throw new ApiError(error.error?.message ?? `Request failed (${response.status})`, response.status);
   }

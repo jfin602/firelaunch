@@ -116,7 +116,7 @@ test('readiness and bundle distinguish automated evidence from creator Amazon ac
 }));
 
 test('API exposes bounded source endpoints without arbitrary process or path input', () => fixture(async (_workspace, repository, id) => {
-  const server = createApi(repository);
+  const server = createApi(repository, undefined, { mode: 'local-legacy' });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const address = server.address(); assert.ok(address && typeof address !== 'string');
   const base = `http://127.0.0.1:${address.port}/api/projects/${id}`;
