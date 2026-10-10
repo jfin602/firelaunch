@@ -114,6 +114,8 @@ Build tenant-owned PostgreSQL CatalogSource/CatalogItem/MediaAsset/Collection re
 
 ### P4 — Catalog-Driven Channel Generation (0.4.x, weeks 6–7)
 
+**Activated 2026-10-10 at root 0.4.0.** P4 authored stack: [P4 README](../tasks/p4/README.md), [assessment](../tasks/p4/prompt-assessment.md) and [plan](../tasks/p4/implementation-plan.md). Seven implementation prompts target 0.4.1–0.4.7; independent browser/non-mock provider closeout targets 0.4.8. Phase 3 remains CATALOG GREEN only and inherited production hosting release qualification remains open.
+
 Generate differentiated video, audio and writing TV experiences using the existing ChannelSpec/ChannelAgent. Provide meaningful content, collections, media previews, beginner-friendly progressive editing, live D-pad Preview and safe creator overrides. Prompt-first and Code are advanced alternatives.
 
 **GREEN:** Three representative catalogs result in distinctly appropriate, polished, navigable TV previews; regeneration cannot erase manual customization. At least one real non-mock provider must take a representative imported catalog through grounded ChannelAgent calls, validated ChannelSpec mutations, persistence and usable Preview. **Bedrock is optional**; AWS is not a P4 requirement. Mock-only runs cannot qualify this gate.
@@ -169,4 +171,4 @@ Pilot video/audio/writing creators and repair onboarding, accessible remote focu
 
 Defer shared teams, Fire OS/Roku/other TV platforms, live TV/EPG, viewer IAP/affiliate-led TV commerce, advertising, deep analytics, general transcoding service, unbounded AI source modification and unofficial Developer Console submission. Amazon approvals and content rights are external hard gates. Preserve real TV and code export as enduring product invariants.
 
-Phase 1 is GREEN / QUALIFIED; Phase 2 P7 and c2 remain NOT GREEN. Phase 3 is closed CATALOG GREEN for the tested local workflow at root `0.3.8`, with hosted release NOT QUALIFIED and outstanding S1–S6 security/infrastructure evidence retained for preproduction. Phase 4 is next for `/docs-review` -> owner approval -> `/docs-apply`, followed by its own `/prompt-ass` -> `/prompt-plan` -> `/prompt-write p4` planning gate. Historical `c0-real-tv-qualification` remains separately BLOCKED / NOT GREEN. No feature enters an active stack without approved scope.
+Phase 1 is GREEN / QUALIFIED; Phase 2 P7 and c2 remain NOT GREEN. Phase 3 is closed CATALOG GREEN for the tested local workflow at root `0.3.8`, with hosted release NOT QUALIFIED and outstanding S1–S6 security/infrastructure evidence retained for preproduction. Phase 4 is activated at root `0.4.0` with executable, not-yet-run P4 prompt stack documented in `docs/tasks/p4/`. Its next gate is runner validation and implementation; P8 independently qualifies live provider/browser behavior. Historical `c0-real-tv-qualification` remains separately BLOCKED / NOT GREEN. No feature enters an active stack without approved scope.
