@@ -1,0 +1,29 @@
+TASK: Phase 4 / P2 — Owner-scoped catalog projection and stable bindings
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.4.2`.
+
+GOAL
+Implement a small deterministic, owner-authorized bridge from P3 reviewed catalog records to safe ChannelSpec candidate content while preserving provenance and creator edits.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p4/{README.md,prompt-assessment.md,implementation-plan.md}, docs/tasks/p3/closeout.md, ADR 0008 and directly affected source/tests. Inspect actual HEAD, root package version, git status and previous P4 runner checkpoint before any edits. Preserve P2/c2 historical NOT GREEN and P3 catalog-only GREEN / hosted release NOT QUALIFIED.
+
+IMPLEMENT
+Read apps/server/src/catalog-repository.ts, hosted-repository.ts, api.ts, packages/contracts/src/catalog.ts, sync.ts and ChannelSpec interfaces. Implement a narrow service whose input is authenticated owner+project and explicit chosen catalog/collection IDs; resolve all records server-side from owned inventory and reject foreign/missing IDs. Do not assume P3 CatalogItem has an approval flag it lacks: distinguish persisted import approval, explicit creator selection and per-use rights, documenting how each is enforced. Project safe title/description overrides and stable identities/bindings; track enough association/baseline state for later non-destructive regeneration. Preserve source-owned metadata and never treat an ASIN, upload or discovered source as a display/playback license. Require cleared type-specific artwork/display and playback rights before including actual media; allow a book without media to be informational. Keep raw import source payloads, evidence refs, object IDs, signatures, secrets and ephemeral signed private media URLs out of persisted/exportable ChannelSpec. Reuse revision/CAS and owner-scope patterns, not new client-trusted creator IDs. A draft Preview may later obtain protected short-lived access separately.
+
+OUT OF SCOPE
+Amazon scraping/connectors, scheduled catalog synchronization (P6), immutable public TV manifests or approved TV delivery (P5), physical Fire TV/VPKG/Appstore/publishing (P7/P8), unsafe hosted native builds, and new multiuser/team features.
+
+VALIDATION
+Focused isolated Postgres or repository tests for A/B owner/foreign denial, rights unknown/revoked, creatorOverrides, books without media, repeated projected identity and revision conflicts; verify redaction/safe output and no catalog mutation. Run affected server/contracts checks and git diff --check.
+
+GIT
+Do not create commits or rewrite/move HEAD. The runner exclusively owns the implementation checkpoint commit. Update only root package.json version and the two root entries of package-lock.json to 0.4.2; keep internal workspace versions unchanged unless a proven compatibility change requires it. Preserve unrelated accepted dirty work.
+
+FINAL RESPONSE
+Report exact changed boundaries, focused test counts, typecheck/build and git diff --check results, actual starting HEAD and final root version, evidence for user-visible behavior, and all still-open qualification gates. Never claim a live provider/device/browser result without direct evidence.
