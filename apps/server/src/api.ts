@@ -64,8 +64,8 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
       }
       if (segments[0] === 'api' && segments[1] === 'projects' && mode?.mode === 'hosted') {
         const session = mode.auth.session(request);
-        if (!session) { void audit(hostedRepository?.pool, 'auth_denied', 'denied'); respond(response, 401, { error: { code: 'UNAUTHENTICATED', message: 'Sign in required' } }); return; }
-        if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? '') && !mode.auth.authorizedMutation(request, session)) { void audit(hostedRepository?.pool, 'auth_denied', 'denied', session.principal.accountId); respond(response, 403, { error: { code: 'CSRF', message: 'Invalid request origin or CSRF token' } }); return; }
+        if (!session) { await audit(hostedRepository?.pool, 'auth_denied', 'denied'); respond(response, 401, { error: { code: 'UNAUTHENTICATED', message: 'Sign in required' } }); return; }
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? '') && !mode.auth.authorizedMutation(request, session)) { await audit(hostedRepository?.pool, 'auth_denied', 'denied', session.principal.accountId); respond(response, 403, { error: { code: 'CSRF', message: 'Invalid request origin or CSRF token' } }); return; }
         if (hostedRepository && hostedWorkspace) {
           const principal = session.principal;
           if (segments.length >= 4 && segments[3] === 'catalog' && catalog) {

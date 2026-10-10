@@ -241,6 +241,53 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
           tvPlaybackRights: { status: 'unknown', basis: 'none', permittedUse: 'none' }, deliveryEligible: true } }) });
       assert.equal(attachedResponse.status, 201);
       const attachedAsset = (await attachedResponse.json()).record;
+      const collectionResponse = await fetch(`${catalogPath}/collections`, { method: 'POST', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ expectedRevision: 6, record: { schemaVersion: 1, kind: 'bookshelf', title: 'Owned books', itemIds: [attachedItem.id] } }) });
+      assert.equal(collectionResponse.status, 201);
+      const collection = (await collectionResponse.json()).record;
+      const catalogProbes: { label: string; suffix: string; method?: string; body?: unknown }[] = [
+        { label: 'catalog snapshot', suffix: '' },
+        ...(['sources', 'items', 'media-assets', 'collections'] as const).flatMap(kind => [
+          { label: `${kind} list`, suffix: `/${kind}` },
+          { label: `${kind} create`, suffix: `/${kind}`, method: 'POST', body: { expectedRevision: 7, record: sourceBody } },
+          { label: `${kind} detail`, suffix: `/${kind}/${({ sources: attachedSource.id, items: attachedItem.id, 'media-assets': attachedAsset.id, collections: collection.id })[kind]}` },
+          { label: `${kind} update`, suffix: `/${kind}/${({ sources: attachedSource.id, items: attachedItem.id, 'media-assets': attachedAsset.id, collections: collection.id })[kind]}`, method: 'PUT', body: { expectedRevision: 7, record: sourceBody } },
+          { label: `${kind} delete`, suffix: `/${kind}/${({ sources: attachedSource.id, items: attachedItem.id, 'media-assets': attachedAsset.id, collections: collection.id })[kind]}`, method: 'DELETE', body: { expectedRevision: 7 } }
+        ]),
+        ...(['preview', 'approve', 'feed-preview', 'feed-approve'] as const).map(action => ({
+          label: `import ${action}`, suffix: `/imports/${action}`, method: 'POST', body: { sourceId: attachedSource.id }
+        })),
+        { label: 'rights events', suffix: `/media-assets/${attachedAsset.id}/rights-events` }
+      ];
+      for (const probe of catalogProbes) {
+        const options = { method: probe.method ?? 'GET', headers: catalogForeignHeaders,
+          ...(probe.body === undefined ? {} : { body: JSON.stringify(probe.body) }) };
+        const denied = await fetch(`${catalogPath}${probe.suffix}`, options);
+        assert.equal(denied.status, 404, probe.label);
+        const absent = await fetch(`${endpoint}/ch_${'f'.repeat(32)}/catalog${probe.suffix}`, options);
+        assert.equal(absent.status, denied.status, `${probe.label} existence`);
+      }
+      for (const kind of ['sources', 'items', 'media-assets', 'collections']) {
+        assert.equal((await fetch(`${catalogPath}/${kind}`, { headers: { cookie: firstLogin.cookie } })).status, 200, `${kind} owner list`);
+      }
+      for (const [kind, id] of Object.entries({ sources: attachedSource.id, items: attachedItem.id,
+        'media-assets': attachedAsset.id, collections: collection.id })) {
+        assert.equal((await fetch(`${catalogPath}/${kind}/${id}`, { headers: { cookie: firstLogin.cookie } })).status, 200, `${kind} owner detail`);
+      }
+      const fileContent = '[]';
+      const filePreview = await fetch(`${catalogPath}/imports/preview`, { method: 'POST', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ sourceId: attachedSource.id, format: 'json', content: fileContent }) });
+      assert.equal(filePreview.status, 200);
+      const filePlan = await filePreview.json();
+      assert.equal((await fetch(`${catalogPath}/imports/approve`, { method: 'POST', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ sourceId: attachedSource.id, format: 'json', content: fileContent,
+          expectedRevision: filePlan.revision, fingerprint: filePlan.fingerprint }) })).status, 200);
+      assert.equal((await fetch(`${catalogPath}/imports/preview`, { method: 'POST',
+        headers: { cookie: firstLogin.cookie, origin, 'content-type': 'application/json' }, body: '{}' })).status, 403);
+      const maliciousPreview = await fetch(`${catalogPath}/imports/preview`, { method: 'POST', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ sourceId: attachedSource.id, format: 'json', content: '[{"externalId":"../bad","kind":"book","title":"x"}]' }) });
+      assert.equal(maliciousPreview.status, 200);
+      assert.deepEqual((await maliciousPreview.json()).issues.map((issue: { code: string }) => issue.code), ['INVALID']);
       const rightsPath = `${catalogPath}/media-assets/${attachedAsset.id}/rights-events`;
       assert.equal((await fetch(rightsPath, { headers: { cookie: secondLogin.cookie } })).status, 404);
       const rightsResponse = await fetch(rightsPath, { headers: { cookie: firstLogin.cookie } });
@@ -248,7 +295,7 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       assert.equal((await rightsResponse.json()).events.length, 1);
       assert.equal((await fetch(rightsPath, { headers: { cookie: firstLogin.cookie }, method: 'POST' })).status, 403);
       assert.equal((await fetch(`${catalogPath}/media-assets/${attachedAsset.id}`, { method: 'DELETE', headers: catalogOwnerHeaders,
-        body: JSON.stringify({ expectedRevision: 6 }) })).status, 200);
+        body: JSON.stringify({ expectedRevision: 7 }) })).status, 200);
       assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}`, { headers: { cookie: secondLogin.cookie } })).status, 404);
       assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}/capability`, { method: 'POST', headers: foreignHeaders, body: '{}' })).status, 404);
       assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}/capability`, { method: 'DELETE', headers: foreignHeaders })).status, 404);

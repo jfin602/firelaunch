@@ -110,3 +110,32 @@ test('private media upload stays scoped and rejects oversized input before a req
     assert.equal(calls.length, 1);
   } finally { globalThis.fetch = previous; }
 });
+
+test('Studio file preview belongs to its source and rejects a later oversized file', async () => {
+  const previous = globalThis.fetch;
+  const otherSourceId = `src_${'e'.repeat(32)}`;
+  const inventory = base();
+  inventory.sources = [sourceId, otherSourceId].map(id => ({ schemaVersion: 1, id, creatorAccountId: owner, projectId,
+    type: 'creator_csv', state: 'discovered', permission: { retrieval: 'unknown', tvDisplay: 'unknown' } }));
+  globalThis.fetch = (async input => {
+    assert.equal(String(input), `/api/projects/${projectId}/catalog`);
+    return json(inventory);
+  }) as typeof fetch;
+  try {
+    render(createElement(Catalog, { projectId, hosted: true }));
+    const sourceSelect = await screen.findByRole('combobox', { name: 'Select source' });
+    fireEvent.change(sourceSelect, { target: { value: sourceId } });
+    const valid = Object.assign(new dom.window.File(['externalId,kind,title\na,audio,Episode'], 'audio.csv', { type: 'text/csv' }),
+      { text: async () => 'externalId,kind,title\na,audio,Episode' });
+    fireEvent.change(screen.getByLabelText(/CATALOG FILE/), { target: { files: [valid] } });
+    await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Preview import' }) as HTMLButtonElement).disabled, false));
+    fireEvent.change(sourceSelect, { target: { value: otherSourceId } });
+    assert.equal((screen.getByRole('button', { name: 'Preview import' }) as HTMLButtonElement).disabled, true);
+    fireEvent.change(screen.getByLabelText(/CATALOG FILE/), { target: { files: [valid] } });
+    await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Preview import' }) as HTMLButtonElement).disabled, false));
+    const oversized = new dom.window.File([new Uint8Array(512_001)], 'large.csv', { type: 'text/csv' });
+    fireEvent.change(screen.getByLabelText(/CATALOG FILE/), { target: { files: [oversized] } });
+    assert.equal((screen.getByRole('button', { name: 'Preview import' }) as HTMLButtonElement).disabled, true);
+    assert.match(screen.getByRole('alert').textContent ?? '', /exceeds 512 KB/);
+  } finally { cleanup(); globalThis.fetch = previous; }
+});
