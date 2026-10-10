@@ -62,6 +62,7 @@ test('hosted OIDC validates code flow, tokens, session rotation, CSRF and logout
     const response = await fetch(`${origin}/api/auth/login`, { redirect: 'manual' });
     assert.equal(response.status, 302);
     const url = new URL(response.headers.get('location')!);
+    assert.equal(url.searchParams.get('prompt'), 'select_account');
     assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
     assert.equal(url.searchParams.get('response_type'), 'code');
     expectedChallenge = url.searchParams.get('code_challenge')!;

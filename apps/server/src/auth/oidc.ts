@@ -43,6 +43,7 @@ export class OidcVerifier {
     url.searchParams.set('client_id', this.config.clientId);
     url.searchParams.set('redirect_uri', this.config.redirectUri);
     url.searchParams.set('scope', 'openid email');
+    url.searchParams.set('prompt', 'select_account');
     url.searchParams.set('state', state);
     url.searchParams.set('nonce', nonce);
     url.searchParams.set('code_challenge', digest(verifier));
