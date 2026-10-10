@@ -5,6 +5,7 @@ import { channelDeploymentSchema, channelSpecSchema, createProjectSchema, projec
 import { newId, starterChannel } from '@firelaunch/channel-engine';
 import { z } from 'zod';
 import { RepositoryError } from './repository.js';
+import { sourceMatchesBaseline } from './hosted-workspace.js';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 
 type ProjectRow = { id: string; revision: number; spec: unknown; created_at: Date; updated_at: Date };
@@ -213,7 +214,8 @@ export class HostedProjectRepository {
       if (!current.rows[0]) throw new RepositoryError('NOT_FOUND', 'Project not found');
       if (current.rows[0].revision !== revision) throw new RepositoryError('CONFLICT', 'Project revision changed');
       const prior = await client.query<{ files: Record<string, string>; baseline: Record<string, string> }>('SELECT files, baseline FROM hosted_source_projects WHERE project_id = $1 AND creator_account_id = $2 FOR UPDATE', [id, owner]);
-      if (prior.rows[0] && Object.keys(prior.rows[0].files).some(name => prior.rows[0]!.files[name] !== prior.rows[0]!.baseline[name]))
+      if (prior.rows[0] && [...new Set([...Object.keys(prior.rows[0].files), ...Object.keys(prior.rows[0].baseline)])].some(name =>
+        !sourceMatchesBaseline(prior.rows[0]!.files[name], prior.rows[0]!.baseline[name])))
         throw new RepositoryError('CONFLICT', 'Custom generated files exist. Preserve edits before regeneration.');
       await client.query(`INSERT INTO hosted_source_projects(project_id, creator_account_id, spec_revision, fingerprint, files, baseline)
         VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb)

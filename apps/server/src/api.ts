@@ -120,6 +120,9 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             if (action === 'readiness' && request.method === 'GET') { respond(response, 200, await hostedWorkspace.readiness(principal, id)); return; }
             if (action === 'bundle' && request.method === 'POST') { await hostedRepository.read(principal, id); z.strictObject({}).parse(await body(request)); respond(response, 200, await hostedWorkspace.bundle(principal, id)); return; }
           }
+          if (segments.length === 5 && segments[3] === 'code' && segments[4] === 'export' && !url.search && request.method === 'GET') {
+            respond(response, 200, await hostedWorkspace.exportSource(principal, segments[2]!)); return;
+          }
           if (segments.length === 5 && segments[3] === 'code' && segments[4] === 'file') {
             const id = segments[2]!;
             await hostedRepository.read(principal, id);

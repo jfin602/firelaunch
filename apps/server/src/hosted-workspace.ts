@@ -6,6 +6,8 @@ import type { HostedProjectRepository } from './hosted-repository.js';
 
 const textName = /\.(?:js|jsx|ts|tsx|json|toml|md|txt)$|^(?:README|LICENSE)$/i;
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
+export const sourceMatchesBaseline = (content: string | undefined, baseline: string | undefined): boolean =>
+  content !== undefined && baseline !== undefined && (/^sha256:[a-f0-9]{64}$/.test(baseline) ? hash(content) === baseline.slice(7) : content === baseline);
 function safeName(name: string): void {
   if (!name || name.length > 240 || name.includes('\\') || name.includes('\0') || name.startsWith('/') ||
     name.split('/').some(part => !part || part === '.' || part === '..' || part.startsWith('.')) || !textName.test(name))
@@ -24,7 +26,7 @@ export class HostedWorkspaceService {
     const source = await this.repository.source(principal, id);
     if (!source) return { generated: false, files: [] as string[], changed: [] as string[], stale: false, path: null };
     const changed = [...new Set([...Object.keys(source.files), ...Object.keys(source.baseline)])]
-      .filter(name => source.files[name] !== source.baseline[name]).sort();
+      .filter(name => !sourceMatchesBaseline(source.files[name], source.baseline[name])).sort();
     return { generated: true, files: Object.keys(source.files).sort(), changed,
       stale: source.fingerprint !== (await generateProject(project.spec)).fingerprint, path: null };
   }
@@ -54,6 +56,17 @@ export class HostedWorkspaceService {
     if (Buffer.byteLength(content) > 256_000 || content.includes('\0')) throw new RepositoryError('INVALID_INPUT', 'Text edit exceeds size limit');
     await this.repository.saveSource(principal, id, name, content, expectedHash);
     return this.read(principal, id, name);
+  }
+
+  async exportSource(principal: AuthenticatedPrincipal, id: string) {
+    const project = await this.repository.read(principal, id);
+    const source = await this.repository.source(principal, id);
+    if (!source) throw new RepositoryError('NOT_FOUND', 'Generated source not found');
+    const files = Object.fromEntries(Object.entries(source.files).sort(([a], [b]) => a.localeCompare(b)));
+    const sha256 = Object.fromEntries(Object.entries(files).map(([name, content]) => [name, hash(content)]));
+    return { format: 'firelaunch-source-export-v1' as const, projectId: project.id, revision: project.revision,
+      generatorFingerprint: source.fingerprint, rights: 'No media or artwork license is inferred by this export',
+      sha256, files };
   }
 
   async buildStatus(principal: AuthenticatedPrincipal, id: string) {

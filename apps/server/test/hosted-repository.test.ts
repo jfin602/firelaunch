@@ -192,6 +192,9 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       assert.equal(edit.status, 200);
       assert.deepEqual((await (await fetch(`${ownedPath}/code`, { headers: { cookie: firstLogin.cookie } })).json()).changed, ['manifest.toml']);
       assert.match((await second.source({ accountId: firstLogin.session.accountId, issuer, subject: 'http-a', email: 'http-a@example.com' }, owned.id))!.files['manifest.toml']!, /owned edit/);
+      const exported = await (await fetch(`${ownedPath}/code/export`, { headers: { cookie: firstLogin.cookie } })).json();
+      assert.equal(exported.format, 'firelaunch-source-export-v1');
+      assert.match(exported.files['manifest.toml'], /owned edit/);
       assert.equal((await fetch(`${ownedPath}/code`, { method: 'POST', headers: ownerHeaders, body: '{}' })).status, 409);
       assert.equal((await fetch(`${ownedPath}/build`, { method: 'POST', headers: ownerHeaders, body: '{}' })).status, 200);
       assert.deepEqual(await (await fetch(`${ownedPath}/build`, { headers: { cookie: firstLogin.cookie } })).json(),
@@ -219,6 +222,7 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
         { label: 'code overview', suffix: '/code' },
         { label: 'generate', suffix: '/code', method: 'POST', body: {} },
         { label: 'file read', suffix: '/code/file?path=manifest.toml' },
+        { label: 'source export', suffix: '/code/export' },
         { label: 'file save', suffix: '/code/file', method: 'POST', body: { path: 'manifest.toml', content: 'stolen', expectedHash: file.sha256 } },
         { label: 'build status', suffix: '/build' },
         { label: 'build', suffix: '/build', method: 'POST', body: {} },
