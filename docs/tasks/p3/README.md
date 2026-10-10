@@ -1,6 +1,6 @@
 # p3 — Catalog Import and Discovery
 
-Status: DOCUMENTATION ALIGNED / PROMPT STACK NOT YET AUTHORED
+Status: PROMPT STACK AUTHORED / NOT EXECUTED
 Phase: 3 (post-P0 SaaS launch roadmap)
 Activation baseline: root `0.3.0`; prior P2/c2 formal qualification remains NOT GREEN
 Model guidance: GPT-6 Sol High on security/import boundaries; Medium on tightly bounded routine UI
@@ -16,7 +16,7 @@ Read [carried-forward gates](carried-forward-gates.md) before planning. P2 P7 an
 
 | P3 prompt | Planned responsibility | Assigned version | Browser |
 | --- | --- | --- | --- |
-| P1 | Concurrent two-profile local isolation / P2 security carry-forward | 0.3.1 | yes (manual browser gate; plan runner handling) |
+| P1 | Verify live two-profile security preflight and owner-scope tests | 0.3.1 | no (manual real-browser preflight prerequisite) |
 | P2 | Tenant-owned catalog PostgreSQL schema, constraints, CRUD | 0.3.2 | no |
 | P3 | Bounded CSV/JSON parsing, import preview, duplicate resolution | 0.3.3 | no |
 | P4 | One-shot safe creator-controlled HTTPS feed snapshot import | 0.3.4 | no |
@@ -25,7 +25,7 @@ Read [carried-forward gates](carried-forward-gates.md) before planning. P2 P7 an
 | P7 | End-to-end integration and security/edge-case regressions | 0.3.7 | no |
 | P8 | Independent browser/import/security qualification closeout | 0.3.8 | yes |
 
-The table is a planning map, not a runnable stack. During `/prompt-ass` and `/prompt-plan`, decide whether the live P1 browser gate needs an explicit manual preflight checkpoint, because the runner halts on browser-required prompts. Do not generate a `P1-*.txt` with `Browser required: yes` expecting an unattended run.
+The eight prompts are executable. The runner cannot execute browser-required implementation prompts, so the two-profile real-Google security check must be performed manually BEFORE P1 (see [security-preflight.md](security-preflight.md)). P1 is non-browser for runner compatibility, but must fail without actual S1/S2 live evidence. P8 is the sole browser-required closeout. This keeps the security requirement intact and avoids an unresumable P1 runner halt.
 
 ## Existing source and contracts
 
@@ -43,4 +43,4 @@ No general Amazon integration, periodic feed synchronization, catalog-grounded A
 
 ## Next workflow
 
-`/prompt-ass + /prompt-plan + /prompt-write p3` after reviewing this task foundation; then `npm run codex:stack:validate -- p3` before running the authored stack. Successful implementation prompts receive runner-owned commits; manual browser closeout writes real evidence and does not self-commit.
+Complete [manual security preflight](security-preflight.md), review [assessment](prompt-assessment.md) and [implementation plan](implementation-plan.md), then run `npm run codex:stack:validate -- p3` and `npm run codex:stack -- p3` from clean root 0.3.0. Runner commits P1-P7; P8 is a separate independent browser closeout. Successful implementation prompts receive runner-owned commits; manual browser closeout writes real evidence and does not self-commit.
