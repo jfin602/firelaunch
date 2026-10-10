@@ -19,7 +19,7 @@ export async function audit(pool: Pool | undefined, event: z.infer<typeof events
 
 export async function health(pool: Pool, store: PrivateObjectStore): Promise<{ status: 'ok' | 'degraded'; database: boolean; objectStore: boolean; migration: number }> {
   let database = false; let objectStore = false; let migration = 0;
-  try { const result = await pool.query<{ version: number }>('SELECT max(version)::int AS version FROM firelaunch_schema_migrations'); migration = result.rows[0]?.version ?? 0; database = migration === 4; } catch { /* safe status only */ }
+  try { const result = await pool.query<{ version: number }>('SELECT max(version)::int AS version FROM firelaunch_schema_migrations'); migration = result.rows[0]?.version ?? 0; database = migration === 5; } catch { /* safe status only */ }
   // Object stores expose no list permission. A missing random key must return an error, proving a reachable authenticated read path.
   try { await store.get(`private/${'0'.repeat(64)}`); objectStore = true; }
   catch (error) { objectStore = !(error instanceof TypeError) && /NoSuchKey|ENOENT|not found/i.test(String(error)); }
@@ -27,7 +27,7 @@ export async function health(pool: Pool, store: PrivateObjectStore): Promise<{ s
 }
 
 /** Operator only: no API route. Bounded account export includes actual private bytes and excludes credentials/capabilities. */
-export async function exportAccount(pool: Pool, store: PrivateObjectStore, id: string): Promise<{ account: unknown; providerIdentities: unknown[]; projects: unknown[]; source: unknown[]; deployments: unknown[]; legacyImportMarkers: unknown[]; creatorAuditEvents: unknown[]; operationalAuditEvents: unknown[]; objects: { metadata: unknown; contentBase64: string }[] }> {
+export async function exportAccount(pool: Pool, store: PrivateObjectStore, id: string): Promise<{ account: unknown; providerIdentities: unknown[]; projects: unknown[]; source: unknown[]; catalog: unknown[]; deployments: unknown[]; legacyImportMarkers: unknown[]; creatorAuditEvents: unknown[]; operationalAuditEvents: unknown[]; objects: { metadata: unknown; contentBase64: string }[] }> {
   accountId.parse(id);
   const client = await pool.connect();
   try {
@@ -37,6 +37,12 @@ export async function exportAccount(pool: Pool, store: PrivateObjectStore, id: s
     const providerIdentities = (await client.query('SELECT issuer, subject FROM provider_identities WHERE creator_account_id = $1 ORDER BY issuer, subject', [id])).rows;
     const projects = (await client.query('SELECT id, spec, revision, created_at, updated_at FROM channel_projects WHERE creator_account_id = $1 ORDER BY id', [id])).rows;
     const source = (await client.query('SELECT project_id, spec_revision, fingerprint, files, baseline FROM hosted_source_projects WHERE creator_account_id = $1 ORDER BY project_id', [id])).rows;
+    const catalog = (await client.query(`SELECT r.project_id, r.revision,
+      COALESCE((SELECT jsonb_agg(s.record ORDER BY s.id) FROM catalog_sources s WHERE s.project_id = r.project_id AND s.creator_account_id = $1), '[]'::jsonb) AS sources,
+      COALESCE((SELECT jsonb_agg(i.record ORDER BY i.id) FROM catalog_items i WHERE i.project_id = r.project_id AND i.creator_account_id = $1), '[]'::jsonb) AS items,
+      COALESCE((SELECT jsonb_agg(m.record ORDER BY m.id) FROM catalog_media_assets m WHERE m.project_id = r.project_id AND m.creator_account_id = $1), '[]'::jsonb) AS media_assets,
+      COALESCE((SELECT jsonb_agg(c.record ORDER BY c.id) FROM catalog_collections c WHERE c.project_id = r.project_id AND c.creator_account_id = $1), '[]'::jsonb) AS collections
+      FROM catalog_revisions r WHERE r.creator_account_id = $1 ORDER BY r.project_id`, [id])).rows;
     const deployments = (await client.query('SELECT deployment FROM channel_deployments WHERE creator_account_id = $1 ORDER BY id', [id])).rows.map(row => row.deployment);
     const legacyImportMarkers = (await client.query('SELECT legacy_project_id, fingerprint, imported_project_id FROM legacy_import_markers WHERE creator_account_id = $1 ORDER BY legacy_project_id', [id])).rows;
     const creatorAuditEvents = (await client.query('SELECT event_type, project_id, occurred_at, details FROM creator_audit_events WHERE creator_account_id = $1 ORDER BY id LIMIT 10001', [id])).rows;
@@ -54,7 +60,7 @@ export async function exportAccount(pool: Pool, store: PrivateObjectStore, id: s
       objects.push({ metadata, contentBase64: content.toString('base64') });
     }
     await client.query('COMMIT');
-    return { account, providerIdentities, projects, source, deployments, legacyImportMarkers, creatorAuditEvents, operationalAuditEvents, objects };
+    return { account, providerIdentities, projects, source, catalog, deployments, legacyImportMarkers, creatorAuditEvents, operationalAuditEvents, objects };
   } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error; }
   finally { client.release(); }
 }

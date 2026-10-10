@@ -47,7 +47,7 @@ export class HostedProjectRepository {
       await client.query('SELECT pg_advisory_xact_lock($1)', [482921]);
       await client.query('CREATE TABLE IF NOT EXISTS firelaunch_schema_migrations (version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
       const result = await client.query<{ version: number }>('SELECT version FROM firelaunch_schema_migrations ORDER BY version');
-      if (result.rows.some(row => ![1, 2, 3, 4].includes(row.version))) throw new Error('Unsupported hosted database migration');
+      if (result.rows.some(row => ![1, 2, 3, 4, 5].includes(row.version))) throw new Error('Unsupported hosted database migration');
       if (!result.rows.some(row => row.version === 1)) {
         const sql = await readFile(new URL('../migrations/001_hosted_ownership.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
@@ -67,6 +67,11 @@ export class HostedProjectRepository {
         const sql = await readFile(new URL('../migrations/004_operations.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
         await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [4]);
+      }
+      if (!result.rows.some(row => row.version === 5)) {
+        const sql = await readFile(new URL('../migrations/005_catalog.up.sql', import.meta.url), 'utf8');
+        await client.query(sql);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [5]);
       }
       await client.query('COMMIT');
     } catch (error) { await client.query('ROLLBACK'); throw error; }

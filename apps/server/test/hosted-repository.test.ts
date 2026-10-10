@@ -146,6 +146,35 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       const createdResponse = await post(firstLogin, { title: 'Owned by HTTP A' });
       assert.equal(createdResponse.status, 201);
       const owned = await createdResponse.json();
+      const catalogPath = `${endpoint}/${owned.id}/catalog`;
+      const catalogOwnerHeaders = { cookie: firstLogin.cookie, origin, 'x-csrf-token': firstLogin.session.csrfToken, 'content-type': 'application/json' };
+      const catalogForeignHeaders = { cookie: secondLogin.cookie, origin, 'x-csrf-token': secondLogin.session.csrfToken, 'content-type': 'application/json' };
+      const sourceBody = { schemaVersion: 1, type: 'creator_json', state: 'discovered',
+        permission: { retrieval: 'unknown', tvDisplay: 'unknown' } };
+      assert.equal((await fetch(catalogPath, { headers: { cookie: secondLogin.cookie } })).status, 404);
+      assert.equal((await fetch(`${catalogPath}/sources`, { method: 'POST', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ expectedRevision: 0, record: sourceBody }) })).status, 201);
+      const sourceList = await (await fetch(`${catalogPath}/sources`, { headers: { cookie: firstLogin.cookie } })).json();
+      assert.equal(sourceList.revision, 1);
+      assert.equal(sourceList.records.length, 1);
+      const sourceId = sourceList.records[0].id;
+      assert.equal((await fetch(`${catalogPath}/sources/${sourceId}`, { headers: { cookie: firstLogin.cookie } })).status, 200);
+      const updatedSource = await fetch(`${catalogPath}/sources/${sourceId}`, { method: 'PUT', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ expectedRevision: 1, record: sourceBody }) });
+      assert.equal(updatedSource.status, 200);
+      assert.equal((await updatedSource.json()).revision, 2);
+      assert.equal((await fetch(`${catalogPath}/sources/${sourceId}`, { method: 'DELETE', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ expectedRevision: 1 }) })).status, 409);
+      assert.equal((await fetch(`${catalogPath}/sources/${sourceList.records[0].id}`, { headers: { cookie: secondLogin.cookie } })).status, 404);
+      assert.equal((await fetch(`${catalogPath}/sources`, { method: 'POST', headers: catalogForeignHeaders,
+        body: JSON.stringify({ expectedRevision: 1, record: sourceBody }) })).status, 404);
+      assert.equal((await fetch(`${catalogPath}/sources`, { method: 'POST', headers: { cookie: firstLogin.cookie, origin, 'content-type': 'application/json' },
+        body: JSON.stringify({ expectedRevision: 1, record: sourceBody }) })).status, 403);
+      assert.equal((await fetch(`${catalogPath}/sources`, { method: 'POST', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ expectedRevision: 2, record: { ...sourceBody, creatorAccountId: secondLogin.session.accountId } }) })).status, 400);
+      assert.equal((await fetch(`${catalogPath}/sources/${sourceId}`, { method: 'DELETE', headers: catalogOwnerHeaders,
+        body: JSON.stringify({ expectedRevision: 2 }) })).status, 200);
+      assert.deepEqual((await (await fetch(catalogPath, { headers: { cookie: firstLogin.cookie } })).json()).sources, []);
       const ownedList = await (await fetch(endpoint, { headers: { cookie: firstLogin.cookie } })).json();
       assert.ok(ownedList.some((project: { id: string }) => project.id === owned.id));
       assert.equal((await fetch(endpoint, { headers: { cookie: secondLogin.cookie } })).status, 200);
@@ -337,7 +366,10 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     const sourceDown = await readFile(new URL('../migrations/002_hosted_source.down.sql', import.meta.url), 'utf8');
     const objectDown = await readFile(new URL('../migrations/003_private_objects.down.sql', import.meta.url), 'utf8');
     const operationsDown = await readFile(new URL('../migrations/004_operations.down.sql', import.meta.url), 'utf8');
+    const catalogDown = await readFile(new URL('../migrations/005_catalog.down.sql', import.meta.url), 'utf8');
     await restarted.pool.query('BEGIN');
+    await restarted.pool.query(catalogDown);
+    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 5');
     await restarted.pool.query(operationsDown);
     await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 4');
     await restarted.pool.query(objectDown);

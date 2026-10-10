@@ -1,0 +1,98 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { randomUUID } from 'node:crypto';
+import { Pool } from 'pg';
+import { HostedProjectRepository } from '../src/hosted-repository.js';
+import { CatalogRepository } from '../src/catalog-repository.js';
+
+const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
+const databaseTest = baseUrl ? test : test.skip;
+
+databaseTest('catalog SQL ownership, revisions, references and rollback with two creators', async () => {
+  const admin = new Pool({ connectionString: baseUrl });
+  const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const url = new URL(baseUrl!); url.pathname = `/${name}`;
+  await admin.query(`CREATE DATABASE ${name}`);
+  let first: HostedProjectRepository | undefined;
+  let second: HostedProjectRepository | undefined;
+  try {
+    first = await HostedProjectRepository.connect(url.toString());
+    second = await HostedProjectRepository.connect(url.toString());
+    const identity = async (repository: HostedProjectRepository, subject: string) => ({
+      accountId: await repository.accountForIdentity({ issuer: 'https://issuer.example', subject, email: `${subject}@example.com` }),
+      issuer: 'https://issuer.example', subject, email: `${subject}@example.com`
+    });
+    const a = await identity(first, 'catalog-a');
+    const b = await identity(first, 'catalog-b');
+    const aProject = await first.create(a, { title: 'Books' });
+    const bProject = await first.create(b, { title: 'Other books' });
+    const one = new CatalogRepository(first);
+    const two = new CatalogRepository(second);
+    const source = { schemaVersion: 1, type: 'creator_json', state: 'discovered', permission: { retrieval: 'unknown', tvDisplay: 'unknown' } };
+    const aSource = (await one.mutate(a, aProject.id, 'sources', 'POST', 0, source)).record!;
+    const bSource = (await two.mutate(b, bProject.id, 'sources', 'POST', 0, source)).record!;
+    assert.equal((await one.read(a, aProject.id)).revision, 1);
+    await assert.rejects(two.read(b, aProject.id), { code: 'NOT_FOUND' });
+    await assert.rejects(two.read({ ...b, accountId: a.accountId }, aProject.id), { code: 'NOT_FOUND' });
+    await assert.rejects(two.mutate(b, aProject.id, 'sources', 'POST', 1, source), { code: 'NOT_FOUND' });
+    const book = (sourceId: string, value: string) => ({ schemaVersion: 1, kind: 'book',
+      sourceRecord: { sourceId, externalId: { provider: 'creator', kind: 'feed_item_id', value },
+        observedAt: '2026-10-10T00:00:00.000Z', metadata: { title: 'A novel' } },
+      externalIdentifiers: [{ provider: 'creator', kind: 'feed_item_id', value }], mediaAssetIds: [] });
+    await assert.rejects(one.mutate(a, aProject.id, 'items', 'POST', 1, book(bSource.id, 'foreign')), { code: 'INVALID_INPUT' });
+    assert.deepEqual((await one.read(a, aProject.id)).items, [], 'foreign reference rolled back');
+    const aBook = (await one.mutate(a, aProject.id, 'items', 'POST', 1, book(aSource.id, 'novel-1'))).record!;
+    assert.equal((aBook as { kind: string }).kind, 'book');
+    assert.deepEqual((aBook as { mediaAssetIds: string[] }).mediaAssetIds, []);
+    const revision = (await one.read(a, aProject.id)).revision;
+    const outcomes = await Promise.allSettled([
+      one.mutate(a, aProject.id, 'items', 'POST', revision, book(aSource.id, 'novel-2')),
+      two.mutate(a, aProject.id, 'items', 'POST', revision, book(aSource.id, 'novel-3'))
+    ]);
+    assert.equal(outcomes.filter(result => result.status === 'fulfilled').length, 1);
+    assert.equal(outcomes.filter(result => result.status === 'rejected' && result.reason?.code === 'CONFLICT').length, 1);
+    const afterRace = await one.read(a, aProject.id);
+    assert.equal(afterRace.items.length, 2);
+    await assert.rejects(one.mutate(a, aProject.id, 'items', 'POST', afterRace.revision, book(aSource.id, 'novel-1')), { code: 'INVALID_INPUT' });
+    assert.equal((await one.read(a, aProject.id)).revision, afterRace.revision, 'duplicate rolled back without increment');
+    await assert.rejects(one.mutate(a, aProject.id, 'collections', 'POST', afterRace.revision,
+      { schemaVersion: 1, kind: 'bookshelf', title: 'Foreign', itemIds: [`ci_${'f'.repeat(32)}`] }), { code: 'INVALID_INPUT' });
+    const collection = (await one.mutate(a, aProject.id, 'collections', 'POST', afterRace.revision,
+      { schemaVersion: 1, kind: 'bookshelf', title: 'Reading', itemIds: [aBook.id] })).record!;
+    await assert.rejects(one.mutate(a, aProject.id, 'items', 'DELETE', afterRace.revision + 1, undefined, aBook.id), { code: 'INVALID_INPUT' });
+    assert.equal((await one.read(a, aProject.id)).collections[0]?.id, collection.id);
+    const asset = (await one.mutate(a, aProject.id, 'media-assets', 'POST', afterRace.revision + 1,
+      { schemaVersion: 1, catalogItemId: aBook.id, kind: 'artwork', location: { type: 'https', url: 'https://example.com/cover.jpg' },
+        rights: { status: 'unknown', basis: 'none', permittedUse: 'none' }, deliveryEligible: false })).record!;
+    assert.deepEqual((await one.read(a, aProject.id)).items.find(item => item.id === aBook.id)?.mediaAssetIds, [asset.id]);
+    await assert.rejects(two.mutate(b, bProject.id, 'media-assets', 'POST', 1,
+      { schemaVersion: 1, catalogItemId: aBook.id, kind: 'artwork', location: { type: 'https', url: 'https://example.com/cover.jpg' },
+        rights: { status: 'unknown', basis: 'none', permittedUse: 'none' }, deliveryEligible: false }), { code: 'INVALID_INPUT' });
+    assert.equal((await second.pool.query('SELECT count(*)::int AS count FROM catalog_item_identifiers WHERE item_id = $1', [aBook.id])).rows[0].count, 1);
+    const otherBook = (await one.read(a, aProject.id)).items.find(item => item.id !== aBook.id)!;
+    await assert.rejects(second.pool.query('INSERT INTO catalog_item_identifiers(source_id, project_id, creator_account_id, item_id, provider, marketplace, kind, value) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+      [aSource.id, aProject.id, a.accountId, otherBook.id, 'creator', '', 'feed_item_id', 'novel-1']), { code: '23505' });
+    const foreignEvidence = `ev_${randomUUID().replaceAll('-', '')}`;
+    await second.pool.query('INSERT INTO private_objects(id, creator_account_id, project_id, kind, object_key, content_type, byte_size, sha256) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+      [foreignEvidence, b.accountId, bProject.id, 'evidence', `private/${'b'.repeat(64)}`, 'application/pdf', 1, 'c'.repeat(64)]);
+    const beforeEvidence = (await one.read(a, aProject.id)).revision;
+    await assert.rejects(one.mutate(a, aProject.id, 'sources', 'POST', beforeEvidence,
+      { schemaVersion: 1, type: 'creator_json', state: 'verified',
+        permission: { retrieval: 'creator_asserted', tvDisplay: 'creator_asserted', verificationEvidenceId: foreignEvidence } }), { code: 'INVALID_INPUT' });
+    assert.equal((await one.read(a, aProject.id)).revision, beforeEvidence, 'foreign evidence rolled back');
+    const keyedSource = { ...source, externalIdentity: { provider: 'creator', kind: 'feed_item_id', value: 'file-one' } };
+    await one.mutate(a, aProject.id, 'sources', 'POST', beforeEvidence, keyedSource);
+    await assert.rejects(one.mutate(a, aProject.id, 'sources', 'POST', beforeEvidence + 1, keyedSource), { code: 'CONFLICT' });
+    assert.equal((await one.read(a, aProject.id)).revision, beforeEvidence + 1, 'duplicate source identity rolled back');
+    await first.pool.end(); first = undefined;
+    const restarted = await HostedProjectRepository.connect(url.toString()); first = restarted;
+    assert.equal((await new CatalogRepository(restarted).read(a, aProject.id)).mediaAssets[0]?.id, asset.id);
+    await assert.rejects(restarted.pool.query('INSERT INTO catalog_items(id, project_id, creator_account_id, source_id, record) VALUES ($1,$2,$3,$4,$5::jsonb)',
+      [`ci_${'f'.repeat(32)}`, aProject.id, a.accountId, bSource.id, JSON.stringify({ id: `ci_${'f'.repeat(32)}`, projectId: aProject.id, creatorAccountId: a.accountId, schemaVersion: 1, sourceRecord: { sourceId: bSource.id } })]), { code: '23503' });
+  } finally {
+    if (first) await first.pool.end();
+    if (second) await second.pool.end();
+    await admin.query(`DROP DATABASE ${name} WITH (FORCE)`);
+    await admin.end();
+  }
+});

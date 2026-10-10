@@ -10,11 +10,14 @@ import type { ServerMode } from './auth/config.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import type { PrivateObjectService } from './private-objects.js';
 import { audit } from './operations.js';
+import { CatalogRepository, catalogKinds, type CatalogKind } from './catalog-repository.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
 const privatePutSchema = z.strictObject({ kind: z.enum(['media', 'evidence']), contentType: z.string().max(100), contentBase64: z.string().min(1).max(1_000_000).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) });
 const MAX_BODY_BYTES = 1_000_000;
+const catalogWriteSchema = z.strictObject({ expectedRevision: z.number().int().nonnegative(), record: z.record(z.string(), z.unknown()) });
+const catalogDeleteSchema = z.strictObject({ expectedRevision: z.number().int().nonnegative() });
 
 async function body(request: IncomingMessage): Promise<unknown> {
   if (!request.headers['content-type']?.toLowerCase().startsWith('application/json')) throw new ZodError([{ code: 'custom', path: [], message: 'Expected application/json' }]);
@@ -39,6 +42,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
   const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : new BedrockProvider(process.env.BEDROCK_MODEL_ID!))) : null;
   const workspace = mode?.mode === 'local-legacy' ? new WorkspaceService(repository) : null;
   const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository) : null;
+  const catalog = hostedRepository ? new CatalogRepository(hostedRepository) : null;
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? '', 'http://localhost');
@@ -60,6 +64,43 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
         if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? '') && !mode.auth.authorizedMutation(request, session)) { void audit(hostedRepository?.pool, 'auth_denied', 'denied', session.principal.accountId); respond(response, 403, { error: { code: 'CSRF', message: 'Invalid request origin or CSRF token' } }); return; }
         if (hostedRepository && hostedWorkspace) {
           const principal = session.principal;
+          if (segments.length >= 4 && segments[3] === 'catalog' && catalog) {
+            const projectId = segments[2]!;
+            if (url.search || segments.length > 6) { respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return; }
+            if (segments.length === 4 && request.method === 'GET') { respond(response, 200, await catalog.read(principal, projectId)); return; }
+            const kind = segments[4];
+            if (kind && catalogKinds.includes(kind as CatalogKind)) {
+              const typedKind = kind as CatalogKind;
+              if (segments.length === 5 && request.method === 'GET') {
+                const snapshot = await catalog.read(principal, projectId);
+                const field = { sources: 'sources', items: 'items', 'media-assets': 'mediaAssets', collections: 'collections' }[typedKind] as keyof typeof snapshot;
+                respond(response, 200, { revision: snapshot.revision, records: snapshot[field] }); return;
+              }
+              if (segments.length === 6 && request.method === 'GET') {
+                const snapshot = await catalog.read(principal, projectId);
+                const field = { sources: 'sources', items: 'items', 'media-assets': 'mediaAssets', collections: 'collections' }[typedKind] as 'sources' | 'items' | 'mediaAssets' | 'collections';
+                const record = snapshot[field].find(value => value.id === segments[5]);
+                if (!record) throw new RepositoryError('NOT_FOUND', 'Catalog record not found');
+                respond(response, 200, { revision: snapshot.revision, record }); return;
+              }
+              if (segments.length === 5 && request.method === 'POST') {
+                await hostedRepository.read(principal, projectId);
+                const input = catalogWriteSchema.parse(await body(request));
+                respond(response, 201, await catalog.mutate(principal, projectId, typedKind, 'POST', input.expectedRevision, input.record)); return;
+              }
+              if (segments.length === 6 && request.method === 'PUT') {
+                await hostedRepository.read(principal, projectId);
+                const input = catalogWriteSchema.parse(await body(request));
+                respond(response, 200, await catalog.mutate(principal, projectId, typedKind, 'PUT', input.expectedRevision, input.record, segments[5])); return;
+              }
+              if (segments.length === 6 && request.method === 'DELETE') {
+                await hostedRepository.read(principal, projectId);
+                const input = catalogDeleteSchema.parse(await body(request));
+                respond(response, 200, await catalog.mutate(principal, projectId, typedKind, 'DELETE', input.expectedRevision, undefined, segments[5])); return;
+              }
+            }
+            respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return;
+          }
           if (segments.length >= 4 && segments[3] === 'private-objects') {
             if (!privateObjects) { respond(response, 503, { error: { code: 'STORAGE_ERROR', message: 'Private storage unavailable' } }); return; }
             const projectId = segments[2]!;
