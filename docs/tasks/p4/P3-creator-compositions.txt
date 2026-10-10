@@ -1,0 +1,29 @@
+TASK: Phase 4 / P3 — Video audio and writing draft compositions
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.4.3`.
+
+GOAL
+Generate three substantively different deterministic draft TV experiences from P2's safe projection; keep repeat generation non-destructive.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p4/{README.md,prompt-assessment.md,implementation-plan.md}, docs/tasks/p3/closeout.md, ADR 0008 and directly affected source/tests. Inspect actual HEAD, root package version, git status and previous P4 runner checkpoint before any edits. Preserve P2/c2 historical NOT GREEN and P3 catalog-only GREEN / hosted release NOT QUALIFIED.
+
+IMPLEMENT
+Build limited composition strategies for video (featured films/series with optional cleared trailer), audio (albums/playlists/listening detail) and writing (author/bookshelf, informational books and cleared companion readings). Use existing hero/rail/grid/text ChannelSpec modules unless a P1 contract gap is proven; avoid generic cards-only layouts or an arbitrary page builder. Preserve stable content/page/module identity and creator manual brand/text/order/module edits on regeneration; adopt an explicit conflict/unchanged policy backed by P2 binding evidence. Never silently overwrite protected custom generated source. Show honest nonplayable, missing licensed media and empty-catalog states. No model call required for deterministic starter compositions; no direct TV publication or source sync.
+
+OUT OF SCOPE
+Amazon scraping/connectors, scheduled catalog synchronization (P6), immutable public TV manifests or approved TV delivery (P5), physical Fire TV/VPKG/Appstore/publishing (P7/P8), unsafe hosted native builds, and new multiuser/team features.
+
+VALIDATION
+Three sample creator fixture compositions with expected topology and focus, nonplayable book and playable cleared audio/video scenarios, rights-revoked exclusion, unchanged-input idempotency and manual edit protection. Focused tests, affected workspaces typecheck/build, git diff --check.
+
+GIT
+Do not create commits or rewrite/move HEAD. The runner exclusively owns the implementation checkpoint commit. Update only root package.json version and the two root entries of package-lock.json to 0.4.3; keep internal workspace versions unchanged unless a proven compatibility change requires it. Preserve unrelated accepted dirty work.
+
+FINAL RESPONSE
+Report exact changed boundaries, focused test counts, typecheck/build and git diff --check results, actual starting HEAD and final root version, evidence for user-visible behavior, and all still-open qualification gates. Never claim a live provider/device/browser result without direct evidence.
