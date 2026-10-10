@@ -8,9 +8,11 @@ import { WorkspaceService } from './workspace.js';
 import { HostedWorkspaceService } from './hosted-workspace.js';
 import type { ServerMode } from './auth/config.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
+import type { PrivateObjectService } from './private-objects.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
+const privatePutSchema = z.strictObject({ kind: z.enum(['media', 'evidence']), contentType: z.string().max(100), contentBase64: z.string().min(1).max(1_000_000).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) });
 const MAX_BODY_BYTES = 1_000_000;
 
 async function body(request: IncomingMessage): Promise<unknown> {
@@ -31,7 +33,7 @@ function respond(response: ServerResponse, status: number, value: unknown): void
   response.end(JSON.stringify(value));
 }
 
-export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository) {
+export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository, privateObjects?: PrivateObjectService) {
   const status = selectedProvider ? { provider: selectedProvider.name, configured: true, message: selectedProvider.name === 'mock' ? 'Deterministic mock; no cloud request.' : 'Bedrock configured; credentials and model access checked on request.' } : providerStatus(process.env);
   const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : new BedrockProvider(process.env.BEDROCK_MODEL_ID!))) : null;
   const workspace = mode?.mode === 'local-legacy' ? new WorkspaceService(repository) : null;
@@ -57,6 +59,35 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
         if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? '') && !mode.auth.authorizedMutation(request, session)) { respond(response, 403, { error: { code: 'CSRF', message: 'Invalid request origin or CSRF token' } }); return; }
         if (hostedRepository && hostedWorkspace) {
           const principal = session.principal;
+          if (segments.length >= 4 && segments[3] === 'private-objects') {
+            if (!privateObjects) { respond(response, 503, { error: { code: 'STORAGE_ERROR', message: 'Private storage unavailable' } }); return; }
+            const projectId = segments[2]!;
+            if (segments.length === 4 && !url.search && request.method === 'POST') {
+              await hostedRepository.read(principal, projectId);
+              const input = privatePutSchema.parse(await body(request));
+              respond(response, 201, await privateObjects.put(principal, projectId, input.kind, input.contentType, Buffer.from(input.contentBase64, 'base64'))); return;
+            }
+            if (segments.length === 5 && !url.search) {
+              const objectId = segments[4]!;
+              if (request.method === 'GET') { respond(response, 200, await privateObjects.metadata(principal, projectId, objectId)); return; }
+              if (request.method === 'DELETE') { await privateObjects.delete(principal, projectId, objectId); respond(response, 200, { deleted: true }); return; }
+            }
+            if (segments.length === 6 && !url.search) {
+              const objectId = segments[4]!;
+              if (segments[5] === 'capability' && request.method === 'POST') {
+                z.strictObject({}).parse(await body(request));
+                respond(response, 200, await privateObjects.issueDownload(principal, projectId, objectId)); return;
+              }
+              if (segments[5] === 'capability' && request.method === 'DELETE') { await privateObjects.revoke(principal, projectId, objectId); respond(response, 200, { revoked: true }); return; }
+              if (segments[5] === 'content' && request.method === 'GET') {
+                const downloaded = await privateObjects.download(principal, projectId, objectId, String(request.headers['x-private-capability'] ?? ''));
+                response.writeHead(200, { 'content-type': downloaded.metadata.contentType, 'content-length': downloaded.content.length,
+                  'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-disposition': 'attachment' });
+                response.end(downloaded.content); return;
+              }
+            }
+            respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return;
+          }
           if (segments.length === 2 && !url.search && request.method === 'POST') { respond(response, 201, await hostedRepository.create(principal, await body(request))); return; }
           if (segments.length === 2 && !url.search && request.method === 'GET') { respond(response, 200, await hostedRepository.list(principal)); return; }
           if (segments.length === 3 && !url.search && request.method === 'GET') { respond(response, 200, await hostedRepository.read(principal, segments[2]!)); return; }

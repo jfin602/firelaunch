@@ -9,6 +9,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1149.0",
     "@firelaunch/agent": "0.0.4",
     "@firelaunch/channel-engine": "0.0.1",
     "@firelaunch/contracts": "0.0.1",

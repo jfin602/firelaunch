@@ -16,6 +16,7 @@ import { HostedAuth } from '../src/auth/sessions.js';
 import { ProjectRepository } from '../src/repository.js';
 import { createApi } from '../src/api.js';
 import { MockProvider, type AgentProvider } from '@firelaunch/agent';
+import { IsolatedObjectStore, PrivateObjectService } from '../src/private-objects.js';
 
 const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
 const databaseTest = baseUrl ? test : test.skip;
@@ -117,7 +118,8 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     const mock = new MockProvider();
     let providerCalls = 0;
     const provider: AgentProvider = { name: 'mock', next: async turns => { providerCalls++; return mock.next(turns); } };
-    const api = createApi(new ProjectRepository(directory), provider, { mode: 'hosted', auth }, restarted);
+    const api = createApi(new ProjectRepository(directory), provider, { mode: 'hosted', auth }, restarted,
+      new PrivateObjectService(restarted, new IsolatedObjectStore(directory)));
     api.listen(address.port, '127.0.0.1'); await once(api, 'listening');
     try {
       const login = async (subject: string) => {
@@ -155,6 +157,29 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       const ownedPath = `${endpoint}/${owned.id}`;
       const ownerHeaders = { cookie: firstLogin.cookie, origin, 'x-csrf-token': firstLogin.session.csrfToken, 'content-type': 'application/json' };
       const foreignHeaders = { cookie: secondLogin.cookie, origin, 'x-csrf-token': secondLogin.session.csrfToken, 'content-type': 'application/json' };
+      const privatePath = `${ownedPath}/private-objects`;
+      const objectResponse = await fetch(privatePath, { method: 'POST', headers: ownerHeaders,
+        body: JSON.stringify({ kind: 'evidence', contentType: 'application/pdf', contentBase64: Buffer.from('private evidence').toString('base64') }) });
+      assert.equal(objectResponse.status, 201);
+      const privateMetadata = await objectResponse.json();
+      assert.equal(privateMetadata.kind, 'evidence');
+      assert.equal(JSON.stringify(privateMetadata).includes('private/'), false);
+      assert.equal((await fetch(`${privatePath}/${privateMetadata.id}`, { headers: { cookie: secondLogin.cookie } })).status, 404);
+      assert.equal((await fetch(`${privatePath}/${privateMetadata.id}`, { headers: { cookie: firstLogin.cookie } })).status, 200);
+      assert.equal((await fetch(privatePath, { method: 'POST', headers: foreignHeaders, body: JSON.stringify({ kind: 'evidence', contentType: 'application/pdf', contentBase64: 'YQ==' }) })).status, 404);
+      assert.equal((await fetch(privatePath, { method: 'POST', headers: { cookie: firstLogin.cookie, origin, 'content-type': 'application/json' }, body: '{}' })).status, 403);
+      const capabilityResponse = await fetch(`${privatePath}/${privateMetadata.id}/capability`, { method: 'POST', headers: ownerHeaders, body: '{}' });
+      assert.equal(capabilityResponse.status, 200);
+      const { capability } = await capabilityResponse.json();
+      assert.equal((await fetch(`${privatePath}/${privateMetadata.id}/content`, { headers: { cookie: secondLogin.cookie, 'x-private-capability': capability } })).status, 404);
+      const contentResponse = await fetch(`${privatePath}/${privateMetadata.id}/content`, { headers: { cookie: firstLogin.cookie, 'x-private-capability': capability } });
+      assert.equal(contentResponse.status, 200);
+      assert.equal(await contentResponse.text(), 'private evidence');
+      assert.equal(contentResponse.headers.get('cache-control'), 'no-store');
+      assert.equal((await fetch(`${privatePath}/${privateMetadata.id}/capability`, { method: 'DELETE', headers: ownerHeaders })).status, 200);
+      assert.equal((await fetch(`${privatePath}/${privateMetadata.id}/content`, { headers: { cookie: firstLogin.cookie, 'x-private-capability': capability } })).status, 404);
+      assert.equal((await fetch(`${privatePath}/${privateMetadata.id}`, { method: 'DELETE', headers: foreignHeaders })).status, 404);
+      assert.equal((await fetch(`${privatePath}/${privateMetadata.id}`, { method: 'DELETE', headers: ownerHeaders })).status, 200);
       const sourceResponse = await fetch(`${ownedPath}/code`, { method: 'POST', headers: ownerHeaders, body: '{}' });
       assert.equal(sourceResponse.status, 200);
       const generated = await sourceResponse.json();
@@ -172,7 +197,7 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       assert.deepEqual(await (await fetch(`${ownedPath}/build`, { headers: { cookie: firstLogin.cookie } })).json(),
         await (await fetch(`${ownedPath}/build`, { method: 'POST', headers: ownerHeaders, body: '{}' })).json());
       assert.equal((await (await fetch(`${ownedPath}/build`, { headers: { cookie: firstLogin.cookie } })).json()).status, 'blocked');
-      assert.deepEqual(await readdir(directory), []);
+      assert.deepEqual(await readdir(directory), ['private']);
       assert.equal((await (await fetch(`${ownedPath}/bundle`, { method: 'POST', headers: ownerHeaders, body: '{}' })).json()).status, 'blocked');
       const agent = await fetch(`${ownedPath}/agent`, { method: 'POST', headers: ownerHeaders,
         body: JSON.stringify({ expectedRevision: 1, message: 'add page Explore' }) });
@@ -241,7 +266,10 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     // The down script is exercised only in this disposable database after all persistence assertions.
     const down = await readFile(new URL('../migrations/001_hosted_ownership.down.sql', import.meta.url), 'utf8');
     const sourceDown = await readFile(new URL('../migrations/002_hosted_source.down.sql', import.meta.url), 'utf8');
+    const objectDown = await readFile(new URL('../migrations/003_private_objects.down.sql', import.meta.url), 'utf8');
     await restarted.pool.query('BEGIN');
+    await restarted.pool.query(objectDown);
+    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 3');
     await restarted.pool.query(sourceDown);
     await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 2');
     await restarted.pool.query(down);
