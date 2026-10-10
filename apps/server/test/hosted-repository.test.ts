@@ -118,7 +118,7 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     const mock = new MockProvider();
     let providerCalls = 0;
     const provider: AgentProvider = { name: 'mock', next: async turns => { providerCalls++; return mock.next(turns); } };
-    const api = createApi(new ProjectRepository(directory), provider, { mode: 'hosted', auth }, restarted,
+    let api = createApi(new ProjectRepository(directory), provider, { mode: 'hosted', auth }, restarted,
       new PrivateObjectService(restarted, new IsolatedObjectStore(directory)));
     api.listen(address.port, '127.0.0.1'); await once(api, 'listening');
     try {
@@ -146,6 +146,8 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       const createdResponse = await post(firstLogin, { title: 'Owned by HTTP A' });
       assert.equal(createdResponse.status, 201);
       const owned = await createdResponse.json();
+      const ownedList = await (await fetch(endpoint, { headers: { cookie: firstLogin.cookie } })).json();
+      assert.ok(ownedList.some((project: { id: string }) => project.id === owned.id));
       assert.equal((await fetch(endpoint, { headers: { cookie: secondLogin.cookie } })).status, 200);
       assert.deepEqual(await (await fetch(endpoint, { headers: { cookie: secondLogin.cookie } })).json(), []);
       assert.equal((await fetch(`${endpoint}/${owned.id}`, { headers: { cookie: secondLogin.cookie } })).status, 404);
@@ -157,6 +159,21 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       const ownedPath = `${endpoint}/${owned.id}`;
       const ownerHeaders = { cookie: firstLogin.cookie, origin, 'x-csrf-token': firstLogin.session.csrfToken, 'content-type': 'application/json' };
       const foreignHeaders = { cookie: secondLogin.cookie, origin, 'x-csrf-token': secondLogin.session.csrfToken, 'content-type': 'application/json' };
+      assert.notEqual(firstLogin.session.accountId, secondLogin.session.accountId);
+      assert.notEqual(firstLogin.session.csrfToken, secondLogin.session.csrfToken);
+      assert.equal((await fetch(endpoint, { headers: { cookie: secondLogin.cookie, 'x-user-id': firstLogin.session.accountId,
+        'x-creator-account-id': firstLogin.session.accountId } })).status, 200);
+      assert.deepEqual(await (await fetch(endpoint, { headers: { cookie: secondLogin.cookie,
+        'x-user-id': firstLogin.session.accountId, 'x-creator-account-id': firstLogin.session.accountId } })).json(), []);
+      assert.equal((await fetch(ownedPath, { headers: { cookie: secondLogin.cookie,
+        'x-user-id': firstLogin.session.accountId, 'x-creator-account-id': firstLogin.session.accountId } })).status, 404);
+      assert.equal((await fetch(ownedPath, { method: 'PUT', headers: { ...foreignHeaders,
+        'x-user-id': firstLogin.session.accountId, 'x-creator-account-id': firstLogin.session.accountId },
+        body: JSON.stringify({ expectedRevision: 1, spec: owned.spec }) })).status, 404);
+      assert.equal((await fetch(ownedPath, { method: 'PUT', headers: { ...foreignHeaders,
+        'x-csrf-token': firstLogin.session.csrfToken }, body: JSON.stringify({ expectedRevision: 1, spec: owned.spec }) })).status, 403);
+      assert.equal((await fetch(ownedPath, { method: 'PUT', headers: { ...ownerHeaders,
+        'x-csrf-token': secondLogin.session.csrfToken }, body: JSON.stringify({ expectedRevision: 1, spec: owned.spec }) })).status, 403);
       const privatePath = `${ownedPath}/private-objects`;
       const objectResponse = await fetch(privatePath, { method: 'POST', headers: ownerHeaders,
         body: JSON.stringify({ kind: 'evidence', contentType: 'application/pdf', contentBase64: Buffer.from('private evidence').toString('base64') }) });
@@ -166,6 +183,22 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       assert.equal(JSON.stringify(privateMetadata).includes('private/'), false);
       assert.equal((await fetch(`${privatePath}/${privateMetadata.id}`, { headers: { cookie: secondLogin.cookie } })).status, 404);
       assert.equal((await fetch(`${privatePath}/${privateMetadata.id}`, { headers: { cookie: firstLogin.cookie } })).status, 200);
+      const mediaResponse = await fetch(privatePath, { method: 'POST', headers: ownerHeaders,
+        body: JSON.stringify({ kind: 'media', contentType: 'image/png', contentBase64: Buffer.from('private media').toString('base64') }) });
+      assert.equal(mediaResponse.status, 201);
+      const mediaMetadata = await mediaResponse.json();
+      assert.equal(mediaMetadata.kind, 'media');
+      assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}`, { headers: { cookie: secondLogin.cookie } })).status, 404);
+      assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}/capability`, { method: 'POST', headers: foreignHeaders, body: '{}' })).status, 404);
+      assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}/capability`, { method: 'DELETE', headers: foreignHeaders })).status, 404);
+      const mediaCapabilityResponse = await fetch(`${privatePath}/${mediaMetadata.id}/capability`, { method: 'POST', headers: ownerHeaders, body: '{}' });
+      assert.equal(mediaCapabilityResponse.status, 200);
+      const mediaCapability = (await mediaCapabilityResponse.json()).capability;
+      assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}/content`, { headers: { cookie: secondLogin.cookie,
+        'x-private-capability': mediaCapability } })).status, 404);
+      assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}/content`, { headers: { cookie: firstLogin.cookie,
+        'x-private-capability': mediaCapability } })).status, 200);
+      assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}`, { method: 'DELETE', headers: foreignHeaders })).status, 404);
       assert.equal((await fetch(privatePath, { method: 'POST', headers: foreignHeaders, body: JSON.stringify({ kind: 'evidence', contentType: 'application/pdf', contentBase64: 'YQ==' }) })).status, 404);
       assert.equal((await fetch(privatePath, { method: 'POST', headers: { cookie: firstLogin.cookie, origin, 'content-type': 'application/json' }, body: '{}' })).status, 403);
       const capabilityResponse = await fetch(`${privatePath}/${privateMetadata.id}/capability`, { method: 'POST', headers: ownerHeaders, body: '{}' });
@@ -212,6 +245,10 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       assert.equal((await mutation.json()).revision, 3);
       assert.equal((await (await fetch(`${ownedPath}/agent-status`, { headers: { cookie: firstLogin.cookie } })).json()).provider, 'mock');
       assert.equal((await (await fetch(`${ownedPath}/readiness`, { headers: { cookie: firstLogin.cookie } })).json()).build.status, 'blocked');
+      const ownerUpdate = await fetch(ownedPath, { method: 'PUT', headers: ownerHeaders,
+        body: JSON.stringify({ expectedRevision: 3, spec: { ...owned.spec, title: 'Owner API update' } }) });
+      assert.equal(ownerUpdate.status, 200);
+      assert.equal((await ownerUpdate.json()).revision, 4);
 
       const cases: { label: string; suffix: string; method?: string; body?: unknown }[] = [
         { label: 'project read', suffix: '' },
@@ -260,6 +297,34 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       assert.equal((await fetch(`${ownedPath}/code/file?path=..%2fproject.json`, { headers: { cookie: firstLogin.cookie } })).status, 400);
       assert.equal((await fetch(`${endpoint}`, { headers: { cookie: 'firelaunch_local_session=stale' } })).status, 401);
       assert.equal((await fetch(`${ownedPath}/agent`, { method: 'POST', headers: { ...foreignHeaders, 'x-csrf-token': 'bad' }, body: JSON.stringify({ expectedRevision: 1, message: 'probe' }) })).status, 403);
+      assert.equal((await fetch(`${origin}/api/auth/logout`, { method: 'POST', headers: foreignHeaders })).status, 204);
+      assert.equal((await fetch(endpoint, { headers: { cookie: secondLogin.cookie } })).status, 401);
+      assert.equal((await fetch(ownedPath, { method: 'PUT', headers: foreignHeaders,
+        body: JSON.stringify({ expectedRevision: 4, spec: owned.spec }) })).status, 401);
+      await new Promise<void>(resolve => api.close(() => resolve()));
+      const restartedAuth = new HostedAuth(verifier, origin, principal => restarted.accountForIdentity(principal));
+      api = createApi(new ProjectRepository(directory), provider, { mode: 'hosted', auth: restartedAuth }, restarted,
+        new PrivateObjectService(restarted, new IsolatedObjectStore(directory)));
+      api.listen(address.port, '127.0.0.1'); await once(api, 'listening');
+      // Undici may retry a pooled socket from the stopped server; discard that transport-only failure.
+      const afterRestart = async (url: string, options?: RequestInit): Promise<Response> => {
+        try { return await fetch(url, { ...options, headers: { ...options?.headers, connection: 'close' } }); }
+        catch (error) {
+          if (!(error instanceof TypeError) || (error.cause as { code?: string } | undefined)?.code !== 'UND_ERR_SOCKET') throw error;
+          return fetch(url, { ...options, headers: { ...options?.headers, connection: 'close' } });
+        }
+      };
+      assert.equal((await afterRestart(endpoint, { headers: { cookie: firstLogin.cookie } })).status, 401, 'process-local session cannot survive API restart');
+      const relogin = await login('http-a');
+      assert.equal(relogin.session.accountId, firstLogin.session.accountId, 'provider identity persists across API restart');
+      assert.notEqual(relogin.session.csrfToken, firstLogin.session.csrfToken);
+      assert.equal((await (await fetch(ownedPath, { headers: { cookie: relogin.cookie } })).json()).revision, 4);
+      assert.equal((await fetch(`${ownedPath}/code/export`, { headers: { cookie: relogin.cookie } })).status, 200);
+      assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}`, { headers: { cookie: relogin.cookie } })).status, 200);
+      assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}/content`, { headers: { cookie: relogin.cookie,
+        'x-private-capability': mediaCapability } })).status, 200);
+      assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}`, { method: 'DELETE', headers: { cookie: relogin.cookie,
+        origin, 'x-csrf-token': relogin.session.csrfToken } })).status, 200);
     } finally {
       await new Promise<void>(resolve => api.close(() => resolve()));
       await new Promise<void>(resolve => issuerServer.close(() => resolve()));
