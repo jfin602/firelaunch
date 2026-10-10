@@ -125,9 +125,11 @@ P1 contracts/rights feasibility qualified at root 0.1.5; the committed P2 activa
 - P3 owns catalog ingestion; P4 live AI; P5 manifests; P6 sync; P7 creator publishing. Do not add those into P2.
 - P2 implementation uses runner-owned commits (not manual agent commits); Phase 2 P7 is browser/manual qualification and may close NOT GREEN if live identity, independent accounts or restore proof are unavailable.
 
-## Active Phase 3 — Catalog Import and Discovery (2026-10-10)
+## Closed Phase 3 — Catalog Import and Discovery (2026-10-10)
 
 Root activation baseline: `0.3.0`, building on P2 implementation at `0.2.7`. Read docs/tasks/p3/README.md and carried-forward-gates.md before assessment, planning or authoring prompts. Keep P2 P7 and c2 historical NOT GREEN; do not silently redefine the acceptance gate or assert that production hosting is qualified.
+
+**Closeout:** Phase 3 P8 closed CATALOG GREEN for the tested local workflow / HOSTED RELEASE NOT QUALIFIED at root `0.3.8`. See docs/tasks/p3/closeout.md. P1–P7 implementation checkpoints are completed. Two real Google identities were tested sequentially, not in simultaneous independent profiles; full foreign API/CSRF/session, HTTPS callback/cookie and independent HTTPS S3 restore remain open preproduction gates. P4 is next for `/docs-review`; do not treat that review as approved `/docs-apply` or as a runnable Phase 4 stack.
 
 - Phase 3 P1 uses automated two-principal authentication/tenant regression tests and does not require a manual browser preflight. Real two-profile Google login and live cross-account denial are deferred to independent P3 P8 closeout. Preserve CSRF, cookie and session guards; all catalog/import/object APIs must check owner scope. Never label the deferred live gates GREEN without direct evidence.
 - Preserve the P1 versioned CatalogSource/CatalogItem/MediaAsset/Collection/rights/provenance contracts as the domain baseline. Extend contracts only for a concrete evidence-backed implementation need without altering canonical `ChannelSpec` v1 or the TV semantics.
