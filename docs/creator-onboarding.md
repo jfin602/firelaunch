@@ -1,6 +1,6 @@
 # Catalog-first creator onboarding (proposed)
 
-**Drafted:** 2026-10-09. This is the no-code launch-MVP journey specification, not an implemented Studio flow. It begins with creator-controlled material and works without Amazon API approval. Prompt-first blank creation remains an optional entry. Every channel belongs to one creator and ultimately becomes a separate branded Vega app under that creator's Amazon Developer account; entering an Amazon identity does not create a connection or listing.
+**Drafted:** 2026-10-09; Phase 3 alignment approved 2026-10-10. This is the no-code catalog-first journey specification, not a claim that the Phase 3 import UI already exists. It begins with creator-controlled material and works without Amazon API approval. Prompt-first blank creation remains an optional entry. Every channel belongs to one creator and ultimately becomes a separate branded Vega app under that creator's Amazon Developer account; entering an Amazon identity does not create a connection or listing.
 
 ## Wizard journey and acceptance states
 
@@ -41,3 +41,9 @@ These examples describe intended product behavior only. They do not assert exist
 - **P5 live delivery:** publish only creator-approved, compatible, TV-safe manifest revisions with licensed media; keep draft separate, and validate installed-app refresh/fallback. **P6** later reconciles permitted feeds with creator overrides and review queues. **P7/P8** own creator Console submission, physical Fire TV and actual Appstore approval evidence.
 
 See [product model](PRODUCT-MODEL.md), [publishing model](publishing.md), [roadmap](roadmap/mvp-roadmap.md) and [Amazon feasibility](integrations/amazon-catalog-feasibility.md).
+
+## Phase 3 implementation slice and owner handoff (2026-10-10)
+
+Implement steps 2 through 6 as a progressive **catalog-draft** workflow for an authenticated creator's project: choose a creator-controlled file/feed source, show parse and permission warnings, preview matches/duplicates and per-row corrections, confirm the reviewed import, organize Collections and attach private media plus explicit display/playback rights. Keep errors repairable without losing valid accepted records. Where identity is ambiguous, present `None of these` and creator-managed manual catalog creation, not automatic Amazon retrieval. Start with clear source identity and one meaningful item, then reveal advanced mapping/rights controls only when needed. A simple writing creator may import books with no playable media and remain in a draft-not-ready state.
+
+Phase 3 accepts one-shot HTTPS feed import and manual creator file reimport with explicit preview; **automatic recurring feed sync remains P6**. Channel generation and differentiated video/audio/writing TV experiences remain P4, immutable public TV delivery P5. The P2/c2 unresolved external staging gates must be tracked independently; initial local P3 work needs live two-account isolation before adding public import endpoints. See [Phase 3 task foundation](tasks/p3/README.md).

@@ -1,11 +1,13 @@
 # c2-hosted-qualification — Phase 2 independent qualification/repair
 
-Status: PREPARED / NOT EXECUTED
+Status: CLOSED — BLOCKED / NOT GREEN (2026-10-10; 2/5 cycles executed)
 Type: Correction 2, browser-required manual qualification closeout
 Required unchanged root version: `0.2.7`
 Correction baseline: P2 P7 NOT GREEN; last implementation HEAD `eb881a9a9b1102ab3931cf1538b46bcdc838af9e`
 Default model: GPT-6 Sol High
 Repair budget: at most **five complete qualification/repair cycles**; early Green or a hard external blocker ends the loop
+
+**Actual disposition:** [c2 closeout](closeout.md) documents two executed cycles and outstanding two-profile security, HTTPS staging OIDC/session, hosted restart/export and HTTPS private S3 recovery qualification. Later setup/runner instructions in this README describe its original plan, not current activity. These gates are carried forward explicitly to [P3](../p3/carried-forward-gates.md). Original P2 P7 remains NOT GREEN.
 
 ## Why this correction exists
 

@@ -21,7 +21,7 @@ FireLaunch is not merely an AI code generator and not a generic website builder.
 
 ## Current gate
 
-Current phase root version: `0.2.0` (hosted creator platform P2 activation baseline). P1 contracts/feasibility closed GREEN / QUALIFIED at `0.1.5` on 2026-10-09 (committed 2026-10-10). P0 finished at 0.0.7 with historical P7 NOT GREEN. The c0 repair loop ended BLOCKED / NOT GREEN on 2026-10-09, and its evidence is preserved in docs/tasks/c0-real-tv-qualification/qualification-loop/qualification-closeout.md.
+Current phase root version: `0.3.0` (Phase 3 catalog-import activation baseline, 2026-10-10). P1 contracts/feasibility closed GREEN / QUALIFIED at `0.1.5`. Phase 2 implementation reached `0.2.7`, but its P7 closeout remains NOT GREEN; `c2-hosted-qualification` stopped BLOCKED / NOT GREEN after 2/5 cycles. Their remaining security/staging proof is explicitly carried into Phase 3 and must not be described as passed. P0 finished at `0.0.7` with historical P7 NOT GREEN. The `c0-real-tv-qualification` repair also ended BLOCKED / NOT GREEN on 2026-10-09, with partial virtual-TV successes only.
 
 Observed c0 correction: a real release VPKG and Vega VirtualDevice focus/detail/playback/Back were proven for a tested candidate. Live Bedrock, formal Linux Mint host support, final Studio browser/Publish/aggregate checks, default demo media and physical Fire TV remain unqualified. P1-P3 SaaS may proceed independently. P4 requires a real non-mock supported provider; later phases retain physical TV/Appstore gates.
 
@@ -35,7 +35,7 @@ P0 is a staged Sol implementation stack with six runner-owned implementation che
 6. P6 / 0.0.6 - golden-path integration, Wild Earth fixture, regression and polish
 7. P7 / 0.0.7 - independent browser + real Vega qualification and closeout
 
-P7 was Not Green. The active bounded correction is `c0-real-tv-qualification`; it does not rerun P0 or erase the original P7 disposition. Platform prerequisites must be proven before build/runtime qualification, and qualification must stop truthfully if external tools or a test target cannot be provisioned.
+Historical P0 P7 was NOT GREEN. The completed `c0-real-tv-qualification` correction did not erase that disposition. Platform prerequisites must be proven before build/runtime qualification, and qualification must stop truthfully if external tools or a test target cannot be provisioned.
 
 ## Locked product decisions
 
@@ -93,7 +93,9 @@ The Prompt Stack runner owns implementation commits. Agents executed by the runn
 
 ## Post-P0 SaaS active phase
 
-P1 contract/feasibility scope is GREEN / QUALIFIED (docs/tasks/p1/closeout.md), not hosted SaaS qualification. The active phase is P2 at docs/tasks/p2/: authenticated independent CreatorAccounts, Postgres and transaction-safe ownership, tenant-scoped APIs/source/export access, private storage, migration from P0 local projects, backups/recovery and browser security evidence. P2 starts from committed root 0.2.0. Do not confuse the 0.2.0 phase activation baseline with its P7 closeout target 0.2.7. No AWS/Bedrock, Amazon seller credentials, real TV or Appstore approval is a P2 qualification prerequisite. Old P0 local loopback behavior must not accidentally become a public multi-tenant API. The historical P0 paragraphs below remain unchanged in meaning.
+Phase 1 contract/feasibility work is GREEN / QUALIFIED. Phase 2 Hosted Creator Platform has an implementation and local evidence baseline at `0.2.7` but **P2 P7 is NOT GREEN**, and c2's independent follow-up is **BLOCKED / NOT GREEN (2/5 cycles)**. Preserve both reports at docs/tasks/p2/closeout.md and docs/tasks/c2-hosted-qualification/closeout.md; do not rewrite or retroactively promote either.
+
+**Phase 3 Catalog Import and Discovery** begins at root `0.3.0` under docs/tasks/p3/. Phase 3 builds tenant-owned catalog persistence, creator CSV/JSON and bounded HTTPS feed import, media and rights controls, Collections and Studio onboarding. Early Phase 3 must independently test two live concurrent browser principals on the local hosted configuration before adding new catalog routes. Its final qualification must report HTTPS-staging OIDC secure-cookie and private S3 recovery separately. No P2/c2 GREEN claim or production deployment is available until the security gates are actually evidenced. Amazon source retrieval, live AI, remote manifest delivery and scheduled syncing remain later gated work. Historical P0 sections below remain unchanged in meaning.
 
 ## Definition of hackathon Green
 

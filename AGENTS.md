@@ -115,7 +115,7 @@ The c0 qualification/repair loop executed three cycles and closed BLOCKED / NOT 
 
 See [ADR 0008](docs/decisions/0008-launch-ai-provider-policy.md) and [the launch roadmap](docs/roadmap/mvp-roadmap.md).
 
-## Active hosted phase P2 (2026-10-10)
+## Historical hosted phase P2 (2026-10-10; NOT GREEN)
 
 P1 contracts/rights feasibility qualified at root 0.1.5; the committed P2 activation baseline is 0.2.0. Read docs/tasks/p2/README.md, prompt-assessment.md and implementation-plan.md for this phase.
 - Authenticated creator identity comes from verified sessions, never request-provided owner IDs; deny by default across list/read/write, agent, code, build, bundle, file/media and export surfaces.
@@ -124,3 +124,16 @@ P1 contracts/rights feasibility qualified at root 0.1.5; the committed P2 activa
 - P2 uses real Postgres constraints and owner-scoped transactions; tests must prove cross-account denial, restart persistence and recovery. Schema validation alone is insufficient.
 - P3 owns catalog ingestion; P4 live AI; P5 manifests; P6 sync; P7 creator publishing. Do not add those into P2.
 - P2 implementation uses runner-owned commits (not manual agent commits); Phase 2 P7 is browser/manual qualification and may close NOT GREEN if live identity, independent accounts or restore proof are unavailable.
+
+## Active Phase 3 — Catalog Import and Discovery (2026-10-10)
+
+Root activation baseline: `0.3.0`, building on P2 implementation at `0.2.7`. Read docs/tasks/p3/README.md and carried-forward-gates.md before assessment, planning or authoring prompts. Keep P2 P7 and c2 historical NOT GREEN; do not silently redefine the acceptance gate or assert that production hosting is qualified.
+
+- Qualify two independently authenticated Google creator identities in separate browser profiles and a live local API tenant-denial matrix early in the Phase 3 stack. Preserve CSRF, cookie and session guards. Catalog/import/object APIs must check owner scope before any DB lookup, request processing, URL fetch or private asset operation.
+- Preserve the P1 versioned CatalogSource/CatalogItem/MediaAsset/Collection/rights/provenance contracts as the domain baseline. Extend contracts only for a concrete evidence-backed implementation need without altering canonical `ChannelSpec` v1 or the TV semantics.
+- P3 owns **initial** creator-controlled CSV/JSON, HTTPS feed snapshot ingestion, reviews/duplicates/Collections, licensed media attachment and simple catalog-first Studio UI. P6 owns scheduled refresh, workers, diff/reconciliation and automatic sync.
+- Treat untrusted feed URLs and redirects as SSRF input: disallow localhost/private/link-local/cloud metadata targets, DNS rebinding and oversized/slow responses; enforce HTTPS and bounded parsing. Static file imports require safe sizes/structure and creator approval. Avoid unapproved Amazon scraping, API calls or TV rights claims.
+- Never infer TV rights or playback from a title, ASIN, Amazon listing, uploaded file or URL. Preserve raw source/provenance and creator overrides separately. New items require review; missing-item removal and remote publication are outside P3.
+- Keep upload/evidence objects private and owner scoped, reject dangerous MIME/content/path forms and guard their capabilities. P5 owns public immutable TV manifest delivery; hosted unisolated native builds remain disabled.
+- P3 can begin without approved remote HTTPS staging, but do not mark production hosting or the full inherited security gate GREEN until HTTPS Google callback/secure-cookie, cross-account isolation and independent HTTPS S3 bucket restoration are directly qualified. Missing external staging proof must be visible in P3 closeout and carried to the preproduction release gate.
+- Preserve the original c0/P0 outcomes and P1 GREEN evidence. Use focused tests within implementation checkpoints, one aggregate and real browser/security acceptance at closeout, with runner-owned commits.

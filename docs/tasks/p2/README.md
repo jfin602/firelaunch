@@ -1,9 +1,11 @@
 # p2 — Hosted Creator Platform
 
-Status: READY TO RUN / NOT EXECUTED
+Status: CLOSED — NOT GREEN (P7 qualification 2026-10-10; implementation at 0.2.7)
 Phase: 2 (post-P0 SaaS roadmap)
 Activation root version: 0.2.0 (P1 closed GREEN / QUALIFIED at 0.1.5)
 Model: GPT-6 Sol High for security-sensitive work; bounded lower-risk tasks may use Medium
+
+Closeout: [P2 P7 NOT GREEN](closeout.md). Local c2 follow-up ended [BLOCKED / NOT GREEN after 2/5 cycles](../c2-hosted-qualification/closeout.md). Phase 3 may build on tested P2 code but not claim hosted security or production qualification. This README's runner setup below is historical.
 
 ## Goal
 
