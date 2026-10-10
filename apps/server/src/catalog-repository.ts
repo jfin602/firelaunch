@@ -10,6 +10,9 @@ import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { RepositoryError } from './repository.js';
 import { parseCatalogFile, type FileFormat } from './catalog-file-import.js';
+import { fetchFeedSnapshot } from './catalog-feed.js';
+
+type ImportFormat = FileFormat | 'feed';
 
 export const catalogKinds = ['sources', 'items', 'media-assets', 'collections'] as const;
 export type CatalogKind = typeof catalogKinds[number];
@@ -42,7 +45,7 @@ function databaseError(error: unknown): never {
 }
 
 export class CatalogRepository {
-  constructor(private readonly projects: HostedProjectRepository) {}
+  constructor(private readonly projects: HostedProjectRepository, private readonly feedSnapshot: (endpoint: string) => Promise<string> = fetchFeedSnapshot) {}
 
   private async load(client: PoolClient, owner: string, project: string, revision: number): Promise<Snapshot> {
     const sources = await client.query<{ record: unknown }>('SELECT record FROM catalog_sources WHERE project_id = $1 AND creator_account_id = $2 ORDER BY id', [project, owner]);
@@ -135,17 +138,18 @@ export class CatalogRepository {
     finally { client.release(); }
   }
 
-  private plan(snapshot: Snapshot, sourceId: string, format: FileFormat, content: string) {
+  private plan(snapshot: Snapshot, sourceId: string, format: ImportFormat, content: string) {
     const source = snapshot.sources.find(value => value.id === sourceId);
     if (!source) throw new RepositoryError('NOT_FOUND', 'Catalog source not found');
-    if (source.type !== `creator_${format}`) invalid('File format does not match catalog source');
-    const parsed = parseCatalogFile(format, content, sourceId);
+    if (source.type !== (format === 'feed' ? 'creator_https_feed' : `creator_${format}`)) invalid('Import format does not match catalog source');
+    if (format === 'feed' && source.permission.retrieval !== 'creator_asserted') invalid('Creator must assert feed retrieval permission');
+    const parsed = parseCatalogFile(format === 'feed' ? 'json' : format, content, sourceId);
     const existing = new Map(snapshot.items.filter(item => item.sourceRecord.sourceId === sourceId)
       .map(item => [item.sourceRecord.externalId.value, item]));
     const rows = parsed.rows.map(row => {
       const prior = existing.get(row.externalId);
       const action = !prior ? 'create' : prior.kind !== row.kind ? 'ambiguous' :
-        JSON.stringify(prior.sourceRecord.metadata) === JSON.stringify(row.metadata) ? 'unchanged' : 'update';
+        JSON.stringify({ metadata: prior.sourceRecord.metadata, rawExternalId: prior.sourceRecord.rawExternalId }) === JSON.stringify({ metadata: row.metadata, rawExternalId: row.rawExternalId }) ? 'unchanged' : 'update';
       return { ...row, action, itemId: prior?.id };
     });
     const issues = [...parsed.issues, ...rows.filter(row => row.action === 'ambiguous').map(row =>
@@ -153,7 +157,18 @@ export class CatalogRepository {
     return { sourceId, format, revision: snapshot.revision, fingerprint: parsed.fingerprint, rows, issues };
   }
 
-  async previewImport(principal: AuthenticatedPrincipal, rawProjectId: string, sourceId: string, format: FileFormat, content: string) {
+  async previewFeed(principal: AuthenticatedPrincipal, rawProjectId: string, sourceId: string) {
+    const snapshot = await this.read(principal, rawProjectId);
+    const source = snapshot.sources.find(value => value.id === sourceId);
+    if (!source) throw new RepositoryError('NOT_FOUND', 'Catalog source not found');
+    if (source.type !== 'creator_https_feed' || !source.endpointUrl || source.permission.retrieval !== 'creator_asserted') invalid('Feed source needs creator-asserted retrieval permission');
+    const content = await this.feedSnapshot(source.endpointUrl);
+    const plan = await this.previewImport(principal, rawProjectId, sourceId, 'feed', content);
+    if (plan.revision !== snapshot.revision) throw new RepositoryError('CONFLICT', 'Catalog revision changed during feed fetch');
+    return { ...plan, content };
+  }
+
+  async previewImport(principal: AuthenticatedPrincipal, rawProjectId: string, sourceId: string, format: ImportFormat, content: string) {
     const snapshot = await this.read(principal, rawProjectId);
     const plan = this.plan(snapshot, sourceId, format, content);
     const client = await this.projects.pool.connect();
@@ -174,7 +189,7 @@ export class CatalogRepository {
     finally { client.release(); }
   }
 
-  async approveImport(principal: AuthenticatedPrincipal, rawProjectId: string, sourceId: string, format: FileFormat,
+  async approveImport(principal: AuthenticatedPrincipal, rawProjectId: string, sourceId: string, format: ImportFormat,
     content: string, expectedRevision: number, fingerprint: string): Promise<{ revision: number; created: number; updated: number; unchanged: number }> {
     const project = projectId.safeParse(rawProjectId);
     if (!project.success) throw new RepositoryError('NOT_FOUND', 'Project not found');
@@ -204,12 +219,12 @@ export class CatalogRepository {
         const externalId = { provider: 'creator' as const, kind: 'feed_item_id' as const, value: row.externalId };
         if (row.action === 'create') {
           const item: CatalogItem = { schemaVersion: 1, id: `ci_${randomUUID().replaceAll('-', '')}`, creatorAccountId: owner, projectId: project.data,
-            kind: row.kind, sourceRecord: { sourceId, externalId, observedAt, metadata: row.metadata },
+            kind: row.kind, sourceRecord: { sourceId, externalId, ...(row.rawExternalId ? { rawExternalId: row.rawExternalId } : {}), observedAt, metadata: row.metadata },
             externalIdentifiers: [externalId], mediaAssetIds: [] };
           snapshot.items.push(item); created++;
         } else {
           const item = snapshot.items.find(value => value.id === row.itemId)!;
-          item.sourceRecord = { sourceId, externalId: item.sourceRecord.externalId, observedAt, metadata: row.metadata };
+          item.sourceRecord = { sourceId, externalId: item.sourceRecord.externalId, ...(row.rawExternalId ? { rawExternalId: row.rawExternalId } : {}), observedAt, metadata: row.metadata };
           updated++;
         }
       }

@@ -20,6 +20,8 @@ const catalogWriteSchema = z.strictObject({ expectedRevision: z.number().int().n
 const catalogDeleteSchema = z.strictObject({ expectedRevision: z.number().int().nonnegative() });
 const filePreviewSchema = z.strictObject({ sourceId: z.string().regex(/^src_[a-f0-9]{32}$/), format: z.enum(['csv', 'json']), content: z.string().max(512_000) });
 const fileApproveSchema = filePreviewSchema.extend({ expectedRevision: z.number().int().nonnegative(), fingerprint: z.string().regex(/^[a-f0-9]{64}$/) });
+const feedPreviewSchema = z.strictObject({ sourceId: z.string().regex(/^src_[a-f0-9]{32}$/) });
+const feedApproveSchema = feedPreviewSchema.extend({ content: z.string().max(512_000), expectedRevision: z.number().int().nonnegative(), fingerprint: z.string().regex(/^[a-f0-9]{64}$/) });
 
 async function body(request: IncomingMessage): Promise<unknown> {
   if (!request.headers['content-type']?.toLowerCase().startsWith('application/json')) throw new ZodError([{ code: 'custom', path: [], message: 'Expected application/json' }]);
@@ -72,6 +74,14 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             if (segments.length === 4 && request.method === 'GET') { respond(response, 200, await catalog.read(principal, projectId)); return; }
             if (segments.length === 6 && segments[4] === 'imports' && request.method === 'POST') {
               await hostedRepository.read(principal, projectId);
+              if (segments[5] === 'feed-preview') {
+                const input = feedPreviewSchema.parse(await body(request));
+                respond(response, 200, await catalog.previewFeed(principal, projectId, input.sourceId)); return;
+              }
+              if (segments[5] === 'feed-approve') {
+                const input = feedApproveSchema.parse(await body(request));
+                respond(response, 200, await catalog.approveImport(principal, projectId, input.sourceId, 'feed', input.content, input.expectedRevision, input.fingerprint)); return;
+              }
               if (segments[5] === 'preview') {
                 const input = filePreviewSchema.parse(await body(request));
                 respond(response, 200, await catalog.previewImport(principal, projectId, input.sourceId, input.format, input.content)); return;

@@ -14,8 +14,10 @@
     "@firelaunch/channel-engine": "0.0.1",
     "@firelaunch/contracts": "0.0.1",
     "@firelaunch/generator": "0.0.2",
+    "ipaddr.js": "^2.5.0",
     "jose": "^6.2.12",
     "pg": "^8.23.1",
+    "saxes": "^6.0.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {

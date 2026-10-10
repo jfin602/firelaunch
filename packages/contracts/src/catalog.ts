@@ -101,6 +101,7 @@ export type CatalogMetadata = z.infer<typeof catalogMetadataSchema>;
 export const sourceRecordSchema = z.strictObject({
   sourceId: sourceIdSchema,
   externalId: externalIdentifierSchema,
+  rawExternalId: z.string().min(1).max(2048).optional(),
   observedAt: z.iso.datetime(),
   metadata: catalogMetadataSchema
 });

@@ -4,13 +4,13 @@ import { catalogMetadataSchema, type CatalogItem, type CatalogMetadata } from '@
 import { RepositoryError } from './repository.js';
 
 export type FileFormat = 'csv' | 'json';
-export type ImportedRow = { line: number; externalId: string; kind: CatalogItem['kind']; metadata: CatalogMetadata };
+export type ImportedRow = { line: number; externalId: string; rawExternalId?: string; kind: CatalogItem['kind']; metadata: CatalogMetadata };
 export type ImportIssue = { line: number; code: 'INVALID' | 'DUPLICATE' | 'AMBIGUOUS'; message: string };
 export type ParsedFile = { rows: ImportedRow[]; issues: ImportIssue[]; fingerprint: string };
 const MAX_BYTES = 512_000;
 const MAX_ROWS = 1000;
 const MAX_CELLS = 8;
-const HEADERS = ['externalId', 'kind', 'title', 'description', 'artworkUrl'];
+const HEADERS = ['externalId', 'rawExternalId', 'kind', 'title', 'description', 'artworkUrl'];
 
 function bad(message: string): never { throw new RepositoryError('INVALID_INPUT', message); }
 
@@ -84,10 +84,14 @@ export function parseCatalogFile(format: FileFormat, content: string, sourceId: 
       !['video', 'audio', 'book', 'listing'].includes(String(kind)) || !metadata.success) {
       issues.push({ line, code: 'INVALID', message: 'Invalid externalId, kind, title or metadata' }); continue;
     }
-    const row: ImportedRow = { line, externalId, kind: kind as ImportedRow['kind'], metadata: metadata.data };
+    const rawExternalId = record.rawExternalId;
+    if (rawExternalId !== undefined && (typeof rawExternalId !== 'string' || !rawExternalId || rawExternalId.length > 2048)) {
+      issues.push({ line, code: 'INVALID', message: 'Invalid raw source identifier' }); continue;
+    }
+    const row: ImportedRow = { line, externalId, ...(rawExternalId ? { rawExternalId } : {}), kind: kind as ImportedRow['kind'], metadata: metadata.data };
     const prior = seen.get(externalId);
     if (prior) {
-      issues.push({ line, code: JSON.stringify({ kind: prior.kind, metadata: prior.metadata }) === JSON.stringify({ kind: row.kind, metadata: row.metadata }) ? 'DUPLICATE' : 'AMBIGUOUS', message: `Repeated externalId ${externalId}` });
+      issues.push({ line, code: JSON.stringify({ kind: prior.kind, metadata: prior.metadata, rawExternalId: prior.rawExternalId }) === JSON.stringify({ kind: row.kind, metadata: row.metadata, rawExternalId: row.rawExternalId }) ? 'DUPLICATE' : 'AMBIGUOUS', message: `Repeated externalId ${externalId}` });
       continue;
     }
     seen.set(externalId, row); rows.push(row);

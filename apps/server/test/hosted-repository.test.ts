@@ -158,6 +158,11 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       assert.equal(sourceList.revision, 1);
       assert.equal(sourceList.records.length, 1);
       const sourceId = sourceList.records[0].id;
+      const feedPreviewPath = `${catalogPath}/imports/feed-preview`;
+      const previewBody = JSON.stringify({ sourceId });
+      assert.equal((await fetch(feedPreviewPath, { method: 'POST', headers: catalogForeignHeaders, body: previewBody })).status, 404);
+      assert.equal((await fetch(feedPreviewPath, { method: 'POST', headers: { cookie: firstLogin.cookie, origin, 'content-type': 'application/json' }, body: previewBody })).status, 403);
+      assert.equal((await fetch(feedPreviewPath, { method: 'POST', headers: catalogOwnerHeaders, body: previewBody })).status, 400);
       assert.equal((await fetch(`${catalogPath}/sources/${sourceId}`, { headers: { cookie: firstLogin.cookie } })).status, 200);
       const updatedSource = await fetch(`${catalogPath}/sources/${sourceId}`, { method: 'PUT', headers: catalogOwnerHeaders,
         body: JSON.stringify({ expectedRevision: 1, record: sourceBody }) });
