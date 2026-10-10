@@ -22,7 +22,7 @@ function cookies(request: IncomingMessage): Record<string, string> {
 type Login = { nonce: string; verifier: string; expiresAt: number };
 type Session = { principal: AuthenticatedPrincipal; csrf: string; expiresAt: number };
 
-// Process-local, revocable only for this process. P2 must replace account/session persistence.
+// Sessions remain process-local and revocable; creator account mapping is persisted by P2.
 export class HostedAuth {
   private readonly logins = new Map<string, Login>();
   private readonly sessions = new Map<string, Session>();
@@ -31,7 +31,8 @@ export class HostedAuth {
   private readonly sessionCookie: string;
   private readonly stateCookie: string;
 
-  constructor(readonly verifier: OidcVerifier, publicOrigin: string) {
+  constructor(readonly verifier: OidcVerifier, publicOrigin: string,
+    private readonly resolveAccount: (principal: AuthenticatedPrincipal) => Promise<string>) {
     const origin = new URL(publicOrigin);
     if (origin.origin !== publicOrigin || (origin.protocol !== 'https:' && !(process.env.NODE_ENV === 'test' && origin.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(origin.hostname)))) throw new Error('Hosted public origin must be HTTPS');
     if (new URL(verifier.config.redirectUri).origin !== publicOrigin) throw new Error('OIDC callback origin mismatch');
@@ -94,12 +95,13 @@ export class HostedAuth {
     }
     try {
       const identity = await this.verifier.exchange(code, login.verifier, login.nonce);
+      const accountId = await this.resolveAccount(identity.principal);
       const previous = cookies(request)[this.sessionCookie];
       if (previous) this.sessions.delete(hash(previous));
       for (const [key, session] of this.sessions) if (session.expiresAt <= Date.now()) this.sessions.delete(key);
       if (this.sessions.size >= 10_000) { response.writeHead(503, { 'set-cookie': this.clear(this.stateCookie) }).end(); return; }
       const token = randomToken();
-      this.sessions.set(hash(token), { principal: identity.principal, csrf: randomToken(), expiresAt: Math.min(Date.now() + SESSION_MS, identity.expiresAt) });
+      this.sessions.set(hash(token), { principal: { ...identity.principal, accountId }, csrf: randomToken(), expiresAt: Math.min(Date.now() + SESSION_MS, identity.expiresAt) });
       response.writeHead(302, { location: this.publicOrigin + '/', 'set-cookie': [this.clear(this.stateCookie), this.cookie(this.sessionCookie, token, Math.floor(SESSION_MS / 1000))], 'cache-control': 'no-store' }).end();
     } catch {
       response.writeHead(401, { 'set-cookie': this.clear(this.stateCookie), 'cache-control': 'no-store' }).end();

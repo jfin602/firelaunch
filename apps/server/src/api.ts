@@ -6,6 +6,7 @@ import { agentRequestSchema, BedrockProvider, ChannelAgent, MockProvider, provid
 import { ProjectRepository, RepositoryError } from './repository.js';
 import { WorkspaceService } from './workspace.js';
 import type { ServerMode } from './auth/config.js';
+import type { HostedProjectRepository } from './hosted-repository.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -29,7 +30,7 @@ function respond(response: ServerResponse, status: number, value: unknown): void
   response.end(JSON.stringify(value));
 }
 
-export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode) {
+export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository) {
   const status = selectedProvider ? { provider: selectedProvider.name, configured: true, message: selectedProvider.name === 'mock' ? 'Deterministic mock; no cloud request.' : 'Bedrock configured; credentials and model access checked on request.' } : providerStatus(process.env);
   const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : new BedrockProvider(process.env.BEDROCK_MODEL_ID!))) : null;
   const workspace = new WorkspaceService(repository);
@@ -52,7 +53,22 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
         const session = mode.auth.session(request);
         if (!session) { respond(response, 401, { error: { code: 'UNAUTHENTICATED', message: 'Sign in required' } }); return; }
         if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? '') && !mode.auth.authorizedMutation(request, session)) { respond(response, 403, { error: { code: 'CSRF', message: 'Invalid request origin or CSRF token' } }); return; }
-        // P2 owns scoped persistence. Until then, no hosted request may reach P0 filesystem paths.
+        if (hostedRepository && !url.search) {
+          const principal = session.principal;
+          if (segments.length === 2 && request.method === 'POST') { respond(response, 201, await hostedRepository.create(principal, await body(request))); return; }
+          if (segments.length === 2 && request.method === 'GET') { respond(response, 200, await hostedRepository.list(principal)); return; }
+          if (segments.length === 3 && request.method === 'GET') { respond(response, 200, await hostedRepository.read(principal, segments[2]!)); return; }
+          if (segments.length === 3 && request.method === 'PUT') {
+            const input = updateProjectSchema.parse(await body(request));
+            respond(response, 200, await hostedRepository.update(principal, segments[2]!, input.expectedRevision, input.spec)); return;
+          }
+          if (segments.length === 4 && segments[3] === 'mutations' && request.method === 'POST') {
+            const input = mutationRequestSchema.parse(await body(request));
+            const current = await hostedRepository.read(principal, segments[2]!);
+            if (current.revision !== input.expectedRevision) throw new RepositoryError('CONFLICT', 'Project revision changed');
+            respond(response, 200, await hostedRepository.update(principal, current.id, input.expectedRevision, applyMutation(current.spec, input.mutation))); return;
+          }
+        }
         respond(response, 503, { error: { code: 'HOSTED_STORAGE_UNAVAILABLE', message: 'Hosted project storage is not configured' } }); return;
       }
       if (mode?.mode !== 'local-legacy') { respond(response, 401, { error: { code: 'UNAUTHENTICATED', message: 'Sign in required' } }); return; }

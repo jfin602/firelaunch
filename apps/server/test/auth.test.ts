@@ -48,7 +48,7 @@ test('hosted OIDC validates code flow, tokens, session rotation, CSRF and logout
   const origin = `http://127.0.0.1:${address.port}`;
   assert.equal((await fetch(`${origin}/api/projects`)).status, 401);
   const verifier = new OidcVerifier({ issuer, clientId: 'firelaunch-fixture', authorizationEndpoint: `${issuer}/authorize`, tokenEndpoint: `${issuer}/token`, jwksUri: `${issuer}/keys`, redirectUri: `${origin}/api/auth/callback` });
-  const auth = new HostedAuth(verifier, origin);
+  const auth = new HostedAuth(verifier, origin, async principal => principal.accountId);
   // Recreate the API on the same port with the hosted configuration.
   await new Promise<void>(resolve => api.close(() => resolve()));
   const hosted = createApi(placeholder, undefined, { mode: 'hosted', auth });
@@ -151,7 +151,7 @@ test('HTTPS hosted login sets secure host-only cookies behind a matching proxy',
     authorizationEndpoint: 'http://127.0.0.1:9999/authorize', tokenEndpoint: 'http://127.0.0.1:9999/token',
     jwksUri: 'http://127.0.0.1:9999/keys', redirectUri: 'https://studio.example/api/auth/callback'
   });
-  const auth = new HostedAuth(verifier, 'https://studio.example');
+  const auth = new HostedAuth(verifier, 'https://studio.example', async principal => principal.accountId);
   const server = createServer((request, response) => auth.begin(request, response));
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const address = server.address(); assert.ok(address && typeof address !== 'string');
