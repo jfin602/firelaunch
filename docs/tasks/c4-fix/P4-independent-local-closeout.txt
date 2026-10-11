@@ -1,0 +1,29 @@
+TASK: c4-fix / P4 — Independent local correction qualification closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes (manual independent closeout; browser observations only when actually available).
+
+VERSIONING
+The assigned project version is `0.4.8` (UNCHANGED).
+
+GOAL
+Independently determine local correction GREEN or NOT GREEN from actual tests and accurate external blockers; preserve original P4 NOT GREEN and hosted release NOT QUALIFIED.
+
+PREFLIGHT
+Read c4-fix README/assessment/plan, docs/tasks/p4/closeout.md, docs/tasks/p4/provider-smoke.md, ADR 0008, roadmap, workflow, P1–P3 runner commits and test logs. Inspect actual HEAD, root package.json and two lockfile root versions, complete git status, Node/npm versions, available local Postgres and Studio; do not reset accepted changes. Note GitHub baseline includes P4 closeout commit 3a0a0de.
+
+INDEPENDENT QUALIFICATION
+Verify P1 proves recovery against the current migration contract, P2 leaves Bedrock credential-chain/runbook and truthful offline tests, and P3 protects distinct video/audio/writing, invalid rights, overrides, owner-scoped isolation, persistence and source sanitization. Where a suitable authenticated local browser exists, inspect writing detail/Back, generation/edit/reload and honest video/audio rights warnings; record what was directly observed, not what unit tests imply. AWS verification may be pending. Do NOT require a live Bedrock request for c4 local scope, but original P4 GREEN still requires actual successful non-mock inspect_catalog -> validated SAVED ChannelSpec revision -> visible Preview, with provider identity; mark OPEN until separately witnessed. Do not claim successful video/audio playback without real rights-cleared HTTPS media. Hosted S1-S6, two independent real browser identities, HTTPS secure-cookie OIDC and separate HTTPS S3 stay OPEN/PARTIAL unless specifically tested; none is silently closed.
+
+VALIDATION
+Run `npm run codex:stack:validate -- c4-fix`, ONE final `npm run check` under npm 12.x, `git diff --check`, and only needed focused diagnostics. Capture actual kernel, Studio and runner counts, including skips; 7/7 typechecks and builds only if observed. Any failed required check -> c4 NOT GREEN. Inspect output rather than assuming green from prior separate passes.
+
+CLOSEOUT
+Write docs/tasks/c4-fix/closeout.md with tested candidate HEAD/0.4.8, P1–P3 commits, validations and direct observations, exact c4 LOCAL GREEN or NOT GREEN, original P4 NOT GREEN/live provider OPEN, hosted release NOT QUALIFIED with S1–S6, and P5's actual VirtualDevice requirement. Keep historical P4 closeout/ADR intact. Explicitly identify optional later live provider smoke rather than substituting a configured badge or fixture. No device/VPKG/Appstore/public delivery claims.
+
+GIT
+Manual gate: do not commit or move HEAD. Do not alter version metadata or internal workspace versions. Preserve accepted dirty changes.
+
+FINAL RESPONSE
+Give the bounded outcome, exact test counts and true unqualified external dependencies; never retrofit GREEN to historical phases.
