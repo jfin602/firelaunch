@@ -1,0 +1,30 @@
+TASK: Phase 5 / P2 — Atomic immutable publication persistence
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.5.2`.
+
+GOAL
+Persist owner-reviewed approvals, immutable releases, rights-validated rollback and transactional live release pointers in PostgreSQL.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p5/{README.md,prompt-assessment.md,implementation-plan.md}, docs/decisions/0009-live-channel-delivery.md, and directly touched code/tests. Inspect actual HEAD, git status, root version and prior P5 checkpoint before edits. Historical c4-fix LOCAL GREEN does not convert Phase 4 or hosted release to GREEN.
+
+
+IMPLEMENT
+Inspect apps/server/src/{hosted-repository,catalog-repository}.ts, current migrations 001–009, contracts/publication and owner-scoped transaction style. Add forward-only migration(s) and focused repository/service methods for approval state pinned to owner/project/deployment plus ChannelSpec and catalog revisions, approved selection and media bindings; immutable release bytes, SHA-256/integrity, monotonically increasing sequence and previous ID; one live pointer per deployment. Re-check approval/rights/source permission at transaction time and fail stale CAS. Activation is transactional; retry/idempotence cannot duplicate releases. For rollback, require fresh creator approval and current rights verification, then create a NEW higher-sequence release based on the prior eligible snapshot; do not update old payloads or silently repoint backward. Preserve tenant isolation and existing hosted data. Do not expose public routes or invoke SDK.
+
+OUT OF SCOPE
+No required Bedrock request, native executable payload over public manifest, invented licensed media, unverified real hardware/Appstore claims, or production VPS. Preserve P2/c2 hosted S1–S6 OPEN/PARTIAL and original P4 NOT GREEN. Phase 6 owns scheduled feed sync; Phase 7 owns creator Developer Console handoff; Phase 8 owns physical Fire TV/Appstore approval.
+
+VALIDATION
+Focused isolated PostgreSQL tests: owner success/foreign denial, concurrent CAS collisions, no partial writes, stale revisions, immutability, rights revocation and restart persistence; server typecheck/build and git diff --check. Never weaken migrations.
+
+GIT
+Do not create commits, amend or rewrite/move HEAD. The runner exclusively owns the checkpoint commit. Preserve approved dirty work. Set only root package.json version and two root package-lock.json version entries to 0.5.2; internal workspace versions must remain unchanged unless demonstrated compatibility requires documented exception.
+
+FINAL RESPONSE
+Report affected source/doc boundaries, exact starting HEAD and final version, observed focused/full test counts and skips, checks, direct browser/device observations only when actually executed, and precise remaining qualification gates. Never call P5 GREEN from mocks or by assuming VirtualDevice equals physical Fire TV.
