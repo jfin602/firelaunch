@@ -91,7 +91,12 @@ export class HostedWorkspaceService {
       /^\s*categories\s*=\s*\[[^\]]*"com\.amazon\.category\.main"[^\]]*\]/m.test(manifest) &&
       !code.changed.some(name => ['manifest.toml', 'package.json', 'firelaunch.json'].includes(name));
     const sections = spec.pages.map(page => page.title).join(', ');
-    const featured = spec.content.slice(0, 3).map(item => item.title).join(', ');
+    const featuredVideos = spec.content.filter(item => item.presentation === 'video').slice(0, 3).map(item => item.title).join(', ');
+    const videoCount = spec.content.filter(item => item.presentation === 'video').length;
+    const audioCount = spec.content.filter(item => item.presentation === 'audio').length;
+    const bookCount = spec.content.filter(item => item.presentation === 'information').length;
+    const experiences = [videoCount ? 'watch cleared videos' : '', audioCount ? 'listen to cleared audio' : '',
+      bookCount ? 'open books for details' : ''].filter(Boolean);
     return {
       checks: [
         { group: 'Channel/schema', ready: true, detail: `ChannelSpec revision ${project.revision} validates` },
@@ -106,8 +111,8 @@ export class HostedWorkspaceService {
         { group: 'Human Amazon steps', ready: false, detail: 'Creator submission has not occurred' }
       ],
       copy: { appName: title, shortDescription: `Explore ${title} on your TV`.slice(0, 80),
-        longDescription: `Explore ${title} on Fire TV. Browse ${sections || 'the channel'} with your remote.${featured ? ` Discover featured videos including ${featured}.` : ''} Select a title for details and playback.`,
-        releaseNotes: `Initial release of ${title}: TV-first browsing${spec.content.length ? ` with ${spec.content.length} video${spec.content.length === 1 ? '' : 's'}` : ''} and playback.` },
+        longDescription: `Explore ${title} on Fire TV. Browse ${sections || 'the channel'} with your remote.${featuredVideos ? ` Discover featured videos including ${featuredVideos}.` : ''}${experiences.length ? ` Select a title to ${experiences.join(', or ')}.` : ''}`,
+        releaseNotes: `Initial release of ${title}: TV-first browsing${experiences.length ? ` to ${experiences.join(', or ')}` : ''}.` },
       assets: { artwork, unresolvedLocal: artwork.filter(value => value.startsWith('assets/')), screenshots: [] as string[] },
       build: blockedBuild, generatedPath: null, submitted: false as const
     };

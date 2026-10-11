@@ -1,0 +1,4 @@
+[
+  { "externalId": "p4-track", "kind": "audio", "title": "Creator album track", "description": "A synthetic listening entry." },
+  { "externalId": "p4-withheld-track", "kind": "audio", "title": "Withheld track", "description": "Leave playback rights unknown." }
+]

@@ -1,0 +1,4 @@
+[
+  { "externalId": "p4-book", "kind": "book", "title": "Creator book", "description": "An informational book with no playback URL." },
+  { "externalId": "p4-withheld-reading", "kind": "audio", "title": "Withheld author reading", "description": "Leave playback rights unknown." }
+]

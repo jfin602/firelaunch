@@ -1,0 +1,5 @@
+[
+  { "externalId": "p4-film", "kind": "video", "title": "Creator short film", "description": "A synthetic film entry for TV navigation." },
+  { "externalId": "p4-episode", "kind": "video", "title": "Creator episode", "description": "A synthetic series entry." },
+  { "externalId": "p4-withheld-trailer", "kind": "video", "title": "Withheld trailer", "description": "Leave playback rights unknown." }
+]
