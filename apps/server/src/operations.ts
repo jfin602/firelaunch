@@ -19,7 +19,7 @@ export async function audit(pool: Pool | undefined, event: z.infer<typeof events
 
 export async function health(pool: Pool, store: PrivateObjectStore): Promise<{ status: 'ok' | 'degraded'; database: boolean; objectStore: boolean; migration: number }> {
   let database = false; let objectStore = false; let migration = 0;
-  try { const result = await pool.query<{ version: number }>('SELECT max(version)::int AS version FROM firelaunch_schema_migrations'); migration = result.rows[0]?.version ?? 0; database = migration === 9; } catch { /* safe status only */ }
+  try { const result = await pool.query<{ version: number }>('SELECT max(version)::int AS version FROM firelaunch_schema_migrations'); migration = result.rows[0]?.version ?? 0; database = migration === 10; } catch { /* safe status only */ }
   // Object stores expose no list permission. A missing random key must return an error, proving a reachable authenticated read path.
   try { await store.get(`private/${'0'.repeat(64)}`); objectStore = true; }
   catch (error) { objectStore = !(error instanceof TypeError) && /NoSuchKey|ENOENT|not found/i.test(String(error)); }
@@ -27,7 +27,7 @@ export async function health(pool: Pool, store: PrivateObjectStore): Promise<{ s
 }
 
 /** Operator only: no API route. Bounded account export includes actual private bytes and excludes credentials/capabilities. */
-export async function exportAccount(pool: Pool, store: PrivateObjectStore, id: string): Promise<{ account: unknown; providerIdentities: unknown[]; projects: unknown[]; source: unknown[]; catalog: unknown[]; deployments: unknown[]; legacyImportMarkers: unknown[]; creatorAuditEvents: unknown[]; operationalAuditEvents: unknown[]; objects: { metadata: unknown; contentBase64: string }[] }> {
+export async function exportAccount(pool: Pool, store: PrivateObjectStore, id: string): Promise<{ account: unknown; providerIdentities: unknown[]; projects: unknown[]; source: unknown[]; catalog: unknown[]; deployments: unknown[]; publicationApprovals: unknown[]; publicationReleases: unknown[]; publicationLivePointers: unknown[]; publicationAuditEvents: unknown[]; legacyImportMarkers: unknown[]; creatorAuditEvents: unknown[]; operationalAuditEvents: unknown[]; objects: { metadata: unknown; contentBase64: string }[] }> {
   accountId.parse(id);
   const client = await pool.connect();
   try {
@@ -44,6 +44,10 @@ export async function exportAccount(pool: Pool, store: PrivateObjectStore, id: s
       COALESCE((SELECT jsonb_agg(c.record ORDER BY c.id) FROM catalog_collections c WHERE c.project_id = r.project_id AND c.creator_account_id = $1), '[]'::jsonb) AS collections
       FROM catalog_revisions r WHERE r.creator_account_id = $1 ORDER BY r.project_id`, [id])).rows;
     const deployments = (await client.query('SELECT deployment FROM channel_deployments WHERE creator_account_id = $1 ORDER BY id', [id])).rows.map(row => row.deployment);
+    const publicationApprovals = (await client.query('SELECT id, project_id, deployment_id, channel_revision, catalog_revision, expected_live_release_id, rollback_source_release_id, channel_snapshot, bindings, approved_at FROM publication_approvals WHERE creator_account_id = $1 ORDER BY approved_at, id', [id])).rows;
+    const publicationReleases = (await client.query('SELECT id, project_id, deployment_id, approval_id, sequence, previous_release_id, rollback_source_release_id, manifest_bytes, sha256, published_at FROM publication_releases WHERE creator_account_id = $1 ORDER BY deployment_id, sequence', [id])).rows;
+    const publicationLivePointers = (await client.query('SELECT deployment_id, project_id, release_id, sequence, activated_at FROM publication_live_pointers WHERE creator_account_id = $1 ORDER BY deployment_id', [id])).rows;
+    const publicationAuditEvents = (await client.query('SELECT project_id, deployment_id, approval_id, release_id, action, occurred_at FROM publication_audit_events WHERE creator_account_id = $1 ORDER BY id', [id])).rows;
     const legacyImportMarkers = (await client.query('SELECT legacy_project_id, fingerprint, imported_project_id FROM legacy_import_markers WHERE creator_account_id = $1 ORDER BY legacy_project_id', [id])).rows;
     const creatorAuditEvents = (await client.query('SELECT event_type, project_id, occurred_at, details FROM creator_audit_events WHERE creator_account_id = $1 ORDER BY id LIMIT 10001', [id])).rows;
     const operationalAuditEvents = (await client.query('SELECT event_type, outcome, occurred_at, details FROM operational_audit_events WHERE actor_hash = $1 ORDER BY id LIMIT 10001', [hash(id)])).rows;
@@ -60,7 +64,7 @@ export async function exportAccount(pool: Pool, store: PrivateObjectStore, id: s
       objects.push({ metadata, contentBase64: content.toString('base64') });
     }
     await client.query('COMMIT');
-    return { account, providerIdentities, projects, source, catalog, deployments, legacyImportMarkers, creatorAuditEvents, operationalAuditEvents, objects };
+    return { account, providerIdentities, projects, source, catalog, deployments, publicationApprovals, publicationReleases, publicationLivePointers, publicationAuditEvents, legacyImportMarkers, creatorAuditEvents, operationalAuditEvents, objects };
   } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error; }
   finally { client.release(); }
 }

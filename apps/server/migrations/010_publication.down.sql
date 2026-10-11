@@ -1,0 +1,10 @@
+DROP TABLE publication_audit_events;
+DROP TABLE publication_live_pointers;
+DROP FUNCTION firelaunch_live_sequence();
+ALTER TABLE publication_approvals DROP CONSTRAINT publication_rollback_source_scope;
+DROP TABLE publication_releases;
+DROP FUNCTION firelaunch_release_lineage();
+DROP TABLE publication_approvals;
+DROP FUNCTION firelaunch_publication_no_direct_delete();
+DROP FUNCTION firelaunch_publication_immutable();
+ALTER TABLE channel_deployments DROP CONSTRAINT channel_deployments_publication_scope;
