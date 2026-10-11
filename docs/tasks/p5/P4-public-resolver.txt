@@ -1,0 +1,30 @@
+TASK: Phase 5 / P4 — Public HTTPS resolver for immutable releases
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.5.4`.
+
+GOAL
+Deliver ONLY approved public-safe manifests and current deployment release identifiers without exposing creator-only APIs.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p5/{README.md,prompt-assessment.md,implementation-plan.md}, docs/decisions/0009-live-channel-delivery.md, and directly touched code/tests. Inspect actual HEAD, git status, root version and prior P5 checkpoint before edits. Historical c4-fix LOCAL GREEN does not convert Phase 4 or hosted release to GREEN.
+
+
+IMPLEMENT
+Inspect apps/server/src/api.ts, publication contracts, new P2 persistence and existing auth/private-object handlers. Add narrowly scoped read-only GET routes by opaque deployment/release ID: current pointer information (short/no cache) and immutable versioned published manifest bytes (stable hash/ETag, cacheable). Only public published releases; no draft, private media, raw catalog evidence, owner PII, signed capabilities, secrets, arbitrary code or access to creator mutation. Enforce exact routes/methods/size/correct content type/cache and consistent not-found without foreign disclosure; strict schema parsing before response. Include a staged HTTPS ingress/runbook option exposing ONLY allowed public route prefixes through a controlled reverse proxy or tunnel; do NOT expose legacy no-auth server or owner APIs/MinIO/DB and do not provision an unsolicited VPS. Treat test HTTPS reachability as manual P8 proof, not fixture proof.
+
+OUT OF SCOPE
+No required Bedrock request, native executable payload over public manifest, invented licensed media, unverified real hardware/Appstore claims, or production VPS. Preserve P2/c2 hosted S1–S6 OPEN/PARTIAL and original P4 NOT GREEN. Phase 6 owns scheduled feed sync; Phase 7 owns creator Developer Console handoff; Phase 8 owns physical Fire TV/Appstore approval.
+
+VALIDATION
+Owner/foreign/anonymous and unapproved/revoked release tests; malformed URLs/ID/path/oversized/headers/cache/ETag and concurrent live-pointer snapshots; no private data output. Affected server/contracts typecheck/build, focused tests, git diff --check.
+
+GIT
+Do not create commits, amend or rewrite/move HEAD. The runner exclusively owns the checkpoint commit. Preserve approved dirty work. Set only root package.json version and two root package-lock.json version entries to 0.5.4; internal workspace versions must remain unchanged unless demonstrated compatibility requires documented exception.
+
+FINAL RESPONSE
+Report affected source/doc boundaries, exact starting HEAD and final version, observed focused/full test counts and skips, checks, direct browser/device observations only when actually executed, and precise remaining qualification gates. Never call P5 GREEN from mocks or by assuming VirtualDevice equals physical Fire TV.
