@@ -1,11 +1,11 @@
-TASK: c4-fix / P1 — Repair migration recovery regression
+TASK: Correction 4 / P1 — Repair migration recovery regression
 
 MODEL / REASONING / USAGE
 - Recommended configuration: `GPT-6 Sol High`.
 - Browser required: no.
 
 VERSIONING
-The assigned project version is `0.4.8` (UNCHANGED).
+- Required unchanged project version: `0.4.8`.
 
 GOAL
 Resolve the actual failed kernel recovery assertion from P4 P8 without weakening migration/recovery safety.
