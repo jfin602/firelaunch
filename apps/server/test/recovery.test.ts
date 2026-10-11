@@ -19,6 +19,23 @@ const base = process.env.FIRELAUNCH_TEST_DATABASE_URL;
 const integration = base ? test : test.skip;
 const key = 'a7'.repeat(32);
 
+async function expectedMigrations(): Promise<number[]> {
+  const files = (await readdir(new URL('../migrations/', import.meta.url))).filter(name => name.endsWith('.up.sql')).sort();
+  assert.ok(files.length > 0, 'hosted migrations exist');
+  return files.map((file, index) => {
+    const match = /^(\d{3})_[a-z0-9_]+\.up\.sql$/.exec(file);
+    assert.ok(match, `ordered migration filename: ${file}`);
+    const version = Number(match[1]);
+    assert.equal(version, index + 1, 'hosted migrations are contiguous and ordered');
+    return version;
+  });
+}
+
+async function assertAppliedMigrations(pool: Pool, expected: number[]): Promise<void> {
+  const result = await pool.query<{ version: number }>('SELECT version FROM firelaunch_schema_migrations ORDER BY version');
+  assert.deepEqual(result.rows.map(row => row.version), expected, 'every ordered migration was applied');
+}
+
 integration('real Postgres backup, isolated restore, concurrent update, privacy delete and failed object recovery', async () => {
   const admin = new Pool({ connectionString: base });
   const suffix = randomUUID().replaceAll('-', '');
@@ -32,6 +49,8 @@ integration('real Postgres backup, isolated restore, concurrent update, privacy 
   let repository: HostedProjectRepository | undefined;
   let second: HostedProjectRepository | undefined;
   try {
+    const migrations = await expectedMigrations();
+    const latestMigration = migrations.at(-1)!;
     await admin.query(`CREATE DATABASE ${sourceName}`);
     repository = await HostedProjectRepository.connect(url.toString());
     second = await HostedProjectRepository.connect(url.toString());
@@ -42,7 +61,8 @@ integration('real Postgres backup, isolated restore, concurrent update, privacy 
     const aProject = await repository.create(a, { title: 'Private A' });
     const bProject = await repository.create(b, { title: 'Private B' });
     const store = new IsolatedObjectStore(sourceRoot);
-    assert.deepEqual(await health(repository.pool, store), { status: 'ok', database: true, objectStore: true, migration: 7 });
+    await assertAppliedMigrations(repository.pool, migrations);
+    assert.deepEqual(await health(repository.pool, store), { status: 'ok', database: true, objectStore: true, migration: latestMigration });
     const objects = new PrivateObjectService(repository, store);
     const first = await objects.put(a, aProject.id, 'evidence', 'application/pdf', Buffer.from('%PDF-1.4\na evidence\n%%EOF'));
     await objects.put(b, bProject.id, 'media', 'image/png', Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.from('b image')]));
@@ -75,6 +95,13 @@ integration('real Postgres backup, isolated restore, concurrent update, privacy 
 
     await restoreRecoveryArchive(archive, key, destination.toString(), new IsolatedObjectStore(destRoot));
     await assert.rejects(restoreRecoveryArchive(archive, key, destination.toString(), new IsolatedObjectStore(destRoot)), /already exists/);
+    // Inspect the archive's restored schema before connect() can run any migrations.
+    const restoredPool = new Pool({ connectionString: destination.toString() });
+    try {
+      await assertAppliedMigrations(restoredPool, migrations);
+      assert.deepEqual(await health(restoredPool, new IsolatedObjectStore(destRoot)),
+        { status: 'ok', database: true, objectStore: true, migration: latestMigration });
+    } finally { await restoredPool.end(); }
     const restored = await HostedProjectRepository.connect(destination.toString());
     try {
       assert.equal((await restored.read(b, bProject.id)).revision, 1, 'backup used one SQL snapshot');
