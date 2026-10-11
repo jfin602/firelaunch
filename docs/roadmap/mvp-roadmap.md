@@ -126,6 +126,10 @@ Generate differentiated video, audio and writing TV experiences using the existi
 
 ### P5 — Live Channel Delivery (0.5.x, weeks 8–9)
 
+**Activated 2026-10-11 at root 0.5.0 after committed c4-fix LOCAL GREEN (0.4.8).** Historical P4 remains NOT GREEN and hosted production remains NOT QUALIFIED. See [P5 task stack](../tasks/p5/README.md), [assessment](../tasks/p5/prompt-assessment.md), [plan](../tasks/p5/implementation-plan.md), and [ADR 0009](../decisions/0009-live-channel-delivery.md). P1–P7 target 0.5.1–0.5.7 and independent browser/VirtualDevice closeout P8 targets 0.5.8.
+
+**Qualification target policy:** The actual Vega VirtualDevice is the required authoritative P5 development test target; a physical Fire TV is NOT necessary for P5 GREEN and is deferred to P8 launch/hardware compatibility. P8 closeout must observe the SAME installed release VPKG fetch a newly approved compatible revision through a device-reachable HTTPS public resolver without reinstall, then retain last-known-good across offline restart, reject bad/incompatible releases and observe authorized rollback as a new monotonic release. Browser/unit fixtures alone do NOT qualify that. No production VPS or Bedrock account is necessary to begin implementation; P5 final qualification still needs real controlled HTTPS reachability and actual installed-TV evidence. Never claim VirtualDevice proof guarantees physical device behavior.
+
 Introduce approved immutable PublishedManifest revisions, HTTPS deployment resolver, draft/live separation, schema validation, TV cache, rollback and compatibility. Remote layout/catalog changes require no VPKG rebuild; native/runtime changes still do.
 
 **GREEN:** On a real qualified Vega target (VirtualDevice accepted for P5), the same installed VPKG receives an approved remote channel revision and safely recovers from network/incompatible-manifest failures. Actual physical Fire TV remains a P8 release gate.
