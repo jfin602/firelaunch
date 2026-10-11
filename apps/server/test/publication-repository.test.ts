@@ -12,6 +12,7 @@ import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.j
 import { HostedProjectRepository } from '../src/hosted-repository.js';
 import { CatalogRepository } from '../src/catalog-repository.js';
 import { PublicationRepository } from '../src/publication-repository.js';
+import { PublicReleaseResolver } from '../src/public-resolver.js';
 import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
 import { OidcVerifier } from '../src/auth/oidc.js';
 import { HostedAuth } from '../src/auth/sessions.js';
@@ -125,6 +126,7 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     const ownerLogin = await login('owner');
     const foreignLogin = await login('foreign');
     const publicationPath = `${origin}/api/projects/${project.id}/publication/${deploymentId}`;
+    const publicPath = `${origin}/public/v1/deployments/${deploymentId}`;
     const route = (action: string, input: unknown, credentials = ownerLogin, extra: Record<string, string> = {}) =>
       fetch(`${publicationPath}/${action}`, { method: 'POST', headers: { cookie: credentials.cookie, origin,
         'x-csrf-token': credentials.csrf, 'content-type': 'application/json', ...extra }, body: JSON.stringify(input) });
@@ -159,6 +161,8 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     assert.equal(routeApproval.status, 201);
     const routeApprovalId = (await routeApproval.json()).approvalId as string;
     assert.equal((await publication.history(owner, project.id, deploymentId)).releases.length, 0, 'approval does not publish');
+    assert.equal((await fetch(`${publicPath}/current`)).status, 404);
+    assert.equal((await fetch(`${origin}/public/v1/deployments/${emptyDeploymentId}/current`)).status, 404);
     await assert.rejects(publication.approve(foreign, request), { code: 'NOT_FOUND' });
     await assert.rejects(publication.approve(forged, request), { code: 'NOT_FOUND' });
     await assert.rejects(publication.approve(owner, { ...request, revisions: { channel: 1, catalog: 4 } }), { code: 'CONFLICT' });
@@ -176,6 +180,17 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     const firstRelease = raced.find(value => value.status === 'fulfilled')!.value;
     assert.equal(firstRelease.manifest.releaseSequence, 1);
     assert.equal(firstRelease.sha256, sha256(firstRelease.bytes));
+    const anonymousRelease = await fetch(`${publicPath}/releases/${firstRelease.manifest.releaseId}`);
+    assert.equal(anonymousRelease.status, 200);
+    assert.equal(anonymousRelease.headers.get('etag'), `"${firstRelease.sha256}"`);
+    assert.equal(await anonymousRelease.text(), firstRelease.bytes);
+    assert.equal((await fetch(`${origin}/public/v1/deployments/${id('dep')}/releases/${firstRelease.manifest.releaseId}`)).status, 404);
+    const anonymousCurrent = await fetch(`${publicPath}/current`, { headers: { cookie: foreignLogin.cookie } });
+    assert.deepEqual(await anonymousCurrent.json(), { deploymentId, releaseId: firstRelease.manifest.releaseId,
+      releaseSequence: 1, sha256: firstRelease.sha256 });
+    assert.equal((await fetch(`${publicPath}/releases/${firstRelease.manifest.releaseId}`,
+      { headers: { cookie: ownerLogin.cookie } })).status, 200);
+    assert.doesNotMatch(firstRelease.bytes, /private\/|verificationEvidenceId|creatorAccountId|object_key|signedUrl/);
     const winningApproval = firstRelease.manifest.approvalId;
     const retry = await other.publish(owner, project.id, deploymentId, winningApproval);
     assert.equal(retry.manifest.releaseId, firstRelease.manifest.releaseId);
@@ -202,6 +217,7 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     await assert.rejects(publication.publish(owner, project.id, deploymentId, stale.approvalId), { code: 'CONFLICT' });
     assert.equal((await route('publish', { approvalId: stale.approvalId })).status, 409);
     assert.equal((await publication.history(owner, project.id, deploymentId)).releases.length, 1, 'rights refusal has no partial release');
+    assert.equal((await fetch(`${publicPath}/current`).then(response => response.json())).releaseId, firstRelease.manifest.releaseId);
     await first.pool.query('UPDATE catalog_media_assets SET record = $2::jsonb WHERE id = $1', [playback.id, JSON.stringify(playback)]);
     await catalog.mutate(owner, project.id, 'media-assets', 'PUT', 4, revoked, playback.id);
     await assert.rejects(publication.publish(owner, project.id, deploymentId, stale.approvalId), { code: 'CONFLICT' });
@@ -215,6 +231,7 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     const projectV3 = await first.update(owner, project.id, 2, revised);
     const secondApproval = await publication.approve(owner, { ...nextRequest,
       revisions: { channel: projectV3.revision, catalog: 6 } });
+    const pointerReads = Array.from({ length: 20 }, () => fetch(`${publicPath}/current`).then(response => response.json()));
     const secondResponse = await route('publish', { approvalId: secondApproval.approvalId });
     assert.equal(secondResponse.status, 200);
     const secondRelease = await publication.publish(owner, project.id, deploymentId, secondApproval.approvalId);
@@ -222,6 +239,11 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     assert.equal(secondRelease.manifest.releaseSequence, 2);
     assert.equal(secondRelease.manifest.previousReleaseId, liveId);
     assert.equal(secondRelease.manifest.channel.title, 'Second edition');
+    const seen = await Promise.all(pointerReads);
+    assert.ok(seen.every(pointer => pointer.releaseId === liveId && pointer.releaseSequence === 1 && pointer.sha256 === firstRelease.sha256 ||
+      pointer.releaseId === secondRelease.manifest.releaseId && pointer.releaseSequence === 2 && pointer.sha256 === secondRelease.sha256));
+    assert.equal((await fetch(`${publicPath}/current`).then(response => response.json())).releaseId, secondRelease.manifest.releaseId);
+    assert.equal(await fetch(`${publicPath}/releases/${liveId}`).then(response => response.text()), firstRelease.bytes);
     const rollbackRequest = { revisions: { channel: 3, catalog: 6 }, expectedLiveReleaseId: secondRelease.manifest.releaseId,
       rollbackSourceReleaseId: liveId };
     const refusedRollbackResponse = await route('rollback', rollbackRequest);
@@ -247,6 +269,7 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     assert.equal(rollback.manifest.previousReleaseId, secondRelease.manifest.releaseId);
     assert.equal(rollback.manifest.channel.title, firstRelease.manifest.channel.title);
     assert.notEqual(rollback.manifest.releaseId, liveId);
+    assert.equal((await fetch(`${publicPath}/current`).then(response => response.json())).releaseId, rollback.manifest.releaseId);
     await assert.rejects(first.pool.query(`UPDATE publication_live_pointers SET release_id = $2, sequence = 1
       WHERE deployment_id = $1`, [deploymentId, liveId]), /must advance/);
     assert.equal((await publication.history(owner, project.id, deploymentId)).releases.length, 3);
@@ -256,6 +279,7 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     const history = await new PublicationRepository(restarted).history(owner, project.id, deploymentId);
     assert.equal(history.liveReleaseId, rollback.manifest.releaseId);
     assert.deepEqual(history.releases.map(value => value.sequence), [3, 2, 1]);
+    assert.equal((await new PublicReleaseResolver(restarted).current(deploymentId)).id, rollback.manifest.releaseId);
     const bytes = await restarted.pool.query<{ manifest_bytes: string; sha256: string }>(
       'SELECT manifest_bytes, sha256 FROM publication_releases WHERE id = $1', [liveId]);
     assert.equal(bytes.rows[0]?.manifest_bytes, firstRelease.bytes);

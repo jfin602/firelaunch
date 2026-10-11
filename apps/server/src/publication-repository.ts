@@ -41,7 +41,7 @@ type Locked = { owner: string; channel: ChannelSpec; channelRevision: number; ca
 
 const newId = (prefix: string) => `${prefix}_${randomUUID().replaceAll('-', '')}`;
 const digest = (bytes: string) => createHash('sha256').update(bytes).digest('hex');
-function canonicalBytes(value: unknown): string {
+export function canonicalBytes(value: unknown): string {
   const sort = (entry: unknown): unknown => Array.isArray(entry) ? entry.map(sort) :
     entry && typeof entry === 'object' ? Object.fromEntries(Object.entries(entry)
       .filter(([, part]) => part !== undefined).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)

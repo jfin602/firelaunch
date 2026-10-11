@@ -15,6 +15,7 @@ import { CatalogProjectionService } from './catalog-projection.js';
 import { agentCatalogGrounding } from './agent-grounding.js';
 import { composeCatalogDraft } from './catalog-composition.js';
 import { PublicationRepository } from './publication-repository.js';
+import { PublicReleaseResolver, publicReleaseRoute } from './public-resolver.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -63,8 +64,14 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
   const catalog = hostedRepository ? new CatalogRepository(hostedRepository) : null;
   const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog) : null;
   const publication = hostedRepository ? new PublicationRepository(hostedRepository) : null;
+  const publicResolver = mode?.mode === 'hosted' && hostedRepository ? new PublicReleaseResolver(hostedRepository) : null;
   return createServer(async (request, response) => {
     try {
+      if (request.url?.startsWith('/public/') || request.url === '/public') {
+        if (!publicResolver) throw new RepositoryError('NOT_FOUND', 'Route not found');
+        await publicReleaseRoute(request, response, publicResolver);
+        return;
+      }
       const url = new URL(request.url ?? '', 'http://localhost');
       const segments = url.pathname.split('/').filter(Boolean);
       if (segments[0] === 'api' && segments[1] === 'auth' && mode?.mode === 'hosted') {
