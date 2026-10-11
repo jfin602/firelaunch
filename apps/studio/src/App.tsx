@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import React, { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { ChannelMutation } from '@firelaunch/channel-engine';
 import type { ChannelProject, ContentItem, Module, Page } from '@firelaunch/contracts';
 import type { AgentEvent } from '@firelaunch/agent';
-import { ApiError, askAgent, createProject, getProject, getSession, listProjects, logout, mutateProject, type StudioSession } from './api.js';
+import { ApiError, askAgent, createProject, getProject, getSession, listProjects, logout, mutateProject, type CatalogSelection, type StudioSession } from './api.js';
 import { Preview } from './Preview.js';
 import { AgentPanel } from './AgentPanel.js';
 import { Delivery } from './Delivery.js';
@@ -110,13 +110,14 @@ export default function App() {
   const [error, setError] = useState('');
   const [newChannel, setNewChannel] = useState(false);
   const [agentEvents, setAgentEvents] = useState<Record<string, AgentEvent[]>>({});
+  const [catalogSelections, setCatalogSelections] = useState<Record<string, { selection: CatalogSelection; creator: 'video' | 'audio' | 'writing' }>>({});
   const [session, setSession] = useState<StudioSession | null>(null);
   const [signedOut, setSignedOut] = useState(false);
   const accountRef = useRef<string | null>(null);
   const select = (next: ChannelProject) => { projectRef.current = next; setProject(next); window.history.replaceState(null, '', `?project=${next.id}`); };
   const acceptProject = (next: ChannelProject) => { select(next); setProjects(previous => previous.map(item => item.id === next.id ? next : item)); };
   useEffect(() => {
-    const expired = () => { accountRef.current = null; setSignedOut(true); setSession(null); setProjects([]); setProject(null); setAgentEvents({}); projectRef.current = null; window.history.replaceState(null, '', window.location.pathname); };
+    const expired = () => { accountRef.current = null; setSignedOut(true); setSession(null); setProjects([]); setProject(null); setAgentEvents({}); setCatalogSelections({}); projectRef.current = null; window.history.replaceState(null, '', window.location.pathname); };
     const checkSession = () => { if (!accountRef.current) return; void getSession().then(active => {
       if (!active || active.accountId !== accountRef.current) { expired(); return; }
       setSession(active);
@@ -173,13 +174,14 @@ export default function App() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
     finally { setBusy(false); }
   };
+  const draftSelection = project ? catalogSelections[project.id] : undefined;
   if (signedOut) return <div className="welcome"><h1>Sign in to FireLaunch</h1><p>Your session has ended or you have not signed in.</p><a className="primary" href="/api/auth/login">Sign in with Google</a></div>;
   return <div className="app-shell"><aside className="sidebar"><div className="wordmark"><span className="mark">✳</span><span>firelaunch<small>CREATOR STUDIO</small></span></div>{session && <div className="sidebar-label">{session.email}<button onClick={() => void logout().then(() => window.dispatchEvent(new window.Event('firelaunch-session-expired'))).catch(reason => setError(String(reason)))}>Sign out</button></div>}<div className="sidebar-label">WORKSPACE</div><button className="project-switch" onClick={() => setNewChannel(true)}><span className="project-avatar">{project?.spec.title[0] ?? '+'}</span><span>{project?.spec.title ?? 'New channel'}<small>{project ? `REV ${project.revision} · ${session ? 'PRIVATE' : 'LOCAL'}` : 'GET STARTED'}</small></span><span>＋</span></button>{projects.length > 1 && <select className="project-select" aria-label="Switch project" value={project?.id ?? ''} onChange={event => { if (projects.some(item => item.id === event.target.value)) void switchProject(event.target.value); }}>{projects.map(item => <option key={item.id} value={item.id}>{item.spec.title}</option>)}</select>}
     <div className="sidebar-label">CHANNEL WORKSPACE</div><nav className="sidebar-nav" aria-label="Studio surfaces">{surfaces.map(target => <button key={target} disabled={!project} className={surface === target ? 'active' : ''} onClick={() => setSurface(target)}><span>{icons[target]}</span>{target}</button>)}</nav><div className="sidebar-footer">✧ &nbsp; Vega-first creation<br/><small>{session ? 'Hosted studio' : 'Local studio'}</small></div></aside>
     <main><header className="topbar"><div><span className="eyebrow">STUDIO / {surface.toUpperCase()}</span><h1>{project?.spec.title ?? 'Your next channel'}</h1></div><div className="topbar-right"><span className="status"><i/> {busy ? 'SAVING' : project ? session ? 'SAVED PRIVATELY' : 'SAVED LOCALLY' : 'READY'}</span><button onClick={() => setNewChannel(previous => !previous)}>{newChannel && project ? '← Current channel' : '＋ New channel'}</button></div></header>
       {error && <div className="error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></div>}
       {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : <div className="workspace"><div className="workspace-main"><Preview key={project.id} spec={project.spec}/><div className="under-preview"><div><span className="eyebrow">TV-FIRST INTERACTION</span><h2>From idea to living room.</h2><p>Navigate every tile with the remote. Changes you save on the right appear here immediately. Device playback still needs separate qualification.</p></div><span className="signal">◉ &nbsp; SHARED TV SEMANTICS</span></div></div><aside className="inspector" key={`${project.id}:${surface}`}>
-        {surface === 'Catalog' ? <Catalog projectId={project.id} hosted={!!session}/> : surface === 'Design' ? <Design project={project} commit={commit}/> : surface === 'Content' ? <Content project={project} commit={commit}/> : surface === 'Create' ? <AgentPanel key={project.id} project={project} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery project={project} surface={surface} />}
+        {surface === 'Catalog' ? <Catalog project={project} hosted={!!session} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => setSurface('Create')}/> : surface === 'Design' ? <Design project={project} commit={commit}/> : surface === 'Content' ? <Content project={project} commit={commit}/> : surface === 'Create' ? <AgentPanel key={project.id} project={project} {...(draftSelection ? { catalogSelection: draftSelection.selection } : {})} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery project={project} surface={surface} />}
       </aside></div>}
     </main></div>;
 }

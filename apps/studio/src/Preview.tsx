@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { contentPresentation, isPlayableContent, type ChannelSpec } from '@firelaunch/contracts';
 import { activeItem, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
 import { keyboardCommand, navigate, reconcile } from './preview-state.js';

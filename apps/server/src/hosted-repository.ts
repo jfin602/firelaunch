@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { RepositoryError } from './repository.js';
 import { sourceMatchesBaseline } from './hosted-workspace.js';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
+import type { CompositionKind } from './catalog-composition.js';
 
 type ProjectRow = { id: string; revision: number; spec: unknown; created_at: Date; updated_at: Date };
 const channelId = z.string().regex(/^ch_[a-f0-9]{32}$/);
@@ -47,7 +48,7 @@ export class HostedProjectRepository {
       await client.query('SELECT pg_advisory_xact_lock($1)', [482921]);
       await client.query('CREATE TABLE IF NOT EXISTS firelaunch_schema_migrations (version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
       const result = await client.query<{ version: number }>('SELECT version FROM firelaunch_schema_migrations ORDER BY version');
-      if (result.rows.some(row => ![1, 2, 3, 4, 5, 6, 7, 8].includes(row.version))) throw new Error('Unsupported hosted database migration');
+      if (result.rows.some(row => ![1, 2, 3, 4, 5, 6, 7, 8, 9].includes(row.version))) throw new Error('Unsupported hosted database migration');
       if (!result.rows.some(row => row.version === 1)) {
         const sql = await readFile(new URL('../migrations/001_hosted_ownership.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
@@ -87,6 +88,10 @@ export class HostedProjectRepository {
         const sql = await readFile(new URL('../migrations/008_catalog_item_approvals.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
         await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [8]);
+      }
+      if (!result.rows.some(row => row.version === 9)) {
+        await client.query(await readFile(new URL('../migrations/009_catalog_drafts.up.sql', import.meta.url), 'utf8'));
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [9]);
       }
       await client.query('COMMIT');
     } catch (error) { await client.query('ROLLBACK'); throw error; }
@@ -182,6 +187,42 @@ export class HostedProjectRepository {
         const visible = await client.query('SELECT 1 FROM channel_ownerships WHERE project_id = $1 AND creator_account_id = $2', [id, owner]);
         throw new RepositoryError(visible.rowCount ? 'CONFLICT' : 'NOT_FOUND', visible.rowCount ? 'Project revision changed' : 'Project not found');
       }
+      await client.query('COMMIT');
+      return project(updated.rows[0]);
+    } catch (error) { await client.query('ROLLBACK'); return sqlError(error); }
+    finally { client.release(); }
+  }
+
+  async catalogDraftBaseline(principal: AuthenticatedPrincipal, id: string): Promise<{ kind: CompositionKind; spec: ChannelSpec; selection: { itemIds: string[]; collectionIds: string[] } } | null> {
+    await this.read(principal, id);
+    const result = await this.pool.query<{ creator_type: CompositionKind; baseline: unknown; selection: unknown }>(
+      'SELECT creator_type, baseline, selection FROM catalog_draft_baselines WHERE project_id = $1 AND creator_account_id = $2', [id, principal.accountId]);
+    const row = result.rows[0];
+    if (!row) return null;
+    try { return { kind: row.creator_type, spec: channelSpecSchema.parse(row.baseline), selection: z.strictObject({ itemIds: z.array(z.string()), collectionIds: z.array(z.string()) }).parse(row.selection) }; }
+    catch { throw new RepositoryError('STORAGE_ERROR', 'Invalid catalog draft baseline'); }
+  }
+
+  async saveCatalogDraft(principal: AuthenticatedPrincipal, id: string, projectRevision: number, catalogRevision: number,
+    kind: CompositionKind, spec: ChannelSpec, baseline: ChannelSpec, selection: { itemIds: string[]; collectionIds: string[] }): Promise<ChannelProject> {
+    projectId(id);
+    channelSpecSchema.parse(spec); channelSpecSchema.parse(baseline);
+    if (spec.id !== id || baseline.id !== id) throw new RepositoryError('INVALID_INPUT', 'Draft channel does not match project');
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const owner = await this.owner(principal, client);
+      const owned = await client.query('SELECT 1 FROM channel_ownerships WHERE project_id = $1 AND creator_account_id = $2 FOR UPDATE', [id, owner]);
+      if (!owned.rowCount) throw new RepositoryError('NOT_FOUND', 'Project not found');
+      const catalog = await client.query<{ revision: number }>('SELECT revision FROM catalog_revisions WHERE project_id = $1 AND creator_account_id = $2 FOR UPDATE', [id, owner]);
+      if ((catalog.rows[0]?.revision ?? 0) !== catalogRevision) throw new RepositoryError('CONFLICT', 'Catalog changed; review and retry generation');
+      const updated = await client.query<ProjectRow>(`UPDATE channel_projects SET spec = $4::jsonb, revision = revision + 1, updated_at = now()
+        WHERE id = $1 AND creator_account_id = $2 AND revision = $3 RETURNING id, spec, revision, created_at, updated_at`,
+      [id, owner, projectRevision, JSON.stringify(spec)]);
+      if (!updated.rows[0]) throw new RepositoryError('CONFLICT', 'Project changed; review and retry generation');
+      await client.query(`INSERT INTO catalog_draft_baselines(project_id, creator_account_id, creator_type, baseline, selection)
+        VALUES ($1, $2, $3, $4::jsonb, $5::jsonb) ON CONFLICT (project_id) DO UPDATE SET creator_type = EXCLUDED.creator_type, baseline = EXCLUDED.baseline, selection = EXCLUDED.selection`,
+      [id, owner, kind, JSON.stringify(baseline), JSON.stringify(selection)]);
       await client.query('COMMIT');
       return project(updated.rows[0]);
     } catch (error) { await client.query('ROLLBACK'); return sqlError(error); }

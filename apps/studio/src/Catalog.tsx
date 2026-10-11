@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, type FormEvent } from 'react';
-import type { CatalogItem, Collection, MediaAsset } from '@firelaunch/contracts';
-import { ApiError, approveCatalogImport, deletePrivateObject, previewCatalogImport, readCatalog, uploadPrivateMedia, writeCatalog, type CatalogSnapshot, type ImportPreview } from './api.js';
+import type { CatalogItem, Collection, MediaAsset, ChannelProject } from '@firelaunch/contracts';
+import { ApiError, approveCatalogImport, deletePrivateObject, generateCatalogDraft, getProject, previewCatalogImport, readCatalog, readCatalogDraft, uploadPrivateMedia, writeCatalog, type CatalogSelection, type CatalogSnapshot, type DraftChanges, type ImportPreview } from './api.js';
 
 type CreatorType = 'video' | 'audio' | 'writing';
 type SourceType = 'creator_csv' | 'creator_json' | 'creator_https_feed' | 'creator_upload';
@@ -9,11 +9,12 @@ const sourceLabel: Record<SourceType, string> = { creator_csv: 'CSV file', creat
 const kindFor = (creator: CreatorType): CatalogItem['kind'] => creator === 'writing' ? 'book' : creator;
 const collectionFor = (creator: CreatorType): Collection['kind'] => creator === 'writing' ? 'bookshelf' : creator === 'audio' ? 'album' : 'series';
 const draftSource = (type: SourceType, endpointUrl: string) => ({ schemaVersion: 1, type, state: 'discovered', ...(type === 'creator_https_feed' ? { endpointUrl } : {}), permission: { retrieval: type === 'creator_https_feed' ? 'creator_asserted' : 'unknown', tvDisplay: 'unknown' } });
-const errorText = (reason: unknown): string => reason instanceof ApiError && reason.status === 409 ? 'Catalog changed in another tab. Latest revision loaded; preview or save again.' : reason instanceof Error ? reason.message : String(reason);
+const errorText = (reason: unknown): string => reason instanceof ApiError && reason.status === 409 ? 'Catalog or channel changed in another tab. Latest revision loaded; review and retry.' : reason instanceof Error ? reason.message : String(reason);
 
-export function Catalog({ projectId, hosted }: { projectId: string; hosted: boolean }) {
+export function Catalog({ project, projectId: legacyProjectId, hosted, onGenerated, onSelectionRestored, onRefine, initialSelection, initialCreator = 'video' }: { project?: ChannelProject; projectId?: string; hosted: boolean; onGenerated?: (project: ChannelProject, selection: CatalogSelection, creator: CreatorType) => void; onSelectionRestored?: (selection: CatalogSelection, creator: CreatorType) => void; onRefine?: () => void; initialSelection?: CatalogSelection; initialCreator?: CreatorType }) {
+  const projectId = project?.id ?? legacyProjectId!;
   const [inventory, setInventory] = useState<CatalogSnapshot | null>(null);
-  const [creator, setCreator] = useState<CreatorType>('video');
+  const [creator, setCreator] = useState<CreatorType>(initialCreator);
   const [sourceType, setSourceType] = useState<SourceType>('creator_csv');
   const [endpoint, setEndpoint] = useState('');
   const [sourceId, setSourceId] = useState('');
@@ -34,15 +35,43 @@ export function Catalog({ projectId, hosted }: { projectId: string; hosted: bool
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [draftItemIds, setDraftItemIds] = useState<string[]>(initialSelection?.itemIds ?? []);
+  const [draftCollectionIds, setDraftCollectionIds] = useState<string[]>(initialSelection?.collectionIds ?? []);
+  const [changes, setChanges] = useState<DraftChanges | null>(null);
   const selected = inventory?.items.find(item => item.id === selectedId);
   const source = inventory?.sources.find(item => item.id === sourceId);
   const activeCollection = inventory?.collections.find(item => item.id === collectionId);
   const assets = inventory?.mediaAssets.filter(asset => asset.catalogItemId === selectedId) ?? [];
+  const chosenItems = inventory?.items.filter(item => draftItemIds.includes(item.id) || inventory.collections.some(collection => draftCollectionIds.includes(collection.id) && collection.itemIds.includes(item.id))) ?? [];
+  const matchingItems = chosenItems.filter(item => creator === 'writing' ? ['book', 'audio', 'video'].includes(item.kind) : item.kind === creator);
+  const missingMedia = matchingItems.filter(item => item.kind !== 'book' && !inventory?.mediaAssets.some(asset => item.mediaAssetIds.includes(asset.id) && asset.kind === item.kind && asset.deliveryEligible && asset.tvPlaybackRights?.status === 'cleared' && asset.location.type === 'https' && !new URL(asset.location.url).search));
+  const generate = () => void run(async () => {
+    if (!project || !inventory) throw new Error('Open a saved hosted channel first.');
+    const selection = { expectedCatalogRevision: inventory.revision, itemIds: draftItemIds, collectionIds: draftCollectionIds };
+    try {
+      const result = await generateCatalogDraft(project, creator, selection);
+      setChanges(result.changes); onGenerated?.(result.project, selection, creator);
+      return `Draft saved at revision ${result.project.revision}. Review the difference and TV Preview.`;
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 409) {
+        const fresh = await getProject(project.id);
+        onGenerated?.(fresh, selection, creator);
+      }
+      throw reason;
+    }
+  });
   const refresh = async () => { const data = await readCatalog(projectId); setInventory(data); return data; };
   useEffect(() => {
     if (!hosted) return;
     let alive = true;
     void readCatalog(projectId).then(data => { if (alive) setInventory(data); }).catch(reason => { if (alive) setError(errorText(reason)); });
+    return () => { alive = false; };
+  }, [projectId, hosted]);
+  useEffect(() => {
+    if (!project || initialSelection) return;
+    let alive = true;
+    void readCatalogDraft(project.id).then(draft => { if (alive && draft) { setCreator(draft.creatorType); setDraftItemIds(draft.selection.itemIds); setDraftCollectionIds(draft.selection.collectionIds); onSelectionRestored?.(draft.selection, draft.creatorType); } })
+      .catch(reason => { if (alive) setError(errorText(reason)); });
     return () => { alive = false; };
   }, [projectId, hosted]);
   useEffect(() => { setOverride({ title: selected?.creatorOverrides?.title ?? '', description: selected?.creatorOverrides?.description ?? '' }); }, [selectedId, inventory?.revision]);
@@ -121,7 +150,7 @@ export function Catalog({ projectId, hosted }: { projectId: string; hosted: bool
     await refresh(); return `${use === 'television_display' ? 'Display' : 'Playback'} rights ${cleared ? 'asserted' : 'revoked'}; delivery remains disabled.`;
   });
   if (!hosted) return <div className="panel-content"><h2>Catalog needs a hosted account.</h2><p>Local channels still support the Create, Design, Content, Code, Build and Preview workflow.</p></div>;
-  return <div className="panel-content catalog-panel"><span className="eyebrow">CATALOG / PRIVATE DRAFT</span><h2>Start with your work.</h2><p>Import creator-controlled records, review them, then curate Collections and licensed media. Catalog inventory does not change TV Preview until a later approved channel workflow.</p>
+  return <div className="panel-content catalog-panel"><span className="eyebrow">CATALOG / PRIVATE DRAFT</span><h2>Start with your work.</h2><p>Import creator-controlled records, review them, then curate Collections and licensed media. Generate saves an approved selection as a ChannelSpec draft for TV Preview.</p>
     {error && <p role="alert" className="catalog-error">{error}</p>}{message && <p role="status" className="catalog-status">{message}</p>}{!inventory ? <p>Loading catalog…</p> : <>
     <div className="section-label">01 / CREATOR & SOURCE</div><label className="field"><span>CREATOR TYPE</span><select aria-label="Creator type" value={creator} onChange={event => { const value = event.target.value as CreatorType; setCreator(value); setCollectionKind(collectionFor(value)); }}><option value="video">Video</option><option value="audio">Audio</option><option value="writing">Writing</option></select></label>
     <form onSubmit={addSource}><label className="field"><span>NEW SOURCE</span><select aria-label="New source" value={sourceType} onChange={event => setSourceType(event.target.value as SourceType)}>{Object.entries(sourceLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{sourceType === 'creator_https_feed' && <label className="field"><span>PUBLIC HTTPS FEED URL</span><input type="url" required value={endpoint} onChange={event => setEndpoint(event.target.value)} placeholder="https://example.com/feed.json" /></label>}<button disabled={working}>Add source</button></form>
@@ -132,5 +161,12 @@ export function Catalog({ projectId, hosted }: { projectId: string; hosted: bool
     {selected && <><p><strong>Source:</strong> {selected.sourceRecord.metadata.title}<br/><strong>External ID:</strong> {selected.sourceRecord.externalId.value}<br/><strong>Kind:</strong> {selected.kind}</p><form onSubmit={saveOverride}><label className="field"><span>CREATOR TITLE OVERRIDE</span><input maxLength={160} value={override.title} onChange={event => setOverride({ ...override, title: event.target.value })} placeholder={selected.sourceRecord.metadata.title}/></label><label className="field"><span>CREATOR DESCRIPTION OVERRIDE</span><textarea maxLength={4000} value={override.description} onChange={event => setOverride({ ...override, description: event.target.value })}/></label><button disabled={working || (!override.title.trim() && !override.description.trim())}>Save override</button></form></>}
     <div className="section-label">04 / COLLECTIONS</div><form onSubmit={addCollection}><label className="field"><span>COLLECTION NAME</span><input required maxLength={160} value={collectionTitle} onChange={event => setCollectionTitle(event.target.value)}/></label><label className="field"><span>COLLECTION TYPE</span><select value={collectionKind} onChange={event => setCollectionKind(event.target.value as Collection['kind'])}>{(['series', 'bookshelf', 'featured', 'album', 'playlist', 'rail'] as const).map(kind => <option key={kind}>{kind}</option>)}</select></label><button disabled={working}>Add Collection</button></form><label className="field"><span>EDIT COLLECTION</span><select aria-label="Select Collection" value={collectionId} onChange={event => setCollectionId(event.target.value)}><option value="">Choose a Collection</option>{inventory.collections.map(value => <option key={value.id} value={value.id}>{value.title} · {value.itemIds.length} items</option>)}</select></label>{activeCollection && selected && <button disabled={working} onClick={toggleCollection}>{activeCollection.itemIds.includes(selected.id) ? 'Remove selected item' : 'Add selected item'}</button>}
     {selected && <><div className="section-label">05 / PRIVATE MEDIA & TV RIGHTS</div><p>Upload a private file under 1 MB. Assert display and playback rights separately. An uploaded file alone is never ready for TV delivery.</p><form onSubmit={attachMedia}><label className="field"><span>MEDIA USE</span><select aria-label="Media use" value={mediaUse} onChange={event => setMediaUse(event.target.value as typeof mediaUse)}><option value="artwork">Artwork</option><option value="video">Video</option><option value="audio">Audio</option></select></label><label className="field"><span>PRIVATE FILE</span><input type="file" required accept="image/png,image/jpeg,video/mp4,audio/mpeg" onChange={event => setMediaFile(event.target.files?.[0] ?? null)}/></label><label className="check"><input type="checkbox" checked={display} onChange={event => setDisplay(event.target.checked)}/> I have television display rights</label><label className="check"><input type="checkbox" checked={playback} onChange={event => setPlayback(event.target.checked)}/> I have television playback rights</label><button disabled={working || !mediaFile}>Upload private media</button></form><ul>{assets.map(asset => <li key={asset.id}>{asset.kind}: display {asset.tvDisplayRights?.status ?? 'unknown'}, playback {asset.tvPlaybackRights?.status ?? 'unknown'} · {asset.deliveryEligible ? 'eligible' : 'delivery disabled'}<div className="button-row"><button disabled={working} onClick={() => setAssetRights(asset, 'television_display', asset.tvDisplayRights?.status !== 'cleared')}>{asset.tvDisplayRights?.status === 'cleared' ? 'Revoke display' : 'Assert display'}</button><button disabled={working} onClick={() => setAssetRights(asset, 'television_playback', asset.tvPlaybackRights?.status !== 'cleared')}>{asset.tvPlaybackRights?.status === 'cleared' ? 'Revoke playback' : 'Assert playback'}</button></div></li>)}</ul></>}
+    <div className="section-label">06 / GENERATE CHANNEL DRAFT</div><p>Select reviewed work and Collections for the {creator} channel. Books open details without Play. Audio and films need cleared playback rights and eligible delivery.</p>
+    <div role="group" aria-label="Generate selection">{inventory.collections.map(collection => <label className="check" key={collection.id}><input type="checkbox" checked={draftCollectionIds.includes(collection.id)} onChange={event => setDraftCollectionIds(previous => event.target.checked ? [...previous, collection.id] : previous.filter(id => id !== collection.id))}/>{collection.title} · Collection ({collection.itemIds.length})</label>)}{inventory.items.map(item => <label className="check" key={item.id}><input type="checkbox" checked={draftItemIds.includes(item.id)} onChange={event => setDraftItemIds(previous => event.target.checked ? [...previous, item.id] : previous.filter(id => id !== item.id))}/>{item.creatorOverrides?.title ?? item.sourceRecord.metadata.title} · {item.kind}</label>)}</div>
+    <p>Selected: {draftCollectionIds.length} Collection(s), {chosenItems.length} item(s); {matchingItems.length} match this creator type.</p>
+    {missingMedia.length > 0 && <p className="catalog-error" role="status">{missingMedia.length} selected audio/video item(s) lack eligible playback media or rights. They will be excluded.</p>}
+    {matchingItems.some(item => item.kind === 'book') && <p>Books can appear without playback media. Missing display artwork uses a placeholder.</p>}
+    <button className="primary" disabled={working || !matchingItems.length || (creator !== 'writing' && matchingItems.every(item => missingMedia.includes(item)))} onClick={generate}>Generate {creator} draft →</button>
+    {changes && <div className="catalog-preview" role="status"><strong>Saved draft difference</strong><p>{changes.added} added · {changes.updated} updated · {changes.removed} removed · Pages: {changes.pages.join(', ')}</p>{changes.notices.map((notice, index) => <p key={index}>{notice}</p>)}<p>Brand, creator edits and custom source are preserved. Review Preview, Design and Content before another Generate.</p><button onClick={onRefine}>Describe a change →</button></div>}
     </>}</div>;
 }

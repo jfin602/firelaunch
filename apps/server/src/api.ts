@@ -13,6 +13,7 @@ import { audit } from './operations.js';
 import { CatalogRepository, catalogKinds, type CatalogKind } from './catalog-repository.js';
 import { CatalogProjectionService } from './catalog-projection.js';
 import { agentCatalogGrounding } from './agent-grounding.js';
+import { composeCatalogDraft } from './catalog-composition.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -24,6 +25,9 @@ const filePreviewSchema = z.strictObject({ sourceId: z.string().regex(/^src_[a-f
 const fileApproveSchema = filePreviewSchema.extend({ expectedRevision: z.number().int().nonnegative(), fingerprint: z.string().regex(/^[a-f0-9]{64}$/) });
 const feedPreviewSchema = z.strictObject({ sourceId: z.string().regex(/^src_[a-f0-9]{32}$/) });
 const feedApproveSchema = feedPreviewSchema.extend({ content: z.string().max(512_000), expectedRevision: z.number().int().nonnegative(), fingerprint: z.string().regex(/^[a-f0-9]{64}$/) });
+const draftSchema = z.strictObject({ creatorType: z.enum(['video', 'audio', 'writing']), expectedRevision: z.number().int().positive(),
+  expectedCatalogRevision: z.number().int().nonnegative(), itemIds: z.array(z.string().regex(/^ci_[a-f0-9]{32}$/)).max(500),
+  collectionIds: z.array(z.string().regex(/^col_[a-f0-9]{32}$/)).max(100) });
 
 async function body(request: IncomingMessage): Promise<unknown> {
   if (!request.headers['content-type']?.toLowerCase().startsWith('application/json')) throw new ZodError([{ code: 'custom', path: [], message: 'Expected application/json' }]);
@@ -44,7 +48,7 @@ function respond(response: ServerResponse, status: number, value: unknown): void
 }
 
 export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository, privateObjects?: PrivateObjectService) {
-  const status = selectedProvider ? { provider: selectedProvider.name, configured: true, message: `${selectedProvider.name} injected for this server; availability checked on request.` } : providerStatus(process.env);
+  const status = selectedProvider ? selectedProvider.name === 'mock' ? providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'mock' }) : { provider: selectedProvider.name, configured: true, message: `${selectedProvider.name} injected for this server; availability checked on request.` } : providerStatus(process.env);
   const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : status.provider === 'bedrock' ? new BedrockProvider(process.env.BEDROCK_MODEL_ID!) : new OpenAIProvider(process.env.OPENAI_MODEL!, process.env.OPENAI_API_KEY!))) : null;
   const workspace = mode?.mode === 'local-legacy' ? new WorkspaceService(repository) : null;
   const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository) : null;
@@ -172,6 +176,33 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             const input = mutationRequestSchema.parse(await body(request));
             if (current.revision !== input.expectedRevision) throw new RepositoryError('CONFLICT', 'Project revision changed');
             respond(response, 200, await hostedRepository.update(principal, current.id, input.expectedRevision, applyMutation(current.spec, input.mutation))); return;
+          }
+          if (segments.length === 4 && !url.search && segments[3] === 'catalog-draft' && projection && request.method === 'POST') {
+            const id = segments[2]!;
+            const input = draftSchema.parse(await body(request));
+            const current = await hostedRepository.read(principal, id);
+            const selected = await projection.project(principal, id, { expectedProjectRevision: input.expectedRevision,
+              expectedCatalogRevision: input.expectedCatalogRevision, itemIds: input.itemIds, collectionIds: input.collectionIds });
+            const prior = await hostedRepository.catalogDraftBaseline(principal, id);
+            if (prior && prior.kind !== input.creatorType) throw new RepositoryError('CONFLICT', 'This draft uses another creator type; start a new channel to change type');
+            const composed = composeCatalogDraft(input.creatorType, current.spec, selected, prior?.spec);
+            const before = new Set(current.spec.content.map(item => item.id));
+            const after = new Set(composed.spec.content.map(item => item.id));
+            const existing = new Map(current.spec.content.map(item => [item.id, item]));
+            const changes = { added: [...after].filter(value => !before.has(value)).length,
+              removed: [...before].filter(value => !after.has(value)).length,
+              updated: composed.spec.content.filter(item => existing.has(item.id) && JSON.stringify(existing.get(item.id)) !== JSON.stringify(item)).length,
+              pages: composed.spec.pages.map(page => page.title), notices: composed.notices };
+            if (input.creatorType !== 'writing' && !composed.spec.content.some(item => item.presentation === input.creatorType))
+              throw new RepositoryError('INVALID_INPUT', 'No selected licensed playable media is ready. Review rights and delivery before Generate.');
+            const saved = await hostedRepository.saveCatalogDraft(principal, id, input.expectedRevision, input.expectedCatalogRevision,
+              input.creatorType, composed.spec, composed.baseline, { itemIds: input.itemIds, collectionIds: input.collectionIds });
+            respond(response, 200, { project: saved, changes }); return;
+          }
+          if (segments.length === 4 && !url.search && segments[3] === 'catalog-draft' && request.method === 'GET') {
+            const prior = await hostedRepository.catalogDraftBaseline(principal, segments[2]!);
+            respond(response, 200, prior ? { creatorType: prior.kind, selection: { ...prior.selection,
+              expectedCatalogRevision: (await catalog!.read(principal, segments[2]!)).revision } } : null); return;
           }
           if (segments.length === 4 && !url.search) {
             const id = segments[2]!;

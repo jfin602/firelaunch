@@ -1,9 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import React, { useEffect, useState, type FormEvent } from 'react';
 import type { AgentEvent } from '@firelaunch/agent';
 import type { ChannelProject } from '@firelaunch/contracts';
-import { agentStatus, askAgent, getProject } from './api.js';
+import { agentStatus, askAgent, getProject, type CatalogSelection } from './api.js';
 
-export function AgentPanel({ project, onUpdate, events, onEvents }: { project: ChannelProject; onUpdate: (project: ChannelProject) => void; events: AgentEvent[]; onEvents: (entries: AgentEvent[]) => void }) {
+export function AgentPanel({ project, onUpdate, events, onEvents, catalogSelection }: { project: ChannelProject; onUpdate: (project: ChannelProject) => void; events: AgentEvent[]; onEvents: (entries: AgentEvent[]) => void; catalogSelection?: CatalogSelection }) {
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('Checking provider…');
   const [available, setAvailable] = useState(false);
@@ -19,7 +19,7 @@ export function AgentPanel({ project, onUpdate, events, onEvents }: { project: C
     if (!request || busy) return;
     setMessage(''); setBusy(true);
     try {
-      const result = await askAgent(project, request);
+      const result = await askAgent(project, request, catalogSelection);
       onUpdate(result.project);
       onEvents(result.events);
       if (result.status === 'error') {
