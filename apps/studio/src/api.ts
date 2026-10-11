@@ -1,4 +1,4 @@
-import { projectSchema, type ChannelProject } from '@firelaunch/contracts';
+import { channelDeploymentSchema, projectSchema, type ChannelProject, type PublicationBindings } from '@firelaunch/contracts';
 import type { ChannelMutation } from '@firelaunch/channel-engine';
 import type { AgentResponse } from '@firelaunch/agent';
 
@@ -114,3 +114,16 @@ export async function uploadPrivateMedia(id: string, file: File): Promise<{ id: 
 export async function deletePrivateObject(id: string, objectId: string): Promise<void> {
   await request(`/${id}/private-objects/${objectId}`, { method: 'DELETE' });
 }
+
+export async function readDeployment(id: string) {
+  return channelDeploymentSchema.parse(await request(`/${id}/deployment`));
+}
+export type LiveStatus = { revisions: { channel: number; catalog: number }; liveReleaseId: string | null; liveSequence: number; approvalRequired: true; nativeSubmission: 'separate' };
+export type ReleaseHistory = { liveReleaseId: string | null; releases: { id: string; sequence: number; sha256: string; publishedAt: string; previousReleaseId: string | null; rollbackSourceReleaseId: string | null }[] };
+export type PublicationReview = { revisions: LiveStatus['revisions']; expectedLiveReleaseId: string | null; bindings: PublicationBindings; rollbackSourceReleaseId?: string };
+const publicationPath = (projectId: string, deploymentId: string) => `/${projectId}/publication/${deploymentId}`;
+export const readLiveStatus = (projectId: string, deploymentId: string) => request(`${publicationPath(projectId, deploymentId)}/status`) as Promise<LiveStatus>;
+export const readReleaseHistory = (projectId: string, deploymentId: string) => request(`${publicationPath(projectId, deploymentId)}/history`) as Promise<ReleaseHistory>;
+export const checkLiveReadiness = (projectId: string, deploymentId: string, review: PublicationReview) => request(`${publicationPath(projectId, deploymentId)}/readiness`, json(review));
+export const approveLive = (projectId: string, deploymentId: string, review: PublicationReview) => request(`${publicationPath(projectId, deploymentId)}/${review.rollbackSourceReleaseId ? 'rollback' : 'approve'}`, json(review)) as Promise<{ approvalId: string }>;
+export const publishLive = (projectId: string, deploymentId: string, approvalId: string) => request(`${publicationPath(projectId, deploymentId)}/publish`, json({ approvalId })) as Promise<{ releaseId: string; sequence: number }>;

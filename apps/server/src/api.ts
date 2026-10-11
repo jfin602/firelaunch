@@ -210,6 +210,9 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
           if (segments.length === 2 && !url.search && request.method === 'POST') { respond(response, 201, await hostedRepository.create(principal, await body(request))); return; }
           if (segments.length === 2 && !url.search && request.method === 'GET') { respond(response, 200, await hostedRepository.list(principal)); return; }
           if (segments.length === 3 && !url.search && request.method === 'GET') { respond(response, 200, await hostedRepository.read(principal, segments[2]!)); return; }
+          if (segments.length === 4 && !url.search && segments[3] === 'deployment' && request.method === 'GET') {
+            respond(response, 200, await hostedRepository.readDeployment(principal, segments[2]!)); return;
+          }
           if (segments.length === 3 && !url.search && request.method === 'PUT') {
             await hostedRepository.read(principal, segments[2]!);
             const input = updateProjectSchema.parse(await body(request));
