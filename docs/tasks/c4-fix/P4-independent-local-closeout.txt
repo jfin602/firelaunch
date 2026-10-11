@@ -1,11 +1,11 @@
-TASK: c4-fix / P4 — Independent local correction qualification closeout
+TASK: Correction 4 / P4 — Independent local correction qualification closeout
 
 MODEL / REASONING / USAGE
 - Recommended configuration: `GPT-6 Sol High`.
-- Browser required: yes (manual independent closeout; browser observations only when actually available).
+- Browser required: yes.
 
 VERSIONING
-The assigned project version is `0.4.8` (UNCHANGED).
+- Required unchanged project version: `0.4.8`.
 
 GOAL
 Independently determine local correction GREEN or NOT GREEN from actual tests and accurate external blockers; preserve original P4 NOT GREEN and hosted release NOT QUALIFIED.
