@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { channelSpecSchema, SCHEMA_VERSION, type ChannelSpec } from './index.js';
+import { channelSpecSchema, contentPresentation, SCHEMA_VERSION, type ChannelSpec } from './index.js';
 import { catalogInventorySchema, mediaUseEligible, type CatalogInventory, type MediaAsset } from './catalog.js';
 import { channelDeploymentSchema } from './creator.js';
 
@@ -29,8 +29,11 @@ export const publicationStateSchema = z.discriminatedUnion('state', [publication
 export type PublicationDraft = z.infer<typeof publicationDraftSchema>;
 export type PublicationApproval = z.infer<typeof publicationApprovalSchema>;
 
+// ChannelSpec v1 requires content artwork. An informational item omits playback,
+// but still needs a separately display-cleared artwork binding. A text-only
+// release needs an explicit future ChannelSpec/TV rendering contract.
 const mediaBindingSchema = z.strictObject({
-  contentId: id('item'), catalogItemId: id('ci'), playbackAssetId: id('ma'), artworkAssetId: id('ma')
+  contentId: id('item'), catalogItemId: id('ci'), playbackAssetId: id('ma').optional(), artworkAssetId: id('ma')
 });
 export const publicationBindingsSchema = z.strictObject({
   content: z.array(mediaBindingSchema).max(500),
@@ -73,11 +76,12 @@ export const publishedManifestSchema = z.strictObject({
   if (media.size !== manifest.media.length) issue('Duplicate media IDs');
   const bindings = new Map(manifest.bindings.content.map(binding => [binding.contentId, binding]));
   if (bindings.size !== manifest.bindings.content.length || bindings.size !== manifest.channel.content.length) issue('Content bindings must be one-to-one');
+  if (new Set(manifest.bindings.content.map(binding => binding.catalogItemId)).size !== manifest.bindings.content.length) issue('Catalog selections must be one-to-one');
   const used = new Set<string>();
-  const requireAsset = (id: string | undefined, kind: 'playback' | 'artwork', url: string | undefined) => {
+  const requireAsset = (id: string | undefined, kind: 'video' | 'audio' | 'artwork', url: string | undefined) => {
     if (!id || !url) { issue('Missing required media binding'); return; }
     const asset = media.get(id);
-    if (!asset || asset.url !== url || (kind === 'artwork' ? asset.kind !== 'artwork' : asset.kind === 'artwork')) {
+    if (!asset || asset.url !== url || asset.kind !== kind) {
       issue('Media binding differs from public channel reference');
     }
     used.add(id);
@@ -85,7 +89,10 @@ export const publishedManifestSchema = z.strictObject({
   for (const content of manifest.channel.content) {
     const binding = bindings.get(content.id);
     if (!binding) { issue('Content has no media binding'); continue; }
-    requireAsset(binding.playbackAssetId, 'playback', content.mediaUrl);
+    const presentation = contentPresentation(content);
+    if (presentation === 'information') {
+      if (binding.playbackAssetId !== undefined) issue('Informational content cannot bind playback');
+    } else requireAsset(binding.playbackAssetId, presentation, content.mediaUrl);
     requireAsset(binding.artworkAssetId, 'artwork', content.artwork);
   }
   requireOptionalArtwork(manifest.channel.brand.logo, manifest.bindings.logoAssetId, requireAsset, issue);
@@ -96,7 +103,7 @@ export type PublishedManifest = z.infer<typeof publishedManifestSchema>;
 
 function requireOptionalArtwork(
   url: string | undefined, id: string | undefined,
-  requireAsset: (id: string | undefined, kind: 'playback' | 'artwork', url: string | undefined) => void,
+  requireAsset: (id: string | undefined, kind: 'video' | 'audio' | 'artwork', url: string | undefined) => void,
   issue: (message: string) => void
 ): void {
   if (url === undefined && id === undefined) return;
@@ -128,10 +135,10 @@ export function projectApprovedManifest(input: {
   const itemById = new Map(inventory.items.map(item => [item.id, item]));
   const sourceById = new Map(inventory.sources.map(source => [source.id, source]));
   const publicMedia = new Map<string, z.infer<typeof publicMediaSchema>>();
-  const addAsset = (id: string, kind: 'playback' | 'artwork', expectedUrl: string, itemId?: string) => {
+  const addAsset = (id: string, kind: 'video' | 'audio' | 'artwork', expectedUrl: string, itemId?: string) => {
     const asset: MediaAsset | undefined = assetById.get(id);
     if (!asset || !asset.deliveryEligible || !mediaUseEligible(asset, kind === 'artwork' ? 'television_display' : 'television_playback') ||
-      (kind === 'artwork' ? asset.kind !== 'artwork' : asset.kind === 'artwork') ||
+      asset.kind !== kind ||
       (itemId && asset.catalogItemId !== itemId) || asset.location.type !== 'https' || asset.location.url !== expectedUrl) {
       throw new Error('Invalid, unlicensed or unpublished media reference');
     }
@@ -144,13 +151,30 @@ export function projectApprovedManifest(input: {
     }
     publicMedia.set(id, { id, kind: asset.kind, url: publicUrlSchema.parse(asset.location.url) });
   };
+  if (bindings.content.length !== channel.content.length ||
+    new Set(bindings.content.map(binding => binding.contentId)).size !== bindings.content.length ||
+    new Set(bindings.content.map(binding => binding.catalogItemId)).size !== bindings.content.length) {
+    throw new Error('Content and catalog selections must be one-to-one');
+  }
   for (const binding of bindings.content) {
     const content = channel.content.find(value => value.id === binding.contentId);
     const item = itemById.get(binding.catalogItemId);
-    if (!content || !item || !item.mediaAssetIds.includes(binding.playbackAssetId) ||
-      !item.mediaAssetIds.includes(binding.artworkAssetId)) throw new Error('Content binding differs from catalog');
-    if (!content.mediaUrl) throw new Error('Content has no publishable playback media');
-    addAsset(binding.playbackAssetId, 'playback', content.mediaUrl, item.id);
+    if (!content || !item || !item.mediaAssetIds.includes(binding.artworkAssetId)) throw new Error('Content binding differs from catalog');
+    const source = sourceById.get(item.sourceRecord.sourceId);
+    if (!source || source.state === 'discovered' ||
+      ['unknown', 'revoked'].includes(source.permission.retrieval) ||
+      ['unknown', 'revoked'].includes(source.permission.tvDisplay)) throw new Error('Content source lacks TV display authorization');
+    const presentation = contentPresentation(content);
+    if ((presentation === 'information' && item.kind !== 'book') ||
+      (presentation !== 'information' && presentation !== item.kind)) throw new Error('Content presentation differs from catalog');
+    if (presentation === 'information') {
+      if (binding.playbackAssetId !== undefined) throw new Error('Informational content cannot bind playback');
+    } else {
+      if (!binding.playbackAssetId || !item.mediaAssetIds.includes(binding.playbackAssetId) || !content.mediaUrl) {
+        throw new Error('Content has no publishable playback media');
+      }
+      addAsset(binding.playbackAssetId, presentation, content.mediaUrl, item.id);
+    }
     addAsset(binding.artworkAssetId, 'artwork', content.artwork, item.id);
   }
   if (channel.brand.logo && bindings.logoAssetId) addAsset(bindings.logoAssetId, 'artwork', channel.brand.logo);

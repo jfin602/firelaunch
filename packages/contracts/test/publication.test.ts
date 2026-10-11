@@ -12,9 +12,17 @@ const sourceId = `src_${hex('b')}`;
 const catalogItemId = `ci_${hex('c')}`;
 const playbackId = `ma_${hex('d')}`;
 const artworkId = `ma_${hex('e')}`;
+const bookItemId = `ci_${hex('1')}`;
+const bookArtworkId = `ma_${hex('2')}`;
+const audioItemId = `ci_${hex('3')}`;
+const audioPlaybackId = `ma_${hex('4')}`;
+const audioArtworkId = `ma_${hex('5')}`;
 const timestamp = '2026-10-09T00:00:00.000Z';
 const playbackUrl = 'https://media.example.com/ocean.mp4';
 const artworkUrl = 'https://media.example.com/ocean.jpg';
+const bookArtworkUrl = 'https://media.example.com/book.jpg';
+const audioPlaybackUrl = 'https://media.example.com/album.mp3';
+const audioArtworkUrl = 'https://media.example.com/album.jpg';
 const externalId = { provider: 'creator' as const, kind: 'feed_item_id' as const, value: 'ocean-1' };
 
 const channel = (): ChannelSpec => {
@@ -59,6 +67,91 @@ const bindings = () => ({
 const input = () => ({
   approval: approval(), deployment: deployment(), channel: channel(), inventory: inventory(), bindings: bindings(),
   releaseId: `rel_${hex('a')}`, releaseSequence: 1, publishedAt: timestamp
+});
+const bookContent = () => ({ id: `item_${hex('1')}`, title: 'Field Guide', description: 'A book',
+  artwork: bookArtworkUrl, presentation: 'information' as const });
+const bookItem = () => ({ ...catalogItem(), id: bookItemId, kind: 'book' as const,
+  sourceRecord: { ...catalogItem().sourceRecord, externalId: { ...externalId, value: 'book-1' } },
+  externalIdentifiers: [{ ...externalId, value: 'book-1' }], mediaAssetIds: [bookArtworkId] });
+const bookArtwork = () => ({ ...media()[1], id: bookArtworkId, catalogItemId: bookItemId,
+  location: { type: 'https' as const, url: bookArtworkUrl } });
+const bookBinding = () => ({ contentId: bookContent().id, catalogItemId: bookItemId, artworkAssetId: bookArtworkId });
+const writingInput = () => {
+  const base = input();
+  const pages = base.channel.pages.map(page => ({ ...page, modules: page.modules.map(module =>
+    module.kind === 'text' ? module : { ...module, contentIds: module.contentIds.map(id =>
+      id === base.channel.content[0]?.id ? bookContent().id : id) }) }));
+  return { ...base, channel: { ...base.channel, pages, content: [bookContent()] },
+    inventory: { ...base.inventory, items: [bookItem()], mediaAssets: [bookArtwork()] },
+    bindings: { content: [bookBinding()] } };
+};
+const audioContent = () => ({ id: `item_${hex('3')}`, title: 'Ocean Sounds', description: 'An album',
+  artwork: audioArtworkUrl, presentation: 'audio' as const, mediaUrl: audioPlaybackUrl });
+const audioItem = () => ({ ...catalogItem(), id: audioItemId, kind: 'audio' as const,
+  sourceRecord: { ...catalogItem().sourceRecord, externalId: { ...externalId, value: 'audio-1' } },
+  externalIdentifiers: [{ ...externalId, value: 'audio-1' }], mediaAssetIds: [audioPlaybackId, audioArtworkId] });
+const audioMedia = () => [
+  { ...media()[0], id: audioPlaybackId, catalogItemId: audioItemId, kind: 'audio' as const,
+    location: { type: 'https' as const, url: audioPlaybackUrl } },
+  { ...media()[1], id: audioArtworkId, catalogItemId: audioItemId,
+    location: { type: 'https' as const, url: audioArtworkUrl } }
+];
+
+test('approved writing-only release has detail artwork and no playback reference', () => {
+  const manifest = projectApprovedManifest(writingInput());
+  assert.equal(assertClientCompatible(manifest, 1).channel.content[0]?.presentation, 'information');
+  assert.equal(manifest.channel.content[0]?.mediaUrl, undefined);
+  assert.equal(manifest.bindings.content[0]?.playbackAssetId, undefined);
+  assert.deepEqual(manifest.media.map(asset => asset.id), [bookArtworkId]);
+  assert.equal(JSON.stringify(manifest).includes('playbackAssetId'), false);
+});
+
+test('mixed video, audio and informational content retains type-specific bindings', () => {
+  const base = input();
+  const mixed = { ...base,
+    channel: { ...base.channel, content: [...base.channel.content, audioContent(), bookContent()] },
+    inventory: { ...base.inventory, items: [...base.inventory.items, audioItem(), bookItem()],
+      mediaAssets: [...base.inventory.mediaAssets, ...audioMedia(), bookArtwork()] },
+    bindings: { content: [...base.bindings.content,
+      { contentId: audioContent().id, catalogItemId: audioItemId, playbackAssetId: audioPlaybackId, artworkAssetId: audioArtworkId },
+      bookBinding()] } };
+  const manifest = projectApprovedManifest(mixed);
+  assert.equal(manifest.media.length, 5);
+  assert.equal(assertClientCompatible(manifest, 1).channel.content.length, 3);
+  assert.equal(publishedManifestSchema.safeParse({ ...manifest, bindings: { content: [
+    manifest.bindings.content[0], { ...manifest.bindings.content[1], playbackAssetId: playbackId }, manifest.bindings.content[2]
+  ] } }).success, false);
+  assert.throws(() => projectApprovedManifest({ ...mixed, bindings: { content: [mixed.bindings.content[0],
+    { ...mixed.bindings.content[1], catalogItemId }, mixed.bindings.content[2]] } }), /one-to-one/);
+});
+
+test('writing publication rejects unapproved, revoked, foreign and unsafe display media', () => {
+  const base = writingInput();
+  assert.throws(() => projectApprovedManifest({ ...base, approval: { ...base.approval, state: 'draft' } }));
+  assert.throws(() => projectApprovedManifest({ ...base, inventory: { ...base.inventory,
+    sources: [{ ...source(), state: 'discovered', permission: { retrieval: 'unknown', tvDisplay: 'unknown' } }] } }),
+  /source lacks TV display/);
+  assert.throws(() => projectApprovedManifest({ ...base, inventory: { ...base.inventory,
+    mediaAssets: [{ ...bookArtwork(), rights: { status: 'revoked', basis: 'creator_asserted', permittedUse: 'television_display', assertedAt: timestamp }, deliveryEligible: false }] } }));
+  assert.throws(() => projectApprovedManifest({ ...base, inventory: { ...base.inventory,
+    mediaAssets: [{ ...bookArtwork(), rights: undefined,
+      tvDisplayRights: { status: 'unknown', basis: 'none', permittedUse: 'none' },
+      tvPlaybackRights: rights('television_playback'), deliveryEligible: false }] } }));
+  assert.throws(() => projectApprovedManifest({ ...base, inventory: { ...base.inventory,
+    mediaAssets: [{ ...bookArtwork(), location: { type: 'upload', key: 'media/private/cover.jpg' } }] } }));
+  assert.throws(() => projectApprovedManifest({ ...base, inventory: { ...base.inventory,
+    mediaAssets: [{ ...bookArtwork(), creatorAccountId: `cr_${hex('f')}` }] } }));
+  assert.throws(() => projectApprovedManifest({ ...base, inventory: { ...base.inventory,
+    items: [{ ...bookItem(), kind: 'listing' }] } }), /presentation differs/);
+  assert.throws(() => projectApprovedManifest({ ...base, bindings: { content: [{ ...bookBinding(), playbackAssetId: playbackId }] } }),
+  /cannot bind playback/);
+  assert.throws(() => projectApprovedManifest({ ...base, channel: { ...base.channel,
+    content: [{ ...bookContent(), artwork: 'https://media.example.com/book.jpg?token=private' }] } }));
+  assert.throws(() => projectApprovedManifest({ ...base, channel: { ...base.channel,
+    content: [{ ...bookContent(), artwork: 'assets/catalog-placeholder.png' }] } }));
+  const manifest = projectApprovedManifest(base);
+  assert.equal(publishedManifestSchema.safeParse({ ...manifest, bindings: { content: [{ ...bookBinding(), playbackAssetId: playbackId }] } }).success, false);
+  assert.equal(publishedManifestSchema.safeParse({ ...manifest, media: [{ ...manifest.media[0], url: 'https://media.example.com/book.jpg?token=private' }] }).success, false);
 });
 
 test('approved release projects a public, compatible, versioned manifest', () => {
