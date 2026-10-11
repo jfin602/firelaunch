@@ -1,0 +1,29 @@
+TASK: c4-fix / P3 — Local Studio catalog and rights regression
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.4.8` (UNCHANGED).
+
+GOAL
+Protect the already-implemented three-creator generation, local Studio persistence and fail-closed media/tenant behavior with focused checks; repair only actual regressions.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, c4-fix README/assessment/plan, P4 closeout and P7 handoff, P1/P2 checkpoints. Inspect P4 fixtures and existing Studio/server/TV tests plus catalog composition, projection and agent grounding; confirm HEAD/root version/status.
+
+IMPLEMENT
+Strengthen only missing focused regressions for distinct video/audio/writing presentations; book Select/detail/Back without fake playback; synthetic rights-eligible audio/video semantics; unlicensed/revoked/unknown media refusal; per-creator selection and foreign/CSRF/revision denials; stable IDs and preservation of edited names, text and module/page order through repeat Generate, reload and repository restart; safe generated/exported source with no private object identifiers, capabilities or provider secrets. Use existing database-backed fixtures where available. Preserve original fixture metadata's rights-unknown status: synthetic test rights are NOT licensed media. Avoid broad UI refactoring. Where live browser, real media or separate profiles are missing, classify the exact untested assertion instead of passing it by fixture.
+
+OUT OF SCOPE
+Paid provider, real rights-cleared media acquisition, VPS/HTTPS/S3 gates, device/VPKG/physical Fire TV/Appstore, P5 public manifests.
+
+VALIDATION
+Run affected kernel/server/TV/Studio tests and typechecks/builds plus `git diff --check`; specify skipped DB tests. P4 owns one final root aggregate. No new skip to suppress a failure.
+
+GIT
+Do not self-commit or move HEAD; runner owns checkpoint. Root metadata version remains 0.4.8; workspace versions unchanged.
+
+FINAL RESPONSE
+State changed boundaries, counts, restored behaviors, blocked browser/provider/media gates and exact HEAD/version. Do not claim Phase 4 or hosted release GREEN.
