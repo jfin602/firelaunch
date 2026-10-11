@@ -1,0 +1,34 @@
+# Phase 5 — Prompt Assessment: Live Channel Delivery
+
+Date: 2026-10-11. Status: approved P5 direction translated into source-aware Prompt Stack.
+Entry: `c4-fix` local GREEN at `0.4.8`, original P4 NOT GREEN, hosted release NOT QUALIFIED.
+Activation: committed root `0.5.0`, P1–P8 `0.5.1`–`0.5.8`.
+
+## Problem and evidence
+
+The installed Vega app currently imports static `src/channel.json` (`templates/vega-channel/src/App.js`), so the TV cannot follow approved changes without a new source/build. `packages/generator/src/index.ts` writes that fixed channel and derives a P0 app identity from `ChannelSpec.id`; in hosted delivery, a creator-owned `ChannelDeployment.packageId` and stable resolver endpoint must be generated in its place without breaking legacy P0/local source. `apps/server/src/hosted-repository.ts` stores owner-scoped deployments but no immutable releases or live pointer; `apps/server/src/api.ts` has no public manifest resolver or owner publication workflow. `packages/contracts/src/publication.ts` has strict manifests, approvals, rights projection, compatibility and safe HTTPS media URL checks but wrongly mandates `playbackAssetId` and `mediaUrl` for every published item: Phase 4 correctly has informational books with no playback.
+
+P4 P8 / c4 local correction qualified writing draft/detail/Back, rights warnings and edit/reload, while video/audio playback and live provider success were unavailable; do not silently reclassify their results. Existing historical c0 run produced a real VPKG and demonstrated focus/detail/playback/Back on Vega VirtualDevice, but not an installed app refreshed by a remote release. P5 requires new direct proof for that path, without physical hardware.
+
+## Design choices and alternatives
+
+1. **Immutability and explicit approval.** Keep separate editable draft and creator-approved immutable snapshot. CAS binds owner/project/deployment, current ChannelSpec revision AND catalog revision to chosen rights-eligible binding set; source changes/rights revocation between approval and publication must fail closed or require a fresh approval. Publication creates immutable content/digest and atomically changes the deployment live pointer in a transaction; no mutation of prior release bytes.
+2. **Writing support without fake media.** Make playback binding conditional on presentation. Information-only items never get a fake playback URL or TV Play; display artwork is allowed only with separate eligibility and correct binding (or use an explicit text-only safe fallback if the source contracts support it). Strictly validate video/audio playback rights, TV display rights, approved sources, HTTPS device reachability and sanitized public fields. Preserve v1 legacy video and stable IDs.
+3. **Authoritative release identity.** One CreatorAccount owns each ChannelDeployment and native package identity. A bundle embeds pinned deployment ID + resolver base/origin plus bundled initial projection, not an arbitrary runtime URL or owner credential. Compatible data updates need no VPKG; native code/schema/dependency/permission changes do.
+4. **Public resolver separation.** GET-only, anonymous, versioned releases and current pointer may be public because only explicitly published, TV-safe data are served. Owner mutate/approval/history/rollback APIs remain authenticated/CSRF-protected. Use opaque deployment IDs, exact path handling, caching (short or no-cache pointer, immutable verified release), bounded responses/ETag if useful, correct content type and denial of private drafts. No trust of request owner headers, private S3 keys, JWT/cookies or signed temporary media URLs in public responses.
+5. **Safe client activation.** Over HTTPS, validate strict schema, compatibility, deployment/package identity, digest/integrity, monotonic sequence (rollback increments sequence), and bounded payload before applying. Persist a fully verified LKG across app restarts; use bundled snapshot if none exists. Failure/timeout/offline/incompatible data leaves usable last-known-good; no blank screens. React hooks and TV state/focus must reconcile on revision swap; remote data is not executable.
+6. **Rollback and revocation.** Create NEW approved release from historical content only after current rights/source checks; never repoint to an old manifest bypassing newer rights. Revoke future publication and document offline-cache expiry limitations. Immediate global erasure of already-downloaded assets cannot be guaranteed by a manifest alone.
+7. **Qualification hosting.** P5 needs an actual reachable HTTPS endpoint on the VirtualDevice, **not** a full production VPS. Owner may supply an approved narrow staging tunnel/reverse proxy; dev origin/local API, Google OIDC, PostgreSQL, MinIO stay private. Do not make the local unsecured P0 mode internet-facing. No Bedrock or AWS account entitlement prerequisite.
+8. **Device versus physical parity.** Same installed real VPKG on actual Vega VirtualDevice (OS 1.2 as qualified) is sufficient for **P5 GREEN**, but does not prove a physical Fire TV, codec/performance/remote variance or Appstore approval. No mock-only or browser-only claim counts toward the P5 device gate.
+
+## Risk-driven test matrix
+
+- Mixed video/audio/informational items and writing-only release; malformed unknown private fields, unsafe URLs, incompatible schema; rights unknown/revoked/removed; conflicting revisions, mismatched deployment/owner.
+- Race publication/rollback/rights revocation; immutable rows, global release ID identity, monotonic sequence, pointer CAS, restart durability, previous approved release retained.
+- Anonymous public only for published deployment/current and immutable public release; unauthenticated creator mutation denied; two fixture principals foreign mutation/API denied; no access to drafts, logs, private assets, tokens or source provenance.
+- TV cache first boot/offline restart, network timeout, 404/500/invalid JSON/oversize/digest mismatch, incompatible schema, deployment mismatch, downgraded/replayed sequence and rollbacks; visible focus and media-safe navigation.
+- One real on-VirtualDevice install of a real release VPKG; later publish and rollback via HTTPS from SAME binary; record target identifier, hashes and screenshots. A new VPKG after manifest change voids this proof.
+
+## Prompt decomposition / acceptance
+
+Seven ordered implementation checkpoints plus one independent manual closeout split contracts -> DB -> authorized write -> public read -> native runtime -> Studio -> cross-layer convergence -> on-device qualification. Keep prompts narrow (target <=8 min where feasible), focused validation in each, one aggregate at P8. If external endpoint, rights-cleared media or device is unavailable, implement all safe work but P8 closes NOT GREEN with the precise blocker, never invent evidence or relax tests. P2/c2 S1–S6 remain separate preproduction release blockers.
