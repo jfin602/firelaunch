@@ -1,11 +1,11 @@
-TASK: c4-fix / P3 — Local Studio catalog and rights regression
+TASK: Correction 4 / P3 — Local Studio catalog and rights regression
 
 MODEL / REASONING / USAGE
 - Recommended configuration: `GPT-6 Sol Medium`.
 - Browser required: no.
 
 VERSIONING
-The assigned project version is `0.4.8` (UNCHANGED).
+- Required unchanged project version: `0.4.8`.
 
 GOAL
 Protect the already-implemented three-creator generation, local Studio persistence and fail-closed media/tenant behavior with focused checks; repair only actual regressions.
