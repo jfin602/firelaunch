@@ -448,7 +448,10 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     const catalogDown = await readFile(new URL('../migrations/005_catalog.down.sql', import.meta.url), 'utf8');
     const importDown = await readFile(new URL('../migrations/006_catalog_import_previews.down.sql', import.meta.url), 'utf8');
     const mediaRightsDown = await readFile(new URL('../migrations/007_catalog_media_rights.down.sql', import.meta.url), 'utf8');
+    const approvalsDown = await readFile(new URL('../migrations/008_catalog_item_approvals.down.sql', import.meta.url), 'utf8');
     await restarted.pool.query('BEGIN');
+    await restarted.pool.query(approvalsDown);
+    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 8');
     await restarted.pool.query(mediaRightsDown);
     await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 7');
     await restarted.pool.query(importDown);

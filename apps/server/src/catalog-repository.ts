@@ -138,6 +138,13 @@ export class CatalogRepository {
       const { revision: _revision, ...inventory } = snapshot;
       if (!catalogInventorySchema.safeParse(inventory).success) invalid('Invalid catalog references or identity');
       await this.replace(client, owner, project.data, snapshot);
+      if (kind === 'items' && method === 'POST') {
+        await client.query(`INSERT INTO catalog_item_approvals(item_id, project_id, creator_account_id, origin)
+          VALUES ($1, $2, $3, 'creator_entry')`, [id, project.data, owner]);
+      }
+      if (kind === 'items' && method === 'DELETE') {
+        await client.query('DELETE FROM catalog_item_approvals WHERE item_id = $1 AND project_id = $2 AND creator_account_id = $3', [id, project.data, owner]);
+      }
       if (kind === 'media-assets') {
         const asset = (record ?? priorAsset) as MediaAsset;
         await client.query(`INSERT INTO catalog_media_rights_events(id, project_id, creator_account_id, asset_id, assertion)
@@ -271,13 +278,29 @@ export class CatalogRepository {
           updated++;
         }
       }
-      const result = { revision: expectedRevision + (created || updated ? 1 : 0), created, updated, unchanged };
       if (created || updated) {
         const { revision: _revision, ...inventory } = snapshot;
         if (!catalogInventorySchema.safeParse(inventory).success) invalid('Invalid catalog references or identity');
         await this.replace(client, owner, project.data, snapshot);
         await client.query('UPDATE catalog_revisions SET revision = revision + 1 WHERE project_id = $1 AND creator_account_id = $2', [project.data, owner]);
       }
+      let newlyApproved = 0;
+      for (const row of plan.rows) {
+        const itemId = snapshot.items.find(item => item.sourceRecord.sourceId === sourceId &&
+          item.sourceRecord.externalId.value === row.externalId)?.id;
+        if (!itemId) throw new RepositoryError('STORAGE_ERROR', 'Approved import item missing');
+        const approval = await client.query(`INSERT INTO catalog_item_approvals(item_id, project_id, creator_account_id, origin)
+          VALUES ($1, $2, $3, 'import_approved') ON CONFLICT (item_id) DO UPDATE
+          SET origin = 'import_approved', approved_at = now()
+          WHERE catalog_item_approvals.project_id = $2 AND catalog_item_approvals.creator_account_id = $3
+          AND catalog_item_approvals.origin <> 'import_approved' RETURNING item_id`,
+        [itemId, project.data, owner]);
+        newlyApproved += approval.rowCount ?? 0;
+      }
+      if (!created && !updated && newlyApproved) {
+        await client.query('UPDATE catalog_revisions SET revision = revision + 1 WHERE project_id = $1 AND creator_account_id = $2', [project.data, owner]);
+      }
+      const result = { revision: expectedRevision + (created || updated || newlyApproved ? 1 : 0), created, updated, unchanged };
       await client.query('DELETE FROM catalog_import_previews WHERE project_id = $1 AND creator_account_id = $2 AND source_id = $3 AND revision = $4 AND fingerprint = $5', [project.data, owner, sourceId, expectedRevision, fingerprint]);
       await client.query('COMMIT');
       return result;
