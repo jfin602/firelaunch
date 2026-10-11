@@ -1,0 +1,29 @@
+TASK: c4-fix / P1 — Repair migration recovery regression
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.4.8` (UNCHANGED).
+
+GOAL
+Resolve the actual failed kernel recovery assertion from P4 P8 without weakening migration/recovery safety.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p4/closeout.md, docs/tasks/c4-fix/{README.md,prompt-assessment.md,implementation-plan.md}. Inspect git status, root version, actual HEAD, ordered migrations, recovery implementation, and failing test. Preserve local accepted dirty changes; the upstream P4 closeout is committed at 3a0a0de.
+
+IMPLEMENT
+Reproduce/identify the test expecting applied migration 7 while health reports 9. Decide from source, schema, and real DB behavior whether the health version 9 is correct or recovery is defective; do NOT simply change 7 to 9 without proof. Correct the narrow test/contract/implementation. Prefer a resilient expectation grounded in the canonical ordered migrations and assert operational recovery correctness, transactional safety and negative coverage. Do not delete or skip the test, rewrite migration history, or weaken the health endpoint to make it pass.
+
+OUT OF SCOPE
+Bedrock setup (P2), Studio feature changes (P3), live provider, VPS, HTTPS deployment, licensed media, P5/P8.
+
+VALIDATION
+Run the previously failing recovery test and relevant adjacent migration/restore tests, affected server typecheck/build and `git diff --check`. If DB fixture is missing, report BLOCKED precisely and do not claim recovery PASS. P4 owns the one final root aggregate.
+
+GIT
+Do not commit or move HEAD; runner owns the checkpoint. Keep root package.json and two root package-lock.json version entries exactly 0.4.8, all workspace versions unchanged. Preserve unrelated work.
+
+FINAL RESPONSE
+Report repaired contract/root cause, affected paths, actual test counts/skips, typecheck/build, diff check, starting HEAD/version and remaining gates. P4 history remains NOT GREEN.
