@@ -357,9 +357,23 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
         body: JSON.stringify({ expectedRevision: 3, spec: { ...owned.spec, title: 'Owner API update' } }) });
       assert.equal(ownerUpdate.status, 200);
       assert.equal((await ownerUpdate.json()).revision, 4);
+      const unsafeContent = { id: `item_${'a'.repeat(32)}`, title: 'Private film', description: '',
+        artwork: 'assets/catalog-placeholder.png', presentation: 'video', mediaUrl: `http://127.0.0.1/private/${mediaCapability}` };
+      for (const mediaUrl of [unsafeContent.mediaUrl, `https://media.example/film.mp4?capability=${mediaCapability}`]) {
+        const refused = await fetch(ownedPath, { method: 'PUT', headers: ownerHeaders,
+          body: JSON.stringify({ expectedRevision: 4, spec: { ...owned.spec, content: [{ ...unsafeContent, mediaUrl }] } }) });
+        assert.equal(refused.status, 400);
+        assert.equal((await refused.json()).error.code, 'INVALID_INPUT');
+      }
+      assert.equal((await restarted.read({ accountId: firstLogin.session.accountId, issuer, subject: 'http-a', email: 'http-a@example.com' }, owned.id)).revision, 4,
+        'rejected media writes leave the saved project unchanged');
+      assert.equal((await fetch(`${ownedPath}/code/export`, { headers: { cookie: firstLogin.cookie } })).status, 200);
 
       const cases: { label: string; suffix: string; method?: string; body?: unknown }[] = [
         { label: 'project read', suffix: '' },
+        { label: 'catalog draft read', suffix: '/catalog-draft' },
+        { label: 'catalog draft generate', suffix: '/catalog-draft', method: 'POST', body: { creatorType: 'writing', expectedRevision: 4,
+          expectedCatalogRevision: 8, itemIds: [attachedItem.id], collectionIds: [] } },
         { label: 'project update', suffix: '', method: 'PUT', body: { expectedRevision: 1, spec: owned.spec } },
         { label: 'mutation', suffix: '/mutations', method: 'POST', body: { expectedRevision: 1, mutation: { type: 'setIdentity', title: 'Stolen', slug: 'stolen' } } },
         { label: 'agent status', suffix: '/agent-status' },
@@ -401,6 +415,11 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
           headers: { cookie: firstLogin.cookie, origin, 'content-type': 'application/json' }, body: JSON.stringify(probe.body) });
         assert.equal(result.status, 403, `csrf ${probe.label}`);
       }
+      for (const suffix of ['/catalog-draft', '/agent', '/code', '/code/file', `/private-objects/${mediaMetadata.id}/capability`]) {
+        const result = await fetch(`${ownedPath}${suffix}`, { method: 'POST',
+          headers: { ...ownerHeaders, 'x-csrf-token': secondLogin.session.csrfToken }, body: '{}' });
+        assert.equal(result.status, 403, `forged csrf ${suffix}`);
+      }
       assert.equal((await fetch(`${endpoint}/..%2f..%2fetc%2fpasswd/code/file?path=manifest.toml`, { headers: { cookie: firstLogin.cookie } })).status, 404);
       assert.equal((await fetch(`${ownedPath}/code/file?path=..%2fproject.json`, { headers: { cookie: firstLogin.cookie } })).status, 400);
       assert.equal((await fetch(`${endpoint}`, { headers: { cookie: 'firelaunch_local_session=stale' } })).status, 401);
@@ -431,6 +450,26 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}`, { headers: { cookie: relogin.cookie } })).status, 200);
       assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}/content`, { headers: { cookie: relogin.cookie,
         'x-private-capability': mediaCapability } })).status, 200);
+      const reloginHeaders = { cookie: relogin.cookie, origin, 'x-csrf-token': relogin.session.csrfToken, 'content-type': 'application/json' };
+      const catalogBeforeDraft = await (await fetch(catalogPath, { headers: { cookie: relogin.cookie } })).json();
+      const draftInput = { creatorType: 'writing', expectedRevision: 4, expectedCatalogRevision: catalogBeforeDraft.revision,
+        itemIds: [attachedItem.id], collectionIds: [collection.id] };
+      assert.equal((await fetch(`${ownedPath}/catalog-draft`, { method: 'POST', headers: { ...reloginHeaders, 'x-csrf-token': firstLogin.session.csrfToken },
+        body: JSON.stringify(draftInput) })).status, 403);
+      const draftResponse = await fetch(`${ownedPath}/catalog-draft`, { method: 'POST', headers: reloginHeaders,
+        body: JSON.stringify(draftInput) });
+      assert.equal(draftResponse.status, 200);
+      const draft = await draftResponse.json();
+      assert.equal(draft.project.revision, 5);
+      assert.equal(draft.project.spec.content[0].presentation, 'information');
+      for (const privateValue of [privateMetadata.id, mediaMetadata.id, mediaCapability, capability]) {
+        assert.equal(JSON.stringify(draft.project.spec).includes(privateValue), false);
+      }
+      assert.equal((await fetch(`${ownedPath}/catalog-draft`, { method: 'POST', headers: reloginHeaders,
+        body: JSON.stringify(draftInput) })).status, 409);
+      assert.equal((await (await fetch(catalogPath, { headers: { cookie: relogin.cookie } })).json()).revision, catalogBeforeDraft.revision,
+        'stale draft request does not mutate catalog');
+      assert.equal((await restarted.read({ accountId: relogin.session.accountId, issuer, subject: 'http-a', email: 'http-a@example.com' }, owned.id)).revision, 5);
       assert.equal((await fetch(`${privatePath}/${mediaMetadata.id}`, { method: 'DELETE', headers: { cookie: relogin.cookie,
         origin, 'x-csrf-token': relogin.session.csrfToken } })).status, 200);
     } finally {
@@ -449,7 +488,10 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     const importDown = await readFile(new URL('../migrations/006_catalog_import_previews.down.sql', import.meta.url), 'utf8');
     const mediaRightsDown = await readFile(new URL('../migrations/007_catalog_media_rights.down.sql', import.meta.url), 'utf8');
     const approvalsDown = await readFile(new URL('../migrations/008_catalog_item_approvals.down.sql', import.meta.url), 'utf8');
+    const draftsDown = await readFile(new URL('../migrations/009_catalog_drafts.down.sql', import.meta.url), 'utf8');
     await restarted.pool.query('BEGIN');
+    await restarted.pool.query(draftsDown);
+    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 9');
     await restarted.pool.query(approvalsDown);
     await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 8');
     await restarted.pool.query(mediaRightsDown);

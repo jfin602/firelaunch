@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto';
-import { isIP } from 'node:net';
 import { z } from 'zod';
 import { contentSchema, mediaUseEligible, type CatalogItem, type ContentItem, type MediaAsset } from '@firelaunch/contracts';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { CatalogRepository } from './catalog-repository.js';
 import { RepositoryError } from './repository.js';
+import { publicMediaUrl } from './hosted-media-policy.js';
 
 const selectionSchema = z.strictObject({
   expectedProjectRevision: z.number().int().positive(),
@@ -22,14 +22,9 @@ function stableContentId(itemId: string): string {
 
 // Query strings and fragments can carry private, expiring download capabilities. Only a
 // stable, public HTTPS media location can enter an exportable ChannelSpec.
-function publicMediaUrl(asset: MediaAsset): string | undefined {
+function assetPublicMediaUrl(asset: MediaAsset): string | undefined {
   if (asset.location.type !== 'https') return undefined;
-  const url = new URL(asset.location.url);
-  if (url.search || url.hash || url.username || url.password || url.protocol !== 'https:') return undefined;
-  const host = url.hostname.toLowerCase();
-  if (isIP(host) || host.startsWith('[') || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') ||
-    (url.port && url.port !== '443')) return undefined;
-  return url.toString();
+  return publicMediaUrl(asset.location.url) ? new URL(asset.location.url).toString() : undefined;
 }
 
 function eligibleAsset(item: CatalogItem, assets: Map<string, MediaAsset>, kind: MediaAsset['kind'],
@@ -37,7 +32,7 @@ function eligibleAsset(item: CatalogItem, assets: Map<string, MediaAsset>, kind:
   for (const id of item.mediaAssetIds) {
     const asset = assets.get(id);
     if (asset?.kind === kind && asset.catalogItemId === item.id && asset.deliveryEligible && mediaUseEligible(asset, use)) {
-      const url = publicMediaUrl(asset);
+      const url = assetPublicMediaUrl(asset);
       if (url) return url;
     }
   }

@@ -3,6 +3,7 @@ import { generateProject } from '@firelaunch/generator';
 import { RepositoryError } from './repository.js';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
+import { assertExportableMedia } from './hosted-media-policy.js';
 
 const textName = /\.(?:js|jsx|ts|tsx|json|toml|md|txt)$|^(?:README|LICENSE)$/i;
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -33,6 +34,7 @@ export class HostedWorkspaceService {
 
   async generate(principal: AuthenticatedPrincipal, id: string) {
     const project = await this.repository.read(principal, id);
+    assertExportableMedia(project.spec);
     const generated = await generateProject(project.spec);
     const files = Object.fromEntries(generated.files);
     const baseline = Object.fromEntries([...generated.files].map(([name, content]) => [name, content]));
@@ -60,6 +62,7 @@ export class HostedWorkspaceService {
 
   async exportSource(principal: AuthenticatedPrincipal, id: string) {
     const project = await this.repository.read(principal, id);
+    assertExportableMedia(project.spec);
     const source = await this.repository.source(principal, id);
     if (!source) throw new RepositoryError('NOT_FOUND', 'Generated source not found');
     const files = Object.fromEntries(Object.entries(source.files).sort(([a], [b]) => a.localeCompare(b)));

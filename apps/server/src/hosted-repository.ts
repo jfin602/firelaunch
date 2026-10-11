@@ -8,6 +8,7 @@ import { RepositoryError } from './repository.js';
 import { sourceMatchesBaseline } from './hosted-workspace.js';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { CompositionKind } from './catalog-composition.js';
+import { assertExportableMedia } from './hosted-media-policy.js';
 
 type ProjectRow = { id: string; revision: number; spec: unknown; created_at: Date; updated_at: Date };
 const channelId = z.string().regex(/^ch_[a-f0-9]{32}$/);
@@ -173,6 +174,7 @@ export class HostedProjectRepository {
   async update(principal: AuthenticatedPrincipal, id: string, expectedRevision: number, rawSpec: unknown): Promise<ChannelProject> {
     projectId(id);
     const spec: ChannelSpec = channelSpecSchema.parse(rawSpec);
+    assertExportableMedia(spec);
     if (spec.id !== id) throw new z.ZodError([{ code: 'custom', path: ['spec', 'id'], message: 'Channel ID cannot change' }]);
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) throw new RepositoryError('INVALID_INPUT', 'Invalid revision');
     const client = await this.pool.connect();
@@ -207,6 +209,8 @@ export class HostedProjectRepository {
     kind: CompositionKind, spec: ChannelSpec, baseline: ChannelSpec, selection: { itemIds: string[]; collectionIds: string[] }): Promise<ChannelProject> {
     projectId(id);
     channelSpecSchema.parse(spec); channelSpecSchema.parse(baseline);
+    assertExportableMedia(spec);
+    assertExportableMedia(baseline);
     if (spec.id !== id || baseline.id !== id) throw new RepositoryError('INVALID_INPUT', 'Draft channel does not match project');
     const client = await this.pool.connect();
     try {
