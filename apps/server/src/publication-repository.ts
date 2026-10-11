@@ -20,7 +20,7 @@ const ids = {
 const revision = z.number().int().positive();
 const approvalRequest = z.strictObject({
   projectId: ids.project, deploymentId: ids.deployment,
-  revisions: z.strictObject({ channel: revision, catalog: revision }),
+  revisions: z.strictObject({ channel: revision, catalog: z.number().int().nonnegative() }),
   expectedLiveReleaseId: ids.release.nullable(),
   bindings: publicationBindingsSchema.optional(),
   rollbackSourceReleaseId: ids.release.optional()
@@ -129,23 +129,57 @@ export class PublicationRepository {
     } catch { throw new RepositoryError('STORAGE_ERROR', 'Invalid immutable release'); }
   }
 
+  private async reviewedSelection(client: PoolClient, state: Locked, input: PublicationApprovalRequest): Promise<{ channel: ChannelSpec; bindings: PublicationBindings; rollback: boolean }> {
+    if (state.channelRevision !== input.revisions.channel || state.catalogRevision !== input.revisions.catalog ||
+      state.liveId !== input.expectedLiveReleaseId) conflict('Draft or live release changed; review again');
+    if (state.catalogRevision === 0) conflict('No approved catalog media is ready for publication');
+    const historical = input.rollbackSourceReleaseId ? await this.historical(client, state, input.deploymentId, input.rollbackSourceReleaseId) : null;
+    if (historical && (historical.releaseId === state.liveId || historical.releaseSequence >= state.liveSequence))
+      conflict('Rollback requires a prior release');
+    const channel = historical?.channel ?? state.channel;
+    const bindings = historical?.bindings ?? input.bindings!;
+    await this.requireReviewedItems(client, state, input.projectId, bindings);
+    this.manifest(state, newId('ap'), new Date().toISOString(), channel, bindings, newId('rel'), new Date().toISOString());
+    return { channel, bindings, rollback: !!historical };
+  }
+
+  /** A side-effect-free eligibility check. Approval still rechecks under its own lock. */
+  async readiness(principal: AuthenticatedPrincipal, raw: unknown): Promise<{ ready: true; revisions: { channel: number; catalog: number }; liveReleaseId: string | null; rollback: boolean }> {
+    const input = approvalRequest.parse(raw);
+    const client = await this.projects.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const state = await this.locked(client, principal, input.projectId, input.deploymentId);
+      const selected = await this.reviewedSelection(client, state, input);
+      await client.query('ROLLBACK');
+      return { ready: true, revisions: { channel: state.channelRevision, catalog: state.catalogRevision },
+        liveReleaseId: state.liveId, rollback: selected.rollback };
+    } catch (error) { await client.query('ROLLBACK').catch(() => undefined); return failure(error); }
+    finally { client.release(); }
+  }
+
+  async status(principal: AuthenticatedPrincipal, projectId: string, deploymentId: string): Promise<{ revisions: { channel: number; catalog: number }; liveReleaseId: string | null; liveSequence: number; approvalRequired: true; nativeSubmission: 'separate' }> {
+    ids.project.parse(projectId); ids.deployment.parse(deploymentId);
+    const client = await this.projects.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const state = await this.locked(client, principal, projectId, deploymentId);
+      await client.query('ROLLBACK');
+      return { revisions: { channel: state.channelRevision, catalog: state.catalogRevision }, liveReleaseId: state.liveId,
+        liveSequence: state.liveSequence, approvalRequired: true, nativeSubmission: 'separate' };
+    } catch (error) { await client.query('ROLLBACK').catch(() => undefined); return failure(error); }
+    finally { client.release(); }
+  }
+
   async approve(principal: AuthenticatedPrincipal, raw: unknown): Promise<{ approvalId: string; approvedAt: string }> {
     const input = approvalRequest.parse(raw);
     const client = await this.projects.pool.connect();
     try {
       await client.query('BEGIN');
       const state = await this.locked(client, principal, input.projectId, input.deploymentId);
-      if (state.channelRevision !== input.revisions.channel || state.catalogRevision !== input.revisions.catalog ||
-        state.liveId !== input.expectedLiveReleaseId) conflict('Draft or live release changed; review again');
-      const historical = input.rollbackSourceReleaseId ? await this.historical(client, state, input.deploymentId, input.rollbackSourceReleaseId) : null;
-      if (historical && (historical.releaseId === state.liveId || historical.releaseSequence >= state.liveSequence))
-        conflict('Rollback requires a prior release');
-      const channel = historical?.channel ?? state.channel;
-      const bindings = historical?.bindings ?? input.bindings!;
-      await this.requireReviewedItems(client, state, input.projectId, bindings);
+      const { channel, bindings, rollback } = await this.reviewedSelection(client, state, input);
       const approvalId = newId('ap');
       const approvedAt = new Date().toISOString();
-      this.manifest(state, approvalId, approvedAt, channel, bindings, newId('rel'), approvedAt);
       await client.query(`INSERT INTO publication_approvals(id, creator_account_id, project_id, deployment_id,
         channel_revision, catalog_revision, expected_live_release_id, rollback_source_release_id, channel_snapshot, bindings, approved_at)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11)`,
@@ -153,7 +187,7 @@ export class PublicationRepository {
         state.liveId, input.rollbackSourceReleaseId ?? null, JSON.stringify(channel), JSON.stringify(bindings), approvedAt]);
       await client.query(`INSERT INTO publication_audit_events(creator_account_id, project_id, deployment_id, approval_id, action)
         VALUES ($1,$2,$3,$4,$5)`, [state.owner, input.projectId, input.deploymentId, approvalId,
-        historical ? 'rollback_approved' : 'approved']);
+        rollback ? 'rollback_approved' : 'approved']);
       await client.query('COMMIT');
       return { approvalId, approvedAt };
     } catch (error) { await client.query('ROLLBACK').catch(() => undefined); return failure(error); }
@@ -218,7 +252,7 @@ export class PublicationRepository {
     finally { client.release(); }
   }
 
-  async history(principal: AuthenticatedPrincipal, projectId: string, deploymentId: string): Promise<{ liveReleaseId: string | null; releases: { id: string; sequence: number; sha256: string; previousReleaseId: string | null; rollbackSourceReleaseId: string | null }[] }> {
+  async history(principal: AuthenticatedPrincipal, projectId: string, deploymentId: string): Promise<{ liveReleaseId: string | null; releases: { id: string; sequence: number; sha256: string; publishedAt: string; previousReleaseId: string | null; rollbackSourceReleaseId: string | null }[] }> {
     ids.project.parse(projectId); ids.deployment.parse(deploymentId);
     const client = await this.projects.pool.connect();
     try {
@@ -233,7 +267,8 @@ export class PublicationRepository {
         FROM publication_releases WHERE deployment_id = $1 AND creator_account_id = $2 ORDER BY sequence DESC`, [deploymentId, principal.accountId]);
       await client.query('COMMIT');
       return { liveReleaseId: live.rows[0]?.release_id ?? null, releases: rows.rows.map(row => ({ id: row.id, sequence: row.sequence,
-        sha256: row.sha256, previousReleaseId: row.previous_release_id, rollbackSourceReleaseId: row.rollback_source_release_id })) };
+        sha256: row.sha256, publishedAt: row.published_at.toISOString(), previousReleaseId: row.previous_release_id,
+        rollbackSourceReleaseId: row.rollback_source_release_id })) };
     } catch (error) { await client.query('ROLLBACK').catch(() => undefined); return failure(error); }
     finally { client.release(); }
   }

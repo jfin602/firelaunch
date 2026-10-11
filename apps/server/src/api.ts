@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { ZodError, z } from 'zod';
 import { applyMutation, mutationSchema } from '@firelaunch/channel-engine';
-import { createProjectSchema, updateProjectSchema } from '@firelaunch/contracts';
+import { createProjectSchema, publicationBindingsSchema, updateProjectSchema } from '@firelaunch/contracts';
 import { agentRequestSchema, BedrockProvider, ChannelAgent, MockProvider, OpenAIProvider, providerStatus, type AgentProvider } from '@firelaunch/agent';
 import { ProjectRepository, RepositoryError } from './repository.js';
 import { WorkspaceService } from './workspace.js';
@@ -14,6 +14,7 @@ import { CatalogRepository, catalogKinds, type CatalogKind } from './catalog-rep
 import { CatalogProjectionService } from './catalog-projection.js';
 import { agentCatalogGrounding } from './agent-grounding.js';
 import { composeCatalogDraft } from './catalog-composition.js';
+import { PublicationRepository } from './publication-repository.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -28,6 +29,13 @@ const feedApproveSchema = feedPreviewSchema.extend({ content: z.string().max(512
 const draftSchema = z.strictObject({ creatorType: z.enum(['video', 'audio', 'writing']), expectedRevision: z.number().int().positive(),
   expectedCatalogRevision: z.number().int().nonnegative(), itemIds: z.array(z.string().regex(/^ci_[a-f0-9]{32}$/)).max(500),
   collectionIds: z.array(z.string().regex(/^col_[a-f0-9]{32}$/)).max(100) });
+const releaseIdSchema = z.string().regex(/^rel_[a-f0-9]{32}$/);
+const publicationSnapshotSchema = z.strictObject({
+  revisions: z.strictObject({ channel: z.number().int().positive(), catalog: z.number().int().nonnegative() }),
+  expectedLiveReleaseId: releaseIdSchema.nullable(), bindings: publicationBindingsSchema
+});
+const rollbackReviewSchema = publicationSnapshotSchema.omit({ bindings: true }).extend({ rollbackSourceReleaseId: releaseIdSchema });
+const publishApprovalSchema = z.strictObject({ approvalId: z.string().regex(/^ap_[a-f0-9]{32}$/) });
 
 async function body(request: IncomingMessage): Promise<unknown> {
   if (!request.headers['content-type']?.toLowerCase().startsWith('application/json')) throw new ZodError([{ code: 'custom', path: [], message: 'Expected application/json' }]);
@@ -54,6 +62,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
   const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository) : null;
   const catalog = hostedRepository ? new CatalogRepository(hostedRepository) : null;
   const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog) : null;
+  const publication = hostedRepository ? new PublicationRepository(hostedRepository) : null;
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? '', 'http://localhost');
@@ -75,6 +84,34 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
         if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? '') && !mode.auth.authorizedMutation(request, session)) { await audit(hostedRepository?.pool, 'auth_denied', 'denied', session.principal.accountId); respond(response, 403, { error: { code: 'CSRF', message: 'Invalid request origin or CSRF token' } }); return; }
         if (hostedRepository && hostedWorkspace) {
           const principal = session.principal;
+          if (segments[3] === 'publication' && publication) {
+            if (url.search || segments.length !== 6) { respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return; }
+            const projectId = segments[2]!;
+            const deploymentId = segments[4]!;
+            const action = segments[5];
+            if (action === 'status' && request.method === 'GET') { respond(response, 200, await publication.status(principal, projectId, deploymentId)); return; }
+            if (action === 'history' && request.method === 'GET') { respond(response, 200, await publication.history(principal, projectId, deploymentId)); return; }
+            if (action === 'readiness' && request.method === 'POST') {
+              const input = publicationSnapshotSchema.parse(await body(request));
+              respond(response, 200, await publication.readiness(principal, { projectId, deploymentId, ...input })); return;
+            }
+            if (action === 'approve' && request.method === 'POST') {
+              const input = publicationSnapshotSchema.parse(await body(request));
+              respond(response, 201, await publication.approve(principal, { projectId, deploymentId, ...input })); return;
+            }
+            if (action === 'rollback' && request.method === 'POST') {
+              const input = rollbackReviewSchema.parse(await body(request));
+              respond(response, 201, { ...await publication.approve(principal, { projectId, deploymentId, ...input }),
+                publicationRequired: true }); return;
+            }
+            if (action === 'publish' && request.method === 'POST') {
+              const input = publishApprovalSchema.parse(await body(request));
+              const result = await publication.publish(principal, projectId, deploymentId, input.approvalId);
+              respond(response, 200, { releaseId: result.manifest.releaseId, sequence: result.manifest.releaseSequence,
+                sha256: result.sha256, liveReleaseId: result.manifest.releaseId, nativeSubmission: 'separate' }); return;
+            }
+            respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return;
+          }
           if (segments.length >= 4 && segments[3] === 'catalog' && catalog) {
             const projectId = segments[2]!;
             if (url.search || segments.length > 7) { respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return; }
