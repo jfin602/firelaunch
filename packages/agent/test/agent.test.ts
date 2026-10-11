@@ -81,7 +81,10 @@ test('malformed calls refuse and partial saves remain reported', async () => {
   assert.equal(response.project.spec.pages.length, 2);
   assert.match(response.events.at(-1)!.text, /Invalid set_brand/);
   assert.deepEqual(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'bedrock' }).configured, false);
-  assert.equal(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'bedrock', BEDROCK_MODEL_ID: 'test-model' }).configured, true);
+  assert.equal(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'bedrock', BEDROCK_MODEL_ID: '  ' }).configured, false);
+  const bedrockStatus = providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'bedrock', BEDROCK_MODEL_ID: 'amazon.nova-lite-v1:0', AWS_REGION: 'us-east-2' });
+  assert.equal(bedrockStatus.configured, true);
+  assert.match(bedrockStatus.message, /does not verify region, credentials, model access or request success/);
   assert.throws(() => providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'unknown' }), /Unsupported/);
   assert.equal(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'openai' }).configured, false);
   assert.equal(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'openai', OPENAI_API_KEY: 'server-token', OPENAI_MODEL: 'test-model' }).configured, true);
@@ -98,8 +101,37 @@ test('Bedrock Converse adapter sends tool schemas and marshals tool results with
   assert.equal(proposal.calls[0]?.name, 'inspect_channel');
   assert.equal(commands[0]!.input.modelId, 'test-model');
   assert.equal(commands[0]!.input.toolConfig!.tools!.length, 16);
+  assert.ok(commands[0]!.input.toolConfig!.tools!.some(tool => tool.toolSpec?.name === 'inspect_catalog'));
+  assert.deepEqual(commands[0]!.input.messages![0]!.content, [{ text: 'inspect' }]);
   await provider.next([{ role: 'user', text: 'inspect' }, { role: 'assistant', text: '', calls: proposal.calls }, { role: 'results', results: [{ id: 'one', output: '{}' }] }]);
+  assert.equal(commands[1]!.input.messages![1]!.content![0]!.toolUse?.name, 'inspect_channel');
   assert.equal(commands[1]!.input.messages![2]!.content![0]!.toolResult?.toolUseId, 'one');
+  assert.deepEqual(commands[1]!.input.messages![2]!.content![0]!.toolResult?.content, [{ text: '{}' }]);
+});
+
+test('injected Bedrock tool turns persist only validated edits', async () => {
+  const commands: ConverseCommand[] = [];
+  const replies = [
+    { stopReason: 'tool_use', output: { message: { content: [{ toolUse: { toolUseId: 'inspect', name: 'inspect_channel', input: {} } }] } } },
+    { stopReason: 'tool_use', output: { message: { content: [{ toolUse: { toolUseId: 'brand', name: 'set_brand', input: { changes: { primaryColor: '#abcdef' } } } }] } } },
+    { stopReason: 'end_turn', output: { message: { content: [{ text: 'Updated the brand.' }] } } }
+  ];
+  const fake = { async send(command: ConverseCommand) { commands.push(command); return replies.shift(); } } as unknown as BedrockRuntimeClient;
+  const spec = starterChannel('Nature');
+  const project = { id: spec.id, spec, revision: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  let saves = 0;
+  const result = await new ChannelAgent(new BedrockProvider('test-model', fake)).run(project, 'Set the primary color', async (next, revision) => {
+    saves++;
+    assert.equal(revision, 1);
+    return { ...project, spec: next, revision: 2 };
+  });
+  assert.equal(result.status, 'completed');
+  assert.equal(result.project.spec.brand.primaryColor, '#abcdef');
+  assert.equal(result.project.revision, 2);
+  assert.equal(saves, 1);
+  assert.deepEqual(result.events.filter(event => event.kind === 'tool').map(event => event.text.split(':')[0]), ['inspect_channel', 'set_brand']);
+  assert.equal(commands[1]!.input.messages![2]!.content![0]!.toolResult?.toolUseId, 'inspect');
+  assert.equal(commands[2]!.input.messages![4]!.content![0]!.toolResult?.toolUseId, 'brand');
 });
 
 test('OpenAI Responses transport sends bounded function schemas and continuation with server token', async () => {
@@ -162,14 +194,27 @@ test('agent refuses oversized and over-budget provider proposals before persiste
   assert.equal(saves, 0);
 });
 
-test('Bedrock refuses unusable provider turns and agent reports provider failures', async () => {
+test('Bedrock guardrail refusal and malformed turns cannot claim a saved mutation', async () => {
   const fake = { async send() { return { stopReason: 'guardrail_intervened', output: { message: { content: [{ text: 'blocked' }] } } }; } } as unknown as BedrockRuntimeClient;
   const provider = new BedrockProvider('test-model', fake);
-  await assert.rejects(provider.next([{ role: 'user', text: 'test' }]), /usable turn/);
   const spec = starterChannel('Nature');
   const project = { id: spec.id, spec, revision: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-  const result = await new ChannelAgent(provider).run(project, 'test', async () => { throw new Error('should not persist'); });
-  assert.equal(result.status, 'error');
-  assert.equal(result.project.revision, 1);
-  assert.match(result.events.at(-1)!.text, /bedrock request failed/);
+  let saves = 0;
+  const persist = async () => { saves++; throw new Error('Unexpected save'); };
+  const refused = await new ChannelAgent(provider).run(project, 'test', persist);
+  assert.equal(refused.status, 'refused');
+  assert.match(refused.events.at(-1)!.text, /Bedrock refused/);
+  for (const response of [
+    { stopReason: 'end_turn', output: { message: { content: [] } } },
+    { stopReason: 'end_turn', output: { message: { content: [{ text: '   ' }] } } },
+    { stopReason: 'tool_use', output: { message: { content: [{ text: 'no call' }] } } },
+    { stopReason: 'end_turn', output: { message: { content: [{ toolUse: { toolUseId: 'x', name: 'set_brand', input: { changes: { primaryColor: '#ffffff' } } } }] } } }
+  ]) {
+    const invalid = new BedrockProvider('test-model', { async send() { return response; } } as unknown as BedrockRuntimeClient);
+    const result = await new ChannelAgent(invalid).run(project, 'test', persist);
+    assert.equal(result.status, 'error');
+    assert.equal(result.project.revision, 1);
+    assert.match(result.events.at(-1)!.text, /bedrock request failed/);
+  }
+  assert.equal(saves, 0);
 });

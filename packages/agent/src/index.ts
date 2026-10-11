@@ -101,7 +101,7 @@ export class MockProvider implements AgentProvider {
 export function providerStatus(environment: NodeJS.ProcessEnv): { provider: string; configured: boolean; message: string } {
   const provider = environment.FIRELAUNCH_AGENT_PROVIDER || 'mock';
   if (provider === 'mock') return { provider, configured: true, message: 'Deterministic mock; no cloud request.' };
-  if (provider === 'bedrock') return { provider, configured: !!environment.BEDROCK_MODEL_ID, message: environment.BEDROCK_MODEL_ID ? 'Bedrock selected; region, credentials and model access checked on request.' : 'BEDROCK_MODEL_ID is required.' };
+  if (provider === 'bedrock') return { provider, configured: !!environment.BEDROCK_MODEL_ID?.trim(), message: environment.BEDROCK_MODEL_ID?.trim() ? 'Bedrock model ID configured; this status does not verify region, credentials, model access or request success.' : 'BEDROCK_MODEL_ID is required.' };
   if (provider === 'openai') return { provider, configured: !!environment.OPENAI_API_KEY?.trim() && !!environment.OPENAI_MODEL?.trim(), message: !environment.OPENAI_API_KEY?.trim() ? 'OPENAI_API_KEY is required.' : !environment.OPENAI_MODEL?.trim() ? 'OPENAI_MODEL is required.' : 'OpenAI selected; API availability and model access checked on request.' };
   throw new Error('Unsupported FIRELAUNCH_AGENT_PROVIDER');
 }
