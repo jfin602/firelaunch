@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { fixtureChannel } from '../../channel-engine/test/fixtures.js';
 import { generateProject, writeGeneratedProject } from '../src/index.js';
 import { televisionFromSpec } from '@firelaunch/tv';
+import type { ChannelDeployment } from '@firelaunch/contracts';
 
 test('deterministic tree contains true shared runtime, manifest and projected content', async () => {
   const spec = fixtureChannel();
@@ -73,4 +74,35 @@ test('generated projection and bundled runtime keep informational and audio sema
   assert.equal(runtime.transition(projected, runtime.transition(projected, state, 'select'), 'select').screen, 'playback');
   assert.match(generated.files.get('src/App.js')!, /Now listening/);
   assert.match(generated.files.get('src/App.js')!, /Back to channel/);
+});
+
+test('bound deployments pin public identity while legacy generation remains static', async () => {
+  const spec = fixtureChannel();
+  const deployment: ChannelDeployment = { schemaVersion: 1, id: `dep_${'a'.repeat(32)}`,
+    creatorAccountId: `cr_${'b'.repeat(32)}`, projectId: spec.id, channelId: spec.id,
+    appName: 'Creator channel', packageId: 'com.creator.channel', releaseControl: 'creator',
+    nativeReleaseApproval: 'pending_creator', manifestEndpoint: 'https://channels.example.org/',
+    consoleEvidence: { state: 'none' } };
+  const generated = await generateProject(spec, deployment);
+  assert.deepEqual(JSON.parse(generated.files.get('src/release-config.json')!), {
+    deploymentId: deployment.id, channelId: spec.id, packageId: deployment.packageId, origin: 'https://channels.example.org'
+  });
+  assert.equal(JSON.parse(generated.files.get('src/release-config.json')!).creatorAccountId, undefined);
+  assert.equal(JSON.parse(generated.files.get('app.json')!).name, 'com.creator.channel.main');
+  assert.match(generated.files.get('manifest.toml')!, /id = "com\.creator\.channel"/);
+  const fallback = JSON.parse(generated.files.get('src/channel.json')!);
+  assert.deepEqual(fallback.pages[0].modules[0].items, []);
+  assert.deepEqual(fallback.pages[0].modules[0].body, 'Connect to load this channel.');
+  assert.equal(generated.files.get('src/channel.json')!.includes(spec.content[0]!.mediaUrl!), false);
+  assert.deepEqual(JSON.parse(generated.files.get('firelaunch.json')!).unresolvedAssets, []);
+  assert.notEqual(generated.fingerprint, (await generateProject(spec)).fingerprint);
+  assert.equal((await generateProject(spec)).files.has('src/release-config.json'), false);
+  assert.equal(JSON.parse((await generateProject(spec)).files.get('package.json')!).dependencies['@react-native-async-storage/async-storage'], undefined);
+  assert.match(generated.files.get('src/release-client.js')!, /AsyncStorage/);
+  assert.equal(JSON.parse(generated.files.get('package.json')!).dependencies['@react-native-async-storage/async-storage'],
+    'npm:@amazon-devices/react-native-async-storage__async-storage@2.1.9000000000-rn-83');
+  await assert.rejects(generateProject(spec, { ...deployment, manifestEndpoint: undefined }), /pinned HTTPS/);
+  await assert.rejects(generateProject(spec, { ...deployment, manifestEndpoint: 'https://channels.example.org/elsewhere' }), /Invalid deployment resolver/);
+  await assert.rejects(generateProject(spec, { ...deployment, manifestEndpoint: 'https://localhost./' }), /Unsafe deployment resolver/);
+  await assert.rejects(generateProject(spec, { ...deployment, projectId: `ch_${'f'.repeat(32)}` }), /channel IDs must match/);
 });

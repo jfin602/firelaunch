@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BackHandler, Image, Pressable, ScrollView, StyleSheet, Text, TVEventHandler, View } from 'react-native';
 import { KeplerVideoSurfaceView, VideoPlayer } from '@amazon-devices/react-native-w3cmedia';
-import channel from './channel.json';
+import bundled from './channel.json';
+import { installRelease } from './release-client';
 import { activeItem, initialState, itemFocusId, navFocusId, transition } from './tv-runtime';
 
 function Playback({ item, muted }) {
@@ -28,8 +29,17 @@ function Playback({ item, muted }) {
 }
 
 export default function App() {
-  const [state, setState] = useState(() => initialState(channel));
-  const dispatch = command => setState(previous => transition(channel, previous, command));
+  const [view, setView] = useState(() => ({ channel: bundled, state: initialState(bundled) }));
+  const { channel, state } = view;
+  const dispatch = command => setView(previous => ({ ...previous,
+    state: transition(previous.channel, previous.state, command) }));
+  useEffect(() => {
+    let active = true;
+    const stop = installRelease(bundled, (next, nextState) => {
+      if (active) setView({ channel: next, state: nextState });
+    });
+    return () => { active = false; stop(); };
+  }, []);
   useEffect(() => {
     const handler = new TVEventHandler();
     handler.enable(null, (_, event) => {
@@ -49,7 +59,7 @@ export default function App() {
       {brand.showTitle !== false && <Text style={[styles.heading, { color: brand.textColor }]}>{channel.title}</Text>}
       <View style={styles.nav}>{channel.pages.map(target => <Pressable key={target.id}
         focusable={false}
-        onPress={() => setState({ screen: 'page', pageId: target.id, focusId: navFocusId(target.id) })}
+        onPress={() => setView(previous => ({ ...previous, state: { screen: 'page', pageId: target.id, focusId: navFocusId(target.id) } }))}
         style={[styles.navItem, state.focusId === navFocusId(target.id) && [styles.focused, focusStyle]]}>
         <Text style={{ color: brand.textColor }}>{target.title}</Text>
       </Pressable>)}</View>
@@ -58,8 +68,8 @@ export default function App() {
         {module.kind === 'text' ? <Text style={{ color: brand.textColor }}>{module.body}</Text> :
           <View style={module.kind === 'grid' ? styles.grid : styles.rail}>{module.items.map(content => {
             const focusId = itemFocusId(page.id, module.id, content.id);
-            return <Pressable key={focusId} focusable={false} onPress={() => setState(transition(channel,
-              { screen: 'page', pageId: page.id, focusId }, 'select'))}
+            return <Pressable key={focusId} focusable={false} onPress={() => setView(previous => ({ ...previous,
+              state: transition(previous.channel, { screen: 'page', pageId: page.id, focusId }, 'select') }))}
               style={[styles.card, module.kind === 'hero' && styles.hero,
                 state.focusId === focusId && [styles.focused, focusStyle]]}>
               {content.artwork.startsWith('http') ? <Image source={{ uri: content.artwork }} style={styles.artwork} />

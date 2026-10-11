@@ -7,6 +7,13 @@ import { assertExportableMedia } from './hosted-media-policy.js';
 
 const textName = /\.(?:js|jsx|ts|tsx|json|toml|md|txt)$|^(?:README|LICENSE)$/i;
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
+async function optionalDeployment(repository: HostedProjectRepository, principal: AuthenticatedPrincipal, id: string) {
+  try { return await repository.readDeployment(principal, id); }
+  catch (error) {
+    if (error instanceof RepositoryError && error.code === 'NOT_FOUND' && error.message === 'Deployment not found') return undefined;
+    throw error;
+  }
+}
 export const sourceMatchesBaseline = (content: string | undefined, baseline: string | undefined): boolean =>
   content !== undefined && baseline !== undefined && (/^sha256:[a-f0-9]{64}$/.test(baseline) ? hash(content) === baseline.slice(7) : content === baseline);
 function safeName(name: string): void {
@@ -26,16 +33,19 @@ export class HostedWorkspaceService {
     const project = await this.repository.read(principal, id);
     const source = await this.repository.source(principal, id);
     if (!source) return { generated: false, files: [] as string[], changed: [] as string[], stale: false, path: null };
+    const deployment = await optionalDeployment(this.repository, principal, id);
     const changed = [...new Set([...Object.keys(source.files), ...Object.keys(source.baseline)])]
       .filter(name => !sourceMatchesBaseline(source.files[name], source.baseline[name])).sort();
     return { generated: true, files: Object.keys(source.files).sort(), changed,
-      stale: source.fingerprint !== (await generateProject(project.spec)).fingerprint, path: null };
+      stale: !!deployment && !deployment.manifestEndpoint ||
+        source.fingerprint !== (await generateProject(project.spec, deployment)).fingerprint, path: null };
   }
 
   async generate(principal: AuthenticatedPrincipal, id: string) {
     const project = await this.repository.read(principal, id);
     assertExportableMedia(project.spec);
-    const generated = await generateProject(project.spec);
+    const deployment = await optionalDeployment(this.repository, principal, id);
+    const generated = await generateProject(project.spec, deployment ?? undefined);
     const files = Object.fromEntries(generated.files);
     const baseline = Object.fromEntries([...generated.files].map(([name, content]) => [name, content]));
     await this.repository.generateSource(principal, id, project.revision, generated.fingerprint, files, baseline);
