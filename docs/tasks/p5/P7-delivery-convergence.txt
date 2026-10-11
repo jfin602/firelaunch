@@ -1,0 +1,30 @@
+TASK: Phase 5 / P7 — End to end release integrity and device handoff
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.5.7`.
+
+GOAL
+Converge owner publication, public HTTPS-shaped delivery and native refresh while preparing a reproducible real VirtualDevice closeout.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p5/{README.md,prompt-assessment.md,implementation-plan.md}, docs/decisions/0009-live-channel-delivery.md, and directly touched code/tests. Inspect actual HEAD, git status, root version and prior P5 checkpoint before edits. Historical c4-fix LOCAL GREEN does not convert Phase 4 or hosted release to GREEN.
+
+
+IMPLEMENT
+Inspect new P1–P6 changes, existing server/Postgres fixtures, contract tests, generator/TV tests, c0 VirtualDevice CLI 1.4.4 SDK 0.24.12112 evidence. Build focused integrated deterministic harness: distinct creator deployments; approved release v1, visible v2, stale/revoked/foreign denial, immutable past releases, rollback NEW v3, anonymous public resolver redaction and strict caching, native LKG/offline/wrong deployment/bad digest/incompatible fallback. Test source code custom-edits and local P0 generation remain unchanged. Repair only observed cross-system defects. Write concise P8 runbook under docs/tasks/p5/ with actual SDK/CLI/VirtualDevice preflight, one installed VPKG, controlled device-reachable HTTPS origin, owned rights-cleared or writing-only test content and manifest ID/hash tracing. Do not perform/claim paid AI, production VPS, device build, or physical Fire TV if not witnessed.
+
+OUT OF SCOPE
+No required Bedrock request, native executable payload over public manifest, invented licensed media, unverified real hardware/Appstore claims, or production VPS. Preserve P2/c2 hosted S1–S6 OPEN/PARTIAL and original P4 NOT GREEN. Phase 6 owns scheduled feed sync; Phase 7 owns creator Developer Console handoff; Phase 8 owns physical Fire TV/Appstore approval.
+
+VALIDATION
+Focused convergence + negative tenant/CSRF/rights and affected builds/typechecks, git diff --check. Reserve one full npm run check, real HTTPS/browser and VirtualDevice acceptance for P8.
+
+GIT
+Do not create commits, amend or rewrite/move HEAD. The runner exclusively owns the checkpoint commit. Preserve approved dirty work. Set only root package.json version and two root package-lock.json version entries to 0.5.7; internal workspace versions must remain unchanged unless demonstrated compatibility requires documented exception.
+
+FINAL RESPONSE
+Report affected source/doc boundaries, exact starting HEAD and final version, observed focused/full test counts and skips, checks, direct browser/device observations only when actually executed, and precise remaining qualification gates. Never call P5 GREEN from mocks or by assuming VirtualDevice equals physical Fire TV.
