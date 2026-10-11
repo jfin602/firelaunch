@@ -1,11 +1,11 @@
-TASK: c4-fix / P2 — Secure local Bedrock Nova Lite readiness
+TASK: Correction 4 / P2 — Secure local Bedrock Nova Lite readiness
 
 MODEL / REASONING / USAGE
 - Recommended configuration: `GPT-6 Sol High`.
 - Browser required: no.
 
 VERSIONING
-The assigned project version is `0.4.8` (UNCHANGED).
+- Required unchanged project version: `0.4.8`.
 
 GOAL
 Make the existing Bedrock Converse provider locally configurable and reliably testable offline; do not require verified AWS access or claim a live model call.
