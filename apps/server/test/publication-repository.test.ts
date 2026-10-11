@@ -4,20 +4,22 @@ import { createHash, randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 import { createServer, type Server } from 'node:http';
 import { once } from 'node:events';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
 import { HostedProjectRepository } from '../src/hosted-repository.js';
 import { CatalogRepository } from '../src/catalog-repository.js';
-import { PublicationRepository } from '../src/publication-repository.js';
+import { PublicationRepository, canonicalBytes } from '../src/publication-repository.js';
 import { PublicReleaseResolver } from '../src/public-resolver.js';
 import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
 import { OidcVerifier } from '../src/auth/oidc.js';
 import { HostedAuth } from '../src/auth/sessions.js';
 import { createApi } from '../src/api.js';
 import { ProjectRepository } from '../src/repository.js';
+import { generateProject } from '../../../packages/generator/src/index.js';
 
 const databaseTest = process.env.FIRELAUNCH_TEST_DATABASE_URL ? test : test.skip;
 const id = (prefix: string) => `${prefix}_${randomUUID().replaceAll('-', '')}`;
@@ -34,6 +36,7 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
   let api: Server | undefined;
   let oidcServer: Server | undefined;
   let directory: string | undefined;
+  let clientDirectory: string | undefined;
   const previousNodeEnv = process.env.NODE_ENV;
   try {
     first = await HostedProjectRepository.connect(url.toString());
@@ -184,13 +187,110 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     assert.equal(anonymousRelease.status, 200);
     assert.equal(anonymousRelease.headers.get('etag'), `"${firstRelease.sha256}"`);
     assert.equal(await anonymousRelease.text(), firstRelease.bytes);
+    assert.equal(anonymousRelease.headers.get('cache-control'), 'public, max-age=31536000, immutable');
     assert.equal((await fetch(`${origin}/public/v1/deployments/${id('dep')}/releases/${firstRelease.manifest.releaseId}`)).status, 404);
     const anonymousCurrent = await fetch(`${publicPath}/current`, { headers: { cookie: foreignLogin.cookie } });
     assert.deepEqual(await anonymousCurrent.json(), { deploymentId, releaseId: firstRelease.manifest.releaseId,
       releaseSequence: 1, sha256: firstRelease.sha256 });
+    assert.equal(anonymousCurrent.headers.get('cache-control'), 'public, max-age=0, must-revalidate');
     assert.equal((await fetch(`${publicPath}/releases/${firstRelease.manifest.releaseId}`,
       { headers: { cookie: ownerLogin.cookie } })).status, 200);
     assert.doesNotMatch(firstRelease.bytes, /private\/|verificationEvidenceId|creatorAccountId|object_key|signedUrl/);
+    const foreignProject = await first.create(foreign, { title: 'Other creator' });
+    const foreignDeploymentId = id('dep');
+    const foreignDeployment = { schemaVersion: 1 as const, id: foreignDeploymentId,
+      creatorAccountId: foreign.accountId, projectId: foreignProject.id, channelId: foreignProject.id,
+      appName: 'Other creator', packageId: 'com.example.othercreator', releaseControl: 'creator' as const,
+      nativeReleaseApproval: 'creator_approved' as const, manifestEndpoint: 'https://tv.example.org/',
+      consoleEvidence: { state: 'none' as const } };
+    await first.createDeployment(foreign, foreignDeployment);
+    await assert.rejects(catalog.mutate(foreign, foreignProject.id, 'sources', 'POST', 0, {
+      schemaVersion: 1, type: 'creator_json', state: 'verified',
+      permission: { retrieval: 'creator_asserted', tvDisplay: 'creator_asserted', verificationEvidenceId: evidenceId }
+    }), { code: 'INVALID_INPUT' });
+    const foreignEvidenceId = id('ev');
+    await first.pool.query(`INSERT INTO private_objects(id, creator_account_id, project_id, kind, object_key, content_type, byte_size, sha256)
+      VALUES ($1,$2,$3,'evidence',$4,'application/pdf',1,$5)`, [foreignEvidenceId, foreign.accountId, foreignProject.id,
+      `private/${'b'.repeat(64)}`, sha256('y')]);
+    const foreignSource = (await catalog.mutate(foreign, foreignProject.id, 'sources', 'POST', 0, {
+      schemaVersion: 1, type: 'creator_json', state: 'verified',
+      permission: { retrieval: 'creator_asserted', tvDisplay: 'creator_asserted', verificationEvidenceId: foreignEvidenceId }
+    })).record!;
+    const foreignItem = (await catalog.mutate(foreign, foreignProject.id, 'items', 'POST', 1, {
+      schemaVersion: 1, kind: 'video', sourceRecord: { sourceId: foreignSource.id,
+        externalId: { provider: 'creator', kind: 'feed_item_id', value: 'other-film' },
+        observedAt: '2026-10-11T00:00:00.000Z', metadata: { title: 'Other film' } },
+      externalIdentifiers: [{ provider: 'creator', kind: 'feed_item_id', value: 'other-film' }], mediaAssetIds: []
+    })).record!;
+    const foreignPlayback = (await catalog.mutate(foreign, foreignProject.id, 'media-assets', 'POST', 2, {
+      schemaVersion: 1, catalogItemId: foreignItem.id, kind: 'video',
+      location: { type: 'https', url: 'https://media.example.com/other.mp4' },
+      rights: rights('television_playback'), deliveryEligible: true
+    })).record!;
+    const foreignArtwork = (await catalog.mutate(foreign, foreignProject.id, 'media-assets', 'POST', 3, {
+      schemaVersion: 1, catalogItemId: foreignItem.id, kind: 'artwork',
+      location: { type: 'https', url: 'https://media.example.com/other.jpg' },
+      rights: rights('television_display'), deliveryEligible: true
+    })).record!;
+    const foreignSpec = { ...spec, id: foreignProject.id, title: 'Other creator',
+      content: [{ ...spec.content[0]!, mediaUrl: 'https://media.example.com/other.mp4',
+        artwork: 'https://media.example.com/other.jpg' }] };
+    const foreignUpdated = await first.update(foreign, foreignProject.id, 1, foreignSpec);
+    const foreignRequest = { projectId: foreignProject.id, deploymentId: foreignDeploymentId,
+      revisions: { channel: foreignUpdated.revision, catalog: 4 }, expectedLiveReleaseId: null,
+      bindings: { content: [{ contentId: foreignSpec.content[0]!.id, catalogItemId: foreignItem.id,
+        playbackAssetId: foreignPlayback.id, artworkAssetId: foreignArtwork.id }] } };
+    await assert.rejects(publication.approve(owner, foreignRequest), { code: 'NOT_FOUND' });
+    const foreignApproval = await publication.approve(foreign, foreignRequest);
+    const foreignRelease = await publication.publish(foreign, foreignProject.id, foreignDeploymentId, foreignApproval.approvalId);
+    assert.equal((await fetch(`${origin}/public/v1/deployments/${foreignDeploymentId}/current`).then(response => response.json())).releaseId,
+      foreignRelease.manifest.releaseId);
+    assert.equal((await fetch(`${publicPath}/releases/${foreignRelease.manifest.releaseId}`)).status, 404);
+    assert.equal((await fetch(`${origin}/public/v1/deployments/${foreignDeploymentId}/releases/${firstRelease.manifest.releaseId}`)).status, 404);
+    assert.doesNotMatch(foreignRelease.bytes, /private\/|verificationEvidenceId|creatorAccountId|object_key|signedUrl/);
+    const clientOrigin = 'https://tv.example.org';
+    const generated = await generateProject(spec, { schemaVersion: 1, id: deploymentId,
+      creatorAccountId: owner.accountId, projectId: project.id, channelId: project.id,
+      appName: 'Video channel', packageId: 'com.example.publication', releaseControl: 'creator',
+      nativeReleaseApproval: 'creator_approved', manifestEndpoint: `${clientOrigin}/`,
+      consoleEvidence: { state: 'none' } });
+    const local = await generateProject(spec);
+    assert.equal(local.files.has('src/release-config.json'), false, 'P0 generation remains static');
+    assert.equal(local.files.has('src/remote-release.js'), false);
+    assert.deepEqual(JSON.parse(generated.files.get('src/release-config.json')!), {
+      deploymentId, channelId: project.id, packageId: 'com.example.publication', origin: clientOrigin
+    });
+    clientDirectory = await mkdtemp(path.join(process.cwd(), 'node_modules', '.firelaunch-convergence-'));
+    await mkdir(path.join(clientDirectory, 'src'));
+    await writeFile(path.join(clientDirectory, 'package.json'), '{"type":"module"}');
+    for (const name of ['src/remote-release.js', 'src/sha256.js', 'src/tv-runtime.js'])
+      await writeFile(path.join(clientDirectory, name), generated.files.get(name)!);
+    const { createChannelLoader } = await import(pathToFileURL(path.join(clientDirectory, 'src/remote-release.js')).href);
+    const config = JSON.parse(generated.files.get('src/release-config.json')!);
+    const bundled = JSON.parse(generated.files.get('src/channel.json')!);
+    const stored = new Map<string, string>();
+    const storage = { getItem: async (key: string) => stored.get(key) ?? null,
+      setItem: async (key: string, value: string) => { stored.set(key, value); } };
+    let offline = false;
+    let replacement: string | undefined;
+    let pointerReplacement: string | undefined;
+    const wireGet = async (url: string, limit: number): Promise<string> => {
+      if (offline) throw new Error('offline');
+      assert.ok(url.startsWith(`${clientOrigin}/public/v1/deployments/${deploymentId}/`));
+      const response = await fetch(url.replace(clientOrigin, origin));
+      if (response.status !== 200) throw new Error(`HTTP ${response.status}`);
+      const bytes = url.endsWith('/current') && pointerReplacement ? pointerReplacement
+        : replacement && url.includes('/releases/') ? replacement : await response.text();
+      if (Buffer.byteLength(bytes) > limit) throw new Error('response too large');
+      return bytes;
+    };
+    const received: string[] = [];
+    const loader = createChannelLoader(config, bundled, { get: wireGet, storage,
+      onChannel: (channel: { title: string }) => received.push(channel.title) });
+    assert.equal(await loader.start(), true);
+    assert.deepEqual(received, [spec.title]);
+    assert.equal(await loader.refresh(), false, 'unchanged current pointer does not reload');
+    assert.equal(stored.size, 1);
     const winningApproval = firstRelease.manifest.approvalId;
     const retry = await other.publish(owner, project.id, deploymentId, winningApproval);
     assert.equal(retry.manifest.releaseId, firstRelease.manifest.releaseId);
@@ -244,6 +344,15 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
       pointer.releaseId === secondRelease.manifest.releaseId && pointer.releaseSequence === 2 && pointer.sha256 === secondRelease.sha256));
     assert.equal((await fetch(`${publicPath}/current`).then(response => response.json())).releaseId, secondRelease.manifest.releaseId);
     assert.equal(await fetch(`${publicPath}/releases/${liveId}`).then(response => response.text()), firstRelease.bytes);
+    assert.equal(await loader.refresh(), true);
+    assert.deepEqual(received, [spec.title, 'Second edition']);
+    offline = true;
+    const restartedTitles: string[] = [];
+    const restartedLoader = createChannelLoader(config, bundled, { get: wireGet, storage,
+      onChannel: (channel: { title: string }) => restartedTitles.push(channel.title) });
+    assert.equal(await restartedLoader.start(), false);
+    assert.deepEqual(restartedTitles, ['Second edition'], 'verified LKG survives an offline restart');
+    offline = false;
     const rollbackRequest = { revisions: { channel: 3, catalog: 6 }, expectedLiveReleaseId: secondRelease.manifest.releaseId,
       rollbackSourceReleaseId: liveId };
     const refusedRollbackResponse = await route('rollback', rollbackRequest);
@@ -269,6 +378,23 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     assert.equal(rollback.manifest.previousReleaseId, secondRelease.manifest.releaseId);
     assert.equal(rollback.manifest.channel.title, firstRelease.manifest.channel.title);
     assert.notEqual(rollback.manifest.releaseId, liveId);
+    for (const [reason, invalidBytes, invalidDigest] of [
+      ['bad digest', rollback.bytes, '0'.repeat(64)],
+      ['incompatible schema', canonicalBytes({ ...rollback.manifest,
+        clientCompatibility: { minSchemaVersion: 2, maxSchemaVersion: 2, channelSchemaVersion: 2 } }), undefined],
+      ['wrong deployment', canonicalBytes({ ...rollback.manifest,
+        deployment: { ...rollback.manifest.deployment, id: foreignDeploymentId } }), undefined]
+    ] as const) {
+      replacement = invalidBytes;
+      pointerReplacement = JSON.stringify({ deploymentId, releaseId: rollback.manifest.releaseId,
+        releaseSequence: 3, sha256: invalidDigest ?? sha256(invalidBytes) });
+      assert.equal(await restartedLoader.refresh(), false, reason);
+      assert.deepEqual(restartedTitles, ['Second edition']);
+    }
+    replacement = undefined;
+    pointerReplacement = undefined;
+    assert.equal(await restartedLoader.refresh(), true, 'new-sequence rollback is a valid remote update');
+    assert.deepEqual(restartedTitles, ['Second edition', spec.title]);
     assert.equal((await fetch(`${publicPath}/current`).then(response => response.json())).releaseId, rollback.manifest.releaseId);
     await assert.rejects(first.pool.query(`UPDATE publication_live_pointers SET release_id = $2, sequence = 1
       WHERE deployment_id = $1`, [deploymentId, liveId]), /must advance/);
@@ -296,6 +422,11 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     await restarted.pool.query('DELETE FROM catalog_items WHERE project_id = $1', [project.id]);
     await restarted.pool.query('DELETE FROM catalog_sources WHERE project_id = $1', [project.id]);
     await restarted.pool.query('DELETE FROM creator_accounts WHERE id = $1', [owner.accountId]);
+    await restarted.pool.query('DELETE FROM catalog_media_assets WHERE project_id = $1', [foreignProject.id]);
+    await restarted.pool.query('DELETE FROM catalog_item_identifiers WHERE project_id = $1', [foreignProject.id]);
+    await restarted.pool.query('DELETE FROM catalog_items WHERE project_id = $1', [foreignProject.id]);
+    await restarted.pool.query('DELETE FROM catalog_sources WHERE project_id = $1', [foreignProject.id]);
+    await restarted.pool.query('DELETE FROM creator_accounts WHERE id = $1', [foreign.accountId]);
     assert.equal((await restarted.pool.query('SELECT count(*)::int AS count FROM publication_releases')).rows[0]?.count, 0);
   } finally {
     if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
@@ -303,6 +434,7 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     if (api) await new Promise<void>(resolve => api!.close(() => resolve()));
     if (oidcServer) await new Promise<void>(resolve => oidcServer!.close(() => resolve()));
     if (directory) await rm(directory, { recursive: true, force: true });
+    if (clientDirectory) await rm(clientDirectory, { recursive: true, force: true });
     if (first) await first.pool.end();
     if (second) await second.pool.end();
     await admin.query(`DROP DATABASE ${name} WITH (FORCE)`);
