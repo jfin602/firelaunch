@@ -1,5 +1,9 @@
 import type { ChannelSpec, ContentItem, Brand } from '@firelaunch/contracts';
 
+function isPlayableContent(item: ContentItem): boolean {
+  return item.presentation !== 'information' && typeof item.mediaUrl === 'string';
+}
+
 export type TvModule = {
   id: string; kind: 'hero' | 'rail' | 'grid' | 'text'; title?: string; body?: string;
   items: ContentItem[];
@@ -61,7 +65,10 @@ export function transition(tv: Television, state: TvState, command: TvCommand): 
   }
   if (state.screen === 'detail') {
     if (command === 'back') return { screen: 'page', pageId: state.pageId, focusId: state.returnFocusId };
-    if (command === 'select') return { ...state, screen: 'playback', focusId: `player:${state.itemId}` };
+    const item = activeItem(tv, state);
+    if (command === 'select' && item && isPlayableContent(item)) {
+      return { ...state, screen: 'playback', focusId: `player:${state.itemId}` };
+    }
     return state;
   }
   const rows = focusRows(tv, state.pageId);
@@ -86,7 +93,7 @@ export function transition(tv: Television, state: TvState, command: TvCommand): 
     .flatMap(module => module.items.map(content => ({ content, focusId: itemFocusId(state.pageId, module.id, content.id) })))
     .find(candidate => candidate.focusId === state.focusId);
   return item ? { screen: 'detail', pageId: state.pageId, itemId: item.content.id,
-    returnFocusId: state.focusId, focusId: `play:${item.content.id}` } : state;
+    returnFocusId: state.focusId, focusId: `${isPlayableContent(item.content) ? 'play' : 'detail'}:${item.content.id}` } : state;
 }
 
 export function activeItem(tv: Television, state: TvState): ContentItem | undefined {

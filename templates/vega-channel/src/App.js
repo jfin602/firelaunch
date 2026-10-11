@@ -18,7 +18,12 @@ function Playback({ item, muted }) {
     player.current.clearSurfaceHandle(handle);
     await player.current.deinitialize();
   };
-  return <KeplerVideoSurfaceView style={styles.video} onSurfaceViewCreated={onSurfaceViewCreated}
+  return item.presentation === 'audio' ? <View style={styles.audioPlayback}>
+    {item.artwork.startsWith('http') ? <Image source={{ uri: item.artwork }} style={styles.audioArtwork} /> : <View style={styles.audioArtwork} />}
+    <Text style={styles.audioLabel}>Now listening</Text>
+    <KeplerVideoSurfaceView style={styles.audioSurface} onSurfaceViewCreated={onSurfaceViewCreated}
+      onSurfaceViewDestroyed={onSurfaceViewDestroyed} />
+  </View> : <KeplerVideoSurfaceView style={styles.video} onSurfaceViewCreated={onSurfaceViewCreated}
     onSurfaceViewDestroyed={onSurfaceViewDestroyed} />;
 }
 
@@ -67,9 +72,11 @@ export default function App() {
       <Text style={[styles.heading, { color: brand.textColor }]}>{item?.title}</Text>
       {state.screen === 'detail' ? <>
         <Text style={{ color: brand.textColor }}>{item?.description}</Text>
-        <Pressable focusable={false} style={[styles.card, styles.focused, focusStyle]} onPress={() => dispatch('select')}>
-          <Text style={{ color: brand.textColor }}>Play</Text>
-        </Pressable>
+        {item?.presentation === 'information' ? <Pressable focusable={false} style={[styles.card, styles.focused, focusStyle]} onPress={() => dispatch('back')}>
+          <Text style={{ color: brand.textColor }}>Back to channel</Text>
+        </Pressable> : <Pressable focusable={false} style={[styles.card, styles.focused, focusStyle]} onPress={() => dispatch('select')}>
+          <Text style={{ color: brand.textColor }}>{item?.presentation === 'audio' ? 'Play audio' : 'Play film'}</Text>
+        </Pressable>}
       </> : item && <Playback item={item} muted={channel.playback.startMuted} />}
       <Pressable focusable={false} onPress={() => dispatch('back')}><Text style={{ color: brand.textColor }}>Back</Text></Pressable>
     </>}
@@ -83,5 +90,8 @@ const styles = StyleSheet.create({
   rail: { flexDirection: 'row' }, grid: { flexDirection: 'row', flexWrap: 'wrap' },
   card: { width: 250, padding: 12, borderWidth: 4, borderColor: 'transparent', marginRight: 16 },
   hero: { width: 420 }, artwork: { height: 160, width: '100%', marginBottom: 12 },
-  focused: { borderWidth: 4 }, video: { flex: 1 }
+  focused: { borderWidth: 4 }, video: { flex: 1 },
+  audioPlayback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  audioArtwork: { width: 320, height: 320 }, audioLabel: { color: '#FFFFFF', fontSize: 30, marginTop: 24 },
+  audioSurface: { width: 1, height: 1, opacity: 0 }
 });

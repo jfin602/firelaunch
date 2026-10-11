@@ -149,6 +149,7 @@ export function projectApprovedManifest(input: {
     const item = itemById.get(binding.catalogItemId);
     if (!content || !item || !item.mediaAssetIds.includes(binding.playbackAssetId) ||
       !item.mediaAssetIds.includes(binding.artworkAssetId)) throw new Error('Content binding differs from catalog');
+    if (!content.mediaUrl) throw new Error('Content has no publishable playback media');
     addAsset(binding.playbackAssetId, 'playback', content.mediaUrl, item.id);
     addAsset(binding.artworkAssetId, 'artwork', content.artwork, item.id);
   }

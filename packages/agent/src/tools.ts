@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { applyMutation, newId, type ChannelMutation } from '@firelaunch/channel-engine';
-import { brandSchema, contentSchema, idSchema, moduleSchema, type ChannelSpec } from '@firelaunch/contracts';
+import { brandSchema, contentSchema, contentShapeSchema, idSchema, moduleSchema, type ChannelSpec } from '@firelaunch/contracts';
 
 const title = z.string().trim().min(1).max(120);
 const pageId = idSchema.refine(value => value.startsWith('page_'));
@@ -19,7 +19,7 @@ const moduleInput = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('grid'), title, contentIds: z.array(contentId).max(100) }),
   z.strictObject({ kind: z.literal('text'), title, body: z.string().max(2000) })
 ]);
-const contentFields = contentSchema.omit({ id: true });
+const contentFields = z.strictObject(contentShapeSchema.shape).omit({ id: true });
 const brandChanges = brandSchema.partial().refine(value => Object.keys(value).length > 0, 'No brand changes');
 const contentChanges = contentFields.partial().refine(value => Object.keys(value).length > 0, 'No content changes');
 
@@ -39,7 +39,7 @@ export const toolDefinitions: Record<string, Tool> = {
   }),
   remove_module: tool('Remove a module from a page.', z.strictObject({ pageId, moduleId }), (_spec, input) => ({ type: 'removeModule', ...input })),
   reorder_modules: tool('Set the complete module order on one page using each existing module ID exactly once.', z.strictObject({ pageId, moduleIds: ids(moduleId, 30) }), (_spec, input) => ({ type: 'reorderModules', ...input })),
-  add_content: tool('Add playable content. Provide a safe HTTP(S) artwork and media URL or asset artwork path.', z.strictObject({ content: contentFields }), (_spec, { content }) => ({ type: 'addContent', content: { ...content, id: newId('item') } })),
+  add_content: tool('Add video, audio or informational content with safe artwork; playable content requires an HTTP(S) media URL.', z.strictObject({ content: contentFields }), (_spec, { content }) => ({ type: 'addContent', content: { ...content, id: newId('item') } })),
   update_content: tool('Change only specified fields on an existing content item.', z.strictObject({ contentId, changes: contentChanges }), (spec, { contentId: id, changes }) => {
     const current = spec.content.find(item => item.id === id);
     if (!current) throw new Error('Unknown content');

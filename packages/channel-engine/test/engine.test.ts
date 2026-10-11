@@ -27,6 +27,14 @@ test('migration seam accepts current version, rejects missing and future version
   assert.throws(() => migrateChannel({ ...spec, schemaVersion: undefined }));
 });
 
+test('migration and validated mutations retain informational content without fabricated playback', () => {
+  const spec = fixtureChannel();
+  const book = { id: 'item_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', title: 'Field Guide', description: 'A book', artwork: 'assets/ocean.jpg', presentation: 'information' };
+  const next = applyMutation(spec, { type: 'addContent', content: book });
+  assert.deepEqual(migrateChannel(next).content[1], book);
+  assert.throws(() => applyMutation(next, { type: 'updateContent', content: { ...book, mediaUrl: 'https://example.org/fake.mp4' } }));
+});
+
 test('page, module and navigation edits use stable IDs and complete permutations', () => {
   const start = fixtureChannel();
   const page = { id: 'page_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', title: 'Films', modules: [] };

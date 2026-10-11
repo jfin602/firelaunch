@@ -52,3 +52,25 @@ test('rejects occupied destinations without writing any generated files', async 
     assert.deepEqual(await readdir(destination), ['custom.txt']);
   } finally { await rm(destination, { recursive: true, force: true }); }
 });
+
+test('generated projection and bundled runtime keep informational and audio semantics', async () => {
+  const spec = fixtureChannel();
+  const book = { id: 'item_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', title: 'Guide', description: 'A book', artwork: 'assets/ocean.jpg', presentation: 'information' as const };
+  const audio = { ...spec.content[0]!, id: 'item_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', presentation: 'audio' as const };
+  const module = { ...spec.pages[0]!.modules[0]!, kind: 'rail' as const, title: 'Browse', contentIds: [book.id, audio.id] };
+  const mixed = { ...spec, content: [...spec.content, book, audio], pages: [{ ...spec.pages[0]!, modules: [module] }] };
+  const generated = await generateProject(mixed);
+  const projected = JSON.parse(generated.files.get('src/channel.json')!);
+  assert.deepEqual(projected, televisionFromSpec(mixed));
+  assert.equal(projected.pages[0].modules[0].items[0].mediaUrl, undefined);
+  const runtime = await import(`data:text/javascript,${encodeURIComponent(generated.files.get('src/tv-runtime.js')!)}`);
+  let state = runtime.transition(projected, runtime.initialState(projected), 'down');
+  state = runtime.transition(projected, state, 'select');
+  assert.equal(state.screen, 'detail');
+  assert.deepEqual(runtime.transition(projected, state, 'select'), state);
+  state = runtime.transition(projected, state, 'back');
+  state = runtime.transition(projected, state, 'right');
+  assert.equal(runtime.transition(projected, runtime.transition(projected, state, 'select'), 'select').screen, 'playback');
+  assert.match(generated.files.get('src/App.js')!, /Now listening/);
+  assert.match(generated.files.get('src/App.js')!, /Back to channel/);
+});

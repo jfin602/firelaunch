@@ -42,3 +42,29 @@ test('empty pages and bounded directional transitions never lose focus', () => {
     assert.equal(state.focusId, navFocusId(tv.pages[0]!.id));
   }
 });
+
+test('informational detail cannot play and Back returns to its card; audio can play', () => {
+  const spec = fixtureChannel();
+  const book = { id: 'item_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', title: 'Guide', description: 'Read about this guide', artwork: 'assets/ocean.jpg', presentation: 'information' as const };
+  const audio = { ...spec.content[0]!, id: 'item_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', title: 'Listening Guide', presentation: 'audio' as const };
+  const module = { ...spec.pages[0]!.modules[0]!, kind: 'rail' as const, title: 'Browse', contentIds: [book.id, audio.id, spec.content[0]!.id] };
+  const tv = televisionFromSpec({ ...spec, content: [...spec.content, book, audio], pages: [{ ...spec.pages[0]!, modules: [module] }] });
+  const page = tv.pages[0]!;
+  let state = transition(tv, initialState(tv), 'down');
+  const bookFocus = itemFocusId(page.id, module.id, book.id);
+  assert.equal(state.focusId, bookFocus);
+  state = transition(tv, state, 'select');
+  assert.equal(state.screen, 'detail');
+  assert.equal(state.focusId, `detail:${book.id}`);
+  assert.deepEqual(transition(tv, state, 'select'), state);
+  state = transition(tv, state, 'back');
+  assert.equal(state.focusId, bookFocus);
+  state = transition(tv, state, 'right');
+  const audioFocus = state.focusId;
+  state = transition(tv, transition(tv, state, 'select'), 'select');
+  assert.equal(state.screen, 'playback');
+  state = transition(tv, transition(tv, state, 'back'), 'back');
+  assert.equal(state.focusId, audioFocus);
+  state = transition(tv, state, 'right');
+  assert.equal(transition(tv, transition(tv, state, 'select'), 'select').screen, 'playback');
+});

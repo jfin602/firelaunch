@@ -42,12 +42,22 @@ export const moduleSchema = z.discriminatedUnion('kind', [
   z.strictObject({ id: moduleIdSchema, kind: z.literal('text'), title: titleSchema, body: descriptionSchema })
 ]);
 export const pageSchema = z.strictObject({ id: pageIdSchema, title: titleSchema, modules: z.array(moduleSchema).max(30) });
-export const contentSchema = z.strictObject({
+export const contentShapeSchema = z.strictObject({
   id: itemIdSchema, title: titleSchema, description: descriptionSchema,
-  artwork: artworkSchema, mediaUrl: httpUrlSchema,
+  artwork: artworkSchema,
+  presentation: z.enum(['video', 'audio', 'information']).optional(),
+  mediaUrl: httpUrlSchema.optional(),
   durationSeconds: z.number().int().positive().max(86400).optional(),
   category: z.string().trim().min(1).max(80).optional(),
   series: z.string().trim().min(1).max(80).optional()
+});
+export const contentSchema = contentShapeSchema.superRefine((item, context) => {
+  if (item.presentation === 'information') {
+    if (item.mediaUrl !== undefined) context.addIssue({ code: 'custom', path: ['mediaUrl'], message: 'Informational content cannot have playback media' });
+    if (item.durationSeconds !== undefined) context.addIssue({ code: 'custom', path: ['durationSeconds'], message: 'Informational content cannot have playback duration' });
+  } else if (item.mediaUrl === undefined) {
+    context.addIssue({ code: 'custom', path: ['mediaUrl'], message: 'Playable content requires a media URL' });
+  }
 });
 export const playbackSchema = z.strictObject({ autoplayNext: z.boolean(), startMuted: z.boolean() });
 export const channelSpecSchema = z.strictObject({
@@ -75,6 +85,13 @@ export type Brand = z.infer<typeof brandSchema>;
 export type Page = z.infer<typeof pageSchema>;
 export type Module = z.infer<typeof moduleSchema>;
 export type ContentItem = z.infer<typeof contentSchema>;
+export type ContentPresentation = 'video' | 'audio' | 'information';
+export function contentPresentation(item: ContentItem): ContentPresentation {
+  return item.presentation ?? 'video';
+}
+export function isPlayableContent(item: ContentItem): boolean {
+  return contentPresentation(item) !== 'information' && item.mediaUrl !== undefined;
+}
 
 export const projectSchema = z.strictObject({
   id: channelIdSchema, revision: z.number().int().positive(), createdAt: z.iso.datetime(),

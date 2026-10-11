@@ -43,6 +43,15 @@ test('tools validate every mutation through ChannelSpec and preserve references'
   assert.throws(() => applyMutation(spec, { type: 'setIdentity', title: '' }));
 });
 
+test('agent content tool accepts informational titles only without playback media', () => {
+  const spec = starterChannel('Books');
+  const content = { title: 'Field Guide', description: 'A book', artwork: 'https://example.org/cover.jpg', presentation: 'information' };
+  const added = executeTool(spec, 'add_content', { content }).spec;
+  assert.equal(added.content[0]!.mediaUrl, undefined);
+  assert.throws(() => executeTool(spec, 'add_content', { content: { ...content, mediaUrl: 'https://example.org/fake.mp4' } }), /Informational content/);
+  assert.throws(() => executeTool(spec, 'add_content', { content: { ...content, presentation: 'audio' } }), /media URL/);
+});
+
 test('mock is reproducible and unsupported requests refuse without mutation', async () => {
   const spec = starterChannel('Nature');
   const project = { id: spec.id, spec, revision: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };

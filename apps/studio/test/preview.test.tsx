@@ -47,3 +47,37 @@ test('virtual remote and keyboard select the same P2 transitions in TV Preview',
   assert.ok(view.container.querySelector('.tv-card.focused'));
   cleanup();
 });
+
+test('Preview offers book detail and audio controls without a fake film player', () => {
+  const spec = fixtureChannel();
+  const book = { id: 'item_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', title: 'Field Guide', description: 'A book', artwork: 'assets/ocean.jpg', presentation: 'information' as const };
+  const audio = { ...spec.content[0]!, id: 'item_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', title: 'Field Recording', presentation: 'audio' as const };
+  const module = { ...spec.pages[0]!.modules[0]!, kind: 'rail' as const, title: 'Browse', contentIds: [book.id, audio.id] };
+  const mixed = { ...spec, content: [...spec.content, book, audio], pages: [{ ...spec.pages[0]!, modules: [module] }] };
+  const view = render(createElement(Preview, { spec: mixed }));
+  fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+  assert.ok(screen.getByText('ABOUT THIS TITLE · FEATURE'));
+  assert.equal(screen.queryByRole('button', { name: /Play film|Play audio/ }), null);
+  fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+  assert.equal(view.container.querySelector('video, audio'), null);
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+  assert.ok(view.container.querySelector('.tv-card.focused'));
+  fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+  assert.ok(screen.getByRole('button', { name: /Play audio/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+  assert.ok(view.container.querySelector('audio'));
+  assert.equal(view.container.querySelector('video'), null);
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+  assert.ok(screen.getByRole('button', { name: /Play audio/ }));
+  const tv = televisionFromSpec(mixed);
+  let playback = navigate(tv, initialState(tv), 'down');
+  playback = navigate(tv, playback, 'right');
+  playback = navigate(tv, navigate(tv, playback, 'select'), 'select');
+  const changed = televisionFromSpec({ ...mixed, content: mixed.content.map(item => item.id === audio.id
+    ? { id: audio.id, title: audio.title, description: audio.description, artwork: audio.artwork, presentation: 'information' as const }
+    : item) });
+  assert.equal(reconcile(changed, playback).screen, 'detail');
+  cleanup();
+});

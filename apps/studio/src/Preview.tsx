@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ChannelSpec } from '@firelaunch/contracts';
+import { contentPresentation, isPlayableContent, type ChannelSpec } from '@firelaunch/contracts';
 import { activeItem, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
 import { keyboardCommand, navigate, reconcile } from './preview-state.js';
 
@@ -50,7 +50,7 @@ export function Preview({ spec }: { spec: ChannelSpec }) {
             <nav className="tv-nav" aria-label="TV pages">{tv.pages.map(target => <button key={target.id} data-tv-focus={navFocusId(target.id)} className={'tv-nav-button' + focus(navFocusId(target.id))} onClick={() => setState({ screen: 'page', pageId: target.id, focusId: navFocusId(target.id) })}>{target.title}</button>)}</nav>
           </header>
           <div className="tv-content" key={page.id}>
-            {page.modules.length === 0 && <div className="tv-empty">Your channel is ready for content.<small>Add a film in Content to light up this screen.</small></div>}
+            {page.modules.length === 0 && <div className="tv-empty">Your channel is ready for content.<small>Add content to light up this screen.</small></div>}
             {page.modules.map(module => <section className={'tv-module tv-' + module.kind} key={module.id}>
               {module.title && <h3>{module.title}</h3>}
               {module.kind === 'text' ? <p>{module.body}</p> : <div className="tv-items">{module.items.map(content => {
@@ -64,8 +64,14 @@ export function Preview({ spec }: { spec: ChannelSpec }) {
         </> : item && <div className={'tv-overlay tv-' + current.screen}>
           {current.screen === 'detail' ? <>
             <img src={artwork(item.artwork)} alt="" />
-            <div className="tv-detail-copy"><span className="eyebrow">NOW SHOWING · {item.category ?? 'FEATURE'}</span><h2>{item.title}</h2><p>{item.description}</p><button className="tv-play focused" onClick={() => dispatch('select')}>▶ &nbsp; Play film</button><small>Press Enter to play · Escape to go back</small></div>
-          </> : <div className="tv-player"><video key={item.id} src={item.mediaUrl} controls autoPlay muted={tv.playback.startMuted} playsInline /><div className="tv-player-footer"><strong>{item.title}</strong><button className="tv-play focused" onClick={() => dispatch('back')}>← Back to details</button></div></div>}
+            <div className="tv-detail-copy"><span className="eyebrow">{contentPresentation(item) === 'video' ? 'NOW SHOWING' : contentPresentation(item) === 'audio' ? 'NOW LISTENING' : 'ABOUT THIS TITLE'} · {item.category ?? 'FEATURE'}</span><h2>{item.title}</h2><p>{item.description}</p>
+              {isPlayableContent(item) ? <button data-tv-focus={current.focusId} className="tv-play focused" onClick={() => dispatch('select')}>▶ &nbsp; {contentPresentation(item) === 'audio' ? 'Play audio' : 'Play film'}</button>
+                : <button data-tv-focus={current.focusId} className="tv-play focused" onClick={() => dispatch('back')}>← Back to channel</button>}
+              <small>{isPlayableContent(item) ? 'Press Enter to play · Escape to go back' : 'Press Escape to go back'}</small></div>
+          </> : <div className="tv-player">{contentPresentation(item) === 'audio'
+            ? <><img src={artwork(item.artwork)} alt="" /><audio key={item.id} src={item.mediaUrl} controls autoPlay muted={tv.playback.startMuted} /></>
+            : <video key={item.id} src={item.mediaUrl} controls autoPlay muted={tv.playback.startMuted} playsInline />}
+            <div className="tv-player-footer"><strong>{item.title}</strong><button className="tv-play focused" onClick={() => dispatch('back')}>← Back to details</button></div></div>}
         </div>}
       </div>
     </div>
