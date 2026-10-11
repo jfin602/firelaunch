@@ -1,0 +1,30 @@
+TASK: Phase 5 / P3 — Authenticated approve publish and rollback API
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.5.3`.
+
+GOAL
+Expose explicit creator-controlled draft approval, publication, release history and safe rollback through the hosted API.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p5/{README.md,prompt-assessment.md,implementation-plan.md}, docs/decisions/0009-live-channel-delivery.md, and directly touched code/tests. Inspect actual HEAD, git status, root version and prior P5 checkpoint before edits. Historical c4-fix LOCAL GREEN does not convert Phase 4 or hosted release to GREEN.
+
+
+IMPLEMENT
+Inspect apps/server/src/api.ts session+origin/CSRF model, P2 owner checks, new P2 publication persistence and Studio API conventions. Implement small allowlisted owner-facing routes to inspect publication readiness, explicitly approve current channel/catalog/deployment binding snapshot, publish with revision CAS, read owned history/live status, and request re-approved rollback as a new release. Authenticate via verified server principal only; never trust caller owner, deployment rights or media authorization. Guard unapproved/foreign/stale/invalid/revoked input. Distinguish user-visible approval from native/Appstore submission, and keep hosted Build blocked. New public anonymous read routes belong to P4.
+
+OUT OF SCOPE
+No required Bedrock request, native executable payload over public manifest, invented licensed media, unverified real hardware/Appstore claims, or production VPS. Preserve P2/c2 hosted S1–S6 OPEN/PARTIAL and original P4 NOT GREEN. Phase 6 owns scheduled feed sync; Phase 7 owns creator Developer Console handoff; Phase 8 owns physical Fire TV/Appstore approval.
+
+VALIDATION
+Focused API tests against isolated database: real owner success, foreign/unauth/forged principal denial, missing or bad CSRF/origin, stale approval/revoked rights, optimistic concurrency, idempotent retry and no auto-publish. Server typecheck/build and git diff --check.
+
+GIT
+Do not create commits, amend or rewrite/move HEAD. The runner exclusively owns the checkpoint commit. Preserve approved dirty work. Set only root package.json version and two root package-lock.json version entries to 0.5.3; internal workspace versions must remain unchanged unless demonstrated compatibility requires documented exception.
+
+FINAL RESPONSE
+Report affected source/doc boundaries, exact starting HEAD and final version, observed focused/full test counts and skips, checks, direct browser/device observations only when actually executed, and precise remaining qualification gates. Never call P5 GREEN from mocks or by assuming VirtualDevice equals physical Fire TV.
