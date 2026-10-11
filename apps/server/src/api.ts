@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { ZodError, z } from 'zod';
 import { applyMutation, mutationSchema } from '@firelaunch/channel-engine';
 import { createProjectSchema, updateProjectSchema } from '@firelaunch/contracts';
-import { agentRequestSchema, BedrockProvider, ChannelAgent, MockProvider, providerStatus, type AgentProvider } from '@firelaunch/agent';
+import { agentRequestSchema, BedrockProvider, ChannelAgent, MockProvider, OpenAIProvider, providerStatus, type AgentProvider } from '@firelaunch/agent';
 import { ProjectRepository, RepositoryError } from './repository.js';
 import { WorkspaceService } from './workspace.js';
 import { HostedWorkspaceService } from './hosted-workspace.js';
@@ -11,6 +11,8 @@ import type { HostedProjectRepository } from './hosted-repository.js';
 import type { PrivateObjectService } from './private-objects.js';
 import { audit } from './operations.js';
 import { CatalogRepository, catalogKinds, type CatalogKind } from './catalog-repository.js';
+import { CatalogProjectionService } from './catalog-projection.js';
+import { agentCatalogGrounding } from './agent-grounding.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -42,11 +44,12 @@ function respond(response: ServerResponse, status: number, value: unknown): void
 }
 
 export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository, privateObjects?: PrivateObjectService) {
-  const status = selectedProvider ? { provider: selectedProvider.name, configured: true, message: selectedProvider.name === 'mock' ? 'Deterministic mock; no cloud request.' : 'Bedrock configured; credentials and model access checked on request.' } : providerStatus(process.env);
-  const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : new BedrockProvider(process.env.BEDROCK_MODEL_ID!))) : null;
+  const status = selectedProvider ? { provider: selectedProvider.name, configured: true, message: `${selectedProvider.name} injected for this server; availability checked on request.` } : providerStatus(process.env);
+  const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : status.provider === 'bedrock' ? new BedrockProvider(process.env.BEDROCK_MODEL_ID!) : new OpenAIProvider(process.env.OPENAI_MODEL!, process.env.OPENAI_API_KEY!))) : null;
   const workspace = mode?.mode === 'local-legacy' ? new WorkspaceService(repository) : null;
   const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository) : null;
   const catalog = hostedRepository ? new CatalogRepository(hostedRepository) : null;
+  const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog) : null;
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? '', 'http://localhost');
@@ -179,7 +182,18 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
               const input = agentRequestSchema.parse(await body(request));
               if (current.revision !== input.expectedRevision) throw new RepositoryError('CONFLICT', 'Project revision changed');
               if (!agent) { respond(response, 503, { error: { code: 'PROVIDER_UNAVAILABLE', message: status.message } }); return; }
-              respond(response, 200, await agent.run(current, input.message, (spec, revision) => hostedRepository.update(principal, current.id, revision, spec))); return;
+              if (agent.provider.name !== 'mock' && !input.catalogSelection) { respond(response, 400, { error: { code: 'INVALID_INPUT', message: 'Explicit approved catalog selection is required for live agent requests' } }); return; }
+              const groundingSnapshot = input.catalogSelection && projection ? agentCatalogGrounding(await projection.project(principal, current.id, {
+                expectedProjectRevision: current.revision, ...input.catalogSelection
+              })) : undefined;
+              const grounding = groundingSnapshot && input.catalogSelection && projection ? {
+                ...groundingSnapshot,
+                authorize: async (before: typeof current.spec, after: typeof current.spec, revision: number) => {
+                  const latest = await projection.project(principal, current.id, { expectedProjectRevision: revision, ...input.catalogSelection! });
+                  agentCatalogGrounding(latest).authorize(before, after, revision);
+                }
+              } : groundingSnapshot;
+              respond(response, 200, await agent.run(current, input.message, (spec, revision) => hostedRepository.update(principal, current.id, revision, spec), grounding)); return;
             }
             if (action === 'code' && request.method === 'GET') { respond(response, 200, await hostedWorkspace.overview(principal, id)); return; }
             if (action === 'code' && request.method === 'POST') { await hostedRepository.read(principal, id); z.strictObject({}).parse(await body(request)); respond(response, 200, await hostedWorkspace.generate(principal, id)); return; }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { applyMutation, newId, type ChannelMutation } from '@firelaunch/channel-engine';
 import { brandSchema, contentSchema, contentShapeSchema, idSchema, moduleSchema, type ChannelSpec } from '@firelaunch/contracts';
+import type { CatalogGrounding } from './index.js';
 
 const title = z.string().trim().min(1).max(120);
 const pageId = idSchema.refine(value => value.startsWith('page_'));
@@ -50,12 +51,27 @@ export const toolDefinitions: Record<string, Tool> = {
 
 export const toolSchemas = [
   { name: 'inspect_channel', description: 'Inspect a bounded page/module/content window and IDs; use offsets to see more.', inputSchema: z.toJSONSchema(z.strictObject({ pageOffset: z.number().int().min(0).max(29).optional(), moduleOffset: z.number().int().min(0).max(29).optional(), contentOffset: z.number().int().min(0).max(499).optional() })) },
+  { name: 'inspect_catalog', description: 'Inspect up to ten selected, approved catalog items. Offset only; creator and project are server-owned.', inputSchema: z.toJSONSchema(z.strictObject({ offset: z.number().int().min(0).max(490).optional() })) },
+  { name: 'add_catalog_content', description: 'Add an approved rights-safe selected catalog item to the channel using its stable content ID.', inputSchema: z.toJSONSchema(z.strictObject({ catalogItemId: z.string().regex(/^ci_[a-f0-9]{32}$/) })) },
   ...Object.entries(toolDefinitions).map(([name, definition]) => ({ name, description: definition.description, inputSchema: z.toJSONSchema(definition.schema) }))
 ];
 
 export class AgentToolError extends Error {}
 
-export function executeTool(spec: ChannelSpec, name: string, input: unknown): { spec: ChannelSpec; changed: boolean; output: string } {
+export function executeTool(spec: ChannelSpec, name: string, input: unknown, grounding?: CatalogGrounding): { spec: ChannelSpec; changed: boolean; output: string } {
+  if (name === 'inspect_catalog') {
+    const parsed = z.strictObject({ offset: z.number().int().min(0).max(490).optional() }).safeParse(input);
+    if (!parsed.success || !grounding) throw new AgentToolError('Catalog inspection unavailable or invalid arguments');
+    return { spec, changed: false, output: grounding.inspect(parsed.data.offset ?? 0) };
+  }
+  if (name === 'add_catalog_content') {
+    const parsed = z.strictObject({ catalogItemId: z.string().regex(/^ci_[a-f0-9]{32}$/) }).safeParse(input);
+    if (!parsed.success || !grounding) throw new AgentToolError('Catalog content unavailable or invalid arguments');
+    try {
+      const next = grounding.add(spec, parsed.data.catalogItemId);
+      return { spec: next, changed: true, output: JSON.stringify({ applied: name, contentId: next.content.at(-1)?.id }) };
+    } catch (error) { throw new AgentToolError(error instanceof Error ? error.message.slice(0, 300) : 'Invalid catalog content'); }
+  }
   if (name === 'inspect_channel') {
     const parsed = z.strictObject({ pageOffset: z.number().int().min(0).max(29).optional(), moduleOffset: z.number().int().min(0).max(29).optional(), contentOffset: z.number().int().min(0).max(499).optional() }).safeParse(input);
     if (!parsed.success) throw new AgentToolError('Invalid inspect_channel arguments');

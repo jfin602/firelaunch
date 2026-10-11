@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { isIP } from 'node:net';
 import { z } from 'zod';
 import { contentSchema, mediaUseEligible, type CatalogItem, type ContentItem, type MediaAsset } from '@firelaunch/contracts';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
@@ -25,6 +26,9 @@ function publicMediaUrl(asset: MediaAsset): string | undefined {
   if (asset.location.type !== 'https') return undefined;
   const url = new URL(asset.location.url);
   if (url.search || url.hash || url.username || url.password || url.protocol !== 'https:') return undefined;
+  const host = url.hostname.toLowerCase();
+  if (isIP(host) || host.startsWith('[') || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') ||
+    (url.port && url.port !== '443')) return undefined;
   return url.toString();
 }
 

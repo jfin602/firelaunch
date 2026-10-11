@@ -3,7 +3,7 @@ import test from 'node:test';
 import { BedrockRuntimeClient, ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
 import { applyMutation, starterChannel } from '@firelaunch/channel-engine';
 import type { AgentProvider, AgentTurn } from '../src/index.js';
-import { BedrockProvider, ChannelAgent, MockProvider, providerStatus } from '../src/index.js';
+import { BedrockProvider, ChannelAgent, MockProvider, OpenAIProvider, providerStatus, agentRequestSchema, agentResponseSchema } from '../src/index.js';
 import { executeTool, toolSchemas } from '../src/tools.js';
 
 test('tools validate every mutation through ChannelSpec and preserve references', () => {
@@ -39,7 +39,7 @@ test('tools validate every mutation through ChannelSpec and preserve references'
   spec = executeTool(spec, 'remove_module', { pageId, moduleId: module.id }).spec;
   spec = executeTool(spec, 'remove_page', { pageId }).spec;
   assert.equal(spec.pages.length, 1);
-  assert.equal(toolSchemas.length, 14);
+  assert.equal(toolSchemas.length, 16);
   assert.throws(() => applyMutation(spec, { type: 'setIdentity', title: '' }));
 });
 
@@ -83,6 +83,8 @@ test('malformed calls refuse and partial saves remain reported', async () => {
   assert.deepEqual(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'bedrock' }).configured, false);
   assert.equal(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'bedrock', BEDROCK_MODEL_ID: 'test-model' }).configured, true);
   assert.throws(() => providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'unknown' }), /Unsupported/);
+  assert.equal(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'openai' }).configured, false);
+  assert.equal(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'openai', OPENAI_API_KEY: 'server-token', OPENAI_MODEL: 'test-model' }).configured, true);
 });
 
 test('Bedrock Converse adapter sends tool schemas and marshals tool results without credentials', async () => {
@@ -95,9 +97,69 @@ test('Bedrock Converse adapter sends tool schemas and marshals tool results with
   const proposal = await provider.next([{ role: 'user', text: 'inspect' }]);
   assert.equal(proposal.calls[0]?.name, 'inspect_channel');
   assert.equal(commands[0]!.input.modelId, 'test-model');
-  assert.equal(commands[0]!.input.toolConfig!.tools!.length, 14);
+  assert.equal(commands[0]!.input.toolConfig!.tools!.length, 16);
   await provider.next([{ role: 'user', text: 'inspect' }, { role: 'assistant', text: '', calls: proposal.calls }, { role: 'results', results: [{ id: 'one', output: '{}' }] }]);
   assert.equal(commands[1]!.input.messages![2]!.content![0]!.toolResult?.toolUseId, 'one');
+});
+
+test('OpenAI Responses transport sends bounded function schemas and continuation with server token', async () => {
+  const requests: { url: string; init: RequestInit; body: Record<string, unknown> }[] = [];
+  const transport = async (url: string | URL | Request, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body));
+    requests.push({ url: String(url), init: init!, body });
+    const output = requests.length === 1
+      ? [{ type: 'function_call', call_id: 'call_1', name: 'inspect_catalog', arguments: '{"offset":0}' }]
+      : [{ type: 'message', content: [{ type: 'output_text', text: 'Catalog inspected.' }] }];
+    return Response.json({ id: `resp_${requests.length}`, status: 'completed', output });
+  };
+  const provider = new OpenAIProvider('test-model', 'server-token', transport as typeof fetch);
+  const turns: AgentTurn[] = [{ role: 'user', text: 'Inspect selected books' }];
+  const first = await provider.next(turns);
+  assert.equal(first.calls[0]?.name, 'inspect_catalog');
+  turns.push({ role: 'assistant', text: first.text, calls: first.calls }, { role: 'results', results: [{ id: 'call_1', output: '{"items":[]}' }] });
+  assert.equal((await provider.next(turns)).calls.length, 0);
+  assert.equal(requests[0]?.url, 'https://api.openai.com/v1/responses');
+  assert.equal(requests[0]?.init.headers && (requests[0].init.headers as Record<string, string>).authorization, 'Bearer server-token');
+  assert.equal((requests[0]?.body.tools as unknown[]).length, 16);
+  assert.equal(requests[1]?.body.previous_response_id, 'resp_1');
+  assert.deepEqual(requests[1]?.body.input, [{ type: 'function_call_output', call_id: 'call_1', output: '{"items":[]}' }]);
+  assert.equal(agentRequestSchema.safeParse({ expectedRevision: 1, message: 'x', ownerId: 'foreign' }).success, false);
+  assert.equal(agentResponseSchema.safeParse({ provider: 'openai', status: 'completed', project: { invalid: true }, events: [] }).success, false);
+});
+
+test('OpenAI transport errors and invalid outputs cannot masquerade as saved edits', async () => {
+  assert.throws(() => new OpenAIProvider('', 'token'), /required/);
+  const spec = starterChannel('Nature');
+  const project = { id: spec.id, spec, revision: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  for (const response of [new Response('unavailable', { status: 503 }), Response.json({ id: 'r1', status: 'incomplete', output: [] }),
+    Response.json({ id: 'r1', status: 'completed', output: [{ type: 'function_call', call_id: 'x', name: 'set_brand', arguments: '{bad' }] })]) {
+    const provider = new OpenAIProvider('test-model', 'token', (async () => response) as typeof fetch);
+    const result = await new ChannelAgent(provider).run(project, 'change color', async () => { throw new Error('Unexpected save'); });
+    assert.equal(result.status, 'error');
+    assert.equal(result.project.revision, 1);
+  }
+  const timeout = new OpenAIProvider('test-model', 'token', (async () => { throw new DOMException('Timed out', 'TimeoutError'); }) as typeof fetch);
+  const timedOut = await new ChannelAgent(timeout).run(project, 'change color', async () => { throw new Error('Unexpected save'); });
+  assert.equal(timedOut.status, 'error');
+  assert.equal(timedOut.project.revision, 1);
+});
+
+test('agent refuses oversized and over-budget provider proposals before persistence', async () => {
+  const spec = starterChannel('Nature');
+  const project = { id: spec.id, spec, revision: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  let saves = 0;
+  const persist = async () => { saves++; throw new Error('Unexpected save'); };
+  for (const proposal of [
+    { text: 'x'.repeat(801), calls: [] },
+    { text: '', calls: Array.from({ length: 5 }, (_, index) => ({ id: `id${index}`, name: 'inspect_channel', input: {} })) },
+    { text: '', calls: [{ id: 'one', name: 'inspect_channel', input: { contentOffset: -1 } }] }
+  ]) {
+    const provider: AgentProvider = { name: 'fixture', async next() { return proposal; } };
+    const result = await new ChannelAgent(provider).run(project, 'inspect', persist);
+    assert.equal(result.status, 'refused');
+    assert.equal(result.project.revision, 1);
+  }
+  assert.equal(saves, 0);
 });
 
 test('Bedrock refuses unusable provider turns and agent reports provider failures', async () => {

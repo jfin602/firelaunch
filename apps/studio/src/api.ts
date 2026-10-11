@@ -55,12 +55,12 @@ export async function mutateProject(project: ChannelProject, mutation: ChannelMu
   return projectSchema.parse(await request(`/${project.id}/mutations`, json({ expectedRevision: project.revision, mutation })));
 }
 
-export async function agentStatus(id: string): Promise<{ provider: 'mock' | 'bedrock'; configured: boolean; message: string }> {
-  return await request(`/${id}/agent-status`) as { provider: 'mock' | 'bedrock'; configured: boolean; message: string };
+export async function agentStatus(id: string): Promise<{ provider: string; configured: boolean; message: string }> {
+  return await request(`/${id}/agent-status`) as { provider: string; configured: boolean; message: string };
 }
 
-export async function askAgent(project: ChannelProject, message: string): Promise<AgentResponse> {
-  const result = await request(`/${project.id}/agent`, json({ expectedRevision: project.revision, message })) as AgentResponse;
+export async function askAgent(project: ChannelProject, message: string, catalogSelection?: { expectedCatalogRevision: number; itemIds: string[]; collectionIds: string[] }): Promise<AgentResponse> {
+  const result = await request(`/${project.id}/agent`, json({ expectedRevision: project.revision, message, ...(catalogSelection ? { catalogSelection } : {}) })) as AgentResponse;
   return { ...result, project: projectSchema.parse(result.project) };
 }
 
