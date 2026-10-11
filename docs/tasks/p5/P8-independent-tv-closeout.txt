@@ -1,0 +1,30 @@
+TASK: Phase 5 / P8 — Independent VirtualDevice live delivery closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+The assigned project version is `0.5.8`.
+
+GOAL
+Independently prove the SAME actually installed VPKG receives new approved compatible HTTPS channel revisions, survives failure and rolls back safely; write factual P5 closeout.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p5/{README.md,prompt-assessment.md,implementation-plan.md}, docs/decisions/0009-live-channel-delivery.md, and directly touched code/tests. Inspect actual HEAD, git status, root version and prior P5 checkpoint before edits. Historical c4-fix LOCAL GREEN does not convert Phase 4 or hosted release to GREEN.
+P8 is an independent MANUAL browser/device closeout; never treat a runner fixture as real TV proof.
+
+IMPLEMENT / MANUAL QUALIFICATION
+Review P1–P7 runner checkpoint SHAs/evidence, root/current version, c4/P4 historic dispositions, S1–S6, AWS status, current source and published manifest. Use actual installed qualified Vega toolchain and VirtualDevice; identify SDK/CLI/device OS/host. Build a fresh real release VPKG, capture exact nonempty path/SHA-256, install once, confirm package identity and initial visible content with D-pad focus/detail/Back. Via controlled device-reachable HTTPS public resolver, explicitly approve and publish a visibly different compatible revision, observe the SAME installed package fetch/activate revision v2 (without rebuild/reinstall). Cold restart while network disabled: persisted verified last-known-good or bundled safe fallback visibly works. Test timeout/invalid or incompatible manifest and wrong digest/deployment rejection without blanking. Issue owner-authorized rollback as NEW higher-sequence release and observe original compatible content on SAME installed VPKG. Record sanitized URL class, release IDs/sequence/digests, network/device logs/screenshots, API outcomes and media rights proof. If no real HTTPS, SDK or VirtualDevice access, report precise NOT GREEN blocker: mocks/browser alone NEVER satisfy P5. Physical Fire TV is not required, but cannot be claimed qualified; P4 live provider and hosted S1–S6 remain separate.
+
+OUT OF SCOPE
+No required Bedrock request, native executable payload over public manifest, invented licensed media, unverified real hardware/Appstore claims, or production VPS. Preserve P2/c2 hosted S1–S6 OPEN/PARTIAL and original P4 NOT GREEN. Phase 6 owns scheduled feed sync; Phase 7 owns creator Developer Console handoff; Phase 8 owns physical Fire TV/Appstore approval.
+
+VALIDATION
+Focused independent TV/browser evidence; ONE final npm 12 npm run check and record seven typechecks/builds and kernel/Studio/runner counts with skips; npm run codex:stack:validate -- p5, git diff --check. Write docs/tasks/p5/closeout.md, increment only root package.json + root entries package-lock.json to 0.5.8; no self-commit/HEAD movement. Full P5 GREEN only if all live target gates truly pass; otherwise NOT GREEN.
+
+GIT
+Do not create commits, amend or rewrite/move HEAD. This is a manual closeout; do not self-commit. Preserve approved dirty work. Set only root package.json version and two root package-lock.json version entries to 0.5.8; internal workspace versions must remain unchanged unless demonstrated compatibility requires documented exception.
+
+FINAL RESPONSE
+Report affected source/doc boundaries, exact starting HEAD and final version, observed focused/full test counts and skips, checks, direct browser/device observations only when actually executed, and precise remaining qualification gates. Never call P5 GREEN from mocks or by assuming VirtualDevice equals physical Fire TV.
