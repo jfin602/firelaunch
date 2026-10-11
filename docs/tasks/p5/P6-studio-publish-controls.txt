@@ -1,0 +1,30 @@
+TASK: Phase 5 / P6 — Studio draft live approval and release history
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.5.6`.
+
+GOAL
+Expose creator-friendly approval and live publication without confusing it with generation, build or Appstore submission.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p5/{README.md,prompt-assessment.md,implementation-plan.md}, docs/decisions/0009-live-channel-delivery.md, and directly touched code/tests. Inspect actual HEAD, git status, root version and prior P5 checkpoint before edits. Historical c4-fix LOCAL GREEN does not convert Phase 4 or hosted release to GREEN.
+
+
+IMPLEMENT
+Inspect apps/studio/src/App.tsx, existing catalog/Generate/Preview/Edit/Publish surfaces, API client patterns and new P3 owner routes. Add minimal clear Draft vs Live state, current revision/readiness and blockers; deliberate Approve then Publish confirmation; release history, current live release details, rollback confirmation and visible conflict/error/retry. Never auto-publish on Generate/edit; preserve manual changes and catalog workflow. Show missing rights/media honestly, support information-only writing where allowed; accessible keyboard/focus and no broad theme redesign. Keep separate native Build/Store readiness boundaries.
+
+OUT OF SCOPE
+No required Bedrock request, native executable payload over public manifest, invented licensed media, unverified real hardware/Appstore claims, or production VPS. Preserve P2/c2 hosted S1–S6 OPEN/PARTIAL and original P4 NOT GREEN. Phase 6 owns scheduled feed sync; Phase 7 owns creator Developer Console handoff; Phase 8 owns physical Fire TV/Appstore approval.
+
+VALIDATION
+Focused JSDOM Studio API-backed or mocked route tests: no automatic release, explicit confirmed publish, history/reload/rollback and stale/error/blocked cases; Studio typecheck/build and git diff --check. Do not claim browser/device qualification.
+
+GIT
+Do not create commits, amend or rewrite/move HEAD. The runner exclusively owns the checkpoint commit. Preserve approved dirty work. Set only root package.json version and two root package-lock.json version entries to 0.5.6; internal workspace versions must remain unchanged unless demonstrated compatibility requires documented exception.
+
+FINAL RESPONSE
+Report affected source/doc boundaries, exact starting HEAD and final version, observed focused/full test counts and skips, checks, direct browser/device observations only when actually executed, and precise remaining qualification gates. Never call P5 GREEN from mocks or by assuming VirtualDevice equals physical Fire TV.
