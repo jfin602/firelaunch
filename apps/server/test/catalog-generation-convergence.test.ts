@@ -18,12 +18,15 @@ const cleared = (use: 'television_display' | 'television_playback') => ({
 const unknown = { status: 'unknown', basis: 'none', permittedUse: 'none' };
 
 (database ? test : test.skip)('three isolated imported catalogs converge through generation, TV Preview, edit, restart and export', async () => {
+  const priorProviderKey = process.env.OPENAI_API_KEY;
+  const syntheticProviderKey = 'synthetic-provider-secret-for-export-regression';
   const admin = new Pool({ connectionString: database });
   const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(database!); url.pathname = `/${name}`;
   await admin.query(`CREATE DATABASE ${name}`);
   let repository: HostedProjectRepository | undefined;
   try {
+    process.env.OPENAI_API_KEY = syntheticProviderKey;
     repository = await HostedProjectRepository.connect(url.toString());
     const identity = async (subject: string) => ({ issuer: 'https://issuer.example', subject, email: `${subject}@example.com`,
       accountId: await repository!.accountForIdentity({ issuer: 'https://issuer.example', subject, email: `${subject}@example.com` }) });
@@ -80,6 +83,10 @@ const unknown = { status: 'unknown', basis: 'none', permittedUse: 'none' };
       assert.equal(projected.bindings.filter(binding => binding.baseline === null).length, 1);
       assert.equal(projected.bindings.filter(binding => binding.baseline !== null).length, scenario.kind === 'video' ? 2 : 1);
       const first = composeCatalogDraft(scenario.kind, created.spec, projected);
+      assert.deepEqual(first.spec.pages.map(value => value.title), scenario.kind === 'video' ? ['Featured', 'Series']
+        : scenario.kind === 'audio' ? ['Listen', 'Albums & playlists'] : ['Author', 'Bookshelf']);
+      assert.deepEqual(first.spec.content.map(value => value.presentation), scenario.kind === 'video' ? ['video', 'video']
+        : scenario.kind === 'audio' ? ['audio'] : ['information']);
       let saved = await repository.saveCatalogDraft(owner, created.id, created.revision, inventory.revision, scenario.kind,
         first.spec, first.baseline, { itemIds: selectedIds, collectionIds });
       const tv = projectTelevision(saved.spec);
@@ -90,12 +97,19 @@ const unknown = { status: 'unknown', basis: 'none', permittedUse: 'none' };
       const detail = transition(tv, focused, 'select');
       assert.equal(detail.screen, 'detail');
       assert.deepEqual(transition(tv, detail, 'back'), focused);
-      assert.equal(transition(tv, detail, 'select').screen, scenario.kind === 'writing' ? 'detail' : 'playback');
+      const selected = transition(tv, detail, 'select');
+      assert.equal(selected.screen, scenario.kind === 'writing' ? 'detail' : 'playback');
+      if (selected.screen === 'playback') assert.deepEqual(transition(tv, selected, 'back'), detail);
       assert.equal(saved.spec.content.some(value => value.title.includes('Uncleared')), false);
       const editedSpec = structuredClone(saved.spec);
       editedSpec.brand.primaryColor = '#123456';
       editedSpec.navigation.reverse();
       editedSpec.content[0]!.title = 'Manual title';
+      editedSpec.pages[0]!.title = 'Manual page';
+      const intro = editedSpec.pages[0]!.modules.find(value => value.kind === 'text');
+      assert.ok(intro && intro.kind === 'text');
+      intro.body = 'Manual creator text';
+      editedSpec.pages[0]!.modules.reverse();
       saved = await repository.update(owner, created.id, saved.revision, editedSpec);
       const repeatProjection = await service.project(owner, created.id, selection(saved.revision));
       const prior = await repository.catalogDraftBaseline(owner, created.id);
@@ -104,6 +118,12 @@ const unknown = { status: 'unknown', basis: 'none', permittedUse: 'none' };
         repeat.spec, repeat.baseline, { itemIds: selectedIds, collectionIds });
       assert.deepEqual(saved.spec, editedSpec, 'unchanged inputs preserve edits and order');
       assert.equal(saved.spec.content[0]!.title, 'Manual title');
+      const second = composeCatalogDraft(scenario.kind, saved.spec,
+        await service.project(owner, created.id, selection(saved.revision)),
+        (await repository.catalogDraftBaseline(owner, created.id))!.spec);
+      assert.deepEqual(second.spec, editedSpec, 'a second Generate preserves manual page, text and module order');
+      saved = await repository.saveCatalogDraft(owner, created.id, saved.revision, inventory.revision, scenario.kind,
+        second.spec, second.baseline, { itemIds: selectedIds, collectionIds });
       const provider: AgentProvider = { name: 'fixture', async next(turns) {
         if (turns.length === 1) return { text: '', calls: [{ id: 'inspect', name: 'inspect_catalog', input: {} }] };
         if (turns.length === 3) return { text: '', calls: [{ id: 'brand', name: 'set_brand', input: { changes: { textColor: '#eeeeee' } } }] };
@@ -125,7 +145,9 @@ const unknown = { status: 'unknown', basis: 'none', permittedUse: 'none' };
       const exported = await workspace.exportSource(owner, created.id);
       assert.ok(exported.files['manifest.toml']?.includes('com.amazon.category.main'));
       const output = JSON.stringify(exported);
-      for (const sensitive of [owner.accountId, source.id, ...selectedIds, 'evidenceId', 'objectId', 'private-objects', 'X-Amz-Signature'])
+      for (const sensitive of [owner.accountId, source.id, ...selectedIds, ...inventory.mediaAssets.map(value => value.id),
+        'evidenceId', 'objectId', 'private-objects', 'X-Amz-Signature', 'x-private-capability',
+        'FIRELAUNCH_AGENT_PROVIDER', 'AWS_SECRET_ACCESS_KEY', 'OPENAI_API_KEY', syntheticProviderKey])
         assert.equal(output.includes(sensitive), false, `export leaked ${sensitive}`);
       await assert.rejects(workspace.exportSource(foreign, created.id), { code: 'NOT_FOUND' });
       await assert.rejects(repository.read(foreign, created.id), { code: 'NOT_FOUND' });
@@ -134,12 +156,18 @@ const unknown = { status: 'unknown', basis: 'none', permittedUse: 'none' };
       const relogin = await identity(scenario.kind);
       assert.equal(relogin.accountId, owner.accountId);
       assert.deepEqual((await repository.read(relogin, created.id)).spec, saved.spec);
-      assert.equal((await repository.catalogDraftBaseline(relogin, created.id))?.kind, scenario.kind);
+      const persistedDraft = await repository.catalogDraftBaseline(relogin, created.id);
+      assert.equal(persistedDraft?.kind, scenario.kind);
+      assert.deepEqual(persistedDraft?.selection.itemIds, selectedIds);
+      assert.deepEqual(persistedDraft?.selection.collectionIds, collectionIds);
+      assert.deepEqual((await new CatalogRepository(repository).read(relogin, created.id)).items.map(value => value.id), selectedIds);
       assert.equal((await new HostedWorkspaceService(repository).exportSource(relogin, created.id)).revision, saved.revision);
     }
   } finally {
     await repository?.pool.end();
     await admin.query(`DROP DATABASE ${name} WITH (FORCE)`);
     await admin.end();
+    if (priorProviderKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = priorProviderKey;
   }
 });

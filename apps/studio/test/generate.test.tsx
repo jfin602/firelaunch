@@ -50,6 +50,8 @@ test('writing selection generates a persisted draft and opens book detail withou
     fireEvent.click(screen.getByRole('button', { name: 'Select' }));
     assert.ok(screen.getByText('ABOUT THIS TITLE · FEATURE'));
     assert.equal(screen.queryByRole('button', { name: /Play film|Play audio/ }), null);
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+    assert.ok(screen.getByText('ABOUT THIS TITLE · FEATURE'), 'book Select remains on informational detail');
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     assert.ok(screen.getByRole('button', { name: 'Open First Book' }));
   } finally { cleanup(); globalThis.fetch = previous; }
