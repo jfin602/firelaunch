@@ -1,0 +1,29 @@
+TASK: c4-fix / P2 — Secure local Bedrock Nova Lite readiness
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.4.8` (UNCHANGED).
+
+GOAL
+Make the existing Bedrock Converse provider locally configurable and reliably testable offline; do not require verified AWS access or claim a live model call.
+
+PREFLIGHT
+Read c4-fix README/assessment/plan, P4 closeout and docs/tasks/p4/provider-smoke.md, ADR 0008, previous P1 checkpoint, root version and git status. Inspect packages/agent/src/{bedrock,index,tools}.ts, apps/server/src/api.ts, existing provider tests and server environment handling before edits.
+
+IMPLEMENT
+Retain existing Bedrock, OpenAI and mock adapters. Confirm `AWS_REGION=us-east-2`, `FIRELAUNCH_AGENT_PROVIDER=bedrock`, and a supported `BEDROCK_MODEL_ID` (candidate `amazon.nova-lite-v1:0`); avoid assuming model entitlement or requiring credentials for offline tests. Use AWS SDK default credential chain with least-privilege IAM Identity Center/SSO or temporary role credentials; NEVER root access keys. Verify real status messaging distinguishes configured model ID from credential/model availability. Repair only proven Converse serialization/tool result, configuration, failure or secrecy defects. Add small offline injected-client tests for tools, bad provider output/refusal and no false saved mutation. Create docs/tasks/c4-fix/bedrock-local.md with explicit local-only setup, no secrets committed, opt-in live catalog-grounded smoke instructions after account verification, and safe cost/budget warning. No VPS or paid call in deterministic tests.
+
+OUT OF SCOPE
+New provider rewrite, AWS IAM console automation, creating keys, storing tokens, credential exposure, actual live AWS proof, production hosting.
+
+VALIDATION
+Run focused Bedrock/agent/server regression tests, affected typechecks/build and `git diff --check`. No live call is required or implied. Record absent access as UNQUALIFIED, not an integration PASS.
+
+GIT
+Do not commit or move HEAD. Runner owns checkpoint; root version/lockfile 0.4.8 unchanged.
+
+FINAL RESPONSE
+Describe exact source/docs changes, offline test results, AWS configuration conditions and all unqualified external gates without claiming Phase 4 GREEN.
