@@ -1,0 +1,29 @@
+TASK: Correction 5 / P2 — Prepare approved public HTTPS release and Vega handoff
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.0`.
+
+GOAL
+Convert the repaired native client into an evidence-ready creator-owned P5 remote-publication test without granting public access to creator/private APIs.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p5/closeout.md, docs/tasks/p5/P8-device-runbook.md, docs/tasks/p5/public-https-staging.md, docs/tasks/c5-vega/{README.md,prompt-assessment.md,implementation-plan.md}, ADR 0009 and directly affected source/tests. Inspect actual HEAD, worktree, root version, P5 P1-P7 checkpoint history and available installed Vega SDK/CLI before edits. The fixed correction baseline is 0.6.0; do not rely on historical Phase 5 version metadata as a substitute for source. Preserve the P5 NOT GREEN closeout and unrelated P6 docs/work.
+
+IMPLEMENT
+Inspect real P5 owner publication routes, Postgres migration state, release pointer/public resolver and generated deployment binding; use P1's output. Author and, only where credentials/rights/staging are already authorized, verify a creator-owned deployment with approved v1 and distinguishable v2 draft/approval plus rights-valid rollback candidate v3. Reject any sample media/artwork without explicit TV display/playback permission; use a small original HTTPS asset or separately cleared informational fixture. Respect P5 read-only public resolver contract: public-only SSL vhost with precise anonymous GET paths and no `/api`, Studio, DB, secret or upload routes. The existing `firelaunch.jfin.dev` remains private authenticated Studio. Record operator steps for separate TV origin, no automatic DNS/Nginx/SSH mutations or passwords; check positive/negative resolver route, immutable digest/ETag/cache semantics, foreign/unauth denial and device reachability if possible. Create concise `docs/tasks/c5-vega/device-runbook.md` for P3 with same-VPKG install-once, fault injection, artifact IDs, v1/v2/v3 sequence and Ngest pre/post checks. If authorizations/external staging are missing, report blockers, not synthetic live PASS.
+
+OUT OF SCOPE
+No AWS S3/CloudFront/FFmpeg, production VPS provisioning, broad Studio/auth redesign, physical Fire TV claim or bypass of owner approval.
+
+VALIDATION
+Focused P5 owner/public route, manifest signature/digest/caching and generated bound-config tests, plus affected build/typecheck and git diff --check. Actual staging tests only when permission and prerequisites exist; no full npm run check.
+
+GIT / VERSION
+Never create commits, amend, reset, force-push or move HEAD. The runner owns implementation checkpoints; manual closeout never self-commits. Keep root package.json and BOTH root package-lock.json version entries exactly `0.6.0`; all internal workspace versions unchanged. If a dependency needs a real compatibility update, constrain it to generated Vega project/template dependencies and document why. Preserve accepted dirty work and external secrets.
+
+FINAL RESPONSE
+Record starting HEAD/version, files and precise changes, focused test counts/skips, actual Vega/toolchain/HTTPS/browser/device observations versus fixtures, blockers and the next handoff. Do not claim a VPKG, published release, working on-device refresh or c5-vega GREEN without direct evidence.

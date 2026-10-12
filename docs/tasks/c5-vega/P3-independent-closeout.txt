@@ -1,0 +1,29 @@
+TASK: Correction 5 / P3 — Independent same-installed Vega qualification closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- Required unchanged project version: `0.6.0`.
+
+GOAL
+Independently prove original P5's remote live delivery, fault tolerance and rollback on one real installed Vega application after bounded native build repair.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p5/closeout.md, docs/tasks/p5/P8-device-runbook.md, docs/tasks/p5/public-https-staging.md, docs/tasks/c5-vega/{README.md,prompt-assessment.md,implementation-plan.md}, ADR 0009 and directly affected source/tests. Inspect actual HEAD, worktree, root version, P5 P1-P7 checkpoint history and available installed Vega SDK/CLI before edits. The fixed correction baseline is 0.6.0; do not rely on historical Phase 5 version metadata as a substitute for source. Preserve the P5 NOT GREEN closeout and unrelated P6 docs/work.
+
+IMPLEMENT / INDEPENDENT MANUAL QUALIFICATION
+Use actual P1/P2 runner checkpoints and c5 device runbook, real SDK/CLI/virtual-device and safe approved public HTTPS origin. Verify tested VPKG is fresh, creator-bound, nonempty and hash-recorded; install this exact package once and capture package ID/OS/time. Observe v1 from the approved public resolver with visible D-pad focus/detail/Back. Authenticated creator approves and publishes meaningfully changed v2; SAME installed binary must fetch/activate v2 without rebuilding. Cold restart disconnected: verified LKG v2 and useful UI. In controlled test host inject invalid JSON, bad hash, wrong deployment/version, 404/5xx/timeout and test client refusal without blanking; restore the real endpoint afterward without changing historical immutable release bytes. Creator approves an old content selection under CURRENT rights and publishes rollback as new higher-sequence v3; verify same binary displays reverted content; record digest/sequence/endpoint and unmodified earlier releases. Negative anonymous owner-api access, foreign/CSRF and private source leakage; record test media permission, Vimeo/Prime/YouTube/Amazon rights boundaries, physical/host limitations and Ngest untouched. If any real prerequisite missing, close NOT GREEN with precise blockers rather than fabricating VPKG/TV evidence. Write independent c5 closeout; never change historical P5 closeout.
+
+OUT OF SCOPE
+No unqualified physical Fire TV, new native runtime features, P6 FFmpeg pipeline, IAP/paywalls, unapproved media, changing P5 closeout or requiring Bedrock to pass.
+
+VALIDATION
+One final npm 12 npm run check with exact tests/skips and 7 workspace typechecks/builds, npm run codex:stack:validate -- c5-vega, git diff --check, actual installed Vega VirtualDevice logs/screenshots, HTTPS release IDs/digests, creation/invalidation/rollback and one-install proof. Report bounded repair qualification separately from production/physical/Appstore.
+
+GIT / VERSION
+This P3 is the independent MANUAL closeout. Never create a commit or move HEAD. Keep root package/lockfile and internal workspace versions unchanged `0.6.0`. Write `docs/tasks/c5-vega/closeout.md` with exact tested commit, artifact ID/hash, environment, device observations, count of installs, gate outcome and remaining inherited limits. Original `docs/tasks/p5/closeout.md` stays unchanged.
+
+FINAL RESPONSE
+Report c5-vega GREEN only if the real same-installed-VPKG HTTPS, LKG, failure and rollback gates were directly proven. Otherwise NOT GREEN with blockers and next correction scope. Preserve original historical P5 NOT GREEN, P4 non-mock, P2/c2 S1-S6 and physical Fire TV/Appstore separation.

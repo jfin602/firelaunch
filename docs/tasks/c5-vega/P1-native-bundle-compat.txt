@@ -1,0 +1,29 @@
+TASK: Correction 5 / P1 — Repair creator-bound Vega SDK and Metro bundling
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.0`.
+
+GOAL
+Eliminate only the two evidenced bound-client VPKG build failures while preserving strict release verification and old P0 behavior.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/tasks/p5/closeout.md, docs/tasks/p5/P8-device-runbook.md, docs/tasks/p5/public-https-staging.md, docs/tasks/c5-vega/{README.md,prompt-assessment.md,implementation-plan.md}, ADR 0009 and directly affected source/tests. Inspect actual HEAD, worktree, root version, P5 P1-P7 checkpoint history and available installed Vega SDK/CLI before edits. The fixed correction baseline is 0.6.0; do not rely on historical Phase 5 version metadata as a substitute for source. Preserve the P5 NOT GREEN closeout and unrelated P6 docs/work.
+
+IMPLEMENT
+Inspect the exact generator dependency declarations, generated package/alias for AsyncStorage, installed SDK compatibility manifest and runtime API. Choose only a compatibility-supported package or approved storage adapter (do not invent versions). Inspect Zod imports and Metro/Babel parser output; resolve `export * as` bundling with a compatible Babel transform/preset or equivalently strict validated bundle, not by disabling validation. Keep canonical SHA-256 checks, schema rejection, identity/release sequence validation, LKG restore and navigation intact. Test generated bound/unbound project, no leaking credentials in released client, correct AsyncStorage behavior. Re-generate a fresh standalone *bound* example safely, install its dependencies and run real Vega doctor and release VPKG build where local CLI/SDK available. Record exact SDK/CLI, dependency compatibility proof, artifact hash/path/nonzero size; if blocked, keep failure evidence and stop false claims.
+
+OUT OF SCOPE
+No AWS media system, speculative SDK versions, creator data resets, VPS builds or weakening remote manifest security.
+
+VALIDATION
+Focused generator, native-loader/verification and Metro bundle tests; affected builds and typechecks and git diff --check. Run real SDK validation/build when installed. No broad global aggregate, save for manual P3.
+
+GIT / VERSION
+Never create commits, amend, reset, force-push or move HEAD. The runner owns implementation checkpoints; manual closeout never self-commits. Keep root package.json and BOTH root package-lock.json version entries exactly `0.6.0`; all internal workspace versions unchanged. If a dependency needs a real compatibility update, constrain it to generated Vega project/template dependencies and document why. Preserve accepted dirty work and external secrets.
+
+FINAL RESPONSE
+Record starting HEAD/version, files and precise changes, focused test counts/skips, actual Vega/toolchain/HTTPS/browser/device observations versus fixtures, blockers and the next handoff. Do not claim a VPKG, published release, working on-device refresh or c5-vega GREEN without direct evidence.
