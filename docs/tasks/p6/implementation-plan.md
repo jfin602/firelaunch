@@ -1,7 +1,7 @@
 # Phase 6 — Implementation Plan: AWS Media Foundation
 
 Status: authored for executable runner; not executed, not provisioned, not qualified
-Entry: actual owner-closed P5 candidate plus clean committed 0.6.0 activation. If P5 is NOT GREEN, owner must explicitly accept any inherited risks; do not build on a missing public publication/rights path.
+Entry: P5 P1–P7 source is integrated and clean committed 0.6.0 activation exists. On 2026-10-12 the owner **explicitly approved P6 P1–P7 implementation now** with P5/c5 real HTTPS and same-installed-VPKG verification deferred until integration/manual P8. Offline code/tests may start without licensed fixture, AWS credentials or a live TV endpoint; actual P5 publication/rights/security source dependencies must remain functional. See deferred-qualification.md.
 Versioning: P1–P7 0.6.1–0.6.7 with runner-owned checkpoint commits; P8 independent MANUAL 0.6.8, no self-commit.
 Authority: BOOT.md, AGENTS.md, docs/workflow.md, ADRs 0009/0010, docs/integrations/aws-media-delivery.md and this task stack. Review live source before edits.
 

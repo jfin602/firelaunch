@@ -1,6 +1,6 @@
 # c5-vega — Phase 5 Vega build and live delivery qualification
 
-Status: OWNER-APPROVED / DOCS AND PROMPT STACK AUTHORED / NOT EXECUTED
+Status: P1/P2 COMPLETED / P3 INDEPENDENT CLOSEOUT NOT GREEN / LIVE GATES OWNER-DEFERRED TO P6 INTEGRATION
 Phase being corrected: historical post-P0 Phase 5 Live Channel Delivery (0.5.x), closeout NOT GREEN
 Current correction baseline: `0.6.0`, **UNCHANGED** in all prompts; correction does not consume Phase 6 versions
 P5 closeout: [P5 / P8](../p5/closeout.md)
@@ -45,3 +45,7 @@ npm run codex:stack -- c5-vega
 ```
 
 Do not run P3 via the normal implementation runner; stop for independent browser/VirtualDevice closeout. Before running P6 (0.6.1 onward), inspect the actual correction outcome; if NOT GREEN, explicitly retain/fix the missing native qualification before claiming an end-to-end video product.
+
+## Post-P3 owner decision (2026-10-12)
+
+The original [c5 independent closeout](closeout.md) remains **NOT GREEN**. The synthetic creator-bound fixture VPKG was built and hash-verified, but not installed with a real approved creator deployment. Owner explicitly defers the remaining creator-rights/isolated HTTPS/public release and same-installed-VPKG v1→v2/offline/fault/v3 rollback tests until Phase 6 integration. These proofs are deferred, NOT waived or passed. P6 P1–P7 may start at existing `0.6.0` now; no physical Fire TV or Appstore claim follows. Keep historic P5/c5 outcomes and security protections unchanged.

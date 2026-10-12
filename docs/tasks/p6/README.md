@@ -1,10 +1,10 @@
 # p6 — AWS Media Foundation
 
-Status: OWNER-APPROVED 0.6.0 VERSION BASELINE / PROMPT STACK NOT EXECUTED / P5 PREREQUISITES OPEN
+Status: 0.6.0 BASELINE / OWNER-AUTHORIZED P6 IMPLEMENTATION / P5-c5 LIVE QUALIFICATION DEFERRED
 Date: 2026-10-11
 Phase: Launch-MVP Phase 6 (new media foundation; former P6 catalog sync is now planned P7)
 Repository baseline for authoring was 0.5.0. GitHub main now includes the original Phase 5 seven implementation checkpoints and independent P8 NOT GREEN closeout, integrated after the owner approved root `0.6.0`. Source publication/resolver/native-loader exists, but compatible creator-bound VPKG and on-device remote update were not qualified.
-Execution entry: root `0.6.0` exists. **Complete/review `c5-vega` fixed-version native qualification first**: P5 source implementation is integrated, but native AsyncStorage/Zod-Metro packaging and the same-installed-VPKG HTTPS/LKG/rollback proof are open. Do not treat c5 NOT GREEN as a P5 pass; if owner explicitly proceeds with P6 implementation despite an unresolved c5 blocker, preserve that risk and do not qualify end-to-end HLS playback.
+Execution entry (2026-10-12 owner decision): **P6 P1–P7 implementation may begin now at root `0.6.0`**. Historical P5 and c5-vega P3 closeouts remain NOT GREEN; the c5 example-bound VPKG build succeeded, but a real owner-approved public HTTPS release and same-installed-device v1/v2/fault/v3 proof were not obtained. Defer those LIVE gates to P6 integration and manual P8, not the security/rights code requirements. If actual P5 source publication/rights/resolver interfaces are absent or unsafe, stop/fix within scope instead of weakening checks. See [deferred gate ledger](deferred-qualification.md).
 Implementations: P1–P7 `0.6.1`–`0.6.7`; P8 independent manual closeout `0.6.8`.
 Primary target: hosted FireLaunch control plane and a REAL Vega VirtualDevice HLS playback run. Physical Fire TV / Fire OS and Roku qualification are later.
 Models: GPT-6 Sol High for contracts/security/AWS/worker/publication and independent qualification; GPT-6 Sol Medium for bounded Studio UI.
@@ -59,4 +59,4 @@ npm run codex:stack:validate -- p6
 npm run codex:stack -- p6
 ```
 
-Do not start the runner merely because the prompt files exist. Confirm the P5 outcome, docs PR merge, activation commit/root version `0.6.0`, Node 24/npm 12, available disk/memory and current worktree first. If `npm run codex:stack:validate -- p6` fails, correct the prompt stack before execution. No `set -e` or `pipefail` shell setup is required.
+The owner has authorized running P6 implementation now despite the c5/P5 live NOT GREEN outcome. Confirm clean/current main, root version `0.6.0`, Node 24/npm 12, available disk/memory and present docs. If `npm run codex:stack:validate -- p6` fails, correct the prompt stack before execution. No `set -e` or `pipefail` shell setup is required.

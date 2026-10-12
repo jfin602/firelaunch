@@ -3,7 +3,7 @@
 Date: 2026-10-11
 Status: approved design assessed and decomposed; source implementation NOT STARTED
 Decision: ADR 0010, FFprobe/FFmpeg + private S3 originals and delivery + CloudFront OAC
-Predecessor: **P5 remains its own 0.5.x stack.** This assessment was based on the GitHub 0.5.0 activation source, docs/tasks/p5/* and the approved docs branch; the local P5 candidate and cloud account cannot be observed through GitHub. Reconcile them before implementation.
+Predecessor: P5 implementation source and migration 010 are integrated. P5 P8 and c5-vega P3 independent closeouts are NOT GREEN, although c5 produced a nonempty hash-verified example-bound fixture VPKG. On 2026-10-12 the owner deferred the real creator-owned HTTPS/same-installed-VPKG gates to P6 integration and explicitly cleared P6 P1–P7 implementation at 0.6.0. See deferred-qualification.md. No external/cloud/device qualification was granted.
 
 ## Gap / existing baseline
 
@@ -42,4 +42,4 @@ Current inspected contract boundaries: `packages/contracts/src/catalog.ts` alrea
 
 ## Decomposition / rationale
 
-Seven implementation prompts isolate contracts+job persistence, AWS backend/IaC, upload API, FFmpeg worker, rights-safe publication, Studio UX and convergence. One manual closeout owns real AWS, browser and Vega device, operational and aggregate proof. Keep work targeted, prefer focused tests per prompt, one global check only at closeout. Do not run until a P5 closeout and the owner's 0.6.0 activation baseline are confirmed; do not retroactively relabel historical P0/P2/c2/P3/P4 results or P5 on behalf of this P6.
+Seven implementation prompts isolate contracts+job persistence, AWS backend/IaC, upload API, FFmpeg worker, rights-safe publication, Studio UX and convergence. One manual closeout owns real AWS, browser and Vega device, operational and aggregate proof. Keep work targeted, prefer focused tests per prompt, one global check only at closeout. The historical P5 and c5 closeouts are reviewed, and the owner has explicitly approved P6 P1–P7 implementation at 0.6.0 while deferring the live device/HTTPS proof until P6 integration/P8; do not retroactively relabel historical P0/P2/c2/P3/P4 results or P5 on behalf of this P6.
