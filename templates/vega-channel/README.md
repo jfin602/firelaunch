@@ -24,3 +24,8 @@ The cache is retained until replaced, cleared by the OS/user, or the app is remo
 offline clients cannot receive revocations or deletion requests until they reconnect.
 These source files and their storage dependency have not by themselves been qualified
 on a real installed VPKG.
+
+The generated AsyncStorage alias pins the package version listed in its
+`kepler-compatibility.json` for the tested SDK. The Babel namespace-export transform
+lets Metro compile Zod's published `export * as` syntax while retaining the strict
+release schema checks.

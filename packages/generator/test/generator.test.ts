@@ -19,6 +19,8 @@ test('deterministic tree contains true shared runtime, manifest and projected co
   assert.match(first.files.get('manifest.toml')!, /runtime-module = "\/com\.amazon\.kepler\.runtime\.react_native_kepler_4@IReactNativeKepler_0"/);
   assert.match(first.files.get('manifest.toml')!, /\[os\.version\]\nmin = "1\.2"\ntarget = "1\.2"/);
   assert.equal(JSON.parse(first.files.get('package.json')!).dependencies['react-native'], '0.83.0');
+  assert.equal(JSON.parse(first.files.get('package.json')!).devDependencies['@babel/plugin-transform-export-namespace-from'], undefined);
+  assert.doesNotMatch(first.files.get('babel.config.js')!, /@babel\/plugin-transform-export-namespace-from/);
   assert.equal(JSON.parse(first.files.get('app.json')!).name, `com.firelaunch.channel.${spec.id}.main`);
   assert.match(first.files.get('src/tv-runtime.js')!, /function transition\(/);
   const generatedRuntime = await import(`data:text/javascript,${encodeURIComponent(first.files.get('src/tv-runtime.js')!)}`);
@@ -99,8 +101,10 @@ test('bound deployments pin public identity while legacy generation remains stat
   assert.equal((await generateProject(spec)).files.has('src/release-config.json'), false);
   assert.equal(JSON.parse((await generateProject(spec)).files.get('package.json')!).dependencies['@react-native-async-storage/async-storage'], undefined);
   assert.match(generated.files.get('src/release-client.js')!, /AsyncStorage/);
+  assert.equal(JSON.parse(generated.files.get('package.json')!).devDependencies['@babel/plugin-transform-export-namespace-from'], '7.29.7');
+  assert.match(generated.files.get('babel.config.js')!, /@babel\/plugin-transform-export-namespace-from/);
   assert.equal(JSON.parse(generated.files.get('package.json')!).dependencies['@react-native-async-storage/async-storage'],
-    'npm:@amazon-devices/react-native-async-storage__async-storage@2.1.9000000000-rn-83');
+    'npm:@amazon-devices/react-native-async-storage__async-storage@2.1.9000000000');
   await assert.rejects(generateProject(spec, { ...deployment, manifestEndpoint: undefined }), /pinned HTTPS/);
   await assert.rejects(generateProject(spec, { ...deployment, manifestEndpoint: 'https://channels.example.org/elsewhere' }), /Invalid deployment resolver/);
   await assert.rejects(generateProject(spec, { ...deployment, manifestEndpoint: 'https://localhost./' }), /Unsafe deployment resolver/);

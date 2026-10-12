@@ -61,12 +61,13 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
   }, dependencies: { 'react-native': '0.83.0', '@amazon-devices/react-native-kepler': '~4.0.0',
     react: '19.2.0', '@amazon-devices/react-native-w3cmedia': '~2.3.2',
     ...(bound ? {
-      '@react-native-async-storage/async-storage': 'npm:@amazon-devices/react-native-async-storage__async-storage@2.1.9000000000-rn-83',
+      '@react-native-async-storage/async-storage': 'npm:@amazon-devices/react-native-async-storage__async-storage@2.1.9000000000',
       zod: '4.6.5'
     } : {}) },
   devDependencies: { '@amazon-devices/kepler-cli-platform': '^0', '@types/react': '^19.2.0',
     '@react-native-community/cli': '20.0.0', '@react-native/babel-preset': '0.83.0',
-    '@react-native/metro-config': '0.83.0' },
+    '@react-native/metro-config': '0.83.0',
+    ...(bound ? { '@babel/plugin-transform-export-namespace-from': '7.29.7' } : {}) },
   kepler: { projectType: 'application', appName: packageName, targets: ['tv'] } }));
   files.set('app.json', json({ name: `${applicationId}.main`, displayName: appName }));
   files.set('manifest.toml', files.get('manifest.toml')!
@@ -76,6 +77,7 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
   files.set('src/tv-runtime.js', runtime);
   files.set('src/channel.json', json(tv));
   if (bound) {
+    files.set('babel.config.js', `module.exports = {\n  presets: ['module:@react-native/babel-preset'],\n  plugins: ['@babel/plugin-transform-export-namespace-from']\n};\n`);
     files.set('src/release-config.json', json(publicBinding));
     files.set('src/release-client.js', `import AsyncStorage from '@react-native-async-storage/async-storage';\nimport config from './release-config.json';\nimport { createChannelLoader } from './remote-release';\n\nexport function installRelease(bundled, onChannel) {\n  const loader = createChannelLoader(config, bundled, { storage: AsyncStorage, onChannel });\n  loader.start();\n  const interval = setInterval(() => loader.refresh(), 60_000);\n  return () => clearInterval(interval);\n}\n`);
   } else for (const name of ['src/release-config.json', 'src/remote-release.js', 'src/sha256.js']) files.delete(name);

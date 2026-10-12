@@ -95,6 +95,7 @@ test('generated client verifies releases and retains last-known-good across fail
       ['wrong package', rollback.pointer, canonicalBytes({ ...rollback.manifest,
         deployment: { ...rollback.manifest.deployment, packageId: 'com.other.channel' } })],
       ['schema', rollback.pointer, canonicalBytes({ ...rollback.manifest, schemaVersion: 2 })],
+      ['unknown field', rollback.pointer, canonicalBytes({ ...rollback.manifest, unapproved: true })],
       ['private media', rollback.pointer, canonicalBytes({ ...rollback.manifest,
         channel: { ...rollback.manifest.channel, content: rollback.manifest.channel.content.map(item => ({ ...item,
           artwork: 'https://resolver.example.org/api/private-objects/key' })) } })],
@@ -117,6 +118,15 @@ test('generated client verifies releases and retains last-known-good across fail
     assert.deepEqual(restarted, ['Second', 'First']);
     assert.deepEqual(verifyRelease(rollback.pointer, rollback.bytes, config).channel.title, 'First');
     assert.equal(cache.size, 1, 'one scoped atomic LKG value');
+    const storageFailure: string[] = [];
+    const unavailableStorage = { getItem: async () => { throw new Error('storage unavailable'); },
+      setItem: async () => { throw new Error('storage unavailable'); } };
+    delivered = first;
+    assert.equal(await createChannelLoader(config, JSON.parse(generated.files.get('src/channel.json')!), {
+      get, storage: unavailableStorage,
+      onChannel: (channel: { title: string }) => storageFailure.push(channel.title)
+    }).start(), true, 'a storage fault does not prevent a verified release from rendering');
+    assert.deepEqual(storageFailure, ['First']);
     cache.set([...cache.keys()][0]!, '{broken');
     error = new Error('offline');
     const corrupt: string[] = [];
