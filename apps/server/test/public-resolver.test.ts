@@ -33,13 +33,35 @@ test('public resolver serves only valid approved immutable bytes and one-snapsho
   };
   const row = (value: unknown, id: string, sequence: number) => {
     const manifestBytes = canonicalBytes(value);
-    return { id, sequence, manifest_bytes: manifestBytes, sha256: digest(manifestBytes) };
+    return { id, sequence, manifest_bytes: manifestBytes, sha256: digest(manifestBytes),
+      creator_account_id: `cr_${hex('f')}`, project_id: original.id };
   };
   const releases = new Map([[releaseId, row(manifest, releaseId, 1)]]);
   let currentId = releaseId;
   let queries = 0;
-  const repository = { pool: { query: async (sql: string, parameters: string[]) => {
+  const catalogSource = { schemaVersion: 1, id: `src_${hex('4')}`, creatorAccountId: `cr_${hex('f')}`,
+    projectId: original.id, type: 'creator_json', state: 'verified',
+    permission: { retrieval: 'creator_asserted', tvDisplay: 'creator_asserted',
+      verificationEvidenceId: `ev_${hex('5')}` } };
+  const catalogItem = { schemaVersion: 1, id: `ci_${hex('3')}`, creatorAccountId: `cr_${hex('f')}`,
+    projectId: original.id, kind: 'video', sourceRecord: { sourceId: catalogSource.id,
+      externalId: { provider: 'creator', kind: 'feed_item_id', value: 'fixture' },
+      observedAt: '2026-10-11T00:00:00.000Z', metadata: { title: 'Oceans' } },
+    externalIdentifiers: [{ provider: 'creator', kind: 'feed_item_id', value: 'fixture' }],
+    mediaAssetIds: manifest.media.map(asset => asset.id) };
+  const catalogAssets: Array<{ id: string; revoked_at: Date | null; record: unknown;
+    item_record: unknown; source_record: unknown }> = manifest.media.map(asset => ({ id: asset.id, revoked_at: null,
+    record: { schemaVersion: 1, id: asset.id, creatorAccountId: `cr_${hex('f')}`,
+      projectId: original.id, catalogItemId: catalogItem.id, kind: asset.kind,
+      location: { type: 'https', url: asset.url }, rights: { status: 'cleared', basis: 'creator_asserted',
+        permittedUse: asset.kind === 'artwork' ? 'television_display' : 'television_playback',
+        assertedAt: '2026-10-11T00:00:00.000Z' }, deliveryEligible: true },
+    item_record: catalogItem, source_record: catalogSource }));
+  const repository = { pool: { query: async (sql: string, parameters: unknown[]) => {
     queries++;
+    if (sql.includes('FROM catalog_media_assets a')) return {
+      rows: parameters[0] === `cr_${hex('f')}` && parameters[1] === original.id ?
+        catalogAssets.filter(asset => (parameters[2] as string[]).includes(asset.id)) : [] };
     if (parameters[0] !== deploymentId) return { rows: [] };
     const selected = sql.includes('publication_live_pointers') ? currentId : parameters[1];
     return { rows: selected && releases.has(selected) ? [releases.get(selected)] : [] };
@@ -62,7 +84,7 @@ test('public resolver serves only valid approved immutable bytes and one-snapsho
     assert.deepEqual(await pointer.json(), { deploymentId, releaseId, releaseSequence: 1, sha256: releases.get(releaseId)!.sha256 });
     const immutable = await get(`${base}/releases/${releaseId}`);
     assert.equal(immutable.status, 200);
-    assert.equal(immutable.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+    assert.equal(immutable.headers.get('cache-control'), 'public, max-age=60, immutable');
     assert.equal(immutable.headers.get('etag'), `"${releases.get(releaseId)!.sha256}"`);
     assert.equal(immutable.headers.get('content-length'), String(Buffer.byteLength(releases.get(releaseId)!.manifest_bytes)));
     assert.equal(await immutable.text(), releases.get(releaseId)!.manifest_bytes);
@@ -109,6 +131,12 @@ test('public resolver serves only valid approved immutable bytes and one-snapsho
       value.sha256 === releases.get(nextReleaseId)!.sha256));
     assert.equal((await get(`${base}/releases/${releaseId}`).then(response => response.json())).releaseSequence, 1);
     assert.ok(queries >= 25);
+
+    catalogAssets[0]!.revoked_at = new Date('2026-10-12T00:00:00.000Z');
+    assert.equal((await get(`${base}/current`)).status, 404);
+    assert.equal((await get(`${base}/releases/${releaseId}`)).status, 404);
+    catalogAssets[0]!.revoked_at = null;
+    assert.equal((await get(`${base}/current`)).status, 200);
 
     const badValues = [
       { ...releases.get(nextReleaseId)!, sha256: hex('0') + hex('0') },

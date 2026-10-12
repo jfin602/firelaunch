@@ -341,7 +341,8 @@ export class S3MediaStorage {
         !body.includes('#EXT-X-INDEPENDENT-SEGMENTS') || body.includes('://') || body.includes('#EXT-X-KEY'))
         reject('invalid variant playlist');
       if (body.split('\n').some(line => line.startsWith('#') && !(
-        line === '#EXTM3U' || line === '#EXT-X-VERSION:3' || line === '#EXT-X-INDEPENDENT-SEGMENTS' ||
+        line === '#EXTM3U' || line === '#EXT-X-VERSION:3' || line === '#EXT-X-VERSION:6' ||
+        line === '#EXT-X-INDEPENDENT-SEGMENTS' ||
         line === '#EXT-X-PLAYLIST-TYPE:VOD' || line === '#EXT-X-ENDLIST' ||
         /^#EXT-X-TARGETDURATION:[1-9]\d*$/.test(line) || /^#EXT-X-MEDIA-SEQUENCE:\d+$/.test(line) ||
         /^#EXTINF:(?:[0-9]+(?:\.[0-9]+)?),?$/.test(line)))) reject('unsupported variant playlist directive');

@@ -142,6 +142,21 @@ test('abort, expiry and S3 failure leave no falsely closed or verified session',
   assert.equal(row.state, 'expired');
 });
 
+test('concurrent finalizers converge only after an owned completed transition', async () => {
+  const { service, row, records } = fixture();
+  await service.start(owner, projectId, input);
+  const parts = [1, 2].map(partNumber => ({ partNumber, etag: 'a'.repeat(32) }));
+  const first = await Promise.all([service.finalize(owner, projectId, uploadId, { mediaAssetId: assetId, parts }),
+    service.finalize(owner, projectId, uploadId, { mediaAssetId: assetId, parts })]);
+  assert.deepEqual(first.map(result => result.state), ['completed', 'completed']);
+  assert.equal(row.version, 1);
+  await assert.rejects(service.finalize(foreign, projectId, uploadId, { mediaAssetId: assetId, parts }), { code: 'NOT_FOUND' });
+  row.state = 'initiated';
+  row.version = 0;
+  records.recordCompletedOriginal = async () => { throw new RepositoryError('CONFLICT', 'stale'); };
+  await assert.rejects(service.finalize(owner, projectId, uploadId, { mediaAssetId: assetId, parts }), { code: 'CONFLICT' });
+});
+
 test('hosted upload routes require a session and CSRF before invoking storage', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'firelaunch-upload-routes-'));
   const { service } = fixture();

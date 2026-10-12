@@ -107,7 +107,12 @@ export class MediaUploadService {
       await this.storage.headOriginal(scope, uploadId, current.expectedBytes).catch(() => { throw error; });
     }
     await this.storage.headOriginal(scope, uploadId, current.expectedBytes);
-    await this.records.recordCompletedOriginal(principal, projectId, input.mediaAssetId, uploadId, current.version);
+    try {
+      await this.records.recordCompletedOriginal(principal, projectId, input.mediaAssetId, uploadId, current.version);
+    } catch (error) {
+      const updated = await this.records.upload(principal, projectId, input.mediaAssetId, uploadId);
+      if (updated.state !== 'completed' && updated.state !== 'verified') throw error;
+    }
     return this.publicStatus(await this.records.upload(principal, projectId, input.mediaAssetId, uploadId));
   }
 
