@@ -64,3 +64,15 @@ MVP includes authentication, per-creator authorization, secure tokens/assets, ba
 
 21. Evidence beats optimistic status.
 No Amazon connector, real-TV execution, remote sync, Appstore approval or VPKG is qualified by a mock, browser Preview or generated source alone.
+
+
+## AWS media foundation principles (post-P5)
+
+22. Store and stream separately from the control plane.
+FireLaunch owns catalog identity, publishing approval and rights; private originals and verified HLS media live in S3, delivery goes through CloudFront, and muffinos never serves bulk video or runs untrusted encoders.
+
+23. Transcode only as needed and qualify playback.
+Probe first, reuse compatible encoded streams only when keyframes/timestamps are safe, otherwise create a bounded adaptive HLS ladder. Device support is proven on the device, not inferred from an MP4 extension.
+
+24. Processing is not permission.
+Upload, technical readiness, media rights, public approval and viewer entitlement are separate states. CloudFront OAC is not a paywall. Keep provider and worker adapters replaceable, budgets bounded and revocation honest about caches.

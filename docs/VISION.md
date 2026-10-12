@@ -38,3 +38,10 @@ A product listing is not a playback license. A sparse list of product cards is n
 P0 demonstrated a prompt-first Wild Earth product concept built around **Prompt -> Product -> Real Television**. P7 closed NOT GREEN at version `0.0.7`: browser Preview and source output were tested, but live Vega VPKG/device execution and broad live Bedrock requests were not established. The active `c0-real-tv-qualification` correction owns that evidence gap and is separate from the new launch-MVP roadmap.
 
 See [MVP roadmap](roadmap/mvp-roadmap.md).
+
+
+## AWS creator-media delivery direction (approved for future P6)
+
+FireLaunch should let creators provide independently owned/licensed video files and manage conversion to television-ready media without requiring a separate video-hosting vendor. Initial path: secure S3 upload of originals, independently operated FFmpeg, validated HLS renditions and Amazon CloudFront delivery; muffinos remains the Studio/API control plane. Approved media is associated with catalog entries, separately verified TV rights, and explicitly released to independently creator-owned channel applications. No creator must license Amazon Prime Video or grant FireLaunch control of their Amazon Developer account to use this capability. A storefront URL is only a discovery clue, never permission to copy or restream its videos.
+
+The first release is free-to-view streaming on Vega, with media delivery modeled for future Fire OS/Roku adapters. Paid subscriptions/IAP, DRM and cross-platform native parity remain separate later products and qualification work. See [ADR 0010](decisions/0010-aws-media-delivery.md). Existing P5 manifest delivery stays independently qualified; future P6 adds real AWS media.
