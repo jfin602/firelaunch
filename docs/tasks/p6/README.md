@@ -1,10 +1,10 @@
 # p6 — AWS Media Foundation
 
-Status: APPROVED ARCHITECTURE / PROMPT STACK AUTHORED / NOT EXECUTED
+Status: OWNER-APPROVED 0.6.0 VERSION BASELINE / PROMPT STACK NOT EXECUTED / P5 PREREQUISITES OPEN
 Date: 2026-10-11
 Phase: Launch-MVP Phase 6 (new media foundation; former P6 catalog sync is now planned P7)
-Repository baseline for authoring: AWS ADR 0010 documentation branch on top of GitHub main at `0.5.0`; this is NOT the activation checkout.
-Execution entry: **after P5 is completed or explicitly owner-closed** and an owner-approved **clean, committed `0.6.0` activation baseline** is created from the actual P5 candidate. Confirm P5 public manifest/rights/auth path is usable; if not, stop with blocker.
+Repository baseline for authoring: the 0.5.0 P5 activation source. Owner authorized `0.6.0` version metadata on main on 2026-10-11, but no P5 implementation or closeout exists there; this is NOT an assertion of implemented P5 functionality.
+Execution entry: the `0.6.0` baseline version is recorded by owner request, but **P6 must NOT execute yet** until the actual P5 published release/resolver/native client path is implemented or reconciled and explicitly owner-closed with an evidence-based disposition. Version metadata and phase approval do not satisfy that functional dependency. Stop/report blocker rather than inventing a P5 pass.
 Implementations: P1–P7 `0.6.1`–`0.6.7`; P8 independent manual closeout `0.6.8`.
 Primary target: hosted FireLaunch control plane and a REAL Vega VirtualDevice HLS playback run. Physical Fire TV / Fire OS and Roku qualification are later.
 Models: GPT-6 Sol High for contracts/security/AWS/worker/publication and independent qualification; GPT-6 Sol Medium for bounded Studio UI.
