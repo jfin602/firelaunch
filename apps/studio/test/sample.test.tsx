@@ -3,10 +3,12 @@ import test from 'node:test';
 import { applyMutation } from '@firelaunch/channel-engine';
 import { projectSchema, type ChannelSpec } from '@firelaunch/contracts';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
-import { sampleMutations } from '../src/sample.js';
+import { newFilmMediaUrl, sampleMutations, SAMPLE_MEDIA } from '../src/sample.js';
 import { televisionFromSpec, focusRows, transition, initialState } from '@firelaunch/tv';
 
 test('sample creates original hero and three rails with playable detail via canonical mutations', () => {
+  assert.equal(newFilmMediaUrl(true), '');
+  assert.equal(newFilmMediaUrl(false), SAMPLE_MEDIA);
   const fixture = fixtureChannel();
   const spec: ChannelSpec = { ...fixture, pages: [{ ...fixture.pages[0]!, modules: [] }], content: [] };
   const project = projectSchema.parse({ id: spec.id, revision: 1, spec, createdAt: '2026-10-08T00:00:00.000Z', updatedAt: '2026-10-08T00:00:00.000Z' });

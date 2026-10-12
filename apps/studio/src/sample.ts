@@ -2,6 +2,7 @@ import type { ChannelProject } from '@firelaunch/contracts';
 import type { ChannelMutation } from '@firelaunch/channel-engine';
 
 export const SAMPLE_MEDIA = 'http://127.0.0.1:4173/media/field-notes.mp4';
+export const newFilmMediaUrl = (hosted: boolean) => hosted ? '' : SAMPLE_MEDIA;
 export const SAMPLE_ART = 'assets/field-notes.svg';
 
 export function sampleMutations(project: ChannelProject, itemIds: [string, string, string], moduleIds: [string, string, string, string]): ChannelMutation[] {

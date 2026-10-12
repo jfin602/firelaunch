@@ -44,6 +44,12 @@ function fixture() {
     async upload(principal: AuthenticatedPrincipal, project: string, asset: string, upload: string) {
       requireOwner(principal, project, asset, upload); return { ...row };
     },
+    async processingStatus(principal: AuthenticatedPrincipal, project: string, asset: string, upload: string) {
+      requireOwner(principal, project, asset, upload); return null;
+    },
+    async latestAssetStatus(principal: AuthenticatedPrincipal, project: string, asset: string) {
+      requireOwner(principal, project, asset); return { uploadId, uploadState: row.state, processing: null };
+    },
     async attachS3Upload(principal: AuthenticatedPrincipal, project: string, asset: string, upload: string, s3: string) {
       requireOwner(principal, project, asset, upload); row.s3UploadId = s3; calls.push('attach'); return true;
     },
@@ -162,6 +168,8 @@ test('hosted upload routes require a session and CSRF before invoking storage', 
     assert.equal((await post('session=owner')).status, 201);
     assert.equal((await fetch(`${route}/${uploadId}`, { headers: { cookie: 'session=owner', 'x-media-asset-id': assetId } })).status, 200);
     assert.equal((await fetch(`${route}/${uploadId}`, { headers: { cookie: 'session=foreign', 'x-media-asset-id': assetId } })).status, 404);
+    assert.equal((await fetch(route, { headers: { cookie: 'session=owner', 'x-media-asset-id': assetId } })).status, 200);
+    assert.equal((await fetch(route, { headers: { cookie: 'session=foreign', 'x-media-asset-id': assetId } })).status, 404);
     assert.equal((await fetch(`${route}/${uploadId}/part`, { method: 'POST', headers: { cookie: 'session=owner', origin,
       'content-type': 'application/json', 'x-csrf-token': 'bad' }, body: JSON.stringify({ mediaAssetId: assetId, partNumber: 1 }) })).status, 403);
   } finally { await new Promise<void>(resolve => api.close(() => resolve())); await rm(root, { recursive: true, force: true }); }

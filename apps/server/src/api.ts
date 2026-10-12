@@ -114,6 +114,10 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             if (!mediaUploads) { respond(response, 503, { error: { code: 'STORAGE_ERROR', message: 'Media upload storage unavailable' } }); return; }
             if (url.search) { respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return; }
             const projectId = segments[2]!;
+            if (segments.length === 4 && request.method === 'GET') {
+              respond(response, 200, await mediaUploads.assetStatus(principal, projectId,
+                { mediaAssetId: request.headers['x-media-asset-id'] })); return;
+            }
             if (segments.length === 4 && request.method === 'POST') {
               respond(response, 201, await mediaUploads.start(principal, projectId, await body(request))); return;
             }

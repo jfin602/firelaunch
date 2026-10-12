@@ -126,6 +126,33 @@ export class MediaPipelineRepository {
     });
   }
 
+  async processingStatus(principal: AuthenticatedPrincipal, projectId: string, assetId: string, uploadId: string) {
+    id('up').parse(uploadId);
+    return this.transaction(async client => {
+      const { owner } = await this.owned(client, principal, projectId, assetId, true);
+      const result = await client.query<{ state: 'pending' | 'leased' | 'ready' | 'failed' | 'revoked'; failure_code: string | null }>(
+        `SELECT state, failure_code FROM media_processing_jobs WHERE upload_session_id = $1
+          AND project_id = $2 AND creator_account_id = $3 AND asset_id = $4`,
+        [uploadId, projectId, owner, assetId]);
+      return result.rows[0] ? { state: result.rows[0].state, failureCode: result.rows[0].failure_code } : null;
+    });
+  }
+
+  async latestAssetStatus(principal: AuthenticatedPrincipal, projectId: string, assetId: string) {
+    return this.transaction(async client => {
+      const { owner } = await this.owned(client, principal, projectId, assetId, true);
+      const result = await client.query<{ id: string; state: string; job_state: string | null; failure_code: string | null }>(
+        `SELECT u.id, u.state, j.state AS job_state, j.failure_code FROM media_upload_sessions u
+          LEFT JOIN media_processing_jobs j ON j.upload_session_id = u.id AND j.creator_account_id = u.creator_account_id
+            AND j.project_id = u.project_id AND j.asset_id = u.asset_id
+          WHERE u.project_id = $1 AND u.creator_account_id = $2 AND u.asset_id = $3
+          ORDER BY u.created_at DESC, u.id DESC LIMIT 1`, [projectId, owner, assetId]);
+      const row = result.rows[0];
+      return row ? { uploadId: row.id, uploadState: row.state, processing: row.job_state
+        ? { state: row.job_state, failureCode: row.failure_code } : null } : null;
+    });
+  }
+
   async attachS3Upload(principal: AuthenticatedPrincipal, projectId: string, assetId: string,
     uploadId: string, s3UploadId: string): Promise<boolean> {
     if (!s3UploadId || s3UploadId.length > 512) conflict('Invalid storage upload ID');

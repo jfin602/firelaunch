@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { ChannelProject, CatalogItem, MediaAsset, PublicationBindings } from '@firelaunch/contracts';
-import { ApiError, approveLive, checkLiveReadiness, publishLive, readCatalog, readDeployment, readLiveStatus, readReleaseHistory, type CatalogSnapshot, type LiveStatus, type PublicationReview, type ReleaseHistory } from './api.js';
+import { ApiError, approveLive, checkLiveReadiness, publishLive, readCatalog, readDeployment, readLiveStatus, readReleaseHistory, readVideoAssetStatus, type CatalogSnapshot, type LiveStatus, type PublicationReview, type ReleaseHistory, type VideoAssetStatus } from './api.js';
 
 type Choice = { catalogItemId: string; artworkAssetId: string; playbackAssetId: string };
 
@@ -9,6 +9,7 @@ export function LivePublication({ project, hosted }: { project: ChannelProject; 
   const [status, setStatus] = useState<LiveStatus | null>(null);
   const [history, setHistory] = useState<ReleaseHistory | null>(null);
   const [catalog, setCatalog] = useState<CatalogSnapshot | null>(null);
+  const [videoStates, setVideoStates] = useState<Record<string, VideoAssetStatus>>({});
   const [choices, setChoices] = useState<Record<string, Choice>>({});
   const [logoAssetId, setLogoAssetId] = useState('');
   const [heroArtworkAssetId, setHeroArtworkAssetId] = useState('');
@@ -27,9 +28,12 @@ export function LivePublication({ project, hosted }: { project: ChannelProject; 
       const [current, releases, inventory] = await Promise.all([
         readLiveStatus(project.id, bound.id), readReleaseHistory(project.id, bound.id), readCatalog(project.id)
       ]);
+      const managed = inventory.mediaAssets.filter(asset => asset.location.type === 'managed_hls');
+      const states = await Promise.all(managed.map(async asset => [asset.id, await readVideoAssetStatus(project.id, asset.id)] as const));
+      setVideoStates(Object.fromEntries(states));
       setDeployment(bound); setStatus(current); setHistory(releases); setCatalog(inventory);
     } catch (reason) {
-      setDeployment(null); setStatus(null); setHistory(null); setCatalog(null);
+      setDeployment(null); setStatus(null); setHistory(null); setCatalog(null); setVideoStates({});
       setError(reason instanceof ApiError && reason.status === 404 ? 'No owned live deployment is configured for this channel.' : String(reason));
     } finally { setLoading(false); }
   }
@@ -38,7 +42,9 @@ export function LivePublication({ project, hosted }: { project: ChannelProject; 
     return () => { setApproval(null); };
   }, [project.id, project.revision, hosted]);
 
-  const eligible = (asset: MediaAsset, kind: MediaAsset['kind']) => asset.kind === kind && asset.deliveryEligible && asset.location.type === 'https' &&
+  const eligible = (asset: MediaAsset, kind: MediaAsset['kind']) => asset.kind === kind && asset.deliveryEligible &&
+    (asset.location.type === 'https' || (kind === 'video' && asset.location.type === 'managed_hls' &&
+      videoStates[asset.id]?.uploadState === 'verified' && videoStates[asset.id]?.processing?.state === 'ready')) &&
     (kind === 'artwork' ? asset.tvDisplayRights ?? asset.rights : asset.tvPlaybackRights ?? asset.rights)?.status === 'cleared';
   const assets = catalog?.mediaAssets ?? [];
   const artwork = assets.filter(asset => eligible(asset, 'artwork'));
@@ -81,6 +87,14 @@ export function LivePublication({ project, hosted }: { project: ChannelProject; 
   });
   const publish = () => void act(async () => {
     if (!deployment || !approval || !status) return;
+    for (const binding of approval.review.bindings.content) {
+      const selected = catalog?.mediaAssets.find(asset => asset.id === binding.playbackAssetId);
+      if (selected?.location.type === 'managed_hls') {
+        const latest = await readVideoAssetStatus(project.id, selected.id);
+        if (latest?.uploadState !== 'verified' || latest.processing?.state !== 'ready')
+          throw new Error('Managed video is no longer verified and ready. Refresh publication review.');
+      }
+    }
     if (status.revisions.channel !== approval.review.revisions.channel || status.revisions.catalog !== approval.review.revisions.catalog || status.liveReleaseId !== approval.review.expectedLiveReleaseId) {
       throw new Error('Approval is stale. Refresh and approve again.');
     }
@@ -101,7 +115,7 @@ export function LivePublication({ project, hosted }: { project: ChannelProject; 
       <p>Draft revision {project.revision} · catalog revision {catalog.revision}. Live: {history.liveReleaseId ? `release #${status.liveSequence} (${history.liveReleaseId})` : 'none'}.</p>
       {project.revision !== status.revisions.channel || catalog.revision !== status.revisions.catalog ? <p role="alert">Draft changed elsewhere. Refresh before approval.</p> : null}
       <p>Deployment: {deployment.appName} · {deployment.packageId}. Changes to the native package require a separate qualified build.</p>
-      <h3>Review TV content bindings</h3><p>Choose owned catalog items and rights-cleared public HTTPS assets. Private uploads, placeholders, missing rights, or mismatched artwork block publication. Writing may be informational without playback, but still needs cleared artwork.</p>
+      <h3>Review TV content bindings</h3><p>Choose owned catalog items and rights-cleared artwork and playback. Managed video appears only after verified upload and ready HLS processing. Uploading, failed, revoked, or unverified media blocks approval. Server readiness also checks that the draft URL matches the verified CloudFront master. Writing may be informational without playback.</p>
       {project.spec.content.map(content => {
         const choice = choiceFor(content.id);
         const item = itemById.get(choice.catalogItemId);

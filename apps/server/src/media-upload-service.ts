@@ -68,7 +68,14 @@ export class MediaUploadService {
   async status(principal: AuthenticatedPrincipal, projectId: string, uploadId: string, raw: unknown) {
     const { mediaAssetId } = uploadAssetSchema.parse(raw);
     sessionId.parse(uploadId);
-    return this.publicStatus(await this.records.upload(principal, projectId, mediaAssetId, uploadId));
+    const current = await this.records.upload(principal, projectId, mediaAssetId, uploadId);
+    const processing = await this.records.processingStatus(principal, projectId, mediaAssetId, uploadId);
+    return { ...this.publicStatus(current), processing };
+  }
+
+  async assetStatus(principal: AuthenticatedPrincipal, projectId: string, raw: unknown) {
+    const { mediaAssetId } = uploadAssetSchema.parse(raw);
+    return this.records.latestAssetStatus(principal, projectId, mediaAssetId);
   }
 
   async part(principal: AuthenticatedPrincipal, projectId: string, uploadId: string, raw: unknown) {
