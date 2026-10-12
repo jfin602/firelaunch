@@ -74,7 +74,7 @@ Operating targets:
 
 ## Post-hackathon transition (accepted 2026-10-09)
 
-P0's historical post-hackathon deferrals remain true for P0 and the active `c0-real-tv-qualification` correction. The following are now **promoted** into a new, separate launch-MVP roadmap: accounts/hosted persistence (P2), bounded content imports (P3), remotely published TV manifests (P5), permitted synchronization (P6), and limited FireLaunch billing/support (P7). Analytics, viewer commerce, other TV platforms and multiuser teams remain deferred.
+P0's historical post-hackathon deferrals remain true for P0 and the active `c0-real-tv-qualification` correction. The following are now **promoted** into a new, separate launch-MVP roadmap: accounts/hosted persistence (P2), bounded content imports (P3), remotely published TV manifests (P5), approved AWS media delivery (new P6), permitted synchronization (renumbered P7), and limited FireLaunch billing/support (renumbered P8). Analytics, viewer commerce, other TV platforms and multiuser teams remain deferred. This 2026-10-11 update supersedes the former future-phase numbering but does not relabel historical closeout prompt numbers.
 
 ## Launch-MVP target
 
@@ -86,7 +86,7 @@ P0's historical post-hackathon deferrals remain true for P0 and the active `c0-r
 
 **Historical P7 is not a SaaS entry gate:** P0/P7 remained NOT GREEN at `0.0.7`. The 2026-10-09 correction also ended BLOCKED / NOT GREEN, though the tested Vega package and VirtualDevice path passed. **SaaS P1–P3 may start and qualify without full P7 GREEN, an AWS account, Bedrock, a certified Linux Mint host, a physical Fire TV, or Appstore approval.** Their own security/contracts/import gates still apply. Unresolved browser, Publish, aggregate and platform checks transfer to the affected later phase; nothing is retroactively called GREEN.
 
-**Estimated engineering horizon:** 12–16 engineering weeks from SaaS development kickoff, for a solo developer using bounded AI prompt stacks. Amazon provider approval and Appstore review are external schedule risks. Version bands and durations are planning targets, not completed releases. Focus implementation prompts on <=8-minute bounded work, with focused checks; closeout owns aggregate suites/browser/device gates.
+**Estimated engineering horizon:** 14–18 engineering weeks from SaaS development kickoff, for a solo developer using bounded AI prompt stacks. Amazon provider approval and Appstore review are external schedule risks. Version bands and durations are planning targets, not completed releases. Focus implementation prompts on <=8-minute bounded work, with focused checks; closeout owns aggregate suites/browser/device gates.
 
 ### P1 — Product contracts and integration feasibility (0.1.x, week 1)
 
@@ -128,25 +128,31 @@ Generate differentiated video, audio and writing TV experiences using the existi
 
 **Activated 2026-10-11 at root 0.5.0 after committed c4-fix LOCAL GREEN (0.4.8).** Historical P4 remains NOT GREEN and hosted production remains NOT QUALIFIED. See [P5 task stack](../tasks/p5/README.md), [assessment](../tasks/p5/prompt-assessment.md), [plan](../tasks/p5/implementation-plan.md), and [ADR 0009](../decisions/0009-live-channel-delivery.md). P1–P7 target 0.5.1–0.5.7 and independent browser/VirtualDevice closeout P8 targets 0.5.8.
 
-**Qualification target policy:** The actual Vega VirtualDevice is the required authoritative P5 development test target; a physical Fire TV is NOT necessary for P5 GREEN and is deferred to P8 launch/hardware compatibility. P8 closeout must observe the SAME installed release VPKG fetch a newly approved compatible revision through a device-reachable HTTPS public resolver without reinstall, then retain last-known-good across offline restart, reject bad/incompatible releases and observe authorized rollback as a new monotonic release. Browser/unit fixtures alone do NOT qualify that. No production VPS or Bedrock account is necessary to begin implementation; P5 final qualification still needs real controlled HTTPS reachability and actual installed-TV evidence. Never claim VirtualDevice proof guarantees physical device behavior.
+**Qualification target policy:** The actual Vega VirtualDevice is the required authoritative P5 development test target; a physical Fire TV is NOT necessary for P5 GREEN and is deferred to the renumbered P9 launch/hardware compatibility. P8 closeout must observe the SAME installed release VPKG fetch a newly approved compatible revision through a device-reachable HTTPS public resolver without reinstall, then retain last-known-good across offline restart, reject bad/incompatible releases and observe authorized rollback as a new monotonic release. Browser/unit fixtures alone do NOT qualify that. No production VPS or Bedrock account is necessary to begin implementation; P5 final qualification still needs real controlled HTTPS reachability and actual installed-TV evidence. Never claim VirtualDevice proof guarantees physical device behavior.
 
 Introduce approved immutable PublishedManifest revisions, HTTPS deployment resolver, draft/live separation, schema validation, TV cache, rollback and compatibility. Remote layout/catalog changes require no VPKG rebuild; native/runtime changes still do.
 
-**GREEN:** On a real qualified Vega target (VirtualDevice accepted for P5), the same installed VPKG receives an approved remote channel revision and safely recovers from network/incompatible-manifest failures. Actual physical Fire TV remains a P8 release gate.
+**GREEN:** On a real qualified Vega target (VirtualDevice accepted for P5), the same installed VPKG receives an approved remote channel revision and safely recovers from network/incompatible-manifest failures. Actual physical Fire TV remains a P9 launch release gate.
 
-### P6 — Automatic Catalog Synchronization (0.6.x, weeks 10–11)
+### P6 — AWS Media Foundation (0.6.x, planned weeks 10–11)
+
+**Newly approved architecture / NOT IMPLEMENTED.** See [ADR 0010](../decisions/0010-aws-media-delivery.md) and [AWS delivery runbook](../integrations/aws-media-delivery.md). Creator-owned original MP4 files upload directly to isolated private S3; an independent FFprobe/FFmpeg worker on a controlled Linux host initially prepares a verified, lean HLS ladder (480p/720p baseline, optional 1080p). Verified immutable renditions live behind an OAC-protected private S3 delivery origin and CloudFront HTTPS. Muffinos hosts auth, catalog, rights, job coordination and publication metadata only; no VPS video transcoding/CDN. Keep P2/P3 private evidence storage separate. Creator asset identity/rights are canonical in private catalog; publish only approved stable CloudFront HLS URLs compatible with P5's deployed manifest version. Paywalled viewing, DRM, platform IAP, Roku/Fire OS players and 24/7 managed transcoding are deferred.
+
+**GREEN:** An authorized creator uploads an independently rights-cleared video, worker validates/encodes/repackages it, a complete and verified HLS ladder is delivered from private S3 through CloudFront, an owner-approved manifest references the correct stable playback URL, and a real qualified Vega target plays it. Verify foreign upload denial, ownership, failed/retried jobs, no draft disclosure, revocation/cache limitations, restart-safe state, creator quotas, AWS spend guardrails and unaffected Ngest. Real AWS/browser/TV evidence required. Do not infer certification from standards compatibility.
+
+### P7 — Automatic Catalog Synchronization (0.7.x, planned weeks 12–13)
 
 Build idempotent source workers, diffing, audit/health, retries, reconciliation, granular field ownership, creator override protection and review queue. Default new items to review; grace missing items. Creator-controlled HTTPS feeds are the guaranteed sync path. Enable Amazon APIs only after actual authorized access and permitted TV uses.
 
 **GREEN:** A supported external catalog change flows through policy and publication to the installed TV without reinstalling the app; revocation, failure and conflicts are handled truthfully.
 
-### P7 — Creator-Owned Publishing and SaaS Operations (0.7.x, weeks 12–13)
+### P8 — Creator-Owned Publishing and SaaS Operations (0.8.x, planned weeks 14–15)
 
 Implement unique app/release identity, build/readiness provenance, screenshots/store-copy/assets, export, creator-controlled Developer Console handoff and submission tracking. Add minimal FireLaunch subscription/billing, privacy/export/deletion, support and operations workflows. No credential scraping.
 
 **GREEN:** A real creator can package and submit a distinct branded application using their own Developer Console without writing code or transferring app ownership to FireLaunch.
 
-### P8 — Polished MVP Launch Qualification (0.8.x, weeks 14–16)
+### P9 — Polished MVP Launch Qualification (0.9.x, planned weeks 16–18)
 
 Pilot video/audio/writing creators and repair onboarding, accessible remote focus, actual media playback, performance, network/restart/rollback, sync failure recovery, privacy and operational issues. Validate at least one real creator-owned Amazon Appstore **approval**, not just submission. Qualify a physical Fire TV, not only browser Preview or simulated artifacts. Only evidenced launch-blocking fixes during closeout.
 
@@ -159,9 +165,10 @@ Pilot video/audio/writing creators and repair onboarding, accessible remote focu
 - **P3 entry:** Implemented P2 account/project authorization is available but P2/c2 are NOT GREEN. P3 starts with automated authenticated tenant-denial tests; real simultaneous two-profile Google browser isolation is retained for P3 P8, not required before implementation. New importer routes must enforce and test ownership; no Amazon API approval required. HTTPS staging/cross-bucket recovery is retained as an explicit unqualified preproduction gate.
 - **P4 GREEN:** Live provider-neutral (non-mock) catalog-grounded generation, persisted validated mutations and usable Studio Preview; new real-browser editor regression and suitable aggregate checks on the integrated candidate.
 - **P5 GREEN:** Same actual installed Vega package receives compatible remotely published manifests and recovers safely; direct on-target device proof required, supported production build host verified before claiming production readiness.
-- **P6 GREEN:** Real permitted external feed/source changes reach an installed app without a new binary; errors and overrides are handled.
-- **P7 GREEN (SaaS phase, distinct from historical P0/P7):** Studio Publish readiness, package provenance and creator-owned Amazon Developer Console submission/handoff are directly exercised.
-- **P8 LAUNCH:** Physical Fire TV, rights-safe and device-reachable production/default media and artwork, full aggregate/browser/operational regression, and actual creator-owned Appstore approval. Launch requirements stay intact.
+- **P6 GREEN:** An authorized, rights-cleared creator video is uploaded to private S3, processed by isolated FFmpeg, verified as HLS and played on Vega via CloudFront with owner/revocation/failure controls and real AWS evidence.
+- **P7 GREEN:** Real permitted external feed/source changes reach an installed app without a new binary; errors and overrides are handled.
+- **P8 GREEN (SaaS phase, distinct from historical P0/P7):** Studio Publish readiness, package provenance and creator-owned Amazon Developer Console submission/handoff are directly exercised.
+- **P9 LAUNCH:** Physical Fire TV, rights-safe and device-reachable production/default media and artwork, full aggregate/browser/operational regression, and actual creator-owned Appstore approval. Launch requirements stay intact.
 - **Historical P0/c0:** Both closeouts remain NOT GREEN. Outstanding P0 Bedrock, Mint host support, default demo assets/loopback, current Studio editor and Publish evidence, aggregate check and physical hardware must stay traceable; a successful future P4 provider does not retroactively prove an untested P0 Bedrock request.
 
 ## MVP launch acceptance gates
@@ -177,6 +184,11 @@ Pilot video/audio/writing creators and repair onboarding, accessible remote focu
 
 ## Launch exclusions and dependencies
 
-Defer shared teams, Fire OS/Roku/other TV platforms, live TV/EPG, viewer IAP/affiliate-led TV commerce, advertising, deep analytics, general transcoding service, unbounded AI source modification and unofficial Developer Console submission. Amazon approvals and content rights are external hard gates. Preserve real TV and code export as enduring product invariants.
+Defer shared teams, Fire OS/Roku/other TV platforms, live TV/EPG, viewer IAP/affiliate-led TV commerce, advertising, deep analytics, large-scale managed transcoding service (bounded FFmpeg VOD is P6), unbounded AI source modification and unofficial Developer Console submission. Amazon approvals and content rights are external hard gates. Preserve real TV and code export as enduring product invariants.
 
 Phase 1 is GREEN / QUALIFIED; Phase 2 P7 and c2 remain NOT GREEN. Phase 3 is closed CATALOG GREEN for the tested local workflow at root `0.3.8`, with hosted release NOT QUALIFIED and outstanding S1–S6 security/infrastructure evidence retained for preproduction. Phase 4 is activated at root `0.4.0` with executable, not-yet-run P4 prompt stack documented in `docs/tasks/p4/`. Its next gate is runner validation and implementation; P8 independently qualifies live provider/browser behavior. Historical `c0-real-tv-qualification` remains separately BLOCKED / NOT GREEN. No feature enters an active stack without approved scope.
+undefined
+
+## 2026-10-11 AWS media planning decision
+
+Approved docs-only: [ADR 0010](../decisions/0010-aws-media-delivery.md) and [AWS runbook](../integrations/aws-media-delivery.md) establish the proposed FFmpeg + private S3 + CloudFront OAC media architecture. P5 and its authored Prompt Stack remain frozen. P6 media (0.6.x), P7 sync (0.7.x), P8 creator publishing (0.8.x) and P9 launch (0.9.x) are **planning bands**, not executable stacks, versions shipped or qualification claims. No AWS resources or rollout are created by this decision. Do not relabel historical P0/P2/P3/P4 results or P5 P8 *prompt* as a new phase.

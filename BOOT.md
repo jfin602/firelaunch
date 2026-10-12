@@ -114,3 +114,8 @@ Green requires direct evidence that:
 - the three-minute demo path is rehearsable.
 
 If real Vega build/device evidence is unavailable, P7 must be Not Green even if the browser studio is polished.
+
+
+## Next approved foundation (documentation-only, 2026-10-11)
+
+After the independently qualified existing P5 (0.5.x) remote-manifest phase, implement **P6 AWS Media Foundation (0.6.x)**: creator-authorized direct uploads to private S3, FFmpeg worker not on muffinos, validated HLS renditions, and private S3+CloudFront OAC delivery to a qualified Vega client. Initial free-to-view publishing only. The planned later phases shift to P7 catalog sync, P8 creator-owned publishing and P9 launch/hardware/Appstore. Do not change historical P5 P8 prompt requirements, Phase 4/P2/c2 results, or claim that AWS, native playback, subscriptions or production hosted security are qualified. See ADR 0010 and docs/integrations/aws-media-delivery.md. P6 has no authored executable Prompt Stack yet.
