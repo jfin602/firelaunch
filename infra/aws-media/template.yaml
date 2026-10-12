@@ -1,0 +1,217 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Review-only FireLaunch free VOD originals, HLS delivery and OAC boundary
+Parameters:
+  StagingOrigin:
+    Type: String
+    AllowedPattern: '^https://[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$'
+    Description: Exact HTTPS Studio origin allowed to send multipart PUT requests to S3
+  ControlPlaneRoleName:
+    Type: String
+    AllowedPattern: '^[A-Za-z0-9+=,.@_-]{1,64}$'
+    Description: Existing same-account IAM role that runs the authenticated control plane
+  WorkerRoleName:
+    Type: String
+    AllowedPattern: '^[A-Za-z0-9+=,.@_-]{1,64}$'
+    Description: Existing same-account IAM role that runs the isolated FFmpeg worker
+Resources:
+  OriginalsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: [!Ref StagingOrigin]
+            AllowedMethods: [PUT]
+            AllowedHeaders: ['content-type', 'x-amz-checksum-*', 'x-amz-sdk-checksum-algorithm']
+            ExposedHeaders: [ETag]
+            MaxAge: 300
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteOriginals
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+  DeliveryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+  MediaOac:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${AWS::StackName}-media-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+  MediaCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub '${AWS::StackName}-media-cache'
+        DefaultTTL: 60
+        MinTTL: 0
+        MaxTTL: 300
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig: { CookieBehavior: none }
+          HeadersConfig: { HeaderBehavior: none }
+          QueryStringsConfig: { QueryStringBehavior: none }
+          EnableAcceptEncodingGzip: true
+          EnableAcceptEncodingBrotli: true
+  MediaDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: FireLaunch approved free VOD HLS only; delivery bucket is private
+        HttpVersion: http2
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: private-delivery
+            DomainName: !GetAtt DeliveryBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt MediaOac.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: private-delivery
+          ViewerProtocolPolicy: https-only
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: !Ref MediaCachePolicy
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ErrorCachingMinTTL: 0
+          - ErrorCode: 404
+            ErrorCachingMinTTL: 0
+  OriginalsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref OriginalsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: [!GetAtt OriginalsBucket.Arn, !Sub '${OriginalsBucket.Arn}/*']
+            Condition:
+              Bool: { 'aws:SecureTransport': 'false' }
+  DeliveryBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref DeliveryBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: [!GetAtt DeliveryBucket.Arn, !Sub '${DeliveryBucket.Arn}/*']
+            Condition:
+              Bool: { 'aws:SecureTransport': 'false' }
+          - Sid: AllowOacApprovedObjectsOnly
+            Effect: Allow
+            Principal: { Service: cloudfront.amazonaws.com }
+            Action: 's3:GetObject'
+            Resource: !Sub '${DeliveryBucket.Arn}/media/*/*/*/delivery/*'
+            Condition:
+              StringEquals:
+                'AWS:SourceArn': !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${MediaDistribution}'
+  UploaderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ControlPlaneRoleName}' }
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: original-multipart-only
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['s3:PutObject', 's3:AbortMultipartUpload']
+                Resource: !Sub '${OriginalsBucket.Arn}/media/*/*/*/original/*'
+  WorkerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${WorkerRoleName}' }
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: bounded-media-worker
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['s3:GetObject']
+                Resource: !Sub '${OriginalsBucket.Arn}/media/*/*/*/original/*'
+              - Effect: Allow
+                Action: ['s3:GetObject', 's3:PutObject']
+                Resource: !Sub '${DeliveryBucket.Arn}/media/*/*/*/staged/*'
+  PublisherRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ControlPlaneRoleName}' }
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: approved-output-only
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['s3:GetObject']
+                Resource: !Sub '${DeliveryBucket.Arn}/media/*/*/*/staged/*'
+              - Effect: Allow
+                Action: ['s3:PutObject', 's3:GetObject']
+                Resource: !Sub '${DeliveryBucket.Arn}/media/*/*/*/delivery/*'
+Outputs:
+  OriginalsBucketName:
+    Value: !Ref OriginalsBucket
+  DeliveryBucketName:
+    Value: !Ref DeliveryBucket
+  CloudFrontDomainName:
+    Value: !GetAtt MediaDistribution.DomainName
+  UploaderRoleArn:
+    Value: !GetAtt UploaderRole.Arn
+  WorkerRoleArn:
+    Value: !GetAtt WorkerRole.Arn
+  PublisherRoleArn:
+    Value: !GetAtt PublisherRole.Arn
