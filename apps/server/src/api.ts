@@ -1,7 +1,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { randomUUID } from 'node:crypto';
+import { isIP } from 'node:net';
 import { ZodError, z } from 'zod';
 import { applyMutation, mutationSchema } from '@firelaunch/channel-engine';
-import { createProjectSchema, publicationBindingsSchema, updateProjectSchema } from '@firelaunch/contracts';
+import { channelDeploymentSchema, createProjectSchema, publicationBindingsSchema, updateProjectSchema } from '@firelaunch/contracts';
 import { agentRequestSchema, BedrockProvider, ChannelAgent, MockProvider, OpenAIProvider, providerStatus, type AgentProvider } from '@firelaunch/agent';
 import { ProjectRepository, RepositoryError } from './repository.js';
 import { WorkspaceService } from './workspace.js';
@@ -37,6 +39,21 @@ const publicationSnapshotSchema = z.strictObject({
 });
 const rollbackReviewSchema = publicationSnapshotSchema.omit({ bindings: true }).extend({ rollbackSourceReleaseId: releaseIdSchema });
 const publishApprovalSchema = z.strictObject({ approvalId: z.string().regex(/^ap_[a-f0-9]{32}$/) });
+const createDeploymentSchema = z.strictObject({
+  appName: channelDeploymentSchema.shape.appName,
+  packageId: channelDeploymentSchema.shape.packageId,
+  manifestEndpoint: channelDeploymentSchema.shape.manifestEndpoint.unwrap(),
+  nativeReleaseApproval: z.literal('creator_approved')
+}).refine(input => {
+  try {
+    const url = new URL(input.manifestEndpoint);
+    const host = url.hostname.toLowerCase().replace(/\.$/, '');
+    return url.protocol === 'https:' && url.pathname === '/' && !url.search && !url.hash &&
+      !url.username && !url.password && (!url.port || url.port === '443') && !isIP(host) &&
+      host.includes('.') && host !== 'localhost' && !host.endsWith('.localhost') &&
+      !host.endsWith('.local') && !host.endsWith('.internal');
+  } catch { return false; }
+}, 'Deployment needs a dedicated, public HTTPS resolver origin');
 
 async function body(request: IncomingMessage): Promise<unknown> {
   if (!request.headers['content-type']?.toLowerCase().startsWith('application/json')) throw new ZodError([{ code: 'custom', path: [], message: 'Expected application/json' }]);
@@ -212,6 +229,17 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
           if (segments.length === 3 && !url.search && request.method === 'GET') { respond(response, 200, await hostedRepository.read(principal, segments[2]!)); return; }
           if (segments.length === 4 && !url.search && segments[3] === 'deployment' && request.method === 'GET') {
             respond(response, 200, await hostedRepository.readDeployment(principal, segments[2]!)); return;
+          }
+          if (segments.length === 4 && !url.search && segments[3] === 'deployment' && request.method === 'POST') {
+            const projectId = segments[2]!;
+            const input = createDeploymentSchema.parse(await body(request));
+            if (new URL(input.manifestEndpoint).origin === mode.auth.publicOrigin)
+              throw new RepositoryError('INVALID_INPUT', 'TV resolver origin must differ from private Studio origin');
+            respond(response, 201, await hostedRepository.createDeployment(principal, {
+              schemaVersion: 1, id: `dep_${randomUUID().replaceAll('-', '')}`,
+              creatorAccountId: principal.accountId, projectId, channelId: projectId,
+              ...input, releaseControl: 'creator', consoleEvidence: { state: 'none' }
+            })); return;
           }
           if (segments.length === 3 && !url.search && request.method === 'PUT') {
             await hostedRepository.read(principal, segments[2]!);

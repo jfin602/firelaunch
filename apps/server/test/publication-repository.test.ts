@@ -128,6 +128,30 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     };
     const ownerLogin = await login('owner');
     const foreignLogin = await login('foreign');
+    const newProject = await first.create(owner, { title: 'Owner deployment' });
+    const deploymentPath = `${origin}/api/projects/${newProject.id}/deployment`;
+    const createInput = { appName: 'Owner deployment', packageId: 'com.example.ownerdeployment',
+      manifestEndpoint: 'https://tv.example.org/', nativeReleaseApproval: 'creator_approved' };
+    const createRoute = (input: unknown, credentials = ownerLogin, headers: Record<string, string> = {}) =>
+      fetch(deploymentPath, { method: 'POST', headers: { cookie: credentials.cookie, origin,
+        'x-csrf-token': credentials.csrf, 'content-type': 'application/json', ...headers }, body: JSON.stringify(input) });
+    assert.equal((await fetch(deploymentPath, { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(createInput) })).status, 401);
+    assert.equal((await createRoute(createInput, foreignLogin)).status, 404);
+    assert.equal((await createRoute(createInput, ownerLogin, { 'x-csrf-token': 'bad' })).status, 403);
+    assert.equal((await createRoute({ ...createInput, creatorAccountId: foreign.accountId })).status, 400);
+    assert.equal((await createRoute({ ...createInput, manifestEndpoint: 'https://tv.example.org/api' })).status, 400);
+    assert.equal((await createRoute({ ...createInput, manifestEndpoint: 'https://127.0.0.1/' })).status, 400);
+    const createdDeploymentResponse = await createRoute(createInput);
+    assert.equal(createdDeploymentResponse.status, 201);
+    const createdDeployment = await createdDeploymentResponse.json();
+    assert.match(createdDeployment.id, /^dep_[a-f0-9]{32}$/);
+    assert.equal(createdDeployment.creatorAccountId, owner.accountId);
+    assert.equal(createdDeployment.projectId, newProject.id);
+    assert.deepEqual(await (await fetch(deploymentPath, { headers: { cookie: ownerLogin.cookie } })).json(), createdDeployment);
+    assert.equal((await createRoute(createInput)).status, 409, 'one immutable deployment per project');
+    assert.equal((await fetch(`${origin}/api/projects/${newProject.id}/publication/${createdDeployment.id}/status`,
+      { headers: { cookie: ownerLogin.cookie } })).status, 200);
     const publicationPath = `${origin}/api/projects/${project.id}/publication/${deploymentId}`;
     const publicPath = `${origin}/public/v1/deployments/${deploymentId}`;
     const route = (action: string, input: unknown, credentials = ownerLogin, extra: Record<string, string> = {}) =>
