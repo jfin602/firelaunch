@@ -1,0 +1,29 @@
+TASK: Phase 6 / P1 — Media lifecycle contracts and durable jobs
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+The assigned project version is `0.6.1`.
+
+GOAL
+Define safe additive media upload/processing/rendition contracts and durable owner-scoped job transitions without breaking existing catalog, rights, P5 publication or old stored projects.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/roadmap/mvp-roadmap.md, docs/decisions/0009-live-channel-delivery.md, docs/decisions/0010-aws-media-delivery.md, docs/integrations/aws-media-delivery.md and docs/tasks/p6/{README.md,prompt-assessment.md,implementation-plan.md}. Inspect the current source, git status, committed HEAD, root version and previous runner checkpoint before changing anything. Do not assume GitHub's historical 0.5.0 source equals the owner's current P5 tree. Require an explicit 0.6.0 activation checkpoint based on completed/owner-closed P5, working existing publication boundary and owner authorization; stop and report a concrete prerequisite blocker if these are absent. Do not change any historical NOT GREEN result or P5's same-installed-VPKG gate. Read P5 closeout if it exists.
+
+IMPLEMENT
+Inspect packages/contracts/src/catalog.ts and publication.ts, apps/server/src/{hosted-repository,catalog-repository}.ts, migrations/ and current P5 migrations/tests. Add strict additive MediaAsset upload and original/rendition identity/state schemas in the smallest coherent module(s): owner/project/catalog item scoped upload state, content checksum, trusted size metadata, processing job profile/lease/attempt/failure, immutable verified rendition set, revocation and separate rights/approval. Add forward-only Postgres migration(s) AFTER the actual P5 migration head for owned upload sessions/jobs/rendition metadata with FK/CAS/idempotence and bounded indexes; avoid storing credentials or raw signed URLs. Reuse existing MediaAsset and owner permission checks; do not rework ChannelSpec/PublishedManifest wire format or legacy catalog. Provide narrowly tested DB/service transitions and deterministic fake job enqueue/replay paths. No S3 network or FFmpeg.
+
+OUT OF SCOPE
+No external AWS SDK provisioning, FFmpeg, native player changes, bulk upload API, editor redesign or P5 public-manifest rearchitecture. Do not mark media READY from upload alone.
+
+VALIDATION
+Focused schema backward-compat, migration, owner/foreign FK, concurrency/lease, stale update, idempotent duplicate, revoked asset and restart-safe DB tests. Contracts/server typecheck and build plus git diff --check. No paid/cloud calls.
+
+GIT
+Do not create commits, amend or move HEAD; the runner exclusively owns implementation checkpoint commits. Update only the root package.json version and both root package-lock.json root version entries to 0.6.1; leave internal workspace versions unchanged without demonstrated compatibility need. Preserve accepted dirty work and unrelated tasks.
+
+FINAL RESPONSE
+Report starting HEAD, final candidate version, actual changed files, focused tests and build/typecheck/diff results, observations versus assumptions, outstanding prerequisites, and the exact handoff to the next prompt. Never call external AWS, native Vega or Appstore behavior qualified without direct evidence.
