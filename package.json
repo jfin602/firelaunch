@@ -1,6 +1,6 @@
 {
   "name": "firelaunch",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "private": true,
   "type": "module",
   "packageManager": "npm@12.2.0",
@@ -32,7 +32,8 @@
     "hosted:local:start": "node scripts/local-hosted.mjs start",
     "hosted:local:check": "node scripts/local-hosted.mjs check",
     "hosted:local:minio": "bash scripts/local-hosted-minio.sh",
-    "media:worker:once": "node --import tsx apps/server/src/media-worker-cli.ts --once"
+    "media:worker:once": "node --import tsx apps/server/src/media-worker-cli.ts --once",
+    "media:invalidate": "node --import tsx apps/server/src/media-invalidation-cli.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

@@ -10,10 +10,13 @@ const revisionSchema = z.number().int().positive();
 const publicUrlSchema = z.string().max(2048).refine(value => {
   try {
     const url = new URL(value);
-    const host = url.hostname.toLowerCase();
+    const host = url.hostname.toLowerCase().replace(/\.$/, '');
     return url.protocol === 'https:' && !!host && !url.username && !url.password && !url.search && !url.hash
       && !host.startsWith('[') && !/^\d+\.\d+\.\d+\.\d+$/.test(host)
-      && host !== 'localhost' && !host.endsWith('.localhost') && !host.endsWith('.local');
+      && host !== 'localhost' && !host.endsWith('.localhost') && !host.endsWith('.local')
+      && !host.endsWith('.internal') && !host.endsWith('.amazonaws.com') && !host.endsWith('.amazonaws.com.cn')
+      && (!url.port || url.port === '443') && !url.pathname.split('/').some(part =>
+        ['staged', 'original', 'private-objects'].includes(decodeURIComponent(part).toLowerCase()));
   } catch { return false; }
 }, 'Expected a public, stable HTTPS URL without credentials, query or fragment');
 
@@ -121,6 +124,7 @@ export function assertClientCompatible(manifestInput: unknown, clientSchemaVersi
 export function projectApprovedManifest(input: {
   approval: unknown; deployment: unknown; channel: unknown; inventory: unknown; bindings: unknown;
   releaseId: string; releaseSequence: number; previousReleaseId?: string; publishedAt: string;
+  resolvedPlayback?: ReadonlyMap<string, string>;
 }): PublishedManifest {
   const approval = publicationApprovalSchema.parse(input.approval);
   const deployment = channelDeploymentSchema.parse(input.deployment);
@@ -137,9 +141,12 @@ export function projectApprovedManifest(input: {
   const publicMedia = new Map<string, z.infer<typeof publicMediaSchema>>();
   const addAsset = (id: string, kind: 'video' | 'audio' | 'artwork', expectedUrl: string, itemId?: string) => {
     const asset: MediaAsset | undefined = assetById.get(id);
+    const resolved = input.resolvedPlayback?.get(id);
     if (!asset || !asset.deliveryEligible || !mediaUseEligible(asset, kind === 'artwork' ? 'television_display' : 'television_playback') ||
       asset.kind !== kind ||
-      (itemId && asset.catalogItemId !== itemId) || asset.location.type !== 'https' || asset.location.url !== expectedUrl) {
+      (itemId && asset.catalogItemId !== itemId) || (resolved
+        ? kind !== 'video' || asset.location.type !== 'managed_hls' || expectedUrl !== resolved
+        : asset.location.type !== 'https' || asset.location.url !== expectedUrl)) {
       throw new Error('Invalid, unlicensed or unpublished media reference');
     }
     const item = itemById.get(asset.catalogItemId);
@@ -149,15 +156,20 @@ export function projectApprovedManifest(input: {
       ['unknown', 'revoked'].includes(source.permission.tvDisplay)) {
       throw new Error('Media source lacks TV display authorization');
     }
-    publicMedia.set(id, { id, kind: asset.kind, url: publicUrlSchema.parse(asset.location.url) });
+    publicMedia.set(id, { id, kind: asset.kind, url: publicUrlSchema.parse(expectedUrl) });
   };
   if (bindings.content.length !== channel.content.length ||
     new Set(bindings.content.map(binding => binding.contentId)).size !== bindings.content.length ||
     new Set(bindings.content.map(binding => binding.catalogItemId)).size !== bindings.content.length) {
     throw new Error('Content and catalog selections must be one-to-one');
   }
+  const resolvedChannel = { ...channel, content: channel.content.map(content => {
+    const binding = bindings.content.find(value => value.contentId === content.id);
+    const url = binding?.playbackAssetId && input.resolvedPlayback?.get(binding.playbackAssetId);
+    return url ? { ...content, mediaUrl: url } : content;
+  }) };
   for (const binding of bindings.content) {
-    const content = channel.content.find(value => value.id === binding.contentId);
+    const content = resolvedChannel.content.find(value => value.id === binding.contentId);
     const item = itemById.get(binding.catalogItemId);
     if (!content || !item || !item.mediaAssetIds.includes(binding.artworkAssetId)) throw new Error('Content binding differs from catalog');
     const source = sourceById.get(item.sourceRecord.sourceId);
@@ -186,6 +198,6 @@ export function projectApprovedManifest(input: {
     deployment: { id: deployment.id, projectId: deployment.projectId, channelId: deployment.channelId, packageId: deployment.packageId },
     approvedContentRevision: approval.revisions, approvalId: approval.approvalId,
     clientCompatibility: { minSchemaVersion: TV_CLIENT_SCHEMA_VERSION, maxSchemaVersion: TV_CLIENT_SCHEMA_VERSION, channelSchemaVersion: SCHEMA_VERSION },
-    channel, media: [...publicMedia.values()], bindings
+    channel: resolvedChannel, media: [...publicMedia.values()], bindings
   });
 }

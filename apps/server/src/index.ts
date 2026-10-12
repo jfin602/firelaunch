@@ -15,10 +15,12 @@ const mode = serverModeFromEnv(process.env, hostedRepository
   ? principal => hostedRepository.accountForIdentity(principal) : undefined);
 const repository = new ProjectRepository(process.env.FIRELAUNCH_DATA_DIR ?? '.firelaunch-data');
 const privateObjects = hostedRepository ? new PrivateObjectService(hostedRepository, privateObjectStoreFromEnv(process.env)) : undefined;
-const mediaUploads = hostedRepository && process.env.FIRELAUNCH_MEDIA_AWS_REGION
-  ? new MediaUploadService(new MediaPipelineRepository(hostedRepository), mediaStorageFromEnv(process.env)) : undefined;
+const mediaStorage = hostedRepository && process.env.FIRELAUNCH_MEDIA_AWS_REGION
+  ? mediaStorageFromEnv(process.env) : undefined;
+const mediaUploads = hostedRepository && mediaStorage
+  ? new MediaUploadService(new MediaPipelineRepository(hostedRepository), mediaStorage) : undefined;
 if (mediaUploads) {
   void mediaUploads.cleanupExpired();
   setInterval(() => { void mediaUploads.cleanupExpired(); }, 15 * 60_000).unref();
 }
-createApi(repository, undefined, mode, hostedRepository, privateObjects, mediaUploads).listen(port, '127.0.0.1', () => console.log(`FireLaunch API listening on 127.0.0.1:${port} (${mode.mode})`));
+createApi(repository, undefined, mode, hostedRepository, privateObjects, mediaUploads, mediaStorage).listen(port, '127.0.0.1', () => console.log(`FireLaunch API listening on 127.0.0.1:${port} (${mode.mode})`));

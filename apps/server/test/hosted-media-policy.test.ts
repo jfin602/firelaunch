@@ -16,6 +16,8 @@ test('hosted media references accept only stable public HTTPS or bundled artwork
     'http://media.example/film.mp4', 'https://127.0.0.1/film.mp4', 'https://[::1]/film.mp4',
     'https://localhost./film.mp4', 'https://media.internal/film.mp4',
     'https://media.example/film.mp4?token=private', 'https://media.example/film.mp4#private',
+    'https://bucket.s3.us-east-2.amazonaws.com/original.mp4',
+    'https://media.example/media/staged/secret/master.m3u8',
     'https://studio.example/api/projects/channel/private-objects/object/content',
     'https://studio.example/api/%70rivate-objects/object/content'
   ]) {

@@ -10,8 +10,10 @@ export function publicMediaUrl(value: string): boolean {
     const host = url.hostname.toLowerCase().replace(/\.$/, '');
     return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash &&
       !isIP(host) && !host.startsWith('[') && host !== 'localhost' && !host.endsWith('.localhost') &&
-      !host.endsWith('.local') && !host.endsWith('.internal') && (!url.port || url.port === '443') &&
-      !url.pathname.split('/').some(part => decodeURIComponent(part).toLowerCase() === 'private-objects');
+      !host.endsWith('.local') && !host.endsWith('.internal') && !host.endsWith('.amazonaws.com') &&
+      !host.endsWith('.amazonaws.com.cn') &&
+      (!url.port || url.port === '443') &&
+      !url.pathname.split('/').some(part => ['private-objects', 'staged', 'original'].includes(decodeURIComponent(part).toLowerCase()));
   } catch { return false; }
 }
 

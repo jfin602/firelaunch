@@ -42,6 +42,10 @@ class FakeS3 {
       return {};
     }
     if (name === 'AbortMultipartUploadCommand') { this.parts.clear(); return {}; }
+    if (name === 'ListObjectsV2Command') {
+      const keys = [...this.objects.keys()].filter(value => value.startsWith(String(input.Prefix)));
+      return { Contents: keys.slice(0, Number(input.MaxKeys)).map(Key => ({ Key })), IsTruncated: keys.length > Number(input.MaxKeys) };
+    }
     if (name === 'DeleteObjectCommand') { this.objects.delete(key); return {}; }
     if (name === 'PutObjectCommand') {
       if (this.objects.has(key)) throw Object.assign(new Error('exists'), { name: 'PreconditionFailed' });
@@ -167,6 +171,42 @@ test('staged output and immutable publication are idempotent and URL is allowlis
   await assert.rejects(storage.publishStaged(scope, set, '2'.repeat(64), 'master.m3u8', expected), /mismatch/);
 });
 
+test('complete READY graph promotes a stable master only after all staged segments verify', async () => {
+  const { storage, delivery } = setup();
+  const master = Buffer.from('#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-STREAM-INF:BANDWIDTH=1500000,RESOLUTION=854x480\nv480.m3u8\n');
+  const playlist = Buffer.from('#EXTM3U\n#EXT-X-INDEPENDENT-SEGMENTS\n#EXTINF:6.0,\nv480-000.ts\n#EXT-X-ENDLIST\n');
+  const segment = Buffer.from('synthetic segment');
+  const rendition = { id: set, creatorAccountId: scope.creatorAccountId, projectId: scope.projectId,
+    catalogItemId: `ci_${'1'.repeat(32)}`, mediaAssetId: scope.mediaAssetId,
+    jobId: `job_${'2'.repeat(32)}`, profile: 'hls-avc-aac-v1' as const,
+    masterKey: storage.stagedKey(scope, set, 'master.m3u8'), masterSha256: sha(master),
+    variants: [{ height: 480 as const, playlistKey: storage.stagedKey(scope, set, 'v480.m3u8'),
+      playlistSha256: sha(playlist), segmentsSha256: sha(Buffer.from(sha(segment))), segmentCount: 1 }],
+    verifiedAt: '2026-10-12T00:00:00.000Z' };
+  await storage.putStaged(scope, set, 'master.m3u8', master, sha(master));
+  await storage.putStaged(scope, set, 'v480.m3u8', playlist, sha(playlist));
+  const expected = storage.publishedMasterUrl(scope, rendition);
+  assert.equal(expected.includes('/delivery/'), true);
+  assert.equal(expected.includes('/staged/'), false);
+  await assert.rejects(storage.publishVerifiedHls(scope, rendition), /S3 request failed/);
+  assert.equal([...delivery.objects.keys()].some(key => key.includes('/delivery/')), false);
+  await storage.putStaged(scope, set, 'v480-000.ts', segment, sha(segment));
+  assert.equal(await storage.publishVerifiedHls(scope, rendition), expected);
+  assert.equal(await storage.publishVerifiedHls(scope, rendition), expected);
+  assert.equal(delivery.objects.get(storage.deliveryKey(scope, set, sha(master), 'v480-000.ts'))?.body.toString(),
+    segment.toString());
+  await assert.rejects(storage.publishVerifiedHls(other, rendition), /scope mismatch/);
+  await assert.rejects(storage.publishVerifiedHls(scope, { ...rendition, revokedAt: '2026-10-12T01:00:00.000Z' }), /scope mismatch/);
+  await assert.rejects(storage.publishVerifiedHls(scope, { ...rendition, variants: [{ ...rendition.variants[0]!, segmentCount: 2 }] }),
+    /graph differs/);
+  delivery.objects.get(storage.stagedKey(scope, set, 'v480-000.ts'))!.body = Buffer.from('changed');
+  await assert.rejects(storage.publishVerifiedHls(scope, rendition), /checksum mismatch/);
+  assert.equal(await storage.removePublishedAsset(scope), 3);
+  assert.equal(delivery.objects.has(storage.deliveryKey(scope, set, sha(master), 'master.m3u8')), false);
+  assert.equal(delivery.objects.has(storage.stagedKey(scope, set, 'master.m3u8')), true);
+  assert.equal(await storage.removePublishedAsset(other), 0);
+});
+
 test('delivery write errors remain private and never create an approved object', async () => {
   const { storage, delivery } = setup();
   const body = Buffer.from('#EXTM3U\n');
@@ -174,6 +214,16 @@ test('delivery write errors remain private and never create an approved object',
   await assert.rejects(storage.putStaged(scope, set, 'master.m3u8', body, sha(body)), error =>
     error instanceof Error && error.message === 'Media storage: S3 request failed' && !error.message.includes('secret-value'));
   assert.equal(delivery.objects.size, 0);
+});
+
+test('operator cleanup refuses oversized delivery prefixes before deleting anything', async () => {
+  const { storage, delivery } = setup();
+  const prefix = storage.deliveryKey(scope, set, 'a'.repeat(64), 'v480-000.ts').replace('v480-000.ts', '');
+  for (let index = 0; index < 1001; index++) delivery.objects.set(`${prefix}segment_${index}.ts`, {
+    body: Buffer.from('x'), type: 'video/mp2t', encryption: 'AES256', checksumType: 'FULL_OBJECT',
+    etag: '"x"' });
+  await assert.rejects(storage.removePublishedAsset(scope), /1000-object/);
+  assert.equal(delivery.calls.some(call => call.name === 'DeleteObjectCommand'), false);
 });
 
 test('worker download binds owned S3 original to full SHA-256 and deletes corrupt staging', async t => {

@@ -168,6 +168,28 @@ test('approved release projects a public, compatible, versioned manifest', () =>
   assert.equal(channelSpecSchema.parse(fixtureChannel()).schemaVersion, 1);
 });
 
+test('private video binds only a resolved stable HLS URL into v1, never its original identity', () => {
+  const base = input();
+  const url = `https://media.example.org/media/${hex('a')}/${hex('b')}/${hex('d')}/delivery/${hex('f')}/${'1'.repeat(64)}/master.m3u8`;
+  const privateVideo = { ...media()[0], location: { type: 'managed_hls' },
+    rights: undefined, tvDisplayRights: rights('television_display'), tvPlaybackRights: rights('television_playback') };
+  const selected = { ...base, inventory: { ...base.inventory, mediaAssets: [privateVideo, media()[1]] } };
+  assert.throws(() => projectApprovedManifest(selected));
+  const manifest = projectApprovedManifest({ ...selected, resolvedPlayback: new Map([[playbackId, url]]) });
+  assert.equal(manifest.schemaVersion, 1);
+  assert.equal(manifest.channel.content[0]?.mediaUrl, url);
+  assert.equal(manifest.media.find(asset => asset.id === playbackId)?.url, url);
+  assert.doesNotMatch(JSON.stringify(manifest), /managed_hls|private_object|objectId|original|staged|creatorAccountId/);
+  for (const unsafe of ['https://bucket.s3.amazonaws.com/video.m3u8', 'https://media.example.org/video.m3u8?X-Amz-Signature=x',
+    'https://media.example.org/media/staged/secret/master.m3u8', 'https://media.example.org/media/original/file.mp4',
+    'https://127.0.0.1/video.m3u8', 'https://media.example.org:444/video.m3u8'])
+    assert.throws(() => projectApprovedManifest({ ...selected, resolvedPlayback: new Map([[playbackId, unsafe]]) }));
+  assert.throws(() => projectApprovedManifest({ ...selected, inventory: { ...selected.inventory,
+    mediaAssets: [{ ...privateVideo, tvDisplayRights: { status: 'revoked', basis: 'creator_asserted',
+      permittedUse: 'television_display', assertedAt: timestamp }, deliveryEligible: false }, media()[1]] },
+  resolvedPlayback: new Map([[playbackId, url]]) }));
+});
+
 test('draft state and incompatible clients cannot publish or activate', () => {
   const draft = { state: 'draft', creatorAccountId, projectId: channel().id, revisions: { channel: 3, catalog: 7 } };
   assert.equal(publicationStateSchema.parse(draft).state, 'draft');

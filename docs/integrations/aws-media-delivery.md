@@ -48,6 +48,25 @@ Rights requirements: independently cleared television playback, imagery, audio, 
 - **Publishing:** Creator's approved channel manifest and HLS manifest are distinct. Immutable channel release points to immutable, approved media rendition. Releasing another catalog/layout version must not mutate prior approved bytes.
 - **Revocation:** Stop new publication, restrict future delivery and handle CDN TTL/invalidation explicitly. Already cached media and disconnected clients limit how promptly removal propagates.
 
+### P6 P5 approved HLS publication and revocation
+
+`managed_hls` is a catalog location with no object key. It is eligible only for video with separate cleared TV display and playback rights. The authenticated P5 readiness/approval/publish transaction checks the current reviewed CatalogItem, source permission, ChannelSpec/catalog revisions, live-release CAS, owned latest READY job, verified upload and unrevoked rendition. Publication rereads and hashes the complete staged master, variants and segments, then copies them under the immutable `delivery/<rendition>/<master SHA-256>/` prefix. The public manifest stays v1 and contains only the stable CloudFront HTTPS master URL. A READY job, source upload, catalog edit or draft does not publish by itself. Informational books retain artwork and no playback.
+
+Free-to-view CloudFront URLs are public to anyone who knows them. OAC protects the S3 origin from direct public reads; it provides no viewer entitlement. The CloudFront template permits only delivery objects, excluding `original/` and `staged/`. Operators must confirm the selected distribution, private bucket policy and MIME types in the actual account before release. Do not use this path for paid, territorial or DRM protected playback.
+
+Revoking rights or a media lifecycle record makes the public manifest resolver reject current and historical releases containing that asset on fresh origin requests. The current pointer is sent with `max-age=0, must-revalidate`; immutable release bytes are cached for at most 60 seconds at the HTTP layer. The checked-in CloudFront media policy has a 300-second maximum TTL and origin objects use `max-age=60`. Already cached CDN objects, browser/device caches and offline last-known-good manifests can persist beyond the database decision. Release an approved replacement with a higher sequence for connected TVs; never mutate an old release or pointer backward. A disconnected TV cannot be forcibly purged by this server.
+
+For an urgent revoked `managed_hls` asset, an operator can run the bounded cleanup command after the DB revocation is recorded. It removes at most 1,000 objects under that asset's derived **delivery-only** prefix, then requests one CloudFront wildcard invalidation. It refuses unrevoked assets, untrusted distribution/host combinations, direct environment access keys and non-role AWS identities. It reserves at most one attempt per asset and ten attempts globally per rolling 24 hours in PostgreSQL audit events; failed attempts also consume the guard because their external effect may be uncertain. Review AWS invalidation pricing/quotas and the exact role permissions before enabling it. It never runs from a creator API route.
+
+```sh
+FIRELAUNCH_MEDIA_INVALIDATION_ENABLED=1 \
+FIRELAUNCH_MEDIA_INVALIDATION_PROFILE=firelaunch-media-operator \
+FIRELAUNCH_MEDIA_INVALIDATION_DISTRIBUTION_ID=EXAMPLE1234 \
+npm run media:invalidate -- --execute ch_<32-hex> ma_<32-hex>
+```
+
+The command also needs the normal hosted `DATABASE_URL` and media bucket/CloudFront configuration, a named AWS CLI profile that assumes a narrow operator role, and an installed AWS CLI. The operator role needs list/delete on the approved delivery prefix, `cloudfront:GetDistribution`, `cloudfront:CreateInvalidation` and `sts:GetCallerIdentity`; it needs no originals access. This is a request for cache invalidation, not proof of immediate deletion from viewers or a live AWS test. If cleanup exceeds the object bound or any call fails, stop and reconcile AWS/DB state manually before another attempt.
+
 ## Cost model (do not hard-code pricing into contracts)
 
 Variable costs: S3 originals+rendition storage (GB-month), S3 operations and retrieval, CloudFront bytes delivered by geography, HTTP requests (HLS is request-heavy), local/remote encoding worker resources, logs and backups. MediaConvert is deliberately absent from initial P6; compare it later only if FFmpeg operations cost outweighs managed encoding. Verify account eligibility for CloudFront free tier or flat-rate plans, their terms/allowances and potential performance policies directly in AWS before assuming any fixed streaming cost. Set budgets, account-level quotas and creator caps before opening public video uploads.

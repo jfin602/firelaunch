@@ -3,13 +3,14 @@ import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod';
 import type { PoolClient } from 'pg';
 import {
-  catalogInventorySchema, channelDeploymentSchema, channelSpecSchema, projectApprovedManifest,
-  publicationApprovalSchema, publicationBindingsSchema, publishedManifestSchema,
+  catalogInventorySchema, channelDeploymentSchema, channelSpecSchema, mediaUseEligible, projectApprovedManifest,
+  mediaRenditionSetSchema, publicationApprovalSchema, publicationBindingsSchema, publishedManifestSchema,
   type CatalogInventory, type ChannelSpec, type PublicationBindings, type PublishedManifest
 } from '@firelaunch/contracts';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { RepositoryError } from './repository.js';
+import type { S3MediaStorage } from './media-storage.js';
 
 const ids = {
   project: z.string().regex(/^ch_[a-f0-9]{32}$/),
@@ -57,7 +58,7 @@ function failure(error: unknown): never {
 
 /** No HTTP route. The caller must supply a verified session principal. */
 export class PublicationRepository {
-  constructor(private readonly projects: HostedProjectRepository) {}
+  constructor(private readonly projects: HostedProjectRepository, private readonly mediaStorage?: S3MediaStorage) {}
 
   private async locked(client: PoolClient, principal: AuthenticatedPrincipal, projectId: string, deploymentId: string): Promise<Locked> {
     if (!principal?.accountId || !principal.issuer || !principal.subject) throw new RepositoryError('NOT_FOUND', 'Project not found');
@@ -99,17 +100,65 @@ export class PublicationRepository {
     if (rows.rowCount !== selected.length) conflict('Catalog selection is not creator-reviewed');
   }
 
-  private manifest(state: Locked, approvalId: string, approvedAt: string, channel: ChannelSpec,
-    bindings: PublicationBindings, releaseId: string, publishedAt: string): PublishedManifest {
+  private async resolvedPlayback(client: PoolClient, state: Locked, bindings: PublicationBindings,
+    promote: boolean): Promise<ReadonlyMap<string, string>> {
+    const urls = new Map<string, string>();
+    for (const binding of bindings.content) {
+      if (!binding.playbackAssetId) continue;
+      const asset = state.inventory.mediaAssets.find(value => value.id === binding.playbackAssetId);
+      if (!asset || asset.location.type === 'https') continue;
+      if (asset.location.type !== 'managed_hls' || asset.kind !== 'video' || asset.catalogItemId !== binding.catalogItemId ||
+        !mediaUseEligible(asset, 'television_display') || !mediaUseEligible(asset, 'television_playback') || !this.mediaStorage)
+        conflict('Private playback has no eligible HLS publisher');
+      const result = await client.query<{ id: string; job_id: string; creator_account_id: string; project_id: string;
+        item_id: string; asset_id: string; profile: 'hls-avc-aac-v1'; master_key: string; master_sha256: string;
+        variants: unknown; verified_at: Date; revoked_at: Date | null; state: string; rendition_set_id: string | null }>(`
+        SELECT r.*, j.state, j.rendition_set_id FROM media_processing_jobs j
+        JOIN media_upload_sessions u ON u.id = j.upload_session_id AND u.creator_account_id = j.creator_account_id
+          AND u.project_id = j.project_id AND u.asset_id = j.asset_id AND u.state = 'verified'
+        LEFT JOIN media_rendition_sets r ON r.id = j.rendition_set_id AND r.creator_account_id = j.creator_account_id
+          AND r.project_id = j.project_id AND r.asset_id = j.asset_id AND r.item_id = j.item_id
+        LEFT JOIN media_asset_lifecycle l ON l.asset_id = j.asset_id AND l.creator_account_id = j.creator_account_id
+          AND l.project_id = j.project_id
+        WHERE j.creator_account_id = $1 AND j.project_id = $2 AND j.item_id = $3 AND j.asset_id = $4
+          AND l.revoked_at IS NULL
+        ORDER BY j.created_at DESC, j.id DESC LIMIT 1 FOR UPDATE OF j`,
+      [state.owner, state.channel.id, binding.catalogItemId, binding.playbackAssetId]);
+      const row = result.rows[0];
+      if (!row || row.state !== 'ready' || !row.id || row.revoked_at || row.rendition_set_id !== row.id)
+        conflict('Playback rendition is missing, stale or revoked');
+      const set = mediaRenditionSetSchema.parse({ id: row.id, jobId: row.job_id,
+        creatorAccountId: row.creator_account_id, projectId: row.project_id, catalogItemId: row.item_id,
+        mediaAssetId: row.asset_id, profile: row.profile, masterKey: row.master_key,
+        masterSha256: row.master_sha256, variants: row.variants, verifiedAt: row.verified_at.toISOString() });
+      if (set.creatorAccountId !== state.owner || set.projectId !== state.channel.id ||
+        set.catalogItemId !== binding.catalogItemId || set.mediaAssetId !== binding.playbackAssetId)
+        conflict('Playback rendition scope differs');
+      const scope = { creatorAccountId: state.owner, projectId: state.channel.id, mediaAssetId: binding.playbackAssetId };
+      const url = promote ? await this.mediaStorage.publishVerifiedHls(scope, set)
+        : this.mediaStorage.publishedMasterUrl(scope, set);
+      urls.set(binding.playbackAssetId, url);
+    }
+    return urls;
+  }
+
+  private async manifest(client: PoolClient, state: Locked, approvalId: string, approvedAt: string, channel: ChannelSpec,
+    bindings: PublicationBindings, releaseId: string, publishedAt: string, promote = false): Promise<PublishedManifest> {
+    const resolvedPlayback = await this.resolvedPlayback(client, state, bindings, false);
     try {
-      return projectApprovedManifest({
+      const manifest = projectApprovedManifest({
         approval: publicationApprovalSchema.parse({ state: 'approved', creatorAccountId: state.owner,
           projectId: state.channel.id, revisions: { channel: state.channelRevision, catalog: state.catalogRevision },
           approvalId, approvedAt }),
-        deployment: state.deployment, channel, inventory: state.inventory, bindings,
+        deployment: state.deployment, channel, inventory: state.inventory, bindings, resolvedPlayback,
         releaseId, releaseSequence: state.liveSequence + 1,
         ...(state.liveId ? { previousReleaseId: state.liveId } : {}), publishedAt
       });
+      if (promote && resolvedPlayback.size) {
+        const promoted = await this.resolvedPlayback(client, state, bindings, true);
+        if (!isDeepStrictEqual([...promoted], [...resolvedPlayback])) conflict('Published HLS URL differs from reviewed rendition');
+      }
+      return manifest;
     } catch { conflict('Publication selection or current rights are ineligible'); }
   }
 
@@ -139,7 +188,7 @@ export class PublicationRepository {
     const channel = historical?.channel ?? state.channel;
     const bindings = historical?.bindings ?? input.bindings!;
     await this.requireReviewedItems(client, state, input.projectId, bindings);
-    this.manifest(state, newId('ap'), new Date().toISOString(), channel, bindings, newId('rel'), new Date().toISOString());
+    await this.manifest(client, state, newId('ap'), new Date().toISOString(), channel, bindings, newId('rel'), new Date().toISOString());
     return { channel, bindings, rollback: !!historical };
   }
 
@@ -224,7 +273,7 @@ export class PublicationRepository {
       await this.requireReviewedItems(client, state, projectId, bindings);
       const releaseId = newId('rel');
       const publishedAt = new Date().toISOString();
-      const manifest = this.manifest(state, approvalId, row.approved_at.toISOString(), channel, bindings, releaseId, publishedAt);
+      const manifest = await this.manifest(client, state, approvalId, row.approved_at.toISOString(), channel, bindings, releaseId, publishedAt, true);
       const bytes = canonicalBytes(manifest);
       if (Buffer.byteLength(bytes) > 1_048_576) conflict('Manifest exceeds release size limit');
       const sha256 = digest(bytes);

@@ -20,6 +20,8 @@ import { HostedAuth } from '../src/auth/sessions.js';
 import { createApi } from '../src/api.js';
 import { ProjectRepository } from '../src/repository.js';
 import { generateProject } from '../../../packages/generator/src/index.js';
+import type { S3MediaStorage } from '../src/media-storage.js';
+import { reserveRevokedMediaInvalidation, finishMediaInvalidation } from '../src/media-invalidation.js';
 
 const databaseTest = process.env.FIRELAUNCH_TEST_DATABASE_URL ? test : test.skip;
 const id = (prefix: string) => `${prefix}_${randomUUID().replaceAll('-', '')}`;
@@ -211,7 +213,7 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     assert.equal(anonymousRelease.status, 200);
     assert.equal(anonymousRelease.headers.get('etag'), `"${firstRelease.sha256}"`);
     assert.equal(await anonymousRelease.text(), firstRelease.bytes);
-    assert.equal(anonymousRelease.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+    assert.equal(anonymousRelease.headers.get('cache-control'), 'public, max-age=60, immutable');
     assert.equal((await fetch(`${origin}/public/v1/deployments/${id('dep')}/releases/${firstRelease.manifest.releaseId}`)).status, 404);
     const anonymousCurrent = await fetch(`${publicPath}/current`, { headers: { cookie: foreignLogin.cookie } });
     assert.deepEqual(await anonymousCurrent.json(), { deploymentId, releaseId: firstRelease.manifest.releaseId,
@@ -341,9 +343,11 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     await assert.rejects(publication.publish(owner, project.id, deploymentId, stale.approvalId), { code: 'CONFLICT' });
     assert.equal((await route('publish', { approvalId: stale.approvalId })).status, 409);
     assert.equal((await publication.history(owner, project.id, deploymentId)).releases.length, 1, 'rights refusal has no partial release');
-    assert.equal((await fetch(`${publicPath}/current`).then(response => response.json())).releaseId, firstRelease.manifest.releaseId);
+    assert.equal((await fetch(`${publicPath}/current`)).status, 404, 'revoked rights suppress the public pointer');
     await first.pool.query('UPDATE catalog_media_assets SET record = $2::jsonb WHERE id = $1', [playback.id, JSON.stringify(playback)]);
+    assert.equal((await fetch(`${publicPath}/current`).then(response => response.json())).releaseId, firstRelease.manifest.releaseId);
     await catalog.mutate(owner, project.id, 'media-assets', 'PUT', 4, revoked, playback.id);
+    assert.equal((await fetch(`${publicPath}/releases/${liveId}`)).status, 404);
     await assert.rejects(publication.publish(owner, project.id, deploymentId, stale.approvalId), { code: 'CONFLICT' });
     assert.equal((await publication.history(owner, project.id, deploymentId)).releases.length, 1);
     await assert.rejects(publication.approve(owner, { ...nextRequest, revisions: { channel: 2, catalog: 5 } }), { code: 'CONFLICT' });
@@ -351,6 +355,7 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
       schemaVersion: 1, catalogItemId: item.id, kind: 'video', location: { type: 'https', url: 'https://media.example.com/film.mp4' },
       rights: rights('television_playback'), deliveryEligible: true
     }, playback.id);
+    assert.equal((await fetch(`${publicPath}/releases/${liveId}`)).status, 200);
     const revised = { ...spec, title: 'Second edition' };
     const projectV3 = await first.update(owner, project.id, 2, revised);
     const secondApproval = await publication.approve(owner, { ...nextRequest,
@@ -441,6 +446,73 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     assert.equal(accountExport.publicationLivePointers.length, 1);
     await assert.rejects(restarted.pool.query('DELETE FROM publication_releases WHERE id = $1', [liveId]), /immutable/);
     await assert.rejects(restarted.pool.query('DELETE FROM publication_approvals WHERE id = $1', [winningApproval]), /immutable/);
+    const privatePlayback = { schemaVersion: 1, catalogItemId: item.id, kind: 'video',
+      location: { type: 'managed_hls' }, rights: undefined,
+      tvDisplayRights: rights('television_display'), tvPlaybackRights: rights('television_playback'), deliveryEligible: true };
+    await new CatalogRepository(restarted).mutate(owner, project.id, 'media-assets', 'PUT', 6, privatePlayback, playback.id);
+    const uploadId = id('up'); const jobId = id('job'); const setId = id('rs');
+    const prefix = `media/${owner.accountId.slice(3)}/${project.id.slice(3)}/${playback.id.slice(3)}`;
+    const masterSha = 'a'.repeat(64);
+    const hlsClient = await restarted.pool.connect();
+    try {
+      await hlsClient.query('BEGIN');
+      await hlsClient.query(`INSERT INTO media_upload_sessions(id,creator_account_id,project_id,item_id,asset_id,
+        idempotency_key,state,original_key,expected_bytes,expected_sha256,verified_bytes,verified_sha256,
+        content_type,expires_at) VALUES ($1,$2,$3,$4,$5,$6,'verified',$7,100,$8,100,$8,'video/mp4',now()+interval '1 hour')`,
+      [uploadId, owner.accountId, project.id, item.id, playback.id, 'publication-hls-test-001', `${prefix}/original/${uploadId.slice(3)}.mp4`, masterSha]);
+      await hlsClient.query(`INSERT INTO media_processing_jobs(id,upload_session_id,creator_account_id,project_id,
+        item_id,asset_id,profile,state,rendition_set_id) VALUES ($1,$2,$3,$4,$5,$6,'hls-avc-aac-v1','ready',$7)`,
+      [jobId, uploadId, owner.accountId, project.id, item.id, playback.id, setId]);
+      await hlsClient.query(`INSERT INTO media_rendition_sets(id,job_id,creator_account_id,project_id,item_id,
+        asset_id,profile,master_key,master_sha256,variants,verified_at) VALUES
+        ($1,$2,$3,$4,$5,$6,'hls-avc-aac-v1',$7,$8,$9::jsonb,now())`,
+      [setId, jobId, owner.accountId, project.id, item.id, playback.id,
+        `${prefix}/staged/${setId.slice(3)}/master.m3u8`, masterSha, JSON.stringify([{
+          height: 480, playlistKey: `${prefix}/staged/${setId.slice(3)}/v480.m3u8`,
+          playlistSha256: 'b'.repeat(64), segmentsSha256: 'c'.repeat(64), segmentCount: 1 }])]);
+      await hlsClient.query('COMMIT');
+    } catch (error) { await hlsClient.query('ROLLBACK'); throw error; }
+    finally { hlsClient.release(); }
+    const hlsUrl = `https://media.example.org/${prefix}/delivery/${setId.slice(3)}/${masterSha}/master.m3u8`;
+    let promoted = 0;
+    const publisher = { publishedMasterUrl: (scope: { creatorAccountId: string; projectId: string; mediaAssetId: string }) => {
+      assert.deepEqual(scope, { creatorAccountId: owner.accountId, projectId: project.id, mediaAssetId: playback.id });
+      return hlsUrl;
+    }, publishVerifiedHls: async () => { promoted++; return hlsUrl; } } as unknown as S3MediaStorage;
+    const hlsPublication = new PublicationRepository(restarted, publisher);
+    const hlsRequest = { ...request, revisions: { channel: 3, catalog: 7 },
+      expectedLiveReleaseId: rollback.manifest.releaseId };
+    await assert.rejects(hlsPublication.approve(foreign, hlsRequest), { code: 'NOT_FOUND' });
+    await assert.rejects(new PublicationRepository(restarted).approve(owner, hlsRequest), { code: 'CONFLICT' });
+    await restarted.pool.query(`UPDATE media_processing_jobs SET state='revoked',rendition_set_id=NULL WHERE id=$1`, [jobId]);
+    await assert.rejects(hlsPublication.approve(owner, hlsRequest), { code: 'CONFLICT' });
+    await restarted.pool.query(`UPDATE media_processing_jobs SET state='ready',rendition_set_id=$2 WHERE id=$1`, [jobId, setId]);
+    const hlsApproval = await hlsPublication.approve(owner, hlsRequest);
+    const losingApproval = await hlsPublication.approve(owner, hlsRequest);
+    assert.equal(promoted, 0, 'approval never exposes staged media');
+    const hlsRelease = await hlsPublication.publish(owner, project.id, deploymentId, hlsApproval.approvalId);
+    assert.equal(promoted, 1);
+    assert.equal(hlsRelease.manifest.schemaVersion, 1);
+    assert.equal(hlsRelease.manifest.channel.content[0]?.mediaUrl, hlsUrl);
+    assert.doesNotMatch(hlsRelease.bytes, /managed_hls|private_object|original|staged|signedUrl|verificationEvidenceId/);
+    await assert.rejects(hlsPublication.publish(owner, project.id, deploymentId, losingApproval.approvalId), { code: 'CONFLICT' });
+    assert.equal((await new PublicReleaseResolver(restarted).current(deploymentId)).id, hlsRelease.manifest.releaseId);
+    await restarted.pool.query(`INSERT INTO media_asset_lifecycle(asset_id,item_id,project_id,creator_account_id,revoked_at)
+      VALUES ($1,$2,$3,$4,now()) ON CONFLICT (asset_id) DO UPDATE SET revoked_at=now()`,
+    [playback.id, item.id, project.id, owner.accountId]);
+    await assert.rejects(new PublicReleaseResolver(restarted).current(deploymentId), { code: 'NOT_FOUND' });
+    const reservation = await reserveRevokedMediaInvalidation(restarted.pool, project.id, playback.id);
+    assert.deepEqual(reservation.scope, { creatorAccountId: owner.accountId, projectId: project.id, mediaAssetId: playback.id });
+    await finishMediaInvalidation(restarted.pool, reservation.auditId, false);
+    await assert.rejects(reserveRevokedMediaInvalidation(restarted.pool, project.id, playback.id), /rate limit/);
+    await assert.rejects(reserveRevokedMediaInvalidation(restarted.pool, foreignProject.id, playback.id), /Revoked owned/);
+    assert.equal((await restarted.pool.query('SELECT manifest_bytes FROM publication_releases WHERE id=$1',
+      [hlsRelease.manifest.releaseId])).rows[0]?.manifest_bytes, hlsRelease.bytes);
+    await restarted.pool.query('UPDATE media_processing_jobs SET state=$2,rendition_set_id=NULL WHERE id=$1', [jobId, 'revoked']);
+    await restarted.pool.query('DELETE FROM media_rendition_sets WHERE id=$1', [setId]);
+    await restarted.pool.query('DELETE FROM media_processing_jobs WHERE id=$1', [jobId]);
+    await restarted.pool.query('DELETE FROM media_upload_sessions WHERE id=$1', [uploadId]);
+    await restarted.pool.query('DELETE FROM media_asset_lifecycle WHERE asset_id=$1', [playback.id]);
     await restarted.pool.query('DELETE FROM catalog_media_assets WHERE project_id = $1', [project.id]);
     await restarted.pool.query('DELETE FROM catalog_item_identifiers WHERE project_id = $1', [project.id]);
     await restarted.pool.query('DELETE FROM catalog_items WHERE project_id = $1', [project.id]);

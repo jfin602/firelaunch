@@ -32,7 +32,8 @@ function parseRecord(kind: CatalogKind, raw: unknown, owner: string, project: st
   if (kind === 'media-assets') {
     const locationType = (value.location as { type?: unknown } | undefined)?.type;
     if (locationType === 'upload') return invalid('Legacy upload keys cannot be attached');
-    if (locationType === 'private_object' && (value.rights !== undefined || !value.tvDisplayRights || !value.tvPlaybackRights))
+    if ((locationType === 'private_object' || locationType === 'managed_hls') &&
+      (value.rights !== undefined || !value.tvDisplayRights || !value.tvPlaybackRights))
       return invalid('Private attachments require separate TV display and playback claims');
   }
   return schemas[kind].parse({ ...value, id, creatorAccountId: owner, projectId: project }) as RecordType;

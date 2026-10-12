@@ -2,11 +2,12 @@ import { createHash } from 'node:crypto';
 import { isIP } from 'node:net';
 import {
   AbortMultipartUploadCommand, CompleteMultipartUploadCommand, CreateMultipartUploadCommand,
-  DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client, UploadPartCommand
+  DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client, UploadPartCommand
 } from '@aws-sdk/client-s3';
 import type { Readable } from 'node:stream';
 import { open, unlink } from 'node:fs/promises';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { mediaRenditionSetSchema, type MediaRenditionSet } from '@firelaunch/contracts';
 
 /** Storage primitives only. Auth, rights, upload quotas and release approval belong to the caller. */
 export type MediaScope = Readonly<{ creatorAccountId: string; projectId: string; mediaAssetId: string }>;
@@ -87,6 +88,16 @@ export class S3MediaStorage {
   deliveryKey(scope: MediaScope, setId: string, versionSha256: string, name: string): string {
     if (!hex64.test(versionSha256)) reject('invalid rendition version');
     return `${scopePath(scope)}/delivery/${renditionId(setId)}/${versionSha256}/${outputName(name)}`;
+  }
+
+  publishedMasterUrl(scope: MediaScope, input: MediaRenditionSet): string {
+    const set = mediaRenditionSetSchema.parse(input);
+    if (set.revokedAt || set.creatorAccountId !== scope.creatorAccountId ||
+      set.projectId !== scope.projectId || set.mediaAssetId !== scope.mediaAssetId ||
+      set.masterKey !== this.stagedKey(scope, set.id, 'master.m3u8') ||
+      set.variants.some(v => v.playlistKey !== this.stagedKey(scope, set.id, `v${v.height}.m3u8`)))
+      reject('rendition identity or staging scope mismatch');
+    return new URL(this.deliveryKey(scope, set.id, set.masterSha256, 'master.m3u8'), this.config.cloudFrontOrigin).toString();
   }
 
   async createOriginal(scope: MediaScope, sessionId: string): Promise<{ key: string; uploadId: string }> {
@@ -278,6 +289,91 @@ export class S3MediaStorage {
     await this.putImmutable(key, name, body, expected.sha256);
     return { object: { key, bytes: expected.bytes, sha256: expected.sha256 },
       url: new URL(key, this.config.cloudFrontOrigin).toString() };
+  }
+
+  /** Verify every staged HLS object before copying any of it to the CDN-readable prefix. */
+  async publishVerifiedHls(scope: MediaScope, input: MediaRenditionSet): Promise<string> {
+    const set = mediaRenditionSetSchema.parse(input);
+    if (set.revokedAt || set.creatorAccountId !== scope.creatorAccountId || set.projectId !== scope.projectId ||
+      set.mediaAssetId !== scope.mediaAssetId ||
+      set.masterKey !== this.stagedKey(scope, set.id, 'master.m3u8') ||
+      set.variants.some(v => v.playlistKey !== this.stagedKey(scope, set.id, `v${v.height}.m3u8`)))
+      reject('rendition identity or staging scope mismatch');
+    const read = async (name: string): Promise<StoredObject & { body: Buffer }> => {
+      const key = this.stagedKey(scope, set.id, name);
+      const head = await this.request(() => this.delivery.send(new HeadObjectCommand({
+        Bucket: this.config.deliveryBucket, Key: key, ChecksumMode: 'ENABLED' })));
+      const length = head.ContentLength;
+      if (!length || length > maxOutputBytes || !head.ETag ||
+        head.ContentType !== contentType(name) || head.ServerSideEncryption !== 'AES256' ||
+        head.ChecksumType !== 'FULL_OBJECT' || !head.ChecksumSHA256) return reject('staged HLS metadata incomplete');
+      const expectedBytes: number = length;
+      const object = await this.request(() => this.delivery.send(new GetObjectCommand({
+        Bucket: this.config.deliveryBucket, Key: key, IfMatch: head.ETag })));
+      if (!object.Body || object.ContentLength !== expectedBytes) reject('staged HLS object changed');
+      const chunks: Buffer[] = []; let bytes = 0;
+      for await (const chunk of object.Body as Readable) {
+        const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        bytes += data.length;
+        if (bytes > maxOutputBytes || bytes > expectedBytes) reject('staged HLS object too large');
+        chunks.push(data);
+      }
+      const body = Buffer.concat(chunks); const sha256 = digest(body);
+      if (bytes !== expectedBytes || checksum(sha256) !== head.ChecksumSHA256)
+        reject('staged HLS checksum mismatch');
+      return { key, bytes, sha256, body };
+    };
+    const files = new Map<string, StoredObject>();
+    const master = await read('master.m3u8');
+    if (master.sha256 !== set.masterSha256) reject('master playlist changed');
+    const masterLines = master.body.toString('utf8').trimEnd().split('\n');
+    if (masterLines[0] !== '#EXTM3U' || masterLines[1] !== '#EXT-X-VERSION:3' ||
+      masterLines.length !== 2 + 2 * set.variants.length ||
+      set.variants.some((v, i) => !new RegExp(`^#EXT-X-STREAM-INF:BANDWIDTH=[1-9]\\d*,RESOLUTION=[1-9]\\d*x${v.height}$`).test(masterLines[2 + 2 * i] ?? '') ||
+        masterLines[3 + 2 * i] !== `v${v.height}.m3u8`)) reject('master playlist graph differs');
+    files.set('master.m3u8', master);
+    for (const variant of set.variants) {
+      const name = `v${variant.height}.m3u8`;
+      const playlist = await read(name);
+      if (playlist.sha256 !== variant.playlistSha256) reject('variant playlist changed');
+      const body = playlist.body.toString('utf8');
+      if (!body.startsWith('#EXTM3U\n') || !body.includes('#EXT-X-ENDLIST') ||
+        !body.includes('#EXT-X-INDEPENDENT-SEGMENTS') || body.includes('://') || body.includes('#EXT-X-KEY'))
+        reject('invalid variant playlist');
+      if (body.split('\n').some(line => line.startsWith('#') && !(
+        line === '#EXTM3U' || line === '#EXT-X-VERSION:3' || line === '#EXT-X-INDEPENDENT-SEGMENTS' ||
+        line === '#EXT-X-PLAYLIST-TYPE:VOD' || line === '#EXT-X-ENDLIST' ||
+        /^#EXT-X-TARGETDURATION:[1-9]\d*$/.test(line) || /^#EXT-X-MEDIA-SEQUENCE:\d+$/.test(line) ||
+        /^#EXTINF:(?:[0-9]+(?:\.[0-9]+)?),?$/.test(line)))) reject('unsupported variant playlist directive');
+      const references = body.split('\n').filter(line => line && !line.startsWith('#'));
+      if (references.length !== variant.segmentCount || variant.segmentCount > 250 ||
+        references.some((line, index) => line !== `v${variant.height}-${String(index).padStart(3, '0')}.ts`))
+        reject('variant segment graph differs');
+      files.set(name, playlist);
+      const hashes: string[] = [];
+      for (const segment of references) {
+        const object = await read(segment);
+        files.set(segment, object);
+        hashes.push(object.sha256);
+      }
+      if (digest(Buffer.from(hashes.join(''))) !== variant.segmentsSha256) reject('segment graph changed');
+    }
+    for (const [name, object] of files) await this.publishStaged(scope, set.id, set.masterSha256, name, object);
+    return this.publishedMasterUrl(scope, set);
+  }
+
+  /** Operator-only cleanup after a recorded revocation; never accepts a caller-supplied prefix. */
+  async removePublishedAsset(scope: MediaScope): Promise<number> {
+    const prefix = `${scopePath(scope)}/delivery/`;
+    const listed = await this.request(() => this.delivery.send(new ListObjectsV2Command({
+      Bucket: this.config.deliveryBucket, Prefix: prefix, MaxKeys: 1000 })));
+    if (listed.IsTruncated || (listed.Contents?.length ?? 0) > 1000) reject('delivery cleanup exceeds 1000-object operator limit');
+    const keys = listed.Contents?.map(object => object.Key) ?? [];
+    if (keys.some(key => !key || !key.startsWith(prefix) || !/^media\/[a-f0-9]{32}\/[a-f0-9]{32}\/[a-f0-9]{32}\/delivery\/[a-f0-9]{32}\/[a-f0-9]{64}\/[a-z0-9_-]+\.(?:m3u8|ts|m4s|mp4)$/.test(key)))
+      reject('delivery cleanup found an unsafe key');
+    for (const key of keys) await this.request(() => this.delivery.send(new DeleteObjectCommand({
+      Bucket: this.config.deliveryBucket, Key: key! })));
+    return keys.length;
   }
 }
 

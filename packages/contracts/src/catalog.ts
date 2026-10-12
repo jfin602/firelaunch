@@ -164,7 +164,9 @@ export const mediaAssetSchema = z.strictObject({
   location: z.discriminatedUnion('type', [
     z.strictObject({ type: z.literal('https'), url: httpsUrlSchema }),
     z.strictObject({ type: z.literal('upload'), key: uploadKeySchema }),
-    z.strictObject({ type: z.literal('private_object'), objectId: mediaAssetIdSchema })
+    z.strictObject({ type: z.literal('private_object'), objectId: mediaAssetIdSchema }),
+    // P6 originals and renditions are keyed in private pipeline tables, never in catalog JSON.
+    z.strictObject({ type: z.literal('managed_hls') })
   ]),
   // The original single-use claim remains readable for existing draft inventories.
   // New attachments record both uses independently; omitted claims mean unknown.
@@ -187,6 +189,11 @@ export const mediaAssetSchema = z.strictObject({
   }
   if (asset.deliveryEligible && !mediaUseEligible(asset, asset.kind === 'artwork' ? 'television_display' : 'television_playback')) {
     context.addIssue({ code: 'custom', message: 'Deliverable media needs cleared, kind-specific TV rights' });
+  }
+  if (asset.location.type === 'managed_hls' && (asset.kind !== 'video' || !asset.tvDisplayRights ||
+    !asset.tvPlaybackRights || asset.rights || !mediaUseEligible(asset, 'television_display') ||
+    !mediaUseEligible(asset, 'television_playback'))) {
+    context.addIssue({ code: 'custom', message: 'Managed HLS needs independent video display and playback rights' });
   }
 });
 export type MediaAsset = z.infer<typeof mediaAssetSchema>;
