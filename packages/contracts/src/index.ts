@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export * from './media-pipeline.js';
 
 export * from './creator.js';
 export * from './catalog.js';
