@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
 import test from 'node:test';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { S3Client } from '@aws-sdk/client-s3';
 import { mediaStorageConfigFromEnv, S3MediaStorage, type MediaScope, type MediaStorageConfig } from '../src/media-storage.js';
 
@@ -171,4 +174,25 @@ test('delivery write errors remain private and never create an approved object',
   await assert.rejects(storage.putStaged(scope, set, 'master.m3u8', body, sha(body)), error =>
     error instanceof Error && error.message === 'Media storage: S3 request failed' && !error.message.includes('secret-value'));
   assert.equal(delivery.objects.size, 0);
+});
+
+test('worker download binds owned S3 original to full SHA-256 and deletes corrupt staging', async t => {
+  const { storage, originals } = setup();
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'firelaunch-storage-test-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const body = Buffer.from('owned original bytes');
+  const key = storage.originalKey(scope, session);
+  originals.objects.set(key, { body, type: 'video/mp4', encryption: 'AES256', checksumType: 'FULL_OBJECT',
+    crc: 'aGVsbG8=', etag: '"original"' });
+  const good = path.join(dir, 'good.mp4');
+  await storage.downloadOriginal(scope, session, { bytes: body.length, sha256: sha(body) }, good);
+  assert.deepEqual(await readFile(good), body);
+  await assert.rejects(storage.downloadOriginal(other, session, { bytes: body.length, sha256: sha(body) },
+    path.join(dir, 'foreign.mp4')), /S3 request failed/);
+  const bad = path.join(dir, 'bad.mp4');
+  await assert.rejects(storage.downloadOriginal(scope, session, { bytes: body.length, sha256: '0'.repeat(64) },bad),
+    /integrity/);
+  await assert.rejects(readFile(bad), /ENOENT/);
+  await assert.rejects(storage.downloadOriginal(scope, session, { bytes: 2_000_000_001, sha256: sha(body) },
+    path.join(dir, 'oversized.mp4')), /limit/);
 });
