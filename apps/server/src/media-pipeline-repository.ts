@@ -60,7 +60,8 @@ export class MediaPipelineRepository {
   }
 
   async createUpload(principal: AuthenticatedPrincipal, projectId: string, assetId: string, request: {
-    idempotencyKey: string; expectedBytes: number; expectedSha256: string; expiresAt: string
+    idempotencyKey: string; expectedBytes: number; expectedSha256: string; expiresAt: string;
+    claimedDurationSeconds?: number; partSize?: number; partCount?: number
   }): Promise<{ id: string; originalKey: string; state: string }> {
     key.parse(request.idempotencyKey); hash.parse(request.expectedSha256);
     z.number().int().positive().max(50_000_000_000).parse(request.expectedBytes);
@@ -69,25 +70,124 @@ export class MediaPipelineRepository {
       new Date(request.expiresAt).getTime() > Date.now() + 86_400_000) conflict('Upload expiry must be within 24 hours');
     return this.transaction(async client => {
       const { owner, itemId } = await this.owned(client, principal, projectId, assetId);
+      // Serialize the account-wide quota across projects.
+      await client.query('SELECT 1 FROM creator_accounts WHERE id = $1 FOR UPDATE', [owner]);
       const existing = await client.query<{ id: string; original_key: string; state: string; expected_bytes: string;
-        expected_sha256: string; expires_at: Date }>(`SELECT * FROM media_upload_sessions WHERE creator_account_id = $1
+        expected_sha256: string; expires_at: Date; claimed_duration_seconds: number | null;
+        part_size: number | null; part_count: number | null }>(`SELECT * FROM media_upload_sessions WHERE creator_account_id = $1
           AND project_id = $2 AND asset_id = $3 AND idempotency_key = $4`,
       [owner, projectId, assetId, request.idempotencyKey]);
       if (existing.rows[0]) {
         const row = existing.rows[0];
         if (Number(row.expected_bytes) !== request.expectedBytes || row.expected_sha256 !== request.expectedSha256 ||
-          row.expires_at.toISOString() !== request.expiresAt) conflict('Upload idempotency key reused with different input');
+          (row.claimed_duration_seconds ?? undefined) !== request.claimedDurationSeconds ||
+          (row.part_size ?? undefined) !== request.partSize || (row.part_count ?? undefined) !== request.partCount)
+          conflict('Upload idempotency key reused with different input');
         return { id: row.id, originalKey: row.original_key, state: row.state };
+      }
+      if (request.partCount !== undefined) {
+        const usage = await client.query<{ active: string; bytes: string }>(`SELECT count(*) AS active,
+          COALESCE(sum(expected_bytes),0) AS bytes FROM media_upload_sessions
+          WHERE creator_account_id = $1 AND ((state = 'initiated' AND expires_at > now()) OR
+            state IN ('aborting','expiring'))`, [owner]);
+        if (Number(usage.rows[0]?.active) >= 3 || Number(usage.rows[0]?.bytes) + request.expectedBytes > 10_000_000_000)
+          conflict('Concurrent upload quota exceeded');
       }
       const uploadId = newId('up');
       const originalKey = `media/${owner.slice(3)}/${projectId.slice(3)}/${assetId.slice(3)}/original/${uploadId.slice(3)}.mp4`;
       await client.query(`INSERT INTO media_upload_sessions(id, creator_account_id, project_id, item_id, asset_id,
-        idempotency_key, original_key, expected_bytes, expected_sha256, content_type, expires_at)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'video/mp4',$10)`,
+        idempotency_key, original_key, expected_bytes, expected_sha256, content_type, expires_at,
+        claimed_duration_seconds, part_size, part_count)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'video/mp4',$10,$11,$12,$13)`,
       [uploadId, owner, projectId, itemId, assetId, request.idempotencyKey, originalKey,
-        request.expectedBytes, request.expectedSha256, request.expiresAt]);
+        request.expectedBytes, request.expectedSha256, request.expiresAt,
+        request.claimedDurationSeconds ?? null, request.partSize ?? null, request.partCount ?? null]);
       return { id: uploadId, originalKey, state: 'initiated' };
     });
+  }
+
+  async upload(principal: AuthenticatedPrincipal, projectId: string, assetId: string, uploadId: string) {
+    id('up').parse(uploadId);
+    return this.transaction(async client => {
+      const { owner } = await this.owned(client, principal, projectId, assetId);
+      const result = await client.query<{ id: string; state: string; version: number; original_key: string;
+        s3_upload_id: string | null; expected_bytes: string; expected_sha256: string; expires_at: Date;
+        claimed_duration_seconds: number | null; part_size: number | null; part_count: number | null }>(
+        `SELECT id,state,version,original_key,s3_upload_id,expected_bytes,expected_sha256,expires_at,
+          claimed_duration_seconds,part_size,part_count FROM media_upload_sessions
+          WHERE id = $1 AND project_id = $2 AND creator_account_id = $3 AND asset_id = $4`,
+        [uploadId, projectId, owner, assetId]);
+      const row = result.rows[0];
+      if (!row) return missing();
+      return { id: row.id, state: row.state, version: row.version, originalKey: row.original_key,
+        s3UploadId: row.s3_upload_id, expectedBytes: Number(row.expected_bytes), expectedSha256: row.expected_sha256,
+        expiresAt: row.expires_at.toISOString(), claimedDurationSeconds: row.claimed_duration_seconds,
+        partSize: row.part_size, partCount: row.part_count };
+    });
+  }
+
+  async attachS3Upload(principal: AuthenticatedPrincipal, projectId: string, assetId: string,
+    uploadId: string, s3UploadId: string): Promise<boolean> {
+    if (!s3UploadId || s3UploadId.length > 512) conflict('Invalid storage upload ID');
+    return this.transaction(async client => {
+      const { owner } = await this.owned(client, principal, projectId, assetId);
+      const result = await client.query(`UPDATE media_upload_sessions SET s3_upload_id = $5
+        WHERE id = $1 AND project_id = $2 AND creator_account_id = $3 AND asset_id = $4
+          AND state = 'initiated' AND expires_at > now() AND s3_upload_id IS NULL`,
+      [uploadId, projectId, owner, assetId, s3UploadId]);
+      return !!result.rowCount;
+    });
+  }
+
+  async recordCompletedOriginal(principal: AuthenticatedPrincipal, projectId: string, assetId: string,
+    uploadId: string, expectedVersion: number): Promise<void> {
+    await this.transaction(async client => {
+      const { owner } = await this.owned(client, principal, projectId, assetId);
+      const result = await client.query(`UPDATE media_upload_sessions SET state = 'completed', version = version + 1
+        WHERE id = $1 AND project_id = $2 AND creator_account_id = $3 AND asset_id = $4
+          AND state = 'initiated' AND version = $5 AND expires_at > now() AND s3_upload_id IS NOT NULL`,
+      [uploadId, projectId, owner, assetId, expectedVersion]);
+      if (!result.rowCount) conflict('Upload stale or expired');
+    });
+  }
+
+  async beginAbort(principal: AuthenticatedPrincipal, projectId: string, assetId: string,
+    uploadId: string, expectedVersion: number): Promise<void> {
+    await this.transaction(async client => {
+      const { owner } = await this.owned(client, principal, projectId, assetId);
+      const result = await client.query(`UPDATE media_upload_sessions SET state = 'aborting', version = version + 1
+        WHERE id = $1 AND project_id = $2 AND creator_account_id = $3 AND asset_id = $4
+          AND version = $5 AND state = 'initiated'`, [uploadId, projectId, owner, assetId, expectedVersion]);
+      if (!result.rowCount) conflict('Upload close stale or unavailable');
+    });
+  }
+
+  /** Internal bounded maintenance; never accepts caller-provided scope or object key. */
+  async pendingCleanup(limit = 25): Promise<Array<{ id: string; creatorAccountId: string; projectId: string;
+    assetId: string; s3UploadId: string | null; version: number; state: 'aborting' | 'expiring' }>> {
+    const result = await this.projects.pool.query<{ id: string; creator_account_id: string; project_id: string;
+      asset_id: string; s3_upload_id: string | null; version: number; state: 'aborting' | 'expiring' }>(
+      `UPDATE media_upload_sessions SET state = 'expiring', version = version + 1
+       WHERE state = 'initiated' AND expires_at <= now() AND
+         id IN (SELECT id FROM media_upload_sessions WHERE state = 'initiated' AND expires_at <= now()
+         ORDER BY expires_at,id LIMIT $1)
+       RETURNING id,creator_account_id,project_id,asset_id,s3_upload_id,version,state`,
+      [Math.min(Math.max(limit, 1), 100)]);
+    const pending = await this.projects.pool.query<typeof result.rows[number]>(
+      `SELECT id,creator_account_id,project_id,asset_id,s3_upload_id,version,state
+       FROM media_upload_sessions WHERE state IN ('aborting','expiring') ORDER BY created_at,id LIMIT $1`,
+      [Math.min(Math.max(limit, 1), 100)]);
+    return [...new Map([...result.rows, ...pending.rows].map(row => [row.id, {
+      id: row.id, creatorAccountId: row.creator_account_id, projectId: row.project_id,
+      assetId: row.asset_id, s3UploadId: row.s3_upload_id, version: row.version, state: row.state
+    }])).values()];
+  }
+
+  async finishCleanup(uploadId: string, version: number, state: 'aborted' | 'expired'): Promise<boolean> {
+    const result = await this.projects.pool.query(`UPDATE media_upload_sessions SET state = $3, version = version + 1
+      WHERE id = $1 AND version = $2 AND state = $4`,
+      [uploadId, version, state, state === 'aborted' ? 'aborting' : 'expiring']);
+    return !!result.rowCount;
   }
 
   // Trusted storage adapter must HEAD/hash the completed original before calling this.
@@ -101,7 +201,8 @@ export class MediaPipelineRepository {
       const moved = await client.query(`UPDATE media_upload_sessions SET state = 'verified',
         verified_bytes = $5, verified_sha256 = $6, version = version + 1
         WHERE id = $1 AND project_id = $2 AND creator_account_id = $3 AND asset_id = $4
-          AND state = 'initiated' AND version = $7 AND expires_at > now()
+          AND version = $7 AND (state = 'completed' OR
+            (state = 'initiated' AND s3_upload_id IS NULL AND expires_at > now()))
           AND expected_bytes = $5 AND expected_sha256 = $6`,
       [uploadId, projectId, owner, assetId, trusted.bytes, trusted.sha256, trusted.expectedVersion]);
       if (!moved.rowCount) conflict('Upload stale, expired or checksum mismatch');

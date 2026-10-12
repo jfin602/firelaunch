@@ -18,6 +18,7 @@ import { agentCatalogGrounding } from './agent-grounding.js';
 import { composeCatalogDraft } from './catalog-composition.js';
 import { PublicationRepository } from './publication-repository.js';
 import { PublicReleaseResolver, publicReleaseRoute } from './public-resolver.js';
+import type { MediaUploadService } from './media-upload-service.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -73,7 +74,7 @@ function respond(response: ServerResponse, status: number, value: unknown): void
   response.end(JSON.stringify(value));
 }
 
-export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository, privateObjects?: PrivateObjectService) {
+export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository, privateObjects?: PrivateObjectService, mediaUploads?: MediaUploadService) {
   const status = selectedProvider ? selectedProvider.name === 'mock' ? providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'mock' }) : { provider: selectedProvider.name, configured: true, message: `${selectedProvider.name} injected for this server; this status does not verify provider availability or request success.` } : providerStatus(process.env);
   const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : status.provider === 'bedrock' ? new BedrockProvider(process.env.BEDROCK_MODEL_ID!) : new OpenAIProvider(process.env.OPENAI_MODEL!, process.env.OPENAI_API_KEY!))) : null;
   const workspace = mode?.mode === 'local-legacy' ? new WorkspaceService(repository) : null;
@@ -108,6 +109,26 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
         if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? '') && !mode.auth.authorizedMutation(request, session)) { await audit(hostedRepository?.pool, 'auth_denied', 'denied', session.principal.accountId); respond(response, 403, { error: { code: 'CSRF', message: 'Invalid request origin or CSRF token' } }); return; }
         if (hostedRepository && hostedWorkspace) {
           const principal = session.principal;
+          if (segments[3] === 'media-uploads') {
+            if (!mediaUploads) { respond(response, 503, { error: { code: 'STORAGE_ERROR', message: 'Media upload storage unavailable' } }); return; }
+            if (url.search) { respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return; }
+            const projectId = segments[2]!;
+            if (segments.length === 4 && request.method === 'POST') {
+              respond(response, 201, await mediaUploads.start(principal, projectId, await body(request))); return;
+            }
+            const uploadId = segments[4]!;
+            if (segments.length === 5 && request.method === 'GET') {
+              // The asset ID is carried in a header so status never accepts query keys or raw S3 locations.
+              respond(response, 200, await mediaUploads.status(principal, projectId, uploadId,
+                { mediaAssetId: request.headers['x-media-asset-id'] })); return;
+            }
+            if (segments.length === 6 && request.method === 'POST') {
+              if (segments[5] === 'part') { respond(response, 200, await mediaUploads.part(principal, projectId, uploadId, await body(request))); return; }
+              if (segments[5] === 'finalize') { respond(response, 200, await mediaUploads.finalize(principal, projectId, uploadId, await body(request))); return; }
+              if (segments[5] === 'abort') { respond(response, 200, await mediaUploads.abort(principal, projectId, uploadId, await body(request))); return; }
+            }
+            respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return;
+          }
           if (segments[3] === 'publication' && publication) {
             if (url.search || segments.length !== 6) { respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return; }
             const projectId = segments[2]!;

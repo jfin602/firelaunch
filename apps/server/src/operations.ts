@@ -19,7 +19,7 @@ export async function audit(pool: Pool | undefined, event: z.infer<typeof events
 
 export async function health(pool: Pool, store: PrivateObjectStore): Promise<{ status: 'ok' | 'degraded'; database: boolean; objectStore: boolean; migration: number }> {
   let database = false; let objectStore = false; let migration = 0;
-  try { const result = await pool.query<{ version: number }>('SELECT max(version)::int AS version FROM firelaunch_schema_migrations'); migration = result.rows[0]?.version ?? 0; database = migration === 11; } catch { /* safe status only */ }
+  try { const result = await pool.query<{ version: number }>('SELECT max(version)::int AS version FROM firelaunch_schema_migrations'); migration = result.rows[0]?.version ?? 0; database = migration === 12; } catch { /* safe status only */ }
   // Object stores expose no list permission. A missing random key must return an error, proving a reachable authenticated read path.
   try { await store.get(`private/${'0'.repeat(64)}`); objectStore = true; }
   catch (error) { objectStore = !(error instanceof TypeError) && /NoSuchKey|ENOENT|not found/i.test(String(error)); }

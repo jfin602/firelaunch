@@ -71,6 +71,36 @@ databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and r
     await assert.rejects(pipeline.createUpload(forged, project.id, asset.id, request), /not found/i);
     const upload = await pipeline.createUpload(owner, project.id, asset.id, request);
     assert.deepEqual(await pipeline.createUpload(owner, project.id, asset.id, request), upload);
+    const direct = await pipeline.createUpload(owner, project.id, asset.id, { ...request,
+      idempotencyKey: 'direct-upload-key-0001', expectedBytes: 8_000_001,
+      claimedDurationSeconds: 90, partSize: 8 * 1024 * 1024, partCount: 1 });
+    await assert.rejects(pipeline.upload(foreign, project.id, asset.id, direct.id), { code: 'NOT_FOUND' });
+    await assert.rejects(pipeline.upload(forged, project.id, asset.id, direct.id), { code: 'NOT_FOUND' });
+    await assert.rejects(pipeline.upload(owner, otherProject.id, asset.id, direct.id), { code: 'NOT_FOUND' });
+    assert.equal((await pipeline.upload(owner, project.id, asset.id, direct.id)).s3UploadId, null);
+    assert.equal(await pipeline.attachS3Upload(owner, project.id, asset.id, direct.id, 'opaque-s3-upload'), true);
+    assert.equal(await pipeline.attachS3Upload(owner, project.id, asset.id, direct.id, 'another-s3-upload'), false);
+    await pipeline.recordCompletedOriginal(owner, project.id, asset.id, direct.id, 0);
+    await assert.rejects(pipeline.enqueue(owner, project.id, asset.id, direct.id), /verified/i);
+    await pipeline.recordVerifiedOriginal(owner, project.id, asset.id, direct.id,
+      { bytes: 8_000_001, sha256: request.expectedSha256, expectedVersion: 1 });
+    assert.equal((await pipeline.upload(owner, project.id, asset.id, direct.id)).state, 'verified');
+    const abortRace = await pipeline.createUpload(owner, project.id, asset.id, { ...request,
+      idempotencyKey: 'direct-abort-race-0001', claimedDurationSeconds: 90,
+      partSize: 8 * 1024 * 1024, partCount: 1 });
+    await pipeline.attachS3Upload(owner, project.id, asset.id, abortRace.id, 'opaque-race-upload');
+    await pipeline.beginAbort(owner, project.id, asset.id, abortRace.id, 0);
+    await assert.rejects(pipeline.recordCompletedOriginal(owner, project.id, asset.id, abortRace.id, 0), /stale/i);
+    await assert.rejects(pipeline.beginAbort(foreign, project.id, asset.id, abortRace.id, 1), { code: 'NOT_FOUND' });
+    const pending = (await pipeline.pendingCleanup()).find(row => row.id === abortRace.id);
+    assert.equal(pending?.state, 'aborting');
+    assert.equal(await pipeline.finishCleanup(abortRace.id, pending!.version, 'aborted'), true);
+    assert.equal((await pipeline.upload(owner, project.id, asset.id, abortRace.id)).state, 'aborted');
+    const quotaInput = { ...request, partSize: 8 * 1024 * 1024, partCount: 1, claimedDurationSeconds: 90 };
+    await pipeline.createUpload(owner, project.id, asset.id, { ...quotaInput, idempotencyKey: 'quota-upload-one-0001' });
+    await pipeline.createUpload(owner, project.id, asset.id, { ...quotaInput, idempotencyKey: 'quota-upload-two-0002' });
+    await assert.rejects(pipeline.createUpload(owner, project.id, asset.id,
+      { ...quotaInput, idempotencyKey: 'quota-upload-three-0003' }), /quota/i);
     await assert.rejects(pipeline.createUpload(owner, project.id, asset.id, { ...request, expectedBytes: 43 }), /idempotency/i);
     const abandoned = await pipeline.createUpload(owner, project.id, asset.id,
       { ...request, idempotencyKey: 'abandoned-upload-key' });

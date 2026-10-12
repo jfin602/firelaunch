@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
 import test from 'node:test';
-import type { S3Client } from '@aws-sdk/client-s3';
+import { S3Client } from '@aws-sdk/client-s3';
 import { mediaStorageConfigFromEnv, S3MediaStorage, type MediaScope, type MediaStorageConfig } from '../src/media-storage.js';
 
 const scope: MediaScope = { creatorAccountId: `cr_${'a'.repeat(32)}`, projectId: `ch_${'b'.repeat(32)}`,
@@ -39,6 +39,7 @@ class FakeS3 {
       return {};
     }
     if (name === 'AbortMultipartUploadCommand') { this.parts.clear(); return {}; }
+    if (name === 'DeleteObjectCommand') { this.objects.delete(key); return {}; }
     if (name === 'PutObjectCommand') {
       if (this.objects.has(key)) throw Object.assign(new Error('exists'), { name: 'PreconditionFailed' });
       const body = input.Body as Buffer;
@@ -87,6 +88,26 @@ test('scoped opaque keys reject foreign and path-like identities before S3 reque
   assert.throws(() => storage.stagedKey(scope, set, '../master.m3u8'), /name/);
   assert.throws(() => storage.deliveryKey(scope, set, 'nope', 'master.m3u8'), /version/);
   assert.equal(originals.calls.length + delivery.calls.length, 0);
+});
+
+test('multipart part presigning creates a short-lived scoped S3 PUT capability without network I/O', async () => {
+  const client = new S3Client({ region: config.region, endpoint: 'https://s3.example.org', forcePathStyle: true,
+    credentials: { accessKeyId: 'test-uploader', secretAccessKey: 'private-fixture-secret' } });
+  try {
+    const storage = new S3MediaStorage(config, client, client);
+    const signed = await storage.signOriginalPart(scope, session, 'opaque-s3-upload', 1, 8 * 1024 * 1024);
+    const url = new URL(signed.url);
+    assert.equal(url.protocol, 'https:');
+    assert.equal(url.hostname, 's3.example.org');
+    assert.equal(url.searchParams.get('partNumber'), '1');
+    assert.equal(url.searchParams.get('uploadId'), 'opaque-s3-upload');
+    assert.equal(url.searchParams.get('X-Amz-Expires'), '300');
+    assert.match(url.searchParams.get('X-Amz-SignedHeaders') ?? '', /content-length/);
+    assert.equal(signed.url.includes('private-fixture-secret'), false);
+    assert.equal(signed.expiresInSeconds, 300);
+    assert.equal(signed.contentLength, 8 * 1024 * 1024);
+    await assert.rejects(storage.signOriginalPart(scope, session, 'opaque-s3-upload', 1001, 1));
+  } finally { client.destroy(); }
 });
 
 test('multipart create, part, complete, HeadObject and full SHA-256 verification', async () => {

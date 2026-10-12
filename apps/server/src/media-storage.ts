@@ -2,9 +2,10 @@ import { createHash } from 'node:crypto';
 import { isIP } from 'node:net';
 import {
   AbortMultipartUploadCommand, CompleteMultipartUploadCommand, CreateMultipartUploadCommand,
-  GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client, UploadPartCommand
+  DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client, UploadPartCommand
 } from '@aws-sdk/client-s3';
 import type { Readable } from 'node:stream';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 /** Storage primitives only. Auth, rights, upload quotas and release approval belong to the caller. */
 export type MediaScope = Readonly<{ creatorAccountId: string; projectId: string; mediaAssetId: string }>;
@@ -107,6 +108,30 @@ export class S3MediaStorage {
     return { partNumber, etag: result.ETag! };
   }
 
+  async signOriginalPart(scope: MediaScope, sessionId: string, s3UploadId: string,
+    partNumber: number, contentLength: number): Promise<{ url: string; expiresInSeconds: number; contentLength: number }> {
+    if (!s3UploadId || !Number.isInteger(partNumber) || partNumber < 1 || partNumber > 1000)
+      reject('invalid multipart part');
+    if (!Number.isInteger(contentLength) || contentLength < 1 || contentLength > 8 * 1024 * 1024)
+      reject('invalid multipart part length');
+    const expiresInSeconds = 300;
+    const url = await this.request(() => getSignedUrl(this.originals, new UploadPartCommand({
+      Bucket: this.config.originalsBucket, Key: this.originalKey(scope, sessionId),
+      UploadId: s3UploadId, PartNumber: partNumber, ContentLength: contentLength
+    }), { expiresIn: expiresInSeconds }));
+    return { url, expiresInSeconds, contentLength };
+  }
+
+  async headOriginal(scope: MediaScope, sessionId: string, expectedBytes: number): Promise<void> {
+    const head = await this.request(() => this.originals.send(new HeadObjectCommand({
+      Bucket: this.config.originalsBucket, Key: this.originalKey(scope, sessionId), ChecksumMode: 'ENABLED'
+    })));
+    if (head.ContentLength !== expectedBytes || head.ContentType !== 'video/mp4' ||
+      head.ServerSideEncryption !== 'AES256' || head.ChecksumType !== 'FULL_OBJECT' ||
+      !head.ChecksumCRC64NVME || !head.ETag)
+      reject('completed original size, type, encryption or checksum missing');
+  }
+
   async completeOriginal(scope: MediaScope, sessionId: string, s3UploadId: string,
     parts: readonly { partNumber: number; etag: string }[]): Promise<void> {
     if (!s3UploadId || !parts.length || parts.length > 10000 ||
@@ -120,8 +145,20 @@ export class S3MediaStorage {
 
   async abortOriginal(scope: MediaScope, sessionId: string, s3UploadId: string): Promise<void> {
     if (!s3UploadId) reject('missing multipart upload ID');
-    await this.request(() => this.originals.send(new AbortMultipartUploadCommand({ Bucket: this.config.originalsBucket,
-      Key: this.originalKey(scope, sessionId), UploadId: s3UploadId })));
+    try {
+      await this.originals.send(new AbortMultipartUploadCommand({ Bucket: this.config.originalsBucket,
+        Key: this.originalKey(scope, sessionId), UploadId: s3UploadId }));
+    } catch (error) {
+      if (error instanceof Error && error.name === 'NoSuchUpload') return;
+      reject('S3 request failed');
+    }
+  }
+
+  /** Removes a completed object left behind when S3 completion succeeded but DB finalization did not. */
+  async deleteOrphanOriginal(scope: MediaScope, sessionId: string): Promise<void> {
+    await this.request(() => this.originals.send(new DeleteObjectCommand({
+      Bucket: this.config.originalsBucket, Key: this.originalKey(scope, sessionId)
+    })));
   }
 
   /** Run on a capacity-controlled worker: S3 multipart ETags and composite SHA-256 are not full-object SHA-256. */

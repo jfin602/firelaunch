@@ -8,7 +8,7 @@ const scope = { creatorAccountId: id('cr'), projectId: id('ch'), catalogItemId: 
 
 // These are private control-plane records. They never belong in ChannelSpec or a TV manifest.
 export const mediaUploadSessionSchema = z.strictObject({
-  id: id('up'), ...scope, state: z.enum(['initiated', 'verified', 'aborted', 'expired']),
+  id: id('up'), ...scope, state: z.enum(['initiated', 'completed', 'verified', 'aborting', 'expiring', 'aborted', 'expired']),
   originalKey: objectKey, expectedBytes: bytes, expectedSha256: sha256,
   verifiedBytes: bytes.optional(), verifiedSha256: sha256.optional(),
   contentType: z.literal('video/mp4'), expiresAt: z.iso.datetime(), version: z.number().int().nonnegative(),
