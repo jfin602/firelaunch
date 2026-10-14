@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Review-only FireLaunch Foundation-derived private MediaConvert adapter; existing buckets and CDN are imported by name
+Description: Review-only FireLaunch private MediaConvert queue and event delivery; existing buckets and CDN are imported by name
 Parameters:
   OriginalsBucketName:
     Type: String
@@ -10,16 +10,6 @@ Parameters:
   ControlPlaneRoleName:
     Type: String
     AllowedPattern: '^[A-Za-z0-9+=,.@_-]{1,64}$'
-  LambdaArtifactBucket:
-    Type: String
-    AllowedPattern: '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$'
-  LambdaArtifactKey:
-    Type: String
-    AllowedPattern: '^firelaunch/foundation/[a-f0-9]{64}/adapter.zip$'
-  LambdaArtifactVersion:
-    Type: String
-    MinLength: 1
-    Description: Immutable S3 object version of operator-reviewed adapter package; P3 must supply it
 Resources:
   BoundedQueue:
     Type: AWS::MediaConvert::Queue
@@ -54,102 +44,42 @@ Resources:
               - Effect: Allow
                 Action: s3:PutObject
                 Resource: !Sub 'arn:${AWS::Partition}:s3:::${DeliveryBucketName}/media/*/*/*/staged/*'
-  SubmitRole:
-    Type: AWS::IAM::Role
+  ControlPlaneMediaPolicy:
+    Type: AWS::IAM::Policy
     Properties:
-      AssumeRolePolicyDocument:
+      PolicyName: !Sub '${AWS::StackName}-media-control'
+      Roles: [!Ref ControlPlaneRoleName]
+      PolicyDocument:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
-            Principal: { Service: lambda.amazonaws.com }
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: fixed-submit-only
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: [logs:CreateLogStream, logs:PutLogEvents]
-                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-firelaunch-submit:*'
-              - Effect: Allow
-                Action: iam:PassRole
-                Resource: !GetAtt MediaConvertRole.Arn
-                Condition:
-                  StringEquals: { 'iam:PassedToService': mediaconvert.amazonaws.com }
-              - Effect: Allow
-                Action: mediaconvert:CreateJob
-                Resource: !GetAtt BoundedQueue.Arn
-              - Effect: Allow
-                Action: s3:GetObject
-                Resource: !Sub 'arn:${AWS::Partition}:s3:::${OriginalsBucketName}/media/*/*/*/original/*'
-  ObserveRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
+            Action: iam:PassRole
+            Resource: !GetAtt MediaConvertRole.Arn
+            Condition:
+              StringEquals: { 'iam:PassedToService': mediaconvert.amazonaws.com }
           - Effect: Allow
-            Principal: { Service: lambda.amazonaws.com }
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: provider-observation-only
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: [logs:CreateLogStream, logs:PutLogEvents]
-                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-firelaunch-observe:*'
-              - Effect: Allow
-                Action: mediaconvert:GetJob
-                Resource: !Sub 'arn:${AWS::Partition}:mediaconvert:${AWS::Region}:${AWS::AccountId}:jobs/*'
-  SubmitFunction:
-    Type: AWS::Lambda::Function
+            Action: mediaconvert:CreateJob
+            Resource: !GetAtt BoundedQueue.Arn
+          - Effect: Allow
+            Action: [mediaconvert:GetJob, mediaconvert:CancelJob]
+            Resource: !Sub 'arn:${AWS::Partition}:mediaconvert:${AWS::Region}:${AWS::AccountId}:jobs/*'
+          - Effect: Allow
+            Action: mediaconvert:ListJobs
+            Resource: '*'
+            Condition:
+              StringEquals: { 'aws:RequestedRegion': !Ref 'AWS::Region' }
+          - Effect: Allow
+            Action: [sqs:ReceiveMessage, sqs:DeleteMessage]
+            Resource: !GetAtt MediaConvertEventsQueue.Arn
+  MediaConvertEventsQueue:
+    Type: AWS::SQS::Queue
     Properties:
-      FunctionName: !Sub '${AWS::StackName}-firelaunch-submit'
-      Runtime: nodejs22.x
-      Handler: submit.handler
-      Role: !GetAtt SubmitRole.Arn
-      Timeout: 30
-      ReservedConcurrentExecutions: 1
-      Code:
-        S3Bucket: !Ref LambdaArtifactBucket
-        S3Key: !Ref LambdaArtifactKey
-        S3ObjectVersion: !Ref LambdaArtifactVersion
-      Environment:
-        Variables:
-          ORIGINALS_BUCKET: !Ref OriginalsBucketName
-          STAGING_BUCKET: !Ref DeliveryBucketName
-          QUEUE_ARN: !GetAtt BoundedQueue.Arn
-          MEDIACONVERT_ROLE_ARN: !GetAtt MediaConvertRole.Arn
-  SubmitInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref SubmitFunction
-      Principal: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ControlPlaneRoleName}'
-  ObserveFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub '${AWS::StackName}-firelaunch-observe'
-      Runtime: nodejs22.x
-      Handler: observe.handler
-      Role: !GetAtt ObserveRole.Arn
-      Timeout: 30
-      ReservedConcurrentExecutions: 1
-      Code:
-        S3Bucket: !Ref LambdaArtifactBucket
-        S3Key: !Ref LambdaArtifactKey
-        S3ObjectVersion: !Ref LambdaArtifactVersion
-  SubmitLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-firelaunch-submit'
-      RetentionInDays: 14
-  ObserveLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-firelaunch-observe'
-      RetentionInDays: 14
+      SqsManagedSseEnabled: true
+      VisibilityTimeout: 120
+      MessageRetentionPeriod: 1209600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt EventDeadLetterQueue.Arn
+        maxReceiveCount: 5
   EventDeadLetterQueue:
     Type: AWS::SQS::Queue
     Properties:
@@ -169,21 +99,27 @@ Resources:
           queue: [!GetAtt BoundedQueue.Arn]
           status: [PROGRESSING, COMPLETE, ERROR, CANCELED]
       Targets:
-        - Id: observe-only
-          Arn: !GetAtt ObserveFunction.Arn
+        - Id: private-job-event
+          Arn: !GetAtt MediaConvertEventsQueue.Arn
           DeadLetterConfig:
             Arn: !GetAtt EventDeadLetterQueue.Arn
           RetryPolicy:
             MaximumRetryAttempts: 3
             MaximumEventAgeInSeconds: 3600
-  EventInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref ObserveFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt MediaConvertEvents.Arn
   EventDeadLetterPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref MediaConvertEventsQueue]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: events.amazonaws.com }
+            Action: sqs:SendMessage
+            Resource: !GetAtt MediaConvertEventsQueue.Arn
+            Condition:
+              ArnEquals: { 'aws:SourceArn': !GetAtt MediaConvertEvents.Arn }
+  EventBridgeDeadLetterPolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
       Queues: [!Ref EventDeadLetterQueue]
@@ -198,6 +134,5 @@ Resources:
               ArnEquals: { 'aws:SourceArn': !GetAtt MediaConvertEvents.Arn }
 Outputs:
   QueueArn: { Value: !GetAtt BoundedQueue.Arn }
-  SubmitFunctionArn: { Value: !GetAtt SubmitFunction.Arn }
-  ObserveFunctionArn: { Value: !GetAtt ObserveFunction.Arn }
+  EventQueueUrl: { Value: !Ref MediaConvertEventsQueue }
   DeadLetterQueueArn: { Value: !GetAtt EventDeadLetterQueue.Arn }

@@ -269,6 +269,17 @@ export class MediaPipelineRepository {
     });
   }
 
+  async jobVersion(principal: AuthenticatedPrincipal, projectId: string, assetId: string, jobId: string): Promise<number> {
+    id('job').parse(jobId);
+    return this.transaction(async client => {
+      const { owner } = await this.owned(client, principal, projectId, assetId);
+      const result = await client.query<{ version: number }>(`SELECT version FROM media_processing_jobs
+        WHERE id=$1 AND project_id=$2 AND creator_account_id=$3 AND asset_id=$4`,
+      [jobId, projectId, owner, assetId]);
+      return result.rows[0]?.version ?? missing();
+    });
+  }
+
   async lease(principal: AuthenticatedPrincipal, projectId: string, assetId: string, jobId: string,
     expectedVersion: number, leaseUntil: string): Promise<{ token: string; version: number; attempts: number }> {
     id('job').parse(jobId); z.number().int().nonnegative().parse(expectedVersion); z.iso.datetime().parse(leaseUntil);

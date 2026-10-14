@@ -181,6 +181,32 @@ test('staged output and immutable publication are idempotent and URL is allowlis
   await assert.rejects(storage.publishStaged(scope, set, '2'.repeat(64), 'master.m3u8', expected), /mismatch/);
 });
 
+test('managed private HLS graph is bounded, hashed and normalized before approved publication', async () => {
+  const { storage, delivery } = setup();
+  const raw = `media/${'a'.repeat(32)}/${'b'.repeat(32)}/${'c'.repeat(32)}/staged/${'1'.repeat(32)}/`;
+  const putRaw = (name: string, body: Buffer) => delivery.objects.set(`${raw}${name}`, {
+    body, type: name.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/mp2t',
+    encryption: 'AES256', checksumType: 'FULL_OBJECT', etag: `"${sha(body)}"` });
+  const segment = Buffer.alloc(188); segment[0] = 0x47;
+  putRaw('source_480p000.ts', segment);
+  putRaw('source_720p000.ts', segment);
+  for (const height of [480, 720]) putRaw(`source_${height}p.m3u8`, Buffer.from(
+    `#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:6\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:6,\nsource_${height}p000.ts\n#EXT-X-ENDLIST\n`));
+  putRaw('source.m3u8', Buffer.from('#EXTM3U\n#EXT-X-VERSION:3\n' +
+    [480, 720].map(height => `#EXT-X-STREAM-INF:BANDWIDTH=1200000,RESOLUTION=${height === 480 ? 854 : 1280}x${height},CODECS="avc1.4d401f,mp4a.40.2"\nsource_${height}p.m3u8\n`).join('')));
+  const managed = await storage.verifyManagedHls(scope, raw, set, `job_${'9'.repeat(32)}`, `ci_${'8'.repeat(32)}`);
+  assert.deepEqual(managed.variants.map(v => v.height), [480, 720]);
+  assert.equal(delivery.objects.has(storage.deliveryKey(scope, set, managed.masterSha256, 'master.m3u8')), false);
+  const published = await storage.publishVerifiedHls(scope, managed);
+  assert.equal(published, storage.publishedMasterUrl(scope, managed));
+  assert.equal(delivery.objects.get(storage.stagedKey(scope, set, 'master.m3u8'))?.body.toString('utf8').includes('source'), false);
+  delivery.objects.delete(`${raw}source_720p000.ts`);
+  await assert.rejects(storage.verifyManagedHls(scope, raw, `rs_${'e'.repeat(32)}`,
+    `job_${'9'.repeat(32)}`, `ci_${'8'.repeat(32)}`), /invalid|missing/);
+  await assert.rejects(storage.verifyManagedHls(other, raw, set,
+    `job_${'9'.repeat(32)}`, `ci_${'8'.repeat(32)}`), /scope/);
+});
+
 test('complete READY graph promotes a stable master only after all staged segments verify', async () => {
   const { storage, delivery } = setup();
   const master = Buffer.from('#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-STREAM-INF:BANDWIDTH=1500000,RESOLUTION=854x480\nv480.m3u8\n');

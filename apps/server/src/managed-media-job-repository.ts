@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
-import { managedJobIdentitySchema, managedJobObservationSchema, type ManagedJobObservation } from '@firelaunch/contracts';
+import { managedJobIdentitySchema, managedJobObservationSchema, mediaRenditionSetSchema,
+  type ManagedJobObservation } from '@firelaunch/contracts';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import { RepositoryError } from './repository.js';
 
@@ -20,16 +21,17 @@ type AttemptRow = { intent_token: string; processing_job_id: string; upload_sess
   state: string; version: number; reconcile_after: Date; checked_at: Date | null;
   cancel_requested_at: Date | null; cancel_checked_at: Date | null };
 
-function intent(row: AttemptRow) {
+function intent(row: AttemptRow, newIntent = false) {
   return { intentToken: row.intent_token, jobId: row.processing_job_id, uploadSessionId: row.upload_session_id,
-    creatorAccountId: row.creator_account_id, projectId: row.project_id, mediaAssetId: row.asset_id,
+    creatorAccountId: row.creator_account_id, projectId: row.project_id, catalogItemId: row.item_id,
+    mediaAssetId: row.asset_id,
     attempt: row.attempt, profileHash: row.profile_hash, originalKey: row.original_key,
     originalSha256: row.original_sha256, originalBytes: Number(row.original_bytes),
     outputStagingPrefix: row.output_staging_prefix, awsAccountId: row.aws_account_id,
     awsRegion: row.aws_region, awsJobId: row.aws_job_id, state: row.state, version: row.version,
     reconcileAfter: row.reconcile_after.toISOString(), checkedAt: row.checked_at?.toISOString() ?? null,
     cancelRequestedAt: row.cancel_requested_at?.toISOString() ?? null,
-    cancelCheckedAt: row.cancel_checked_at?.toISOString() ?? null };
+    cancelCheckedAt: row.cancel_checked_at?.toISOString() ?? null, newIntent };
 }
 
 /** Internal control-plane seam. Only authenticated admission and verified provider adapters may call it. */
@@ -63,8 +65,10 @@ export class ManagedMediaJobRepository {
       const owner = await client.query(`SELECT 1 FROM channel_ownerships WHERE project_id=$1 AND creator_account_id=$2 FOR UPDATE`,
         [scope.projectId, scope.creatorAccountId]);
       if (!owner.rowCount) throw new RepositoryError('NOT_FOUND', 'Media job not found');
-      const result = await client.query<{ version: number; attempts: number; state: string; upload_session_id: string;
-        item_id: string; original_key: string; verified_sha256: string; verified_bytes: string }>(`SELECT j.version,j.attempts,j.state,
+      // Serialize paid admissions for all projects belonging to this creator.
+      await client.query('SELECT 1 FROM creator_accounts WHERE id=$1 FOR UPDATE', [scope.creatorAccountId]);
+      const result = await client.query<{ version: number; attempts: number; state: string; failure_code: string | null; upload_session_id: string;
+        item_id: string; original_key: string; verified_sha256: string; verified_bytes: string }>(`SELECT j.version,j.attempts,j.state,j.failure_code,
           j.upload_session_id,j.item_id,u.original_key,u.verified_sha256,u.verified_bytes
         FROM media_processing_jobs j JOIN media_upload_sessions u ON u.id=j.upload_session_id
           AND u.creator_account_id=j.creator_account_id AND u.project_id=j.project_id AND u.asset_id=j.asset_id
@@ -73,15 +77,19 @@ export class ManagedMediaJobRepository {
         LEFT JOIN media_asset_lifecycle l ON l.asset_id=j.asset_id
         WHERE j.id=$1 AND j.creator_account_id=$2 AND j.project_id=$3 AND j.asset_id=$4
           AND u.state='verified' AND l.revoked_at IS NULL AND a.record->>'kind'='video'
-          AND COALESCE(a.record->'rights'->>'status','') <> 'revoked'
-          AND COALESCE(a.record->'tvPlaybackRights'->>'status','') <> 'revoked'
+          AND a.record->>'deliveryEligible'='true'
+          AND ((a.record->'rights'->>'status'='cleared' AND
+            a.record->'rights'->>'permittedUse'='television_playback') OR
+            (a.record->'tvPlaybackRights'->>'status'='cleared' AND
+            a.record->'tvPlaybackRights'->>'permittedUse'='television_playback'))
         FOR UPDATE OF j`, [scope.jobId, scope.creatorAccountId, scope.projectId, scope.mediaAssetId]);
       const job = result.rows[0];
       if (!job) return stale();
       const prior = await client.query<AttemptRow>(`SELECT * FROM managed_media_job_attempts
         WHERE processing_job_id=$1 ORDER BY attempt DESC LIMIT 1`, [scope.jobId]);
       const last = prior.rows[0];
-      if (last && !['error','canceled'].includes(last.state)) {
+      if (last && !['error','canceled'].includes(last.state) &&
+        !(last.state === 'complete' && job.state === 'failed' && job.failure_code === 'verification_failed')) {
         if (job.state !== 'pending' || job.attempts !== last.attempt) return stale();
         if (last.aws_account_id !== input.awsAccountId || last.aws_region !== input.awsRegion ||
           last.profile_hash !== input.profileHash) return stale();
@@ -89,6 +97,19 @@ export class ManagedMediaJobRepository {
       }
       if (job.version !== input.expectedVersion || !['pending','failed'].includes(job.state) || job.attempts >= 3 ||
         (last && last.attempt !== job.attempts)) return stale();
+      const quota = await client.query<{ active: string; seconds: string }>(`SELECT
+        (SELECT count(*) FROM managed_media_job_attempts m JOIN media_processing_jobs j
+          ON j.id=m.processing_job_id AND j.attempts=m.attempt
+          WHERE m.creator_account_id=$1 AND j.state='pending' AND m.state IN ('intent','submitted','progressing','complete')) AS active,
+        (SELECT COALESCE(sum(u.claimed_duration_seconds),0) FROM managed_media_job_attempts m
+          JOIN media_upload_sessions u ON u.id=m.upload_session_id
+          WHERE m.creator_account_id=$1 AND m.created_at >= now()-interval '24 hours') AS seconds`,
+      [scope.creatorAccountId]);
+      const duration = await client.query<{ claimed_duration_seconds: number | null }>(
+        'SELECT claimed_duration_seconds FROM media_upload_sessions WHERE id=$1', [job.upload_session_id]);
+      const claimed = duration.rows[0]?.claimed_duration_seconds;
+      if (!claimed || claimed > 1800 || Number(quota.rows[0]?.active) >= 2 ||
+        Number(quota.rows[0]?.seconds) + claimed > 7200) return stale();
       const token = randomUUID();
       const prefix = `media/${scope.creatorAccountId.slice(3)}/${scope.projectId.slice(3)}/${scope.mediaAssetId.slice(3)}/staged/${token.replaceAll('-', '')}/`;
       const inserted = await client.query<AttemptRow>(`INSERT INTO managed_media_job_attempts (
@@ -100,7 +121,7 @@ export class ManagedMediaJobRepository {
         job.verified_bytes, prefix, input.awsAccountId, input.awsRegion]);
       await client.query(`UPDATE media_processing_jobs SET state='pending',failure_code=NULL,
         attempts=attempts+1,version=version+1 WHERE id=$1 AND version=$2`, [scope.jobId, job.version]);
-      return intent(inserted.rows[0]!);
+      return intent(inserted.rows[0]!, true);
     });
   }
 
@@ -176,7 +197,69 @@ export class ManagedMediaJobRepository {
         AND m.state IN ('intent','submitted','progressing','complete') AND j.state='pending'
         AND j.attempts=m.attempt AND l.revoked_at IS NULL
       ORDER BY m.reconcile_after,m.intent_token LIMIT $1`, [bounded]);
-    return rows.rows.map(intent);
+    return rows.rows.map(row => intent(row));
+  }
+
+  /** Event IDs are only lookup hints; callers still authenticate GetJob and compare every binding. */
+  async byProviderJob(account: string, region: string, jobId: string) {
+    const identity = managedJobIdentitySchema.parse({ awsAccountId: account, awsRegion: region, awsJobId: jobId });
+    const result = await this.pool.query<AttemptRow>(`SELECT * FROM managed_media_job_attempts
+      WHERE aws_account_id=$1 AND aws_region=$2 AND aws_job_id=$3`,
+    [identity.awsAccountId, identity.awsRegion, identity.awsJobId]);
+    return result.rows[0] ? intent(result.rows[0]) : null;
+  }
+
+  async ready(rawScope: unknown, intentToken: string, rawSet: unknown): Promise<boolean> {
+    const scope = ids.parse(rawScope); z.uuid().parse(intentToken);
+    const set = mediaRenditionSetSchema.parse(rawSet);
+    return this.transaction(async client => {
+      const row = await this.lockCurrent(client, scope, intentToken);
+      if (!row || row.state !== 'complete' || !row.aws_job_id || row.cancel_requested_at ||
+        set.creatorAccountId !== scope.creatorAccountId || set.projectId !== scope.projectId ||
+        set.catalogItemId !== row.item_id || set.mediaAssetId !== scope.mediaAssetId ||
+        set.jobId !== scope.jobId || set.revokedAt) return false;
+      const prefix = `media/${scope.creatorAccountId.slice(3)}/${scope.projectId.slice(3)}/${scope.mediaAssetId.slice(3)}/staged/${set.id.slice(3)}/`;
+      if (set.masterKey !== `${prefix}master.m3u8` || set.variants.some(v =>
+        v.playlistKey !== `${prefix}v${v.height}.m3u8`)) return false;
+      const verified = await client.query(`SELECT 1 FROM media_upload_sessions u
+        JOIN catalog_media_assets a ON a.id=u.asset_id AND a.creator_account_id=u.creator_account_id
+        LEFT JOIN media_asset_lifecycle l ON l.asset_id=u.asset_id
+        WHERE u.id=$1 AND u.creator_account_id=$2 AND u.project_id=$3 AND u.asset_id=$4
+          AND u.state='verified' AND u.verified_sha256=$5 AND u.verified_bytes=$6
+          AND l.revoked_at IS NULL AND a.record->>'kind'='video'
+          AND a.record->>'deliveryEligible'='true'
+          AND ((a.record->'rights'->>'status'='cleared' AND
+            a.record->'rights'->>'permittedUse'='television_playback') OR
+            (a.record->'tvPlaybackRights'->>'status'='cleared' AND
+            a.record->'tvPlaybackRights'->>'permittedUse'='television_playback'))`,
+      [row.upload_session_id, scope.creatorAccountId, scope.projectId, scope.mediaAssetId,
+        row.original_sha256, row.original_bytes]);
+      if (!verified.rowCount) return false;
+      await client.query(`INSERT INTO media_rendition_sets(id,job_id,creator_account_id,project_id,item_id,
+        asset_id,profile,master_key,master_sha256,variants,verified_at)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11)`,
+      [set.id, scope.jobId, scope.creatorAccountId, scope.projectId, row.item_id, scope.mediaAssetId,
+        set.profile, set.masterKey, set.masterSha256, JSON.stringify(set.variants), set.verifiedAt]);
+      const updated = await client.query(`UPDATE media_processing_jobs SET state='ready',rendition_set_id=$2,
+        version=version+1 WHERE id=$1 AND creator_account_id=$3 AND project_id=$4 AND asset_id=$5
+        AND state='pending' AND attempts=$6`, [scope.jobId, set.id, scope.creatorAccountId,
+        scope.projectId, scope.mediaAssetId, row.attempt]);
+      if (!updated.rowCount) return stale();
+      return true;
+    });
+  }
+
+  async failVerification(rawScope: unknown, intentToken: string): Promise<boolean> {
+    const scope = ids.parse(rawScope); z.uuid().parse(intentToken);
+    return this.transaction(async client => {
+      const row = await this.lockCurrent(client, scope, intentToken);
+      if (!row || row.state !== 'complete' || row.cancel_requested_at) return false;
+      const updated = await client.query(`UPDATE media_processing_jobs SET state='failed',
+        failure_code='verification_failed',version=version+1 WHERE id=$1 AND creator_account_id=$2
+        AND project_id=$3 AND asset_id=$4 AND attempts=$5 AND state='pending'`,
+      [scope.jobId, scope.creatorAccountId, scope.projectId, scope.mediaAssetId, row.attempt]);
+      return !!updated.rowCount;
+    });
   }
 
   /** Revocation is locally final. These identities are for best-effort provider cancellation only. */
@@ -186,7 +269,7 @@ export class ManagedMediaJobRepository {
       WHERE cancel_requested_at IS NOT NULL AND cancel_checked_at IS NULL AND aws_job_id IS NOT NULL
         AND state IN ('submitted','progressing','complete')
       ORDER BY cancel_requested_at,intent_token LIMIT $1`, [bounded]);
-    return rows.rows.map(intent);
+    return rows.rows.map(row => intent(row));
   }
 
   async cancellationChecked(rawScope: unknown, intentToken: string, expectedVersion: number): Promise<boolean> {

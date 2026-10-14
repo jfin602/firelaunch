@@ -17,7 +17,8 @@ const provider = {
   roleArn: expected.mediaConvertRoleArn,
   originalUri: `s3://${expected.originalsBucket}/${expected.originalKey}`,
   stagingUri: `s3://${expected.stagingBucket}/${expected.outputStagingPrefix}`,
-  intentToken: expected.intentToken, profileHash: expected.profileHash
+  intentToken: expected.intentToken, profileHash: expected.profileHash,
+  outputHeights: [480, 720], durationMs: 6000, settingsMatch: true
 };
 const event = { source: 'aws.mediaconvert', 'detail-type': 'MediaConvert Job State Change',
   account: expected.awsAccountId, region: expected.awsRegion,

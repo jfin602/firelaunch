@@ -10,6 +10,7 @@ export type TrustedManagedJob = Readonly<{
   // Obtained with authenticated MediaConvert GetJob in the configured account/Region, never copied from an event.
   id: string; status: string; queueArn: string; roleArn: string; originalUri: string;
   stagingUri: string; intentToken: string; profileHash: string; errorCode?: string;
+  outputHeights?: readonly number[]; durationMs?: number; settingsMatch?: boolean;
 }>;
 export type ExpectedManagedJob = Readonly<{
   awsAccountId: string; awsRegion: string; awsJobId: string; queueArn: string;
@@ -17,18 +18,11 @@ export type ExpectedManagedJob = Readonly<{
   originalKey: string; outputStagingPrefix: string; intentToken: string; profileHash: string;
 }>;
 
-/** EventBridge routing is only a hint. P3 must fetch GetJob with trusted AWS credentials first. */
-export function verifyMediaConvertEvent(rawEvent: unknown, provider: TrustedManagedJob,
+export function verifyTrustedMediaConvertJob(provider: TrustedManagedJob,
   expected: ExpectedManagedJob): ManagedJobObservation | null {
-  const event = object(rawEvent);
-  const detail = object(event?.detail);
   const originalScope = expected.originalKey.split('/').slice(0, 4).join('/');
   const outputScope = expected.outputStagingPrefix.split('/').slice(0, 4).join('/');
-  if (!event || !detail || event.source !== 'aws.mediaconvert' ||
-    event['detail-type'] !== 'MediaConvert Job State Change' ||
-    event.account !== expected.awsAccountId || detail.accountId !== expected.awsAccountId ||
-    event.region !== expected.awsRegion || detail.jobId !== expected.awsJobId ||
-    detail.queue !== expected.queueArn || !safeJobId.test(expected.awsJobId) ||
+  if (!safeJobId.test(expected.awsJobId) ||
     !safeKey.test(expected.originalKey) || !safeKey.test(expected.outputStagingPrefix) ||
     originalScope !== outputScope ||
     !expected.originalKey.endsWith('.mp4') || !expected.outputStagingPrefix.endsWith('/') ||
@@ -38,12 +32,30 @@ export function verifyMediaConvertEvent(rawEvent: unknown, provider: TrustedMana
     provider.originalUri !== `s3://${expected.originalsBucket}/${expected.originalKey}` ||
     provider.stagingUri !== `s3://${expected.stagingBucket}/${expected.outputStagingPrefix}` ||
     provider.intentToken !== expected.intentToken || provider.profileHash !== expected.profileHash ||
-    detail.status !== provider.status) return null;
-  const status = provider.status === 'PROGRESSING' ? 'PROGRESSING' :
+    provider.settingsMatch !== true ||
+    (provider.status === 'COMPLETE' &&
+      (!provider.outputHeights || provider.outputHeights.length !== 2 ||
+        provider.outputHeights[0] !== 480 || provider.outputHeights[1] !== 720 ||
+        provider.durationMs === undefined || provider.durationMs <= 0 || provider.durationMs > 1_800_000))) return null;
+  const status = provider.status === 'SUBMITTED' ? 'SUBMITTED' :
+    provider.status === 'PROGRESSING' ? 'PROGRESSING' :
     provider.status === 'COMPLETE' ? 'COMPLETE' : provider.status === 'ERROR' ? 'ERROR' :
       provider.status === 'CANCELED' ? 'CANCELED' : null;
   if (!status) return null;
   return managedJobObservationSchema.safeParse({ awsAccountId: expected.awsAccountId,
     awsRegion: expected.awsRegion, awsJobId: expected.awsJobId, status,
     ...(status === 'ERROR' ? { errorCode: provider.errorCode } : {}) }).data ?? null;
+}
+
+/** EventBridge routing is only a hint; GetJob is fetched with AWS credentials before this check. */
+export function verifyMediaConvertEvent(rawEvent: unknown, provider: TrustedManagedJob,
+  expected: ExpectedManagedJob): ManagedJobObservation | null {
+  const event = object(rawEvent);
+  const detail = object(event?.detail);
+  if (!event || !detail || event.source !== 'aws.mediaconvert' ||
+    event['detail-type'] !== 'MediaConvert Job State Change' ||
+    event.account !== expected.awsAccountId || detail.accountId !== expected.awsAccountId ||
+    event.region !== expected.awsRegion || detail.jobId !== expected.awsJobId ||
+    detail.queue !== expected.queueArn || detail.status !== provider.status) return null;
+  return verifyTrustedMediaConvertJob(provider, expected);
 }

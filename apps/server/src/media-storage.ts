@@ -253,7 +253,8 @@ export class S3MediaStorage {
     try {
       await this.delivery.send(new PutObjectCommand({ Bucket: this.config.deliveryBucket, Key: key, Body: body,
         ContentType: contentType(name), ContentLength: body.length, ServerSideEncryption: 'AES256',
-        ChecksumSHA256: checksum(sha256), IfNoneMatch: '*', CacheControl: 'public, max-age=60' }));
+        ChecksumSHA256: checksum(sha256), IfNoneMatch: '*',
+        CacheControl: key.includes('/staged/') ? 'private, no-store' : 'public, max-age=60' }));
     } catch (error) { if (!failure(error)) reject('S3 request failed'); }
     await this.verifyOutput(key, { bytes: body.length, sha256 }, name);
   }
@@ -262,6 +263,132 @@ export class S3MediaStorage {
     const key = this.stagedKey(scope, setId, name);
     await this.putImmutable(key, name, body, sha256);
     return { key, bytes: body.length, sha256 };
+  }
+
+  /** Read only the correlated MediaConvert private prefix; normalize its bounded HLS graph into immutable v1 files. */
+  async verifyManagedHls(scope: MediaScope, rawPrefix: string, setId: string, jobId: string,
+    catalogItemId: string): Promise<MediaRenditionSet> {
+    const ownedPrefix = `${scopePath(scope)}/staged/`;
+    if (!new RegExp(`^${ownedPrefix}[a-f0-9]{32}/$`).test(rawPrefix) ||
+      rawPrefix === `${ownedPrefix}${renditionId(setId)}/`) reject('managed output prefix differs from reserved scope');
+    const listed = await this.request(() => this.delivery.send(new ListObjectsV2Command({
+      Bucket: this.config.deliveryBucket, Prefix: rawPrefix, MaxKeys: 1000 })));
+    if (listed.IsTruncated || !listed.Contents?.length || listed.Contents.length > 600) reject('managed HLS graph missing or too large');
+    const keys = listed.Contents!.map(value => value.Key);
+    if (keys.some(value => !value || !value.startsWith(rawPrefix) ||
+      !fileName.test(value.slice(rawPrefix.length)))) reject('managed HLS path invalid');
+    const names = new Set(keys.map(value => value!.slice(rawPrefix.length)));
+    if (names.size !== keys.length) reject('managed HLS duplicate output');
+    const read = async (name: string): Promise<Buffer> => {
+      if (!names.has(name)) reject('managed HLS object missing');
+      const key = `${rawPrefix}${outputName(name)}`;
+      const head = await this.request(() => this.delivery.send(new HeadObjectCommand({
+        Bucket: this.config.deliveryBucket, Key: key })));
+      if (!head.ETag || !head.ContentLength || head.ContentLength > maxOutputBytes ||
+        head.ContentType !== contentType(name) || head.ServerSideEncryption !== 'AES256')
+        reject('managed HLS object metadata invalid');
+      const expectedLength = head.ContentLength!;
+      const object = await this.request(() => this.delivery.send(new GetObjectCommand({
+        Bucket: this.config.deliveryBucket, Key: key, IfMatch: head.ETag })));
+      if (!object.Body || object.ContentLength !== expectedLength) reject('managed HLS object changed');
+      const chunks: Buffer[] = []; let bytes = 0;
+      for await (const chunk of object.Body as Readable) {
+        const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        bytes += data.length;
+        if (bytes > expectedLength || bytes > maxOutputBytes) reject('managed HLS object too large');
+        chunks.push(data);
+      }
+      if (bytes !== expectedLength) reject('managed HLS object length changed');
+      const after = await this.request(() => this.delivery.send(new HeadObjectCommand({
+        Bucket: this.config.deliveryBucket, Key: key })));
+      if (after.ETag !== head.ETag || after.ContentLength !== expectedLength) reject('managed HLS object mutated');
+      return Buffer.concat(chunks);
+    };
+    const playlists = [...names].filter(name => name.endsWith('.m3u8'));
+    if (playlists.length !== 3) reject('managed HLS playlist count differs');
+    const bodies = await Promise.all(playlists.map(async name => [name, (await read(name)).toString('utf8')] as const));
+    const masters = bodies.filter(([, body]) => body.includes('#EXT-X-STREAM-INF:'));
+    if (masters.length !== 1) reject('managed HLS master missing');
+    const masterLines = masters[0]![1].replaceAll('\r\n', '\n').trim().split('\n');
+    if (masterLines[0] !== '#EXTM3U' || masterLines.some(line =>
+      line.includes('://') || line.includes('..') || line.startsWith('#EXT-X-KEY') || line.startsWith('#EXT-X-MEDIA:')))
+      reject('managed HLS master unsafe');
+    const streams: Array<{ height: 480 | 720; bandwidth: number; name: string }> = [];
+    for (let index = 1; index < masterLines.length; index++) {
+      const line = masterLines[index]!;
+      if (!line.startsWith('#EXT-X-STREAM-INF:')) {
+        if (!/^#EXT-X-VERSION:[3-6]$/.test(line) && line !== '#EXT-X-INDEPENDENT-SEGMENTS')
+          reject('managed HLS master directive unsupported');
+        continue;
+      }
+      const attributes = line.slice('#EXT-X-STREAM-INF:'.length);
+      const bandwidth = /(?:^|,)BANDWIDTH=([1-9]\d*)/.exec(attributes)?.[1];
+      const height = /(?:^|,)RESOLUTION=\d+x(480|720)(?:,|$)/.exec(attributes)?.[1];
+      const codec = /(?:^|,)CODECS="([^"]+)"/.exec(attributes)?.[1];
+      const name = masterLines[++index];
+      if (!bandwidth || !height || !codec?.includes('avc1') || !codec.includes('mp4a') ||
+        !name || !names.has(name) || !name.endsWith('.m3u8')) reject('managed HLS profile differs');
+      streams.push({ height: Number(height) as 480 | 720, bandwidth: Number(bandwidth), name: name! });
+    }
+    if (streams.length !== 2 || new Set(streams.map(v => v.height)).size !== 2 ||
+      streams.some(v => v.bandwidth > 5_000_000)) reject('managed HLS fixed profile differs');
+    const canonical = ['#EXTM3U', '#EXT-X-VERSION:3'];
+    const variants: MediaRenditionSet['variants'] = [];
+    const referenced = new Set([masters[0]![0]]);
+    for (const stream of streams.sort((a, b) => a.height - b.height)) {
+      referenced.add(stream.name);
+      const body = bodies.find(([name]) => name === stream.name)?.[1];
+      if (!body) reject('managed HLS variant missing');
+      const lines = body!.replaceAll('\r\n', '\n').trim().split('\n');
+      if (lines[0] !== '#EXTM3U' || lines.at(-1) !== '#EXT-X-ENDLIST' ||
+        lines.some(line => line.includes('://') || line.includes('..') || line.startsWith('#EXT-X-KEY') ||
+          line.startsWith('#EXT-X-MAP') || line.startsWith('#EXT-X-BYTERANGE'))) reject('managed HLS variant unsafe');
+      const pairs: Array<{ duration: string; name: string }> = [];
+      for (let i = 1; i < lines.length - 1; i++) {
+        const line = lines[i]!;
+        if (line.startsWith('#EXTINF:')) {
+          const duration = /^#EXTINF:([0-9]+(?:\.[0-9]+)?),?$/.exec(line)?.[1];
+          const name = lines[++i];
+          if (!duration || !name || !name.endsWith('.ts') || !names.has(name))
+            reject('managed HLS segment reference invalid');
+          pairs.push({ duration: duration!, name: name! });
+        } else if (!(/^#EXT-X-VERSION:[3-6]$/.test(line) || line === '#EXT-X-INDEPENDENT-SEGMENTS' ||
+          line === '#EXT-X-PLAYLIST-TYPE:VOD' || /^#EXT-X-TARGETDURATION:[1-9]\d*$/.test(line) ||
+          /^#EXT-X-MEDIA-SEQUENCE:0$/.test(line))) reject('managed HLS variant directive unsupported');
+      }
+      if (!pairs.length || pairs.length > 250 || pairs.reduce((sum, pair) => sum + Number(pair.duration), 0) > 1800)
+        reject('managed HLS segment limit exceeded');
+      const hashes: string[] = [];
+      const targetDuration = Math.ceil(Math.max(...pairs.map(pair => Number(pair.duration))));
+      if (targetDuration < 1 || targetDuration > 10) reject('managed HLS segment duration differs');
+      const rendered = ['#EXTM3U', '#EXT-X-VERSION:3', '#EXT-X-INDEPENDENT-SEGMENTS',
+        '#EXT-X-PLAYLIST-TYPE:VOD', `#EXT-X-TARGETDURATION:${targetDuration}`, '#EXT-X-MEDIA-SEQUENCE:0'];
+      for (const [index, pair] of pairs.entries()) {
+        if (referenced.has(pair.name)) reject('managed HLS segment repeated');
+        referenced.add(pair.name);
+        const segment = await read(pair.name);
+        if (segment.length < 188 || segment.length % 188 !== 0 || segment[0] !== 0x47)
+          reject('managed HLS MPEG-TS segment invalid');
+        const name = `v${stream.height}-${String(index).padStart(3, '0')}.ts`;
+        const hash = digest(segment); hashes.push(hash);
+        await this.putStaged(scope, setId, name, segment, hash);
+        rendered.push(`#EXTINF:${pair.duration},`, name);
+      }
+      rendered.push('#EXT-X-ENDLIST');
+      const playlist = Buffer.from(`${rendered.join('\n')}\n`);
+      const name = `v${stream.height}.m3u8`;
+      const object = await this.putStaged(scope, setId, name, playlist, digest(playlist));
+      variants.push({ height: stream.height, playlistKey: object.key, playlistSha256: object.sha256,
+        segmentsSha256: digest(Buffer.from(hashes.join(''))), segmentCount: pairs.length });
+      canonical.push(`#EXT-X-STREAM-INF:BANDWIDTH=${stream.bandwidth},RESOLUTION=${stream.height === 480 ? 854 : 1280}x${stream.height}`, name);
+    }
+    if (referenced.size !== names.size) reject('managed HLS contains unexpected objects');
+    const master = Buffer.from(`${canonical.join('\n')}\n`);
+    const object = await this.putStaged(scope, setId, 'master.m3u8', master, digest(master));
+    return mediaRenditionSetSchema.parse({ id: setId, creatorAccountId: scope.creatorAccountId,
+      projectId: scope.projectId, catalogItemId, mediaAssetId: scope.mediaAssetId, jobId,
+      profile: 'hls-avc-aac-v1', masterKey: object.key, masterSha256: object.sha256,
+      variants, verifiedAt: new Date().toISOString() });
   }
 
   /** Storage copy only; the caller must enforce owner, READY state and reviewed rights before calling. */

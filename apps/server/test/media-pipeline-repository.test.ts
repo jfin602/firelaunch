@@ -64,7 +64,8 @@ databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and r
     const asset = (await catalog.mutate(owner, project.id, 'media-assets', 'POST', 2, {
       schemaVersion: 1, catalogItemId: item.id, kind: 'video',
       location: { type: 'https', url: 'https://media.example.com/unpublished.mp4' },
-      rights: { status: 'unknown', basis: 'none', permittedUse: 'none' }, deliveryEligible: false
+      rights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_playback',
+        assertedAt: new Date().toISOString() }, deliveryEligible: true
     })).record!;
     const pipeline = new MediaPipelineRepository(first);
     const expiresAt = new Date(Date.now() + 3_600_000).toISOString();
@@ -170,7 +171,7 @@ databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and r
       creatorOverrides: { title: 'Edited film', editedAt: '2026-10-12T01:00:00.000Z' } }, item.id);
     assert.equal((await first.pool.query('SELECT count(*)::int AS n FROM media_processing_jobs WHERE id = $1', [jobId])).rows[0]?.n, 1);
     const managedUpload = await pipeline.createUpload(owner, project.id, asset.id,
-      { ...request, idempotencyKey: 'managed-upload-key-001' });
+      { ...request, idempotencyKey: 'managed-upload-key-001', claimedDurationSeconds: 90 });
     await pipeline.recordVerifiedOriginal(owner, project.id, asset.id, managedUpload.id,
       { bytes: 42, sha256: request.expectedSha256, expectedVersion: 0 });
     const managedJobId = await pipeline.enqueue(owner, project.id, asset.id, managedUpload.id);
@@ -238,8 +239,23 @@ databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and r
     const nextAt = new Date(Date.now() + 60_000).toISOString();
     assert.equal(await managedRestarted.checkpoint(managedScope, retryIntent.intentToken, checkpointVersion, nextAt), true);
     assert.equal(await managedRestarted.checkpoint(managedScope, retryIntent.intentToken, checkpointVersion, nextAt), false);
+    const managedSetId = id('rs');
+    const managedPrefix = `media/${owner.accountId.slice(3)}/${project.id.slice(3)}/${asset.id.slice(3)}/staged/${managedSetId.slice(3)}/`;
+    const managedSet = { id: managedSetId, creatorAccountId: owner.accountId, projectId: project.id,
+      catalogItemId: item.id, mediaAssetId: asset.id, jobId: managedJobId, profile: 'hls-avc-aac-v1' as const,
+      masterKey: `${managedPrefix}master.m3u8`, masterSha256: 'a'.repeat(64),
+      variants: [{ height: 480 as const, playlistKey: `${managedPrefix}v480.m3u8`,
+        playlistSha256: 'b'.repeat(64), segmentsSha256: 'c'.repeat(64), segmentCount: 1 }],
+      verifiedAt: new Date().toISOString() };
+    assert.equal(await managedRestarted.ready({ ...managedScope, creatorAccountId: foreign.accountId },
+      retryIntent.intentToken, managedSet), false);
+    assert.equal(await managedRestarted.ready(managedScope, retryIntent.intentToken,
+      { ...managedSet, masterKey: `${managedPrefix}other.m3u8` }), false);
+    assert.equal(await managedRestarted.ready(managedScope, retryIntent.intentToken, managedSet), true);
+    assert.equal(await managedRestarted.ready(managedScope, retryIntent.intentToken, managedSet), false);
+    assert.equal((await resumed.processingStatus(owner, project.id, asset.id, managedUpload.id))?.state, 'ready');
     const lateUpload = await resumed.createUpload(owner, project.id, asset.id,
-      { ...request, idempotencyKey: 'managed-late-upload-001' });
+      { ...request, idempotencyKey: 'managed-late-upload-001', claimedDurationSeconds: 90 });
     await resumed.recordVerifiedOriginal(owner, project.id, asset.id, lateUpload.id,
       { bytes: 42, sha256: request.expectedSha256, expectedVersion: 0 });
     const lateJobId = await resumed.enqueue(owner, project.id, asset.id, lateUpload.id);
@@ -270,6 +286,7 @@ databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and r
         `media/${foreign.accountId.slice(3)}/${project.id.slice(3)}/${asset.id.slice(3)}/original/forged.mp4`, 'f'.repeat(64)]), /check constraint/i);
     await resumed.revoke(owner, project.id, asset.id);
     assert.equal((await restarted.pool.query('SELECT state FROM media_processing_jobs WHERE id = $1', [jobId])).rows[0]?.state, 'revoked');
+    assert.equal(await managedRestarted.ready(managedScope, retryIntent.intentToken, managedSet), false);
     assert.ok((await restarted.pool.query('SELECT revoked_at FROM media_rendition_sets WHERE id = $1', [rendition.id])).rows[0]?.revoked_at);
     assert.equal(await managedRestarted.observe(managedScope, retryIntent.intentToken,
       { ...retryIdentity, status: 'ERROR', errorCode: 'late' }), false);
@@ -325,7 +342,8 @@ databaseTest('migration 013 preserves a READY rendition created under migration 
     const asset = (await catalog.mutate(owner, project.id, 'media-assets', 'POST', 2, {
       schemaVersion: 1, catalogItemId: item.id, kind: 'video',
       location: { type: 'https', url: 'https://media.example.com/legacy.mp4' },
-      rights: { status: 'unknown', basis: 'none', permittedUse: 'none' }, deliveryEligible: false
+      rights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_playback',
+        assertedAt: new Date().toISOString() }, deliveryEligible: true
     })).record!;
     const pipeline = new MediaPipelineRepository(hosted);
     const sha = 'a'.repeat(64);
@@ -360,6 +378,7 @@ databaseTest('migration 013 preserves a READY rendition created under migration 
     assert.equal((await hosted.pool.query('SELECT count(*)::int AS n FROM managed_media_job_attempts')).rows[0]?.n, 0);
     const nextUpload = await pipeline.createUpload(owner, project.id, asset.id, {
       idempotencyKey: 'managed-after-ready-01', expectedBytes: 42, expectedSha256: sha,
+      claimedDurationSeconds: 90,
       expiresAt: new Date(Date.now() + 3_600_000).toISOString()
     });
     await pipeline.recordVerifiedOriginal(owner, project.id, asset.id, nextUpload.id,

@@ -3,18 +3,19 @@ import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { MediaPipelineRepository } from './media-pipeline-repository.js';
 import type { MediaScope, S3MediaStorage } from './media-storage.js';
 import { RepositoryError } from './repository.js';
+import type { ManagedMediaCoordinator } from './managed-media-coordinator.js';
 
 const assetId = z.string().regex(/^ma_[a-f0-9]{32}$/);
 const sessionId = z.string().regex(/^up_[a-f0-9]{32}$/);
 const etag = z.string().regex(/^"?[a-f0-9]{32}(?:-\d+)?"?$/);
 const PART_BYTES = 8 * 1024 * 1024;
-const MAX_BYTES = 5_000_000_000;
+const MAX_BYTES = 2_000_000_000;
 export const startVideoUploadSchema = z.strictObject({
   mediaAssetId: assetId, idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{16,128}$/),
   fileName: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._ -]{0,120}\.mp4$/i),
   contentType: z.literal('video/mp4'), expectedBytes: z.number().int().min(1).max(MAX_BYTES),
   expectedSha256: z.string().regex(/^[a-f0-9]{64}$/),
-  claimedDurationSeconds: z.number().int().min(1).max(14400)
+  claimedDurationSeconds: z.number().int().min(1).max(1800)
 });
 export const finishVideoUploadSchema = z.strictObject({
   mediaAssetId: assetId, parts: z.array(z.strictObject({
@@ -26,7 +27,8 @@ const unavailable = (message: string): never => { throw new RepositoryError('CON
 
 /** Control plane only: browsers PUT parts to S3, and the separate worker hashes the completed source. */
 export class MediaUploadService {
-  constructor(private readonly records: MediaPipelineRepository, private readonly storage: S3MediaStorage) {}
+  constructor(private readonly records: MediaPipelineRepository, private readonly storage: S3MediaStorage,
+    private readonly managed?: ManagedMediaCoordinator) {}
 
   private scope(principal: AuthenticatedPrincipal, projectId: string, mediaAssetId: string): MediaScope {
     return { creatorAccountId: principal.accountId, projectId, mediaAssetId };
@@ -94,7 +96,10 @@ export class MediaUploadService {
   async finalize(principal: AuthenticatedPrincipal, projectId: string, uploadId: string, raw: unknown) {
     const input = finishVideoUploadSchema.parse(raw);
     const current = await this.records.upload(principal, projectId, input.mediaAssetId, sessionId.parse(uploadId));
-    if (current.state === 'completed' || current.state === 'verified') return this.publicStatus(current);
+    if (current.state === 'completed' || current.state === 'verified') {
+      if (this.managed) await this.managed.admit(principal, projectId, input.mediaAssetId, uploadId);
+      return this.publicStatus(await this.records.upload(principal, projectId, input.mediaAssetId, uploadId));
+    }
     if (current.state !== 'initiated' || Date.parse(current.expiresAt) <= Date.now() ||
       !current.s3UploadId || !current.partCount || input.parts.length !== current.partCount ||
       input.parts.some((part, index) => part.partNumber !== index + 1))
@@ -113,6 +118,7 @@ export class MediaUploadService {
       const updated = await this.records.upload(principal, projectId, input.mediaAssetId, uploadId);
       if (updated.state !== 'completed' && updated.state !== 'verified') throw error;
     }
+    if (this.managed) await this.managed.admit(principal, projectId, input.mediaAssetId, uploadId);
     return this.publicStatus(await this.records.upload(principal, projectId, input.mediaAssetId, uploadId));
   }
 

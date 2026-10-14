@@ -16,23 +16,25 @@ test('overlay imports buckets and creates no CDN or public bucket', () => {
   assert.equal((baseline.match(/SSEAlgorithm: AES256/g) ?? []).length, 2);
   assert.equal((baseline.match(/BlockPublicPolicy: true/g) ?? []).length, 2);
 });
-test('submit is control-plane invoked after verified upload, never raw S3 event', () => {
-  assert.match(section('SubmitInvokePermission', 'ObserveFunction'), /ControlPlaneRoleName/);
+test('submit is control-plane admitted after verified upload, never raw S3 event', () => {
+  assert.match(section('ControlPlaneMediaPolicy', 'MediaConvertEventsQueue'), /ControlPlaneRoleName/);
+  assert.match(section('ControlPlaneMediaPolicy', 'MediaConvertEventsQueue'), /mediaconvert:CreateJob/);
   assert.doesNotMatch(overlay, /AWS::S3::BucketNotification|s3:ObjectCreated|s3\.amazonaws\.com/);
 });
 test('MediaConvert reads originals and writes staging only', () => {
-  const role = section('MediaConvertRole', 'SubmitRole');
+  const role = section('MediaConvertRole', 'ControlPlaneMediaPolicy');
   assert.match(role, /original\/\*'/);
   assert.match(role, /staged\/\*'/);
   assert.doesNotMatch(role, /delivery\/\*|s3:\*|Resource: '\*'|s3:DeleteObject/);
 });
-test('submit and observation roles cannot publish or administer buckets', () => {
-  const roles = section('SubmitRole', 'SubmitFunction') + section('ObserveRole', 'SubmitFunction');
-  assert.doesNotMatch(roles, /delivery\/\*|s3:PutObject|s3:DeleteObject|s3:PutBucketPolicy|iam:\*|Action: '\*'/);
-  assert.match(roles, /iam:PassedToService/);
+test('control plane cannot publish or administer buckets', () => {
+  const policy = section('ControlPlaneMediaPolicy', 'MediaConvertEventsQueue');
+  assert.doesNotMatch(policy, /delivery\/\*|s3:PutObject|s3:DeleteObject|s3:PutBucketPolicy|iam:\*|Action: '\*'/);
+  assert.match(policy, /iam:PassedToService/);
+  assert.match(policy, /sqs:ReceiveMessage, sqs:DeleteMessage/);
 });
 test('completion route is restricted and recoverable', () => {
-  const rule = section('MediaConvertEvents', 'EventInvokePermission');
+  const rule = section('MediaConvertEvents', 'EventDeadLetterPolicy');
   assert.match(rule, /State: DISABLED/);
   assert.match(rule, /source: \[aws\.mediaconvert\]/);
   assert.match(rule, /queue: \[!GetAtt BoundedQueue\.Arn\]/);
@@ -40,12 +42,13 @@ test('completion route is restricted and recoverable', () => {
   assert.match(rule, /DeadLetterConfig:/);
   assert.match(rule, /RetryPolicy:/);
   assert.match(section('EventDeadLetterQueue', 'MediaConvertEvents'), /MessageRetentionPeriod: 1209600/);
+  assert.match(section('MediaConvertEventsQueue', 'EventDeadLetterQueue'), /maxReceiveCount: 5/);
 });
 test('spend defaults are paused and bounded', () => {
   assert.match(overlay, /PricingPlan: ON_DEMAND/);
   assert.match(overlay, /ConcurrentJobs: 1/);
   assert.match(overlay, /Status: PAUSED/);
-  assert.match(overlay, /ReservedConcurrentExecutions: 1/);
+  assert.match(overlay, /RedrivePolicy:/);
 });
 test('fixed profile has only 480p and 720p H.264/AAC private destinations', () => {
   const group = profile.OutputGroups[0];
