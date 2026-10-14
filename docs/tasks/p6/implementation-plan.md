@@ -1,3 +1,5 @@
+> **Current planning supersession (2026-10-14):** Phase 6 P1-P7 FFmpeg implementation is now on GitHub main at 0.6.7. This file remains the original historical P6 plan; the owner has accepted [ADR 0011](../../decisions/0011-aws-vod-foundation.md) replacing future custom FFmpeg work with AWS VOD Foundation/MediaConvert. Follow [c6-aws-vod implementation plan](../c6-aws-vod/implementation-plan.md) for the correction at unchanged 0.6.7. Preserve P6 P8 as a separate real cloud/Vega manual gate at 0.6.8, with a managed-provider qualification override; historical P1-P7 are not rerun.
+
 # Phase 6 — Implementation Plan: AWS Media Foundation
 
 Status: authored for executable runner; not executed, not provisioned, not qualified
