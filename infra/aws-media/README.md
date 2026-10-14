@@ -1,3 +1,5 @@
+> **2026-10-14 provider change:** This directory is the original P6 S3/CloudFront/FFmpeg-worker proposal, not a deployable managed VOD target as-is. [ADR 0011](../../docs/decisions/0011-aws-vod-foundation.md) selects AWS VOD Foundation/MediaConvert. [c6-aws-vod P2](../../docs/tasks/c6-aws-vod/P2-foundation-private-staging.txt) owns migration-aware provider/IAM/CDN IaC; reuse safe OAC policy but never deploy automatic public Foundation output or delete existing buckets. This file and existing template remain historical until replacement is reviewed. No AWS resources are provisioned by docs.
+
 # AWS media boundary (operator review required)
 
 `template.yaml` is a declarative proposal for two private SSE-S3 buckets, a GET/HEAD-only CloudFront distribution with signed S3 origin access, and separate uploader, worker and publisher roles. It is **not deployed** by P6/P2. Apply only after operator review of account, region, budget, IAM trust principals, DNS, media rights, logging, retention and rollback. Never paste credentials into template parameters or Git.
