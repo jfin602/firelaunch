@@ -281,6 +281,7 @@ export class MediaPipelineRepository {
         SET state = 'leased', lease_token = $6, lease_until = $7, attempts = attempts + 1, version = version + 1
         WHERE id = $1 AND project_id = $2 AND creator_account_id = $3 AND asset_id = $4 AND version = $5
           AND attempts < 3 AND (state = 'pending' OR (state = 'leased' AND lease_until < now()))
+          AND NOT EXISTS (SELECT 1 FROM managed_media_job_attempts m WHERE m.processing_job_id=media_processing_jobs.id)
         RETURNING version, attempts`, [jobId, projectId, owner, assetId, expectedVersion, token, leaseUntil]);
       const row = result.rows[0];
       if (!row) throw new RepositoryError('CONFLICT', 'Job lease stale or unavailable');
@@ -354,6 +355,10 @@ export class MediaPipelineRepository {
       await client.query(`UPDATE media_processing_jobs SET state = 'revoked', lease_token = NULL,
         lease_until = NULL, failure_code = NULL, rendition_set_id = NULL, version = version + 1
         WHERE project_id = $1 AND creator_account_id = $2 AND asset_id = $3 AND state <> 'revoked'`,
+      [projectId, owner, assetId]);
+      await client.query(`UPDATE managed_media_job_attempts SET cancel_requested_at = COALESCE(cancel_requested_at, now()),
+        version = version + 1 WHERE project_id = $1 AND creator_account_id = $2 AND asset_id = $3
+        AND cancel_requested_at IS NULL AND state IN ('intent','submitted','progressing','complete')`,
       [projectId, owner, assetId]);
       await client.query(`UPDATE media_rendition_sets SET revoked_at = now() WHERE project_id = $1
         AND creator_account_id = $2 AND asset_id = $3 AND revoked_at IS NULL`, [projectId, owner, assetId]);

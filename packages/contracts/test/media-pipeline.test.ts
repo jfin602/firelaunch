@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mediaAssetSchema, mediaProcessingJobSchema, mediaRenditionSetSchema, mediaUploadSessionSchema } from '../src/index.js';
+import { managedJobIdentitySchema, managedJobObservationSchema, mediaAssetSchema, mediaProcessingJobSchema,
+  mediaRenditionSetSchema, mediaUploadSessionSchema } from '../src/index.js';
 
 const a = (prefix: string, digit: string) => `${prefix}_${digit.repeat(32)}`;
 const scope = { creatorAccountId: a('cr', 'a'), projectId: a('ch', 'b'), catalogItemId: a('ci', 'c'), mediaAssetId: a('ma', 'd') };
@@ -33,4 +34,16 @@ test('additive private media contracts preserve legacy MediaAsset and require ve
       playlistSha256: '4'.repeat(64), segmentsSha256: '5'.repeat(64), segmentCount: 1 }], verifiedAt: now };
   assert.equal(mediaRenditionSetSchema.parse(rendition).variants.length, 1);
   assert.equal(mediaRenditionSetSchema.safeParse({ ...rendition, variants: [rendition.variants[0], rendition.variants[0]] }).success, false);
+});
+
+test('managed provider identity and observations are strict and private', () => {
+  const identity = { awsAccountId: '123456789012', awsRegion: 'us-east-2', awsJobId: 'mc-123' };
+  assert.deepEqual(managedJobIdentitySchema.parse(identity), identity);
+  assert.equal(managedJobIdentitySchema.safeParse({ ...identity, awsAccountId: '123' }).success, false);
+  assert.equal(managedJobIdentitySchema.safeParse({ ...identity, awsRegion: 'https://example.com' }).success, false);
+  assert.equal(managedJobIdentitySchema.safeParse({ ...identity, awsJobId: '../job' }).success, false);
+  assert.equal(managedJobObservationSchema.safeParse({ ...identity, status: 'ERROR' }).success, false);
+  assert.equal(managedJobObservationSchema.safeParse({ ...identity, status: 'COMPLETE', errorCode: 'late' }).success, false);
+  assert.equal(managedJobObservationSchema.safeParse({ ...identity, status: 'ERROR', errorCode: '1234' }).success, true);
+  assert.equal(managedJobObservationSchema.safeParse({ ...identity, status: 'COMPLETE', outputUrl: 'https://public.example' }).success, false);
 });

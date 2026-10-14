@@ -7,6 +7,7 @@ import { HostedProjectRepository } from '../src/hosted-repository.js';
 import { CatalogRepository } from '../src/catalog-repository.js';
 import { MediaPipelineRepository } from '../src/media-pipeline-repository.js';
 import { MediaWorkerRepository } from '../src/media-worker-repository.js';
+import { ManagedMediaJobRepository } from '../src/managed-media-job-repository.js';
 import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
 
 const databaseTest = process.env.FIRELAUNCH_TEST_DATABASE_URL ? test : test.skip;
@@ -168,9 +169,82 @@ databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and r
       sourceRecord: item.sourceRecord, externalIdentifiers: item.externalIdentifiers, mediaAssetIds: [asset.id],
       creatorOverrides: { title: 'Edited film', editedAt: '2026-10-12T01:00:00.000Z' } }, item.id);
     assert.equal((await first.pool.query('SELECT count(*)::int AS n FROM media_processing_jobs WHERE id = $1', [jobId])).rows[0]?.n, 1);
+    const managedUpload = await pipeline.createUpload(owner, project.id, asset.id,
+      { ...request, idempotencyKey: 'managed-upload-key-001' });
+    await pipeline.recordVerifiedOriginal(owner, project.id, asset.id, managedUpload.id,
+      { bytes: 42, sha256: request.expectedSha256, expectedVersion: 0 });
+    const managedJobId = await pipeline.enqueue(owner, project.id, asset.id, managedUpload.id);
+    const managedScope = { creatorAccountId: owner.accountId, projectId: project.id,
+      mediaAssetId: asset.id, jobId: managedJobId };
+    const managed = new ManagedMediaJobRepository(first.pool);
+    const admission = { awsAccountId: '123456789012', awsRegion: 'us-east-2',
+      profileHash: '7'.repeat(64), expectedVersion: 0 };
+    await assert.rejects(managed.reserve(foreign, managedScope, admission), { code: 'NOT_FOUND' });
+    await assert.rejects(managed.reserve(forged, managedScope, admission), { code: 'NOT_FOUND' });
+    const intent = await managed.reserve(owner, managedScope, admission);
+    assert.equal(intent.attempt, 1);
+    assert.equal(intent.originalKey, managedUpload.originalKey);
+    assert.equal((await managed.reserve(owner, managedScope, admission)).intentToken, intent.intentToken);
+    await assert.rejects(pipeline.lease(owner, project.id, asset.id, managedJobId, 1,
+      new Date(Date.now() + 60_000).toISOString()), { code: 'CONFLICT' });
+    assert.equal((await first.pool.query(`SELECT count(*)::int AS n FROM managed_media_job_attempts
+      WHERE processing_job_id=$1`, [managedJobId])).rows[0]?.n, 1);
+    await assert.rejects(first.pool.query(`UPDATE managed_media_job_attempts SET creator_account_id=$2,
+      project_id=$3 WHERE intent_token=$1`, [intent.intentToken, foreign.accountId, otherProject.id]), /immutable|constraint/i);
     await first.pool.end(); first = undefined;
     restarted = await HostedProjectRepository.connect(url.toString());
     const resumed = new MediaPipelineRepository(restarted);
+    const managedRestarted = new ManagedMediaJobRepository(restarted.pool);
+    const identity = { awsAccountId: admission.awsAccountId, awsRegion: admission.awsRegion, awsJobId: 'mc-123' };
+    assert.equal((await managedRestarted.due()).some(row => row.intentToken === intent.intentToken), true);
+    assert.equal(await managedRestarted.register({ ...managedScope, creatorAccountId: foreign.accountId },
+      intent.intentToken, identity), false);
+    assert.equal(await managedRestarted.register(managedScope, intent.intentToken,
+      { ...identity, awsAccountId: '000000000000' }), false);
+    assert.equal(await managedRestarted.register(managedScope, intent.intentToken, identity), true);
+    assert.equal(await managedRestarted.register(managedScope, intent.intentToken, identity), true);
+    assert.equal(await managedRestarted.observe({ ...managedScope, creatorAccountId: foreign.accountId },
+      intent.intentToken, { ...identity, status: 'COMPLETE' }), false);
+    assert.equal(await managedRestarted.observe(managedScope, intent.intentToken,
+      { ...identity, awsRegion: 'us-west-2', status: 'COMPLETE' }), false);
+    assert.equal(await managedRestarted.observe(managedScope, intent.intentToken,
+      { ...identity, awsJobId: 'foreign-job', status: 'COMPLETE' }), false);
+    assert.equal(await managedRestarted.observe(managedScope, intent.intentToken,
+      { ...identity, status: 'PROGRESSING' }), true);
+    assert.equal(await managedRestarted.observe(managedScope, intent.intentToken,
+      { ...identity, status: 'SUBMITTED' }), false);
+    const errorObservation = { ...identity, status: 'ERROR', errorCode: 'provider.error' };
+    assert.equal(await managedRestarted.observe(managedScope, intent.intentToken, errorObservation), true);
+    assert.equal(await managedRestarted.observe(managedScope, intent.intentToken, errorObservation), false);
+    assert.equal((await resumed.processingStatus(owner, project.id, asset.id, managedUpload.id))?.state, 'failed');
+    assert.equal(await managedRestarted.observe(managedScope, intent.intentToken,
+      { ...identity, status: 'COMPLETE' }), false);
+    const retryVersion = (await restarted.pool.query<{ version: number }>(
+      'SELECT version FROM media_processing_jobs WHERE id=$1', [managedJobId])).rows[0]!.version;
+    await assert.rejects(managedRestarted.reserve(owner, managedScope,
+      { ...admission, expectedVersion: 0 }), { code: 'CONFLICT' });
+    const retryIntent = await managedRestarted.reserve(owner, managedScope,
+      { ...admission, expectedVersion: retryVersion });
+    assert.equal(retryIntent.attempt, 2);
+    assert.notEqual(retryIntent.intentToken, intent.intentToken);
+    assert.equal(await managedRestarted.register(managedScope, retryIntent.intentToken, identity), false);
+    const retryIdentity = { ...identity, awsJobId: 'mc-456' };
+    assert.equal(await managedRestarted.register(managedScope, retryIntent.intentToken, retryIdentity), true);
+    assert.equal(await managedRestarted.observe(managedScope, retryIntent.intentToken,
+      { ...retryIdentity, status: 'COMPLETE' }), true);
+    assert.equal((await resumed.processingStatus(owner, project.id, asset.id, managedUpload.id))?.state, 'pending');
+    const checkpointVersion = (await restarted.pool.query<{ version: number }>(
+      'SELECT version FROM managed_media_job_attempts WHERE intent_token=$1', [retryIntent.intentToken])).rows[0]!.version;
+    const nextAt = new Date(Date.now() + 60_000).toISOString();
+    assert.equal(await managedRestarted.checkpoint(managedScope, retryIntent.intentToken, checkpointVersion, nextAt), true);
+    assert.equal(await managedRestarted.checkpoint(managedScope, retryIntent.intentToken, checkpointVersion, nextAt), false);
+    const lateUpload = await resumed.createUpload(owner, project.id, asset.id,
+      { ...request, idempotencyKey: 'managed-late-upload-001' });
+    await resumed.recordVerifiedOriginal(owner, project.id, asset.id, lateUpload.id,
+      { bytes: 42, sha256: request.expectedSha256, expectedVersion: 0 });
+    const lateJobId = await resumed.enqueue(owner, project.id, asset.id, lateUpload.id);
+    const lateScope = { ...managedScope, jobId: lateJobId };
+    const lateIntent = await managedRestarted.reserve(owner, lateScope, admission);
     const nextLease = await resumed.lease(owner, project.id, asset.id, jobId, 4, leaseUntil);
     const prefix = `media/${owner.accountId.slice(3)}/${project.id.slice(3)}/${asset.id.slice(3)}/delivery/`;
     const rendition = { id: id('rs'), creatorAccountId: owner.accountId, projectId: project.id,
@@ -197,11 +271,107 @@ databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and r
     await resumed.revoke(owner, project.id, asset.id);
     assert.equal((await restarted.pool.query('SELECT state FROM media_processing_jobs WHERE id = $1', [jobId])).rows[0]?.state, 'revoked');
     assert.ok((await restarted.pool.query('SELECT revoked_at FROM media_rendition_sets WHERE id = $1', [rendition.id])).rows[0]?.revoked_at);
+    assert.equal(await managedRestarted.observe(managedScope, retryIntent.intentToken,
+      { ...retryIdentity, status: 'ERROR', errorCode: 'late' }), false);
+    assert.equal((await restarted.pool.query('SELECT state FROM media_processing_jobs WHERE id=$1',
+      [managedJobId])).rows[0]?.state, 'revoked');
+    assert.ok((await restarted.pool.query(`SELECT cancel_requested_at FROM managed_media_job_attempts
+      WHERE intent_token=$1`, [retryIntent.intentToken])).rows[0]?.cancel_requested_at);
+    const lateIdentity = { ...identity, awsJobId: 'mc-after-revoke' };
+    assert.equal(await managedRestarted.register(lateScope, lateIntent.intentToken, lateIdentity), true);
+    const cancellation = (await managedRestarted.cancellationsDue()).find(row => row.intentToken === lateIntent.intentToken);
+    assert.equal(cancellation?.awsJobId, lateIdentity.awsJobId);
+    assert.equal(await managedRestarted.cancellationChecked(lateScope, lateIntent.intentToken,
+      cancellation!.version), true);
+    assert.equal(await managedRestarted.cancellationChecked(lateScope, lateIntent.intentToken,
+      cancellation!.version), false);
+    assert.equal(await managedRestarted.observe(lateScope, lateIntent.intentToken,
+      { ...lateIdentity, status: 'COMPLETE' }), false);
     await assert.rejects(resumed.createUpload(owner, project.id, asset.id,
       { ...request, idempotencyKey: 'another-upload-key-1' }), /not found/i);
     await assert.rejects(resumed.lease(owner, project.id, asset.id, jobId, 6, leaseUntil), /not found/i);
   } finally {
     await first?.pool.end(); await restarted?.pool.end();
+    await admin.query(`DROP DATABASE ${name} WITH (FORCE)`); await admin.end();
+  }
+});
+
+databaseTest('migration 013 preserves a READY rendition created under migration 012', async () => {
+  const base = process.env.FIRELAUNCH_TEST_DATABASE_URL!;
+  const admin = new Pool({ connectionString: base });
+  const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const url = new URL(base); url.pathname = `/${name}`;
+  await admin.query(`CREATE DATABASE ${name}`);
+  let hosted: HostedProjectRepository | undefined;
+  try {
+    hosted = await HostedProjectRepository.connect(url.toString());
+    await hosted.pool.query(await readFile(new URL('../migrations/013_managed_media_jobs.down.sql', import.meta.url), 'utf8'));
+    await hosted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version=13');
+    const owner: AuthenticatedPrincipal = { accountId: await hosted.accountForIdentity({
+      issuer: 'https://issuer.example', subject: 'legacy-ready', email: 'legacy@example.com'
+    }), issuer: 'https://issuer.example', subject: 'legacy-ready', email: 'legacy@example.com' };
+    const project = await hosted.create(owner, { title: 'Legacy READY project' });
+    const catalog = new CatalogRepository(hosted);
+    const source = (await catalog.mutate(owner, project.id, 'sources', 'POST', 0, {
+      schemaVersion: 1, type: 'creator_json', state: 'discovered',
+      permission: { retrieval: 'unknown', tvDisplay: 'unknown' }
+    })).record!;
+    const externalId = { provider: 'creator', kind: 'feed_item_id', value: 'legacy-ready' };
+    const item = (await catalog.mutate(owner, project.id, 'items', 'POST', 1, {
+      schemaVersion: 1, kind: 'video', sourceRecord: { sourceId: source.id, externalId,
+        observedAt: '2026-10-12T00:00:00.000Z', metadata: { title: 'Legacy film' } },
+      externalIdentifiers: [externalId], mediaAssetIds: []
+    })).record!;
+    const asset = (await catalog.mutate(owner, project.id, 'media-assets', 'POST', 2, {
+      schemaVersion: 1, catalogItemId: item.id, kind: 'video',
+      location: { type: 'https', url: 'https://media.example.com/legacy.mp4' },
+      rights: { status: 'unknown', basis: 'none', permittedUse: 'none' }, deliveryEligible: false
+    })).record!;
+    const pipeline = new MediaPipelineRepository(hosted);
+    const sha = 'a'.repeat(64);
+    const upload = await pipeline.createUpload(owner, project.id, asset.id, {
+      idempotencyKey: 'legacy-ready-upload-01', expectedBytes: 42, expectedSha256: sha,
+      expiresAt: new Date(Date.now() + 3_600_000).toISOString()
+    });
+    await pipeline.recordVerifiedOriginal(owner, project.id, asset.id, upload.id,
+      { bytes: 42, sha256: sha, expectedVersion: 0 });
+    const jobId = await pipeline.enqueue(owner, project.id, asset.id, upload.id);
+    // Reproduce the pre-013 worker row without invoking the new worker guard against a pre-013 database.
+    const lease = { token: randomUUID(), version: 1 };
+    await hosted.pool.query(`UPDATE media_processing_jobs SET state='leased', lease_token=$2,
+      lease_until=now()+interval '2 minutes', attempts=1, version=1 WHERE id=$1`, [jobId, lease.token]);
+    const prefix = `media/${owner.accountId.slice(3)}/${project.id.slice(3)}/${asset.id.slice(3)}/staged/`;
+    const rendition = { id: id('rs'), creatorAccountId: owner.accountId, projectId: project.id,
+      catalogItemId: item.id, mediaAssetId: asset.id, jobId, profile: 'hls-avc-aac-v1' as const,
+      masterKey: `${prefix}master.m3u8`, masterSha256: 'b'.repeat(64),
+      variants: [{ height: 480 as const, playlistKey: `${prefix}480p.m3u8`,
+        playlistSha256: 'c'.repeat(64), segmentsSha256: 'd'.repeat(64), segmentCount: 1 }],
+      verifiedAt: new Date().toISOString() };
+    await pipeline.complete(owner, project.id, asset.id, jobId, lease.token, lease.version, rendition);
+    const before = (await hosted.pool.query('SELECT state, rendition_set_id FROM media_processing_jobs WHERE id=$1',
+      [jobId])).rows[0];
+    await hosted.migrate();
+    const after = (await hosted.pool.query('SELECT state, rendition_set_id FROM media_processing_jobs WHERE id=$1',
+      [jobId])).rows[0];
+    assert.deepEqual(after, before);
+    assert.equal(after.state, 'ready');
+    assert.equal((await hosted.pool.query('SELECT count(*)::int AS n FROM media_rendition_sets WHERE id=$1',
+      [rendition.id])).rows[0]?.n, 1);
+    assert.equal((await hosted.pool.query('SELECT count(*)::int AS n FROM managed_media_job_attempts')).rows[0]?.n, 0);
+    const nextUpload = await pipeline.createUpload(owner, project.id, asset.id, {
+      idempotencyKey: 'managed-after-ready-01', expectedBytes: 42, expectedSha256: sha,
+      expiresAt: new Date(Date.now() + 3_600_000).toISOString()
+    });
+    await pipeline.recordVerifiedOriginal(owner, project.id, asset.id, nextUpload.id,
+      { bytes: 42, sha256: sha, expectedVersion: 0 });
+    const nextJobId = await pipeline.enqueue(owner, project.id, asset.id, nextUpload.id);
+    await new ManagedMediaJobRepository(hosted.pool).reserve(owner, {
+      creatorAccountId: owner.accountId, projectId: project.id, mediaAssetId: asset.id, jobId: nextJobId
+    }, { awsAccountId: '123456789012', awsRegion: 'us-east-2', profileHash: '7'.repeat(64), expectedVersion: 0 });
+    assert.equal(await new MediaWorkerRepository(hosted.pool).claim(), null);
+    assert.equal((await hosted.pool.query('SELECT state FROM media_processing_jobs WHERE id=$1', [jobId])).rows[0]?.state, 'ready');
+  } finally {
+    await hosted?.pool.end();
     await admin.query(`DROP DATABASE ${name} WITH (FORCE)`); await admin.end();
   }
 });

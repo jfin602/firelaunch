@@ -51,3 +51,29 @@ export const mediaProcessingJobSchema = z.strictObject({
     ctx.addIssue({ code: 'custom', message: 'Only failed jobs carry a failure code' });
 });
 export type MediaProcessingJob = z.infer<typeof mediaProcessingJobSchema>;
+
+// Private, trusted adapter boundary. Raw EventBridge/SNS payloads must be authenticated and
+// reduced to this shape before they reach persistence; no provider data enters a TV manifest.
+export const managedJobIdentitySchema = z.strictObject({
+  awsAccountId: z.string().regex(/^[0-9]{12}$/),
+  awsRegion: z.string().regex(/^[a-z]{2}(?:-gov)?-[a-z]+-[1-9][0-9]?$/),
+  awsJobId: z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/)
+});
+export const managedJobObservationSchema = managedJobIdentitySchema.extend({
+  status: z.enum(['SUBMITTED', 'PROGRESSING', 'COMPLETE', 'ERROR', 'CANCELED']),
+  errorCode: z.string().min(1).max(128).regex(/^[A-Za-z0-9_.:-]+$/).optional()
+}).superRefine((value, ctx) => {
+  if ((value.status === 'ERROR') !== (value.errorCode !== undefined))
+    ctx.addIssue({ code: 'custom', message: 'Only provider errors carry an error code' });
+});
+export type ManagedJobIdentity = z.infer<typeof managedJobIdentitySchema>;
+export type ManagedJobObservation = z.infer<typeof managedJobObservationSchema>;
+
+export interface ManagedMediaProvider {
+  // The intent is persisted before submission. An adapter must reconcile the intent token
+  // with the provider before retrying a submission whose response was lost.
+  submit(input: Readonly<{ intentToken: string; originalKey: string; outputStagingPrefix: string;
+    profileHash: string; uploadSessionId: string; attempt: number }>): Promise<ManagedJobIdentity>;
+  status(identity: ManagedJobIdentity): Promise<ManagedJobObservation>;
+  cancel(identity: ManagedJobIdentity): Promise<void>;
+}

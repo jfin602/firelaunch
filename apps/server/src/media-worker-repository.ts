@@ -16,7 +16,8 @@ export class MediaWorkerRepository {
       await client.query('BEGIN');
       await client.query(`UPDATE media_processing_jobs SET state='failed', failure_code='worker_timeout',
         lease_token=NULL, lease_until=NULL, version=version+1
-        WHERE state='leased' AND lease_until < now() AND attempts >= 3`);
+        WHERE state='leased' AND lease_until < now() AND attempts >= 3
+          AND NOT EXISTS (SELECT 1 FROM managed_media_job_attempts m WHERE m.processing_job_id=media_processing_jobs.id)`);
       const token = randomUUID();
       const result = await client.query<{ id: string; creator_account_id: string; project_id: string;
         item_id: string; asset_id: string; upload_session_id: string; attempts: number;
@@ -28,6 +29,7 @@ export class MediaWorkerRepository {
             AND a.creator_account_id=j.creator_account_id
           LEFT JOIN media_asset_lifecycle l ON l.asset_id=j.asset_id
           WHERE (j.state IN ('pending','failed') OR (j.state='leased' AND j.lease_until < now())) AND j.attempts < 3
+            AND NOT EXISTS (SELECT 1 FROM managed_media_job_attempts m WHERE m.processing_job_id=j.id)
             AND u.state='verified' AND l.revoked_at IS NULL
             AND a.record->>'kind'='video'
             AND COALESCE(a.record->'rights'->>'status','') <> 'revoked'
