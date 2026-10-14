@@ -1,0 +1,29 @@
+TASK: Correction 6 / P3 — Integrate managed encoding and approved publication
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Wire existing S3-upload and P5 media publication through Foundation MediaConvert events/status so only verified approved HLS is delivered.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/decisions/0011-aws-vod-foundation.md, docs/integrations/aws-vod-foundation.md and docs/tasks/c6-aws-vod/{README.md,prompt-assessment.md,implementation-plan.md}; inspect actual HEAD, local dirty state, root package version and relevant current source/tests. P6 P1-P7 already created real S3/FFmpeg/rights code. Preserve current and historical evidence. Confirm earlier correction checkpoints; preserve accepted local changes. Inspect current official AWS Foundation specifications when available; do not invent API/events/policy details. Use bounded offline injected fakes when live AWS is absent.
+
+IMPLEMENT
+Inspect media-upload-service.ts, media-storage.ts, media-pipeline-repository.ts, public-resolver.ts, publication-repository.ts and actual provider contracts from P1/P2. On verified finalized upload admit exactly one authorized managed encode intent with per-owner quota and fixed profile. Integrate trusted submit/job correlation and completion/error/status reconciliation; tolerate at-least-once, stale/out-of-order/missing/forged/foreign notifications, failures, attempts and process restarts. Private staging graph verification must check provider job/source identity, master.m3u8+variants+segments, key/path bounds, size/MIME, expected profile and immutable hashes before READY. Never publish merely on job completion. Reuse P5 creator/revision/rights checked P5 transaction to publish final CloudFront approved prefix, v1 stable URL, revoke/rollback cache rules, avoid leaks of staging, S3 keys or signed URLs. If AWS Foundation's default trigger is incompatible with verified upload, adapt narrowly and test that an unverified upload cannot produce an eligible READY asset. Reconcile old READY legacy renditions without discarding them.
+
+OUT OF SCOPE
+No duplicate catalog, weaker auth/CSRF, browser native tests, signing DRM, CDN output auto-publish or paid/cloud requests.
+
+VALIDATION
+Fake MediaConvert/EventBridge/S3 tests for cross-tenant, upload verification, duplicate/error/restart/reconcile, incomplete playlist, published vs draft/rights revoked, immutable hash and existing P5 tests. Affected typechecks/build and git diff --check.
+
+GIT / VERSION
+No commits, no amend, no HEAD move: runner owns implementation checkpoint commits. Root package.json and root package-lock.json and internal workspace versions must remain exactly 0.6.7. Never deploy/change AWS, IAM, DNS, Ngest, live media or SSH without operator approval. Report any partial state accurately.
+
+FINAL RESPONSE
+State exact changed files, focused test counts, typechecks/builds/diff checks, remaining risks and precise next-prompt handoff. Do not call a local fake or generated CloudFormation real AWS, live Vega or P6 GREEN.
