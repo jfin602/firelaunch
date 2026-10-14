@@ -1,0 +1,29 @@
+TASK: Correction 6 / P5 — Independent managed VOD correction closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Independently qualify the local FireLaunch migration from custom FFmpeg to AWS VOD Foundation, then prepare distinct manual P6 P8 real-cloud/device qualification without rewriting P6 history.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/decisions/0011-aws-vod-foundation.md, docs/integrations/aws-vod-foundation.md, docs/tasks/c6-aws-vod/{README.md,prompt-assessment.md,implementation-plan.md}, P6 P8, P5/c5 historical closeouts and current repo source. Verify actual 4 runner checkpoint commits, HEAD, root 0.6.7, worktree, logs, test evidence and original migration preservation. Do not infer AWS deployment or Vega evidence from mocks/templates; account/credits/budget and creator media rights remain external.
+
+INDEPENDENT QUALIFICATION / CLOSEOUT
+Review the managed-only production encode path and reject FFmpeg runtime dependence. Inspect source+AWS IaC for no automatic public output before P5 owner rights approval, private S3 staging and delivery-only OAC, strict upload/quota/CSRF/account scope, verified AWS job correlation, idempotent duplicate/out-of-order/missing events and retries, restart-safe reconciliation, immutable full HLS verification, rights revocation/public CDN cache limitations, no secrets/signed S3 links in app/export/manifest, and legacy READY media. Run independent focused negatives for two principals and staging URL exposure; verify CloudFormation templates are proposals and cannot silently delete live data. Check that prior P5/c5 NOT GREEN and hosted S1-S6 status remain unchanged. Perform ONE final Node 24/npm 12 npm run check with exact 7 workspace typecheck/build and tests/skips, npm run codex:stack:validate -- c6-aws-vod and git diff --check. If requirements pass offline, mark c6 LOCAL GREEN / LIVE AWS AND P6 DEVICE NOT QUALIFIED. Otherwise NOT GREEN with exact blockers. Write docs/tasks/c6-aws-vod/closeout.md. Update future P6 manual P8/runbook to require actual owner-approved S3 -> AWS Foundation MediaConvert -> verified private staged HLS -> approved private delivery + CloudFront -> installed Vega VirtualDevice, with provider job, profile, IAM, costs and failure evidence; preserve original P6 P8 historical text and version. Real creator-bound P5/c5 same-installed-VPKG v1/v2/offline/fault/v3 rollback remains independently unproven unless directly observed.
+
+OUT OF SCOPE
+No live cloud deployment or paid transcode without explicit operator authorization, no production release or physical Fire TV/Appstore success claim, no rewriting P6 P1-P7 commits, no P5/c5 historical edits, no unapproved media, no root/version changes.
+
+VALIDATION
+One final npm run check (Node24/npm12) and exact pass/skip totals, stack grammar validator, git diff --check, independent owner/event/revocation and public-staging tests, safe AWS infra review; log external evidence NOT TESTED when unavailable. Browser is for reviewing relevant product UI, never substitute a browser-only player for native Vega qualification.
+
+GIT
+MANUAL closeout. Do not commit, amend or move HEAD. Keep root and lock/workspace versions 0.6.7. If any local worktree edits are necessary for closeout, report them; runner checkpoint commits are already complete.
+
+FINAL RESPONSE
+Return LOCAL GREEN / NOT GREEN with exact SHA/version, test counts, changed files, managed VOD security/cost/rights gates, links to closeout, and explicit manual P6 P8 real AWS + Vega follow-up. Preserve historical P0/P2/c2/P4/P5/c5 and S1-S6 truth.
