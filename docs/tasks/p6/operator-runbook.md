@@ -1,3 +1,5 @@
+> **Historical P6 worker runbook — 2026-10-14:** Existing steps below reference the original FFmpeg-based implementation. The approved forward implementation is AWS Video on Demand on AWS Foundation, under [ADR 0011](../../decisions/0011-aws-vod-foundation.md) and [c6-aws-vod](../c6-aws-vod/README.md). Until c6 locally closes, do not claim Foundation is integrated; once it does, the independent P6 P8 runbook must require real managed provider/video/device proof and maintain all creator rights, OAC and deferred P5/c5 gates. Do not run historical worker deployment instructions as the new target.
+
 # P6 P8 operator proof — not yet executed
 
 This is a **manual** checklist for the independent `0.6.8` gate, not an instruction to provision AWS during P7. Preserve [deferred P5/c5 qualification](deferred-qualification.md) and their historical NOT GREEN closeouts. Record each check as PASS, PARTIAL or BLOCKED with timestamp, redacted evidence and exact tested commit. Stop on missing ownership/rights, authenticated staging, dedicated public origin or trustworthy device evidence. Never expose credentials, private source bytes, signed URLs or full session cookies in logs.
