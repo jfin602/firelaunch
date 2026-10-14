@@ -1,3 +1,5 @@
+> **Historical assessment only (2026-10-14):** The original FFmpeg-first P6 P1-P7 implementation landed on main by root 0.6.7. [ADR 0011](../../decisions/0011-aws-vod-foundation.md) selects managed AWS VOD Foundation/MediaConvert instead for future creator VOD. Use [c6-aws-vod assessment](../c6-aws-vod/prompt-assessment.md) and [correction plan](../c6-aws-vod/implementation-plan.md) for the replacement; all historical context below stays intact.
+
 # Phase 6 — Prompt Assessment: AWS Creator Media Foundation
 
 Date: 2026-10-11
