@@ -1,0 +1,35 @@
+# AWS Video on Demand Foundation — FireLaunch integration/runbook
+
+Status: DESIGN ACCEPTED 2026-10-14 / NO NEW INFRASTRUCTURE PROVISIONED OR LIVE QUALIFIED BY THIS DOCUMENT
+Authority: [ADR 0011](../decisions/0011-aws-vod-foundation.md), [ADR 0010 historical/security](../decisions/0010-aws-media-delivery.md), [AWS Foundation architecture](https://docs.aws.amazon.com/solutions/latest/video-on-demand-on-aws-foundation/architecture-overview.html), [AWS workflow](https://docs.aws.amazon.com/solutions/latest/video-on-demand-on-aws-foundation/architecture-details.html), [AWS reference source](https://github.com/aws-solutions-library-samples/video-on-demand-on-aws-foundation).
+
+## Deployment boundary
+
+Foundation is reference CloudFormation/CDK infrastructure, not a single abstract 'VOD API'. It normally creates source/destination S3, Lambda submit/complete functions, MediaConvert integration, EventBridge, SNS and CloudFront. Confirm deployment version, source branch, IAM, trigger filters, output locations and default job settings from its current source before operator-reviewed deployment. NEVER expose automatic output CloudFront delivery before FireLaunch creator approval.
+
+Target workflow:
+1. Authenticated owner/CSRF route issues existing bounded presigned multipart upload to private source S3 under opaque owner/project/asset/upload IDs. Complete/verify actual bytes, SHA, MIME and admission quotas.
+2. Create exactly one approved processing intent using provider-side job correlation (trusted job ID, source key, account/region, output staging prefix and job template digest); trigger Foundation job-submit through a narrow trusted event/prefix or reviewed adapter. Prevent duplicate S3-event enqueues and foreign/tampered processing.
+3. MediaConvert produces H.264/AAC HLS 480p/720p to **private staged output**. A completion callback/event is untrusted data until it passes AWS source-account/role/event validation and DB job-ID ownership correlation; reconcile missed events via read-only MediaConvert status and S3 verification.
+4. Verify master+variant playlist references, segments, path containment, HEAD/size/MIME/hashes, encoding profile, job/result identity and full rendition completeness. Mark READY only when all validations and database state transitions pass.
+5. On explicit owner-approved P5 publication, recheck latest catalog, rights, source permissions, upload/job READY state and release revisions in a transaction; promote only verified rendition bytes to immutable approved delivery prefix and put only the stable HTTPS CloudFront master URL in existing PublishedManifest v1.
+6. Vega playback and publication refresh require real VirtualDevice evidence. Revocation blocks new approved manifests, restricts future serving, and uses bounded invalidation/deletion where policy authorizes; do not claim immediate removal from CDN/offline TVs.
+
+## Infrastructure plan
+
+- Decide explicitly whether to adapt the Foundation deployment to our existing private S3 buckets, IAM and OAC CloudFront; do not deploy duplicate public CloudFront by default.
+- Restrict Foundation ingest triggers to a dedicated trusted prefix and/or verified control-plane processing intent; upload-completion and retry must be idempotent and bounded. No arbitrary public client-selected MediaConvert options or path.
+- MediaConvert/service roles get only approved source read + private staging write; job-submit Lambda cannot access other creator originals or write public delivery. FireLaunch publisher alone can move verified staged output to delivery.
+- Retain blocking public S3 access, SSE encryption, restricted CloudFront S3 Origin Access Control and delivery-only read policy; verify actual policy and CloudFront behavior (not just template syntax).
+- Use EventBridge completion with AWS-native verified source/account/region and idempotent DB transitions, or an authenticated bounded queue/API consumer with explicit trust. Default SNS notifications / jobs-manifest.json may aid reconciliation but cannot authorize publication or be treated as tenant-authenticated evidence.
+- Ensure unique safe output prefixes, fixed profile settings, job counts/rate limits, CloudWatch errors, dead-letter/replay semantics, reconciliation polling and rollbacks; keep AWS secrets out of browser and generated applications.
+- Inspect prior `infra/aws-media/template.yaml` resources before replacement to prevent deletion of buckets/media, IAM trust regression, origin path mismatch or other services. Use planned CloudFormation change set; operator approval required to execute.
+- Retain separate P2/P3 private evidence storage. Decommission FFmpeg host permissions and `media:worker:once` only after new workflow acceptance; provide explicit migration/rollback for already encoded assets and in-flight legacy jobs.
+
+## Spend and qualification
+
+Use a short rights-cleared sample, limited 480p/720p test profile, fixed max source size/duration, per-creator total processing minutes/in-flight slots, and configured AWS Budgets alert. MediaConvert charges apply even without viewers; CloudFront bytes and requests, S3 objects, Lambda/EventBridge and logs have their own charges. Operator must check actual account credits/limits/region and give explicit approval before deploying or processing paid work. Budgets alerts do not stop AWS spending.
+
+Offline CI: fake MediaConvert submit/status/events, S3 staging graph and IAM template guards; two-principal auth/CSRF, duplicate/out-of-order/lost events, reconcile, restarts, quota failures, revoked/draft denial, no public staged URLs, immutable release/LKG compatibility, old record migration, Studio statuses and worker retirement.
+
+Manual Phase 6 P8: record sanitized AWS account/region/stack and job IDs, actual HLS output manifest graph, provider status/error/retry, S3 private-read denial, CloudFront delivery-only policy, owner approval and revocation, complete Browser Studio upload, Vega VirtualDevice playback/pause/seek/Back/failure, deferred same-installed VPKG refresh, exact charges/budget status, Ngest untouched and historical gates independently. No cloud credentials or rights-protected videos in evidence.
