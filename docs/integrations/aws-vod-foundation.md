@@ -3,6 +3,8 @@
 Status: DESIGN ACCEPTED 2026-10-14 / NO NEW INFRASTRUCTURE PROVISIONED OR LIVE QUALIFIED BY THIS DOCUMENT
 Authority: [ADR 0011](../decisions/0011-aws-vod-foundation.md), [ADR 0010 historical/security](../decisions/0010-aws-media-delivery.md), [AWS Foundation architecture](https://docs.aws.amazon.com/solutions/latest/video-on-demand-on-aws-foundation/architecture-overview.html), [AWS workflow](https://docs.aws.amazon.com/solutions/latest/video-on-demand-on-aws-foundation/architecture-details.html), [AWS reference source](https://github.com/aws-solutions-library-samples/video-on-demand-on-aws-foundation).
 
+Correction P2 design checkpoint: [review-only overlay and operator sequence](../../infra/aws-media/README.md), pinned Foundation source commit `a432b219910309dd1a7cec661004b980162a98e0`. The chosen path invokes a reviewed submit Lambda only after FireLaunch verifies and reserves an upload; it does not subscribe to raw S3 uploads. Existing buckets/OAC CDN are retained. EventBridge completion is disabled until P3 implements signed `GetJob` plus durable intent correlation. The overlay contains no deployable Lambda artifact yet and no AWS resources have been changed.
+
 ## Deployment boundary
 
 Foundation is reference CloudFormation/CDK infrastructure, not a single abstract 'VOD API'. It normally creates source/destination S3, Lambda submit/complete functions, MediaConvert integration, EventBridge, SNS and CloudFront. Confirm deployment version, source branch, IAM, trigger filters, output locations and default job settings from its current source before operator-reviewed deployment. NEVER expose automatic output CloudFront delivery before FireLaunch creator approval.

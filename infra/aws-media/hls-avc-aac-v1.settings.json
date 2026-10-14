@@ -1,0 +1,76 @@
+{
+  "OutputGroups": [
+    {
+      "Name": "FireLaunch private HLS",
+      "OutputGroupSettings": {
+        "Type": "HLS_GROUP_SETTINGS",
+        "HlsGroupSettings": {
+          "Destination": "REPLACE_WITH_RESERVED_PRIVATE_STAGING_S3_URI",
+          "SegmentLength": 6,
+          "MinSegmentLength": 0,
+          "SegmentControl": "SEGMENTED_FILES",
+          "OutputSelection": "MANIFESTS_AND_SEGMENTS",
+          "DirectoryStructure": "SINGLE_DIRECTORY",
+          "StreamInfResolution": "INCLUDE"
+        }
+      },
+      "Outputs": [
+        {
+          "NameModifier": "_480p",
+          "ContainerSettings": { "Container": "M3U8" },
+          "VideoDescription": {
+            "Width": 854,
+            "Height": 480,
+            "CodecSettings": {
+              "Codec": "H_264",
+              "H264Settings": {
+                "CodecProfile": "MAIN",
+                "RateControlMode": "CBR",
+                "Bitrate": 1200000,
+                "GopSize": 2,
+                "GopSizeUnits": "SECONDS"
+              }
+            }
+          },
+          "AudioDescriptions": [{
+            "AudioSourceName": "Audio Selector 1",
+            "CodecSettings": { "Codec": "AAC", "AacSettings": {
+              "CodecProfile": "LC", "CodingMode": "CODING_MODE_2_0",
+              "SampleRate": 48000, "Bitrate": 96000, "RateControlMode": "CBR"
+            }}
+          }]
+        },
+        {
+          "NameModifier": "_720p",
+          "ContainerSettings": { "Container": "M3U8" },
+          "VideoDescription": {
+            "Width": 1280,
+            "Height": 720,
+            "CodecSettings": {
+              "Codec": "H_264",
+              "H264Settings": {
+                "CodecProfile": "MAIN",
+                "RateControlMode": "CBR",
+                "Bitrate": 2500000,
+                "GopSize": 2,
+                "GopSizeUnits": "SECONDS"
+              }
+            }
+          },
+          "AudioDescriptions": [{
+            "AudioSourceName": "Audio Selector 1",
+            "CodecSettings": { "Codec": "AAC", "AacSettings": {
+              "CodecProfile": "LC", "CodingMode": "CODING_MODE_2_0",
+              "SampleRate": 48000, "Bitrate": 128000, "RateControlMode": "CBR"
+            }}
+          }]
+        }
+      ]
+    }
+  ],
+  "Inputs": [{
+    "FileInput": "REPLACE_WITH_VERIFIED_ORIGINAL_S3_URI",
+    "AudioSelectors": { "Audio Selector 1": { "DefaultSelection": "DEFAULT" } },
+    "VideoSelector": {}
+  }]
+}
