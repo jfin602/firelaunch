@@ -127,3 +127,7 @@ Read `docs/tasks/c5-vega/{README.md,prompt-assessment.md,implementation-plan.md}
 ## Owner-authorized P6 implementation (2026-10-12)
 
 At committed root `0.6.0`, P6 P1–P7 may start immediately even though P5/c5 independent live HTTPS and same-installed-VPKG gates remain NOT GREEN. This decision only defers external proof to integration/P8. Inspect and preserve actual P5 source publication, rights, immutable resolver, tenant/auth/CSRF and data-integrity contracts. P6 P8 still demands real creator-approved AWS HLS through CloudFront to Vega with independent evidence. See docs/tasks/p6/deferred-qualification.md.
+
+## 2026-10-14 current Phase 6 provider policy
+
+GitHub main reached root 0.6.7 after P6 P1-P7 initial FFmpeg pipeline implementation. Existing older BOOT passages saying P6 has not been implemented are historical/stale and do not describe the current code. **ADR 0011** accepts managed AWS Video on Demand on AWS Foundation / MediaConvert to replace the active custom FFmpeg worker. Do not rerun P6 P1-P7; run [c6-aws-vod](docs/tasks/c6-aws-vod/README.md) correction P1-P4 and manual P5 at **unchanged 0.6.7**. New video must be privately staged and creator-authorized for CDN publication, not exposed merely after encoding. This documentation change does not deploy AWS or close P6 P8/P5/c5 native proof, P4 real provider, S1-S6 hosted security or P9 physical Fire TV/Appstore gates.
