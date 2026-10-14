@@ -1,0 +1,29 @@
+TASK: Correction 6 / P1 — Add managed provider and durable job correlation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Replace assumptions tied to a local FFmpeg lease with a small, owner-scoped managed AWS MediaConvert job-state seam while preserving existing identity and compatibility.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/decisions/0011-aws-vod-foundation.md, docs/integrations/aws-vod-foundation.md and docs/tasks/c6-aws-vod/{README.md,prompt-assessment.md,implementation-plan.md}; inspect actual HEAD, local dirty state, root package version and relevant current source/tests. P6 P1-P7 already created real S3/FFmpeg/rights code. Preserve current and historical evidence. Confirm earlier correction checkpoints; preserve accepted local changes. Inspect current official AWS Foundation specifications when available; do not invent API/events/policy details. Use bounded offline injected fakes when live AWS is absent.
+
+IMPLEMENT
+Focus on packages/contracts/src/media-pipeline.ts, apps/server/src/media-pipeline-repository.ts, media-worker-repository.ts, migrations and current status consumers. Inspect existing actual tables and transition semantics before editing. Introduce a minimal provider/job correlation interface with trusted AWS job ID/account/region, intent, attempt, profile hash, upload identity, output staging prefix, observed status/error and reconciliation checkpoint. Use additive forward-only migration only if needed; keep existing READY renditions, legacy rows and P5 manifests unchanged. Enforce uniqueness, creator/project/media FK and CAS; duplicate/reordered/late/foreign events and retried job attempts cannot change another owner's state or move a revoked job to ready. Define bounded failure/retry/cancel semantics and a legacy in-flight policy. No AWS calls and do not remove FFmpeg yet. Hand off strict adapter/event shapes to P2.
+
+OUT OF SCOPE
+No IaC deployment, output/publication rewrite, new client schema or historical migrations rewrite.
+
+VALIDATION
+Focused contract+DB migration/transition tests (owner, foreign, replay, restart, legacy READY and revoke), affected contracts/server typecheck/build and git diff --check.
+
+GIT / VERSION
+No commits, no amend, no HEAD move: runner owns implementation checkpoint commits. Root package.json and root package-lock.json and internal workspace versions must remain exactly 0.6.7. Never deploy/change AWS, IAM, DNS, Ngest, live media or SSH without operator approval. Report any partial state accurately.
+
+FINAL RESPONSE
+State exact changed files, focused test counts, typechecks/builds/diff checks, remaining risks and precise next-prompt handoff. Do not call a local fake or generated CloudFormation real AWS, live Vega or P6 GREEN.
