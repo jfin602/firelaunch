@@ -1,0 +1,29 @@
+TASK: Correction 6 / P4 — Retire local encoder dependencies and converge product
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Make the managed path the only production encoding dependency, without regressing Studio, legacy assets or protected publication.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/decisions/0011-aws-vod-foundation.md, docs/integrations/aws-vod-foundation.md and docs/tasks/c6-aws-vod/{README.md,prompt-assessment.md,implementation-plan.md}; inspect actual HEAD, local dirty state, root package version and relevant current source/tests. P6 P1-P7 already created real S3/FFmpeg/rights code. Preserve current and historical evidence. Confirm earlier correction checkpoints; preserve accepted local changes. Inspect current official AWS Foundation specifications when available; do not invent API/events/policy details. Use bounded offline injected fakes when live AWS is absent.
+
+IMPLEMENT
+Inspect P1-P3 source and test results. Remove active production routing/scripts/config that require locally installed ffmpeg/ffprobe or laptop worker; preserve historical docs/migrations and preexisting READY media. Delete obsolete worker-only code only after proof no live imports depend on it. Clarify status names, retry/error and progress in Studio VideoUpload and API without adding a second media UI or untrusted AWS credentials. Update BOOT/README/P6 operator docs only for CURRENT operation; mark historical FFmpeg notes historical rather than pretending they never existed. Do focused two-creator, CSRF, quotas, interrupted upload, duplicate AWS event, processing failure/retry, staged-public denial, rights/revoke, CloudFront HLS, old media and Vega manifest compatibility regression tests with injected adapters. No real AWS. Prepare precise P5 manual closeout and P6 P8 live-run evidence list.
+
+OUT OF SCOPE
+No physical TV/Appstore claim, live AWS provisioning, worker host operations, version bump, mutation of historical P6 checkpoints or actual creator media.
+
+VALIDATION
+Focused core + Studio tests, all affected typechecks/builds and git diff --check. Leave complete aggregate to manual P5.
+
+GIT / VERSION
+No commits, no amend, no HEAD move: runner owns implementation checkpoint commits. Root package.json and root package-lock.json and internal workspace versions must remain exactly 0.6.7. Never deploy/change AWS, IAM, DNS, Ngest, live media or SSH without operator approval. Report any partial state accurately.
+
+FINAL RESPONSE
+State exact changed files, focused test counts, typechecks/builds/diff checks, remaining risks and precise next-prompt handoff. Do not call a local fake or generated CloudFormation real AWS, live Vega or P6 GREEN.
