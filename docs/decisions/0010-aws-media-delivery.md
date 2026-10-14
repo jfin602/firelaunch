@@ -1,3 +1,5 @@
+> **SUPERSEDED IN PART (2026-10-14):** [ADR 0011](0011-aws-vod-foundation.md) replaces this ADR's local FFprobe/FFmpeg encoding worker and custom job-orchestration decisions with AWS Video on Demand on AWS Foundation / MediaConvert for new FireLaunch-managed uploads. The remainder of this ADR (creator rights, private S3 upload, OAC CloudFront approved delivery, stable PublishedManifest, revocation and separate device qualification) stays authoritative. All original paragraphs below are retained as historical context. Correction: [c6-aws-vod](../tasks/c6-aws-vod/README.md); current root 0.6.7; AWS deployment not performed by this decision.
+
 # ADR 0010 — AWS creator media delivery with FFmpeg and CloudFront
 
 Status: Accepted for documentation and planned Phase 6; implementation and AWS qualification NOT STARTED
