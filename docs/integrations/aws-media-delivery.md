@@ -1,3 +1,5 @@
+> **Current target architecture changed on 2026-10-14:** [ADR 0011](../decisions/0011-aws-vod-foundation.md) selects AWS Video on Demand on AWS Foundation / MediaConvert for new FireLaunch-managed video. This page's FFmpeg worker setup/profile/cost instructions describe the initial P6 implementation and are retained for history only. Use [managed AWS runbook](aws-vod-foundation.md) and [c6-aws-vod](../tasks/c6-aws-vod/README.md) for the migration. All rights, upload scope, private delivery, CloudFront OAC, revocation and native qualification safeguards below still apply. No managed AWS deployment or real provider qualification has happened because of the documentation change.
+
 # FireLaunch AWS Media Delivery — setup and qualification runbook
 
 Status: APPROVED DESIGN / NOT PROVISIONED OR QUALIFIED by this document
