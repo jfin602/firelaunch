@@ -1,0 +1,29 @@
+TASK: Correction 6 / P2 — Adapt Foundation infrastructure and secure event boundary
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Build an operator-reviewed Foundation deployment adaptation that produces privately staged media, never auto-public creator uploads.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/decisions/0011-aws-vod-foundation.md, docs/integrations/aws-vod-foundation.md and docs/tasks/c6-aws-vod/{README.md,prompt-assessment.md,implementation-plan.md}; inspect actual HEAD, local dirty state, root package version and relevant current source/tests. P6 P1-P7 already created real S3/FFmpeg/rights code. Preserve current and historical evidence. Confirm earlier correction checkpoints; preserve accepted local changes. Inspect current official AWS Foundation specifications when available; do not invent API/events/policy details. Use bounded offline injected fakes when live AWS is absent.
+
+IMPLEMENT
+Read infra/aws-media/template.yaml and README plus official AWS Foundation source/architecture. Choose and document a specific pinned Foundation version/commit and deployment/overlay strategy. Provide IaC for restricted source-upload trigger and MediaConvert H.264/AAC 480p/720p HLS, Lambda/EventBridge completion route, encrypted private output staged prefix, narrow source/staging IAM and cost limits. Reconcile existing S3 and OAC CloudFront: only creator-published immutable delivery prefixes may be public through CDN; default Foundation output CDN must be disabled, inaccessible to unfinished content or safely isolated. Avoid duplicate public distribution, bucket replacement, untrusted client job-settings and surprise spend. Define cryptographically trustworthy account/region/source/job correlation and failure/reconciliation event contract for P3. Add offline/static security tests to catch public bucket/prefix, broad roles, wrong trigger, orphaned data and auto-publish. Update infra and operator docs but do not run change sets.
+
+OUT OF SCOPE
+No paid calls, automatic CloudFormation deployment, source/record deletion, Ngest interference, manifest schema change or authorization bypass.
+
+VALIDATION
+Offline template/test checks and affected server tests/typecheck/build; verify default unapproved/staged objects are inaccessible in the planned policies, explicitly label real AWS policy as pending.
+
+GIT / VERSION
+No commits, no amend, no HEAD move: runner owns implementation checkpoint commits. Root package.json and root package-lock.json and internal workspace versions must remain exactly 0.6.7. Never deploy/change AWS, IAM, DNS, Ngest, live media or SSH without operator approval. Report any partial state accurately.
+
+FINAL RESPONSE
+State exact changed files, focused test counts, typechecks/builds/diff checks, remaining risks and precise next-prompt handoff. Do not call a local fake or generated CloudFormation real AWS, live Vega or P6 GREEN.
