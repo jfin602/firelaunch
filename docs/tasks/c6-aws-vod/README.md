@@ -1,10 +1,11 @@
 # c6-aws-vod — Replace self-hosted FFmpeg with AWS VOD Foundation
 
-Status: DOCS APPLIED / IMPLEMENTATION STACK AUTHORED / NOT EXECUTED
+Status: P1–P4 RUNNER CHECKPOINTS COMPLETE / P5 LOCAL GREEN / LIVE AWS AND P6 DEVICE NOT QUALIFIED
 Date: 2026-10-14
 Corrected phase: P6 — AWS Media Foundation.
 Root version: `0.6.7` **UNCHANGED** throughout correction.
 Authority: [ADR 0011](../../decisions/0011-aws-vod-foundation.md), [integration runbook](../../integrations/aws-vod-foundation.md), [assessment](prompt-assessment.md), [plan](implementation-plan.md).
+Independent result: [P5 closeout](closeout.md) at `e207152` and unchanged root `0.6.7`.
 Historical references: [ADR 0010](../../decisions/0010-aws-media-delivery.md), [P6 README](../p6/README.md), [P6 P8](../p6/P8-independent-media-closeout.txt), [P5 closeout](../p5/closeout.md), [c5 closeout](../c5-vega/closeout.md).
 
 ## Objective

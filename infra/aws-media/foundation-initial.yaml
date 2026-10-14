@@ -1,0 +1,334 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Review-only initial private FireLaunch media foundation; no automatic public output
+Parameters:
+  StagingOrigin:
+    Type: String
+    AllowedPattern: '^https://[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$'
+    Description: Exact HTTPS Studio origin allowed to send multipart PUT requests to S3
+  ControlPlanePrincipalArn:
+    Type: String
+    AllowedPattern: '^arn:aws:iam::[0-9]{12}:(role|user)/[A-Za-z0-9+=,.@_/-]+$'
+    Description: Reviewed same-account runtime principal allowed to assume the control-plane role
+Resources:
+  OriginalsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: [!Ref StagingOrigin]
+            AllowedMethods: [PUT]
+            AllowedHeaders: ['content-type', 'x-amz-checksum-*', 'x-amz-sdk-checksum-algorithm']
+            ExposedHeaders: [ETag]
+            MaxAge: 300
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteOriginals
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+  DeliveryBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+  MediaOac:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${AWS::StackName}-media-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+  MediaCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub '${AWS::StackName}-media-cache'
+        DefaultTTL: 60
+        MinTTL: 0
+        MaxTTL: 300
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig: { CookieBehavior: none }
+          HeadersConfig: { HeaderBehavior: none }
+          QueryStringsConfig: { QueryStringBehavior: none }
+          EnableAcceptEncodingGzip: true
+          EnableAcceptEncodingBrotli: true
+  MediaDistribution:
+    Type: AWS::CloudFront::Distribution
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: FireLaunch approved free VOD HLS only; delivery bucket is private
+        HttpVersion: http2
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: private-delivery
+            DomainName: !GetAtt DeliveryBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt MediaOac.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: private-delivery
+          ViewerProtocolPolicy: https-only
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: !Ref MediaCachePolicy
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ErrorCachingMinTTL: 0
+          - ErrorCode: 404
+            ErrorCachingMinTTL: 0
+  OriginalsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref OriginalsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: [!GetAtt OriginalsBucket.Arn, !Sub '${OriginalsBucket.Arn}/*']
+            Condition:
+              Bool: { 'aws:SecureTransport': 'false' }
+  DeliveryBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref DeliveryBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: [!GetAtt DeliveryBucket.Arn, !Sub '${DeliveryBucket.Arn}/*']
+            Condition:
+              Bool: { 'aws:SecureTransport': 'false' }
+          - Sid: AllowOacApprovedObjectsOnly
+            Effect: Allow
+            Principal: { Service: cloudfront.amazonaws.com }
+            Action: 's3:GetObject'
+            Resource: !Sub '${DeliveryBucket.Arn}/media/*/*/*/delivery/*'
+            Condition:
+              StringEquals:
+                'AWS:SourceArn': !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${MediaDistribution}'
+  ControlPlaneRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { AWS: !Ref ControlPlanePrincipalArn }
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: private-media-control
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['s3:PutObject', 's3:GetObject', 's3:DeleteObject', 's3:AbortMultipartUpload']
+                Resource: !Sub '${OriginalsBucket.Arn}/media/*/*/*/original/*'
+              - Effect: Allow
+                Action: ['s3:GetObject', 's3:PutObject']
+                Resource: !Sub '${DeliveryBucket.Arn}/media/*/*/*/staged/*'
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt DeliveryBucket.Arn
+                Condition:
+                  StringLike: { 's3:prefix': 'media/*/*/*/staged/*' }
+              - Effect: Allow
+                Action: s3:GetBucketLocation
+                Resource: [!GetAtt OriginalsBucket.Arn, !GetAtt DeliveryBucket.Arn]
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt MediaConvertRole.Arn
+                Condition:
+                  StringEquals: { 'iam:PassedToService': mediaconvert.amazonaws.com }
+              - Effect: Allow
+                Action: mediaconvert:CreateJob
+                Resource: !GetAtt BoundedQueue.Arn
+              - Effect: Allow
+                Action: [mediaconvert:GetJob, mediaconvert:CancelJob]
+                Resource: !Sub 'arn:${AWS::Partition}:mediaconvert:${AWS::Region}:${AWS::AccountId}:jobs/*'
+              - Effect: Allow
+                Action: mediaconvert:ListJobs
+                Resource: '*'
+                Condition:
+                  StringEquals: { 'aws:RequestedRegion': !Ref 'AWS::Region' }
+              - Effect: Allow
+                Action: [sqs:ReceiveMessage, sqs:DeleteMessage]
+                Resource: !GetAtt MediaConvertEventsQueue.Arn
+              - Effect: Allow
+                Action: sts:AssumeRole
+                Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AWS::StackName}-publisher'
+  PublisherRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-publisher'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { AWS: !GetAtt ControlPlaneRole.Arn }
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: approved-output-only
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['s3:GetObject']
+                Resource: !Sub '${DeliveryBucket.Arn}/media/*/*/*/staged/*'
+              - Effect: Allow
+                Action: ['s3:PutObject', 's3:GetObject']
+                Resource: !Sub '${DeliveryBucket.Arn}/media/*/*/*/delivery/*'
+  BoundedQueue:
+    Type: AWS::MediaConvert::Queue
+    Properties:
+      Name: !Sub '${AWS::StackName}-firelaunch'
+      PricingPlan: ON_DEMAND
+      ConcurrentJobs: 1
+      Status: PAUSED
+      Description: Paused until account access, budget and FireLaunch admission are qualified
+  MediaConvertRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: mediaconvert.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: verified-original-private-staging
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:GetBucketLocation
+                Resource: [!GetAtt OriginalsBucket.Arn, !GetAtt DeliveryBucket.Arn]
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub '${OriginalsBucket.Arn}/media/*/*/*/original/*'
+              - Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub '${DeliveryBucket.Arn}/media/*/*/*/staged/*'
+  MediaConvertEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      SqsManagedSseEnabled: true
+      VisibilityTimeout: 120
+      MessageRetentionPeriod: 1209600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt EventDeadLetterQueue.Arn
+        maxReceiveCount: 5
+  EventDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      SqsManagedSseEnabled: true
+      MessageRetentionPeriod: 1209600
+  MediaConvertEvents:
+    Type: AWS::Events::Rule
+    Properties:
+      State: DISABLED
+      Description: Enable only after account and private GetJob correlation are qualified
+      EventPattern:
+        source: [aws.mediaconvert]
+        detail-type: [MediaConvert Job State Change]
+        account: [!Ref 'AWS::AccountId']
+        region: [!Ref 'AWS::Region']
+        detail:
+          queue: [!GetAtt BoundedQueue.Arn]
+          status: [PROGRESSING, COMPLETE, ERROR, CANCELED]
+      Targets:
+        - Id: private-job-event
+          Arn: !GetAtt MediaConvertEventsQueue.Arn
+          DeadLetterConfig: { Arn: !GetAtt EventDeadLetterQueue.Arn }
+          RetryPolicy:
+            MaximumRetryAttempts: 3
+            MaximumEventAgeInSeconds: 3600
+  MediaConvertEventsPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref MediaConvertEventsQueue]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: events.amazonaws.com }
+            Action: sqs:SendMessage
+            Resource: !GetAtt MediaConvertEventsQueue.Arn
+            Condition:
+              ArnEquals: { 'aws:SourceArn': !GetAtt MediaConvertEvents.Arn }
+  EventDeadLetterPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref EventDeadLetterQueue]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: events.amazonaws.com }
+            Action: sqs:SendMessage
+            Resource: !GetAtt EventDeadLetterQueue.Arn
+            Condition:
+              ArnEquals: { 'aws:SourceArn': !GetAtt MediaConvertEvents.Arn }
+Outputs:
+  OriginalsBucketName:
+    Value: !Ref OriginalsBucket
+  DeliveryBucketName:
+    Value: !Ref DeliveryBucket
+  CloudFrontDomainName:
+    Value: !GetAtt MediaDistribution.DomainName
+  ControlPlaneRoleArn:
+    Value: !GetAtt ControlPlaneRole.Arn
+  PublisherRoleArn:
+    Value: !GetAtt PublisherRole.Arn
+  MediaConvertRoleArn:
+    Value: !GetAtt MediaConvertRole.Arn
+  MediaConvertQueueArn:
+    Value: !GetAtt BoundedQueue.Arn
+  MediaConvertQueueName:
+    Value: !GetAtt BoundedQueue.Name
+  MediaConvertEventQueueUrl:
+    Value: !Ref MediaConvertEventsQueue
+  MediaConvertEventRuleName:
+    Value: !Ref MediaConvertEvents
+  MediaConvertEventDeadLetterQueueArn:
+    Value: !GetAtt EventDeadLetterQueue.Arn
