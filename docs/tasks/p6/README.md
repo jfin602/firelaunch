@@ -60,3 +60,9 @@ npm run codex:stack -- p6
 ```
 
 The owner has authorized running P6 implementation now despite the c5/P5 live NOT GREEN outcome. Confirm clean/current main, root version `0.6.0`, Node 24/npm 12, available disk/memory and present docs. If `npm run codex:stack:validate -- p6` fails, correct the prompt stack before execution. No `set -e` or `pipefail` shell setup is required.
+
+## Managed VOD correction authority (2026-10-14)
+
+P6 implementation P1-P7 has advanced GitHub main to root 0.6.7. The preceding FFmpeg README, prompt plan and implementation prompts remain **historical records** of those completed checkpoints, not directions to rerun them. The owner accepted [ADR 0011](../../decisions/0011-aws-vod-foundation.md): replace FFmpeg with managed AWS Video on Demand on AWS Foundation. Implement that as [c6-aws-vod](../c6-aws-vod/README.md) **unchanged 0.6.7**, with four runner prompts + one manual correction closeout. Until correction implementation completes, production still has FFmpeg code; do not claim new provider is integrated.
+
+After correction local qualification, update future P6 manual P8 at planned 0.6.8 to prove actual MediaConvert/Foundation HLS, private staged output, explicit P5 creator-approved CloudFront publication, Vega VirtualDevice, safety/cost and deferred P5/c5 gates. Historical P6 FFmpeg closeout text must not be rewritten as successful managed AWS evidence.
