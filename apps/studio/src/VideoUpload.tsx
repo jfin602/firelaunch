@@ -1,10 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { CatalogItem, MediaAsset } from '@firelaunch/contracts';
-import { ApiError, readVideoAssetStatus, readVideoUpload, writeCatalog, type CatalogSnapshot, type VideoUploadStatus } from './api.js';
+import { ApiError, readVideoAssetStatus, readVideoUpload, retryVideoProcessing, writeCatalog, type CatalogSnapshot, type VideoUploadStatus } from './api.js';
 import { uploadVideo, validateVideoFile } from './video-upload.js';
 
 const claim = (use: 'television_display' | 'television_playback') =>
   ({ status: 'cleared' as const, basis: 'creator_asserted' as const, permittedUse: use, assertedAt: new Date().toISOString() });
+
+export function videoProcessingMessage(session: VideoUploadStatus): string {
+  if (session.state === 'completed') return 'Upload complete; verifying source and requesting managed processing.';
+  if (session.state !== 'verified') return 'Upload has not been verified.';
+  switch (session.processing?.state) {
+    case 'pending': return 'Managed processing is queued or running. This video is private.';
+    case 'leased': return 'Legacy processing is incomplete. Contact the operator before retrying.';
+    case 'ready': return 'HLS is ready in private staging. Publication needs separate approval.';
+    case 'failed': return session.processing.failureCode === 'verification_failed'
+      ? 'Output verification failed. Retry processing, or upload a replacement master.'
+      : 'Managed processing failed. Retry processing, or upload a replacement master.';
+    case 'revoked': return 'Video rights or processing were revoked. Publication is blocked.';
+    default: return 'Waiting for managed processing.';
+  }
+}
 
 export function VideoUpload({ projectId, item, inventory, refresh }: { projectId: string; item: CatalogItem; inventory: CatalogSnapshot; refresh: () => Promise<CatalogSnapshot> }) {
   const [file, setFile] = useState<File | null>(null);
@@ -49,7 +64,7 @@ export function VideoUpload({ projectId, item, inventory, refresh }: { projectId
     try {
       validateVideoFile(file);
       const seconds = Number(duration);
-      if (!Number.isInteger(seconds) || seconds < 1 || seconds > 14400) throw new Error('Enter a duration from 1 second to 4 hours.');
+      if (!Number.isInteger(seconds) || seconds < 1 || seconds > 1800) throw new Error('Enter a duration from 1 second to 30 minutes.');
       if (!display || !playback) throw new Error('Review and assert both TV display and playback rights before uploading.');
       let ownedAssetId = assetId;
       if (!ownedAssetId) {
@@ -68,17 +83,25 @@ export function VideoUpload({ projectId, item, inventory, refresh }: { projectId
       await refresh().catch(() => undefined);
     } finally { controller.current = null; setBusy(false); }
   };
+  const retry = async () => {
+    if (!session || !assetId) return;
+    setError(''); setBusy(true);
+    try { setSession(await retryVideoProcessing(projectId, session.id, assetId)); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
+    finally { setBusy(false); }
+  };
   if (item.kind !== 'video') return null;
   return <section aria-label="Creator video upload">
     <h3>Video master upload</h3><p>Upload your owned MP4 directly to private storage. Processing and rights review must finish before a separate live approval and publish.</p>
     <label className="field"><span>VIDEO FILE · MP4 · MAX 250 MB</span><input type="file" accept=".mp4,video/mp4" onChange={event => { setFile(event.target.files?.[0] ?? null); setError(''); }}/></label>
-    <label className="field"><span>APPROXIMATE DURATION · SECONDS</span><input type="number" min="1" max="14400" value={duration} onChange={event => setDuration(event.target.value)}/></label>
+    <label className="field"><span>APPROXIMATE DURATION · SECONDS · MAX 30 MINUTES</span><input type="number" min="1" max="1800" value={duration} onChange={event => setDuration(event.target.value)}/></label>
     <label className="check"><input type="checkbox" checked={display} onChange={event => setDisplay(event.target.checked)}/> I have television display rights for this video</label>
     <label className="check"><input type="checkbox" checked={playback} onChange={event => setPlayback(event.target.checked)}/> I have television playback rights for this video</label>
-    <div className="button-row"><button disabled={busy || !file || !display || !playback} onClick={() => void start()}>{session?.processing?.state === 'ready' ? 'Upload replacement master' : session || error ? 'Retry upload' : 'Upload video master'}</button>
-      {busy && <button type="button" onClick={() => controller.current?.abort()}>Cancel upload</button>}</div>
-    {busy && <p role="status">Uploading {progress}%</p>}
-    {session && <p role="status">Upload: {session.state}; SHA-256: {session.verification}; processing: {session.processing?.state ?? 'waiting for worker'}{session.processing?.failureCode ? ` (${session.processing.failureCode})` : ''}. {ready ? 'Ready for separate publication review.' : 'Unavailable for live publication.'}</p>}
+    <div className="button-row"><button disabled={busy || !file || !display || !playback} onClick={() => void start()}>{session ? 'Upload replacement master' : 'Upload video master'}</button>
+      {session?.state === 'verified' && session.processing?.state === 'failed' && <button type="button" disabled={busy} onClick={() => void retry()}>Retry processing</button>}
+      {busy && controller.current && <button type="button" onClick={() => controller.current?.abort()}>Cancel upload</button>}</div>
+    {busy && controller.current && <p role="status">{progress < 100 ? `Uploading ${progress}%` : 'Upload complete; verifying source and requesting managed processing.'}</p>}
+    {session && <p role="status">{videoProcessingMessage(session)} {ready ? 'Ready for separate publication review.' : 'Unavailable for live publication.'}</p>}
     {error && <p role="alert">{error}</p>}
   </section>;
 }

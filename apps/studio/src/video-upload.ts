@@ -34,8 +34,8 @@ function putPart(url: string, body: Blob, signal: AbortSignal, onProgress: (byte
 export async function uploadVideo(projectId: string, mediaAssetId: string, file: File, durationSeconds: number,
   signal: AbortSignal, onProgress: (percent: number) => void, onSession: (session: VideoUploadStatus) => void): Promise<VideoUploadStatus> {
   validateVideoFile(file);
-  if (!Number.isInteger(durationSeconds) || durationSeconds < 1 || durationSeconds > 14400)
-    throw new Error('Enter a duration from 1 second to 4 hours.');
+  if (!Number.isInteger(durationSeconds) || durationSeconds < 1 || durationSeconds > 1800)
+    throw new Error('Enter a duration from 1 second to 30 minutes.');
   if (!crypto?.subtle) throw new Error('Secure browser hashing is unavailable.');
   const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer())))
     .map(byte => byte.toString(16).padStart(2, '0')).join('');

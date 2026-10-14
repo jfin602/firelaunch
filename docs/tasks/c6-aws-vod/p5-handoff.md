@@ -1,0 +1,18 @@
+# c6 P5 manual closeout handoff
+
+Status: P4 offline implementation handoff only. Root version remains `0.6.7`. This file is not a c6 closeout or live AWS/Vega evidence.
+
+## Independent P5 review
+
+1. Confirm the runner's P1–P4 checkpoint SHAs, clean post-checkpoint worktree, root/workspace versions, and unchanged historical P5/c5/P6 outcomes. Review migration 013, legacy READY rows and in-flight legacy pending/leased rows. The retired worker must have no production script or import. Confirm an incomplete legacy job cannot silently become READY or public.
+2. Trace an owned upload through CSRF, multipart abort, full hash verification, creator quotas, durable managed intent, MediaConvert submit/GetJob, private complete graph verification, READY and explicit rights-checked release. Confirm retry is owner-scoped and capped at three attempts. Test duplicate, stale, foreign and missed event handling with injected fakes. Confirm new uploads return unavailable when managed configuration is absent.
+3. Review `foundation-overlay.yaml` and existing private bucket/OAC proposal. Test anonymous original/staging denial and delivery-only read with offline policy tests, then label real AWS IAM and CDN denial **NOT TESTED**. Check that the review-only overlay cannot replace a bucket or distribution and that queue/rule start paused. Inspect output paths, profile settings and no signed/private URLs in manifest/export.
+4. Run one aggregate `npm run check` on Node 24/npm 12, `npm run codex:stack:validate -- c6-aws-vod`, independent negative tests and `git diff --check`. Record exact pass/fail/skip counts and any unavailable PostgreSQL, browser or cloud gate. Write `closeout.md` with LOCAL GREEN or NOT GREEN based only on observed local evidence. No AWS deployment or media publication is authorized by a local closeout.
+
+## Separate P6 P8 live evidence required after operator approval
+
+- Record sanitized account/Region, deployed Foundation adaptation/change set, role and queue/rule IDs, profile hash, MediaConvert job ID/attempt/status, actual output location and provider error/retry observations. Record credits/budget/quota and measured charges; the budget alert is not a hard cap.
+- Use a short creator-owned MP4 with documented display and playback rights. Capture authenticated Studio multipart/CSRF and second-creator denial, S3 original size/hash/MIME and anonymous original/staging S3 **and CloudFront** denials. Show READY only after real 480p/720p HLS master, variants, segments, hashes, MIME and path verification; note any source-height policy that affects variants.
+- Capture explicit creator review and immutable publication, approved delivery-only OAC policy and HTTPS master/segment fetch, owner/rights/revision rejection, revocation/invalidation limits and rollback. Public manifest v1 must contain only stable delivery URLs and remain compatible with the generated Vega client.
+- From the **same installed VPKG** on Vega VirtualDevice, record package hash, SDK/OS, device-reachable HTTPS playback/pause/seek/Back/failure behavior, v1→v2 remote refresh, offline/restart/incompatible last-known-good fallback and new-sequence rights-checked v3 rollback. Keep P5/c5 historical NOT GREEN until their independent gates are directly requalified.
+- Record PostgreSQL restart/reconciliation, duplicate/out-of-order/lost AWS events, failed/retired job behavior, orphan staging inventory, Ngest unaffected and S1–S6 hosted security gaps. Mark every unavailable external item OPEN or NOT TESTED; no mock, CloudFormation template or browser player substitutes for real cloud/device evidence.

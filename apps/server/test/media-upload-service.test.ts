@@ -10,6 +10,7 @@ import type { HostedProjectRepository } from '../src/hosted-repository.js';
 import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
 import type { MediaPipelineRepository } from '../src/media-pipeline-repository.js';
 import type { S3MediaStorage } from '../src/media-storage.js';
+import type { ManagedMediaCoordinator } from '../src/managed-media-coordinator.js';
 import { MediaUploadService } from '../src/media-upload-service.js';
 import { createApi } from '../src/api.js';
 import { ProjectRepository, RepositoryError } from '../src/repository.js';
@@ -114,7 +115,7 @@ test('direct upload control plane is owner scoped, bounded, retry safe and never
   assert.equal(row.state, 'initiated');
   storage.headOriginal = async () => { calls.push('head'); };
   const finished = await service.finalize(owner, projectId, uploadId, { mediaAssetId: assetId, parts });
-  assert.equal(finished.verification, 'pending_worker_sha256');
+  assert.equal(finished.verification, 'pending_sha256');
   assert.equal((await service.finalize(owner, projectId, uploadId, { mediaAssetId: assetId, parts })).state, 'completed');
   await assert.rejects(service.part(owner, projectId, uploadId, { mediaAssetId: assetId, partNumber: 1 }), { code: 'CONFLICT' });
   await assert.rejects(service.abort(owner, projectId, uploadId, { mediaAssetId: assetId }), { code: 'CONFLICT' });
@@ -157,6 +158,42 @@ test('concurrent finalizers converge only after an owned completed transition', 
   await assert.rejects(service.finalize(owner, projectId, uploadId, { mediaAssetId: assetId, parts }), { code: 'CONFLICT' });
 });
 
+test('failed managed processing retries only for the verified owner and never exposes storage identity', async () => {
+  const { row, records, storage } = fixture();
+  row.state = 'verified';
+  let processing: 'failed' | 'pending' = 'failed';
+  records.processingStatus = async (principal, project, asset, upload) => {
+    if (principal.accountId !== owner.accountId || project !== projectId || asset !== assetId || upload !== uploadId)
+      throw new RepositoryError('NOT_FOUND', 'Media asset not found');
+    return { state: processing, failureCode: processing === 'failed' ? 'encode_failed' : null };
+  };
+  let calls = 0;
+  const managed = { async admit() { calls++; processing = 'pending'; } } as unknown as ManagedMediaCoordinator;
+  const service = new MediaUploadService(records as unknown as MediaPipelineRepository,
+    storage as unknown as S3MediaStorage, managed);
+  await assert.rejects(service.retryProcessing(foreign, projectId, uploadId, { mediaAssetId: assetId }), { code: 'NOT_FOUND' });
+  assert.equal(calls, 0);
+  const result = await service.retryProcessing(owner, projectId, uploadId, { mediaAssetId: assetId });
+  assert.equal(result.processing?.state, 'pending');
+  assert.equal(JSON.stringify(result).includes(row.originalKey), false);
+  await assert.rejects(service.retryProcessing(owner, projectId, uploadId, { mediaAssetId: assetId }), { code: 'CONFLICT' });
+  assert.equal(calls, 1);
+});
+
+test('replayed finalize cannot spend a failed managed retry attempt', async () => {
+  const { row, records, storage } = fixture();
+  row.state = 'verified';
+  records.processingStatus = async () => ({ state: 'failed', failureCode: 'encode_failed' });
+  let admissions = 0;
+  const managed = { async admit() { admissions++; } } as unknown as ManagedMediaCoordinator;
+  const service = new MediaUploadService(records as unknown as MediaPipelineRepository,
+    storage as unknown as S3MediaStorage, managed);
+  const result = await service.finalize(owner, projectId, uploadId,
+    { mediaAssetId: assetId, parts: [{ partNumber: 1, etag: 'a'.repeat(32) }] });
+  assert.equal(result.state, 'verified');
+  assert.equal(admissions, 0);
+});
+
 test('hosted upload routes require a session and CSRF before invoking storage', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'firelaunch-upload-routes-'));
   const { service } = fixture();
@@ -187,5 +224,11 @@ test('hosted upload routes require a session and CSRF before invoking storage', 
     assert.equal((await fetch(route, { headers: { cookie: 'session=foreign', 'x-media-asset-id': assetId } })).status, 404);
     assert.equal((await fetch(`${route}/${uploadId}/part`, { method: 'POST', headers: { cookie: 'session=owner', origin,
       'content-type': 'application/json', 'x-csrf-token': 'bad' }, body: JSON.stringify({ mediaAssetId: assetId, partNumber: 1 }) })).status, 403);
+    const retry = (cookie: string, csrf: string) => fetch(`${route}/${uploadId}/retry`, { method: 'POST',
+      headers: { cookie, origin, 'content-type': 'application/json', 'x-csrf-token': csrf },
+      body: JSON.stringify({ mediaAssetId: assetId }) });
+    assert.equal((await retry('session=owner', 'bad')).status, 403);
+    assert.equal((await retry('session=foreign', 'csrf')).status, 404);
+    assert.equal((await retry('session=owner', 'csrf')).status, 409);
   } finally { await new Promise<void>(resolve => api.close(() => resolve())); await rm(root, { recursive: true, force: true }); }
 });

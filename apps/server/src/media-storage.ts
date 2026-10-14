@@ -5,7 +5,6 @@ import {
   DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client, UploadPartCommand
 } from '@aws-sdk/client-s3';
 import type { Readable } from 'node:stream';
-import { open, unlink } from 'node:fs/promises';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { mediaRenditionSetSchema, type MediaRenditionSet } from '@firelaunch/contracts';
 
@@ -198,44 +197,6 @@ export class S3MediaStorage {
     const sha256 = hash.digest('hex');
     if (bytes !== expected.bytes || sha256 !== expected.sha256) reject('original checksum or size mismatch');
     return { key, bytes, sha256 };
-  }
-
-  /** Worker-only bounded download. The destination is a private worker-created path, never a request field. */
-  async downloadOriginal(scope: MediaScope, sessionId: string, expected: { bytes: number; sha256: string },
-    destination: string, signal?: AbortSignal): Promise<void> {
-    if (!Number.isSafeInteger(expected.bytes) || expected.bytes < 1 || expected.bytes > 2_000_000_000 ||
-      !hex64.test(expected.sha256)) reject('original exceeds worker limit');
-    const key = this.originalKey(scope, sessionId);
-    const head = await this.request(() => this.originals.send(new HeadObjectCommand({
-      Bucket: this.config.originalsBucket, Key: key, ChecksumMode: 'ENABLED'
-    }), signal ? { abortSignal: signal } : undefined));
-    if (head.ContentLength !== expected.bytes || head.ContentType !== 'video/mp4' ||
-      head.ServerSideEncryption !== 'AES256' || head.ChecksumType !== 'FULL_OBJECT' ||
-      !head.ChecksumCRC64NVME || !head.ETag) reject('original metadata mismatch');
-    const object = await this.request(() => this.originals.send(new GetObjectCommand({
-      Bucket: this.config.originalsBucket, Key: key, IfMatch: head.ETag
-    }), signal ? { abortSignal: signal } : undefined));
-    if (!object.Body || object.ContentLength !== expected.bytes) reject('original length mismatch');
-    const file = await open(destination, 'wx', 0o600);
-    const hash = createHash('sha256');
-    let bytes = 0;
-    try {
-      for await (const chunk of object.Body as Readable) {
-        if (signal?.aborted) reject('original download cancelled');
-        const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-        bytes += data.length;
-        if (bytes > expected.bytes) reject('original exceeds expected size');
-        hash.update(data);
-        let offset = 0;
-        while (offset < data.length) offset += (await file.write(data, offset, data.length - offset)).bytesWritten;
-      }
-      if (bytes !== expected.bytes || hash.digest('hex') !== expected.sha256) reject('original checksum mismatch');
-    } catch {
-      await file.close();
-      await unlink(destination).catch(() => undefined);
-      return reject('original download failed integrity check');
-    }
-    await file.close();
   }
 
   private async verifyOutput(key: string, expected: { bytes: number; sha256: string }, name: string): Promise<string> {

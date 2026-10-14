@@ -115,7 +115,7 @@ export async function deletePrivateObject(id: string, objectId: string): Promise
   await request(`/${id}/private-objects/${objectId}`, { method: 'DELETE' });
 }
 
-export type VideoUploadStatus = { id: string; state: 'initiated' | 'completed' | 'verified' | 'aborting' | 'expiring' | 'aborted' | 'expired'; expectedBytes: number; expiresAt: string; partSize: number; partCount: number; verification: 'unverified' | 'pending_worker_sha256' | 'sha256_verified'; processing?: { state: 'pending' | 'leased' | 'ready' | 'failed' | 'revoked'; failureCode: string | null } | null };
+export type VideoUploadStatus = { id: string; state: 'initiated' | 'completed' | 'verified' | 'aborting' | 'expiring' | 'aborted' | 'expired'; expectedBytes: number; expiresAt: string; partSize: number; partCount: number; verification: 'unverified' | 'pending_sha256' | 'sha256_verified'; processing?: { state: 'pending' | 'leased' | 'ready' | 'failed' | 'revoked'; failureCode: string | null } | null };
 export const startVideoUpload = (projectId: string, input: { mediaAssetId: string; idempotencyKey: string; fileName: string; contentType: 'video/mp4'; expectedBytes: number; expectedSha256: string; claimedDurationSeconds: number }) =>
   request(`/${projectId}/media-uploads`, json(input)) as Promise<VideoUploadStatus>;
 export const videoUploadPart = (projectId: string, uploadId: string, mediaAssetId: string, partNumber: number) =>
@@ -124,6 +124,8 @@ export const finalizeVideoUpload = (projectId: string, uploadId: string, mediaAs
   request(`/${projectId}/media-uploads/${uploadId}/finalize`, json({ mediaAssetId, parts })) as Promise<VideoUploadStatus>;
 export const abortVideoUpload = (projectId: string, uploadId: string, mediaAssetId: string) =>
   request(`/${projectId}/media-uploads/${uploadId}/abort`, json({ mediaAssetId })) as Promise<VideoUploadStatus>;
+export const retryVideoProcessing = (projectId: string, uploadId: string, mediaAssetId: string) =>
+  request(`/${projectId}/media-uploads/${uploadId}/retry`, json({ mediaAssetId })) as Promise<VideoUploadStatus>;
 export const readVideoUpload = (projectId: string, uploadId: string, mediaAssetId: string) =>
   request(`/${projectId}/media-uploads/${uploadId}`, { headers: { 'x-media-asset-id': mediaAssetId } }) as Promise<VideoUploadStatus>;
 export type VideoAssetStatus = { uploadId: string; uploadState: VideoUploadStatus['state']; processing: VideoUploadStatus['processing'] } | null;

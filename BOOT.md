@@ -116,7 +116,7 @@ Green requires direct evidence that:
 If real Vega build/device evidence is unavailable, P7 must be Not Green even if the browser studio is polished.
 
 
-## Next approved foundation (documentation-only, 2026-10-11)
+## Historical P6 foundation approval (2026-10-11; superseded for encoding)
 
 With P5 source implemented and its remaining live qualification gates explicitly deferred by the owner, implement **P6 AWS Media Foundation (0.6.x)**: creator-authorized direct uploads to private S3, FFmpeg worker not on muffinos, validated HLS renditions, and private S3+CloudFront OAC delivery to a qualified Vega client. Initial free-to-view publishing only. The planned later phases shift to P7 catalog sync, P8 creator-owned publishing and P9 launch/hardware/Appstore. Do not change historical P5 P8 prompt requirements, Phase 4/P2/c2 results, or claim that AWS, native playback, subscriptions or production hosted security are qualified. See ADR 0010 and docs/integrations/aws-media-delivery.md. P6 prompts are authored at docs/tasks/p6/ and the root version baseline has been approved; neither P6 implementation nor AWS/cloud/device validation has happened. P5 implementation prerequisites are present on main, but c5-vega build/device qualification is NOT GREEN until directly proven; owner approved starting P6 P1–P7 now; c5 HTTPS/same-installed-VPKG proof remains NOT GREEN and deferred to P6 integration/P8, not waived for release.
 
@@ -131,3 +131,5 @@ At committed root `0.6.0`, P6 P1–P7 may start immediately even though P5/c5 in
 ## 2026-10-14 current Phase 6 provider policy
 
 GitHub main reached root 0.6.7 after P6 P1-P7 initial FFmpeg pipeline implementation. Existing older BOOT passages saying P6 has not been implemented are historical/stale and do not describe the current code. **ADR 0011** accepts managed AWS Video on Demand on AWS Foundation / MediaConvert to replace the active custom FFmpeg worker. Do not rerun P6 P1-P7; run [c6-aws-vod](docs/tasks/c6-aws-vod/README.md) correction P1-P4 and manual P5 at **unchanged 0.6.7**. New video must be privately staged and creator-authorized for CDN publication, not exposed merely after encoding. This documentation change does not deploy AWS or close P6 P8/P5/c5 native proof, P4 real provider, S1-S6 hosted security or P9 physical Fire TV/Appstore gates.
+
+The current c6 implementation routes new hosted video only when the managed MediaConvert coordinator and private S3 storage are configured. The local FFmpeg executable, npm worker script and worker-only source are retired; legacy READY rendition records and additive migrations remain. Finished managed output stays in private staging until creator-approved publication. This is offline implementation evidence only; manual c6 P5 and real AWS/Vega P6 P8 still decide their separate gates.

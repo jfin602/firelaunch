@@ -30,7 +30,8 @@ const managed = hostedRepository && mediaStorage && process.env.FIRELAUNCH_MEDIA
       new ManagedMediaJobRepository(hostedRepository.pool), mediaStorage,
       new AwsMediaConvertProvider(config, profile), config, profile);
   })() : undefined;
-const mediaUploads = hostedRepository && mediaStorage
+// A hosted upload must never be accepted without its managed processing path.
+const mediaUploads = hostedRepository && mediaStorage && managed
   ? new MediaUploadService(new MediaPipelineRepository(hostedRepository), mediaStorage, managed) : undefined;
 if (mediaUploads) {
   void mediaUploads.cleanupExpired();

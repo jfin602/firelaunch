@@ -6,7 +6,6 @@ import { Pool } from 'pg';
 import { HostedProjectRepository } from '../src/hosted-repository.js';
 import { CatalogRepository } from '../src/catalog-repository.js';
 import { MediaPipelineRepository } from '../src/media-pipeline-repository.js';
-import { MediaWorkerRepository } from '../src/media-worker-repository.js';
 import { ManagedMediaJobRepository } from '../src/managed-media-job-repository.js';
 import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
 
@@ -88,29 +87,6 @@ databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and r
     await pipeline.recordVerifiedOriginal(owner, project.id, asset.id, direct.id,
       { bytes: 8_000_001, sha256: request.expectedSha256, expectedVersion: 1 });
     assert.equal((await pipeline.upload(owner, project.id, asset.id, direct.id)).state, 'verified');
-    const workerJob = await pipeline.enqueue(owner, project.id, asset.id, direct.id);
-    const worker = new MediaWorkerRepository(first.pool);
-    const crashed = await worker.claim();
-    assert.ok(crashed);
-    assert.equal(crashed?.jobId, workerJob);
-    assert.equal(crashed.attempts, 1);
-    assert.equal(await worker.renew(crashed), true);
-    await first.pool.query(`UPDATE media_processing_jobs SET lease_until=now()-interval '1 second' WHERE id=$1`, [workerJob]);
-    const restartedWorker = new MediaWorkerRepository(first.pool);
-    const recovered = await restartedWorker.claim();
-    assert.ok(recovered);
-    assert.equal(recovered?.jobId, workerJob);
-    assert.equal(recovered.attempts, 2);
-    assert.notEqual(recovered.token, crashed.token);
-    assert.equal(await worker.renew(crashed), false);
-    assert.equal(await worker.fail(crashed,'worker_timeout'), false);
-    assert.equal(await restartedWorker.fail(recovered,'encode_failed'), true);
-    const retry = await restartedWorker.claim();
-    assert.ok(retry);
-    assert.equal(retry?.jobId, workerJob);
-    assert.equal(retry.attempts, 3);
-    assert.equal(await restartedWorker.fail(retry,'verification_failed'), true);
-    assert.equal(await restartedWorker.claim(), null);
     const abortRace = await pipeline.createUpload(owner, project.id, asset.id, { ...request,
       idempotencyKey: 'direct-abort-race-0001', claimedDurationSeconds: 90,
       partSize: 8 * 1024 * 1024, partCount: 1 });
@@ -387,7 +363,6 @@ databaseTest('migration 013 preserves a READY rendition created under migration 
     await new ManagedMediaJobRepository(hosted.pool).reserve(owner, {
       creatorAccountId: owner.accountId, projectId: project.id, mediaAssetId: asset.id, jobId: nextJobId
     }, { awsAccountId: '123456789012', awsRegion: 'us-east-2', profileHash: '7'.repeat(64), expectedVersion: 0 });
-    assert.equal(await new MediaWorkerRepository(hosted.pool).claim(), null);
     assert.equal((await hosted.pool.query('SELECT state FROM media_processing_jobs WHERE id=$1', [jobId])).rows[0]?.state, 'ready');
   } finally {
     await hosted?.pool.end();

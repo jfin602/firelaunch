@@ -1,5 +1,7 @@
 # Local FFmpeg worker (P6 P4)
 
+> **Historical only.** The c6 managed VOD correction retired the executable and `media:worker:once` script. Do not follow these commands for current operation. Preserve this record for the initial P6 implementation; inventory unfinished legacy jobs and use [the managed VOD runbook](aws-vod-foundation.md) for current processing.
+
 This is a manually started, single-process Linux worker. It does not start with the Studio/API and is not deployed to muffinos. It uses PostgreSQL only for private job state and S3 only for an owner-scoped verified original plus private staged HLS objects. A READY job is not a public or approved release; P6 P5 still owns rights-checked immutable delivery publication.
 
 ## Before starting

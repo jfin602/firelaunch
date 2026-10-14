@@ -32,7 +32,6 @@
     "hosted:local:start": "node scripts/local-hosted.mjs start",
     "hosted:local:check": "node scripts/local-hosted.mjs check",
     "hosted:local:minio": "bash scripts/local-hosted-minio.sh",
-    "media:worker:once": "node --import tsx apps/server/src/media-worker-cli.ts --once",
     "media:invalidate": "node --import tsx apps/server/src/media-invalidation-cli.ts"
   },
   "devDependencies": {

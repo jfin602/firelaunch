@@ -18,11 +18,15 @@ EventBridge filters native `aws.mediaconvert` job-state changes by account, Regi
 4. Prove anonymous S3 reads deny originals and staging; prove a staging URL through the existing CloudFront host denies; prove only creator-approved immutable `delivery/` bytes are available through that host. Inspect real policy simulation and HTTP responses. Offline template tests prove planned policy shape only. Then explicitly enable the rule/queue with an operator-reviewed change set and process one rights-cleared short sample.
 5. On failure, pause queue and disable rule first, drain/reconcile registered jobs, preserve all object versions and DB rows, and revert the overlay by a reviewed change set. Keep previously READY legacy renditions and the old publication path until P3/P4 regressions pass. Never roll back by deleting buckets, sources or media records.
 
-Failed, canceled and lost-event attempts can leave **orphaned private staging objects**. P4 should add an operator inventory from durable intent prefixes and bounded S3 listings; no automatic lifecycle rule here deletes source or staged bytes. A later retention policy needs a rights and forensics window and separate approval.
+Failed, canceled and lost-event attempts can leave **orphaned private staging objects**. Inventory durable intent prefixes against bounded S3 listings; no automatic lifecycle rule here deletes source or staged bytes. A later retention policy needs a rights and forensics window and separate approval.
+
+Current c6 P4 operation has no local encoding script. Before enabling the managed queue, inventory `media_processing_jobs` rows without `managed_media_job_attempts` and their source/staged prefixes. Keep READY rows and published delivery objects. Quarantine unfinished legacy `pending`/`leased` rows for operator review; never run the retired worker or delete their media automatically. Compare managed attempt prefixes against bounded private S3 listings to identify orphaned staged objects, then obtain separate approval for retention/deletion. The source verification path currently streams the verified original in the API process; capacity and timeout must be qualified before admitting the 2 GB maximum in production.
 
 No AWS change set, paid MediaConvert call, policy simulation or live CDN denial was run in P2. Real account policy and profile compatibility remain pending.
 
-# AWS media boundary (operator review required)
+## Historical P6 `template.yaml` notes (not current deployment instructions)
+
+### AWS media boundary (historical proposal)
 
 `template.yaml` is a declarative proposal for two private SSE-S3 buckets, a GET/HEAD-only CloudFront distribution with signed S3 origin access, and separate uploader, worker and publisher roles. It is **not deployed** by P6/P2. Apply only after operator review of account, region, budget, IAM trust principals, DNS, media rights, logging, retention and rollback. Never paste credentials into template parameters or Git.
 

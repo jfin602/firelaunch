@@ -1,5 +1,7 @@
 # p6 — AWS Media Foundation
 
+> **Historical implementation stack.** P1–P7 ran at root `0.6.1`–`0.6.7` using the initial FFmpeg architecture. ADR 0011 and the fixed-version [c6 managed VOD correction](../c6-aws-vod/README.md) govern current encoding. This record and its prompt text remain intact as historical evidence; current operation is in the [managed runbook](../../integrations/aws-vod-foundation.md). The manual P8 must use the current-policy override in its prompt and real AWS/Vega evidence.
+
 Status: 0.6.0 BASELINE / OWNER-AUTHORIZED P6 IMPLEMENTATION / P5-c5 LIVE QUALIFICATION DEFERRED
 Date: 2026-10-11
 Phase: Launch-MVP Phase 6 (new media foundation; former P6 catalog sync is now planned P7)

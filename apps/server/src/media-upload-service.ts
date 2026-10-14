@@ -25,7 +25,7 @@ export const finishVideoUploadSchema = z.strictObject({
 export const uploadAssetSchema = z.strictObject({ mediaAssetId: assetId });
 const unavailable = (message: string): never => { throw new RepositoryError('CONFLICT', message); };
 
-/** Control plane only: browsers PUT parts to S3, and the separate worker hashes the completed source. */
+/** Control plane only: browsers PUT parts to S3; managed admission verifies the source. */
 export class MediaUploadService {
   constructor(private readonly records: MediaPipelineRepository, private readonly storage: S3MediaStorage,
     private readonly managed?: ManagedMediaCoordinator) {}
@@ -64,7 +64,7 @@ export class MediaUploadService {
       expectedSha256: current.expectedSha256, expiresAt: current.expiresAt,
       partSize: current.partSize, partCount: current.partCount,
       verification: current.state === 'verified' ? 'sha256_verified' :
-        current.state === 'completed' ? 'pending_worker_sha256' : 'unverified' };
+        current.state === 'completed' ? 'pending_sha256' : 'unverified' };
   }
 
   async status(principal: AuthenticatedPrincipal, projectId: string, uploadId: string, raw: unknown) {
@@ -78,6 +78,18 @@ export class MediaUploadService {
   async assetStatus(principal: AuthenticatedPrincipal, projectId: string, raw: unknown) {
     const { mediaAssetId } = uploadAssetSchema.parse(raw);
     return this.records.latestAssetStatus(principal, projectId, mediaAssetId);
+  }
+
+  async retryProcessing(principal: AuthenticatedPrincipal, projectId: string, uploadId: string, raw: unknown) {
+    const { mediaAssetId } = uploadAssetSchema.parse(raw);
+    sessionId.parse(uploadId);
+    const current = await this.records.upload(principal, projectId, mediaAssetId, uploadId);
+    const processing = await this.records.processingStatus(principal, projectId, mediaAssetId, uploadId);
+    const managed = this.managed;
+    if (!managed || current.state !== 'verified' || processing?.state !== 'failed')
+      throw new RepositoryError('CONFLICT', 'Only failed managed processing can be retried');
+    await managed.admit(principal, projectId, mediaAssetId, uploadId);
+    return this.status(principal, projectId, uploadId, { mediaAssetId });
   }
 
   async part(principal: AuthenticatedPrincipal, projectId: string, uploadId: string, raw: unknown) {
@@ -97,7 +109,10 @@ export class MediaUploadService {
     const input = finishVideoUploadSchema.parse(raw);
     const current = await this.records.upload(principal, projectId, input.mediaAssetId, sessionId.parse(uploadId));
     if (current.state === 'completed' || current.state === 'verified') {
-      if (this.managed) await this.managed.admit(principal, projectId, input.mediaAssetId, uploadId);
+      const processing = await this.records.processingStatus(principal, projectId, input.mediaAssetId, uploadId);
+      // Replayed finalize is idempotent. A failed job incurs another paid attempt only via /retry.
+      if (this.managed && (!processing || processing.state === 'pending'))
+        await this.managed.admit(principal, projectId, input.mediaAssetId, uploadId);
       return this.publicStatus(await this.records.upload(principal, projectId, input.mediaAssetId, uploadId));
     }
     if (current.state !== 'initiated' || Date.parse(current.expiresAt) <= Date.now() ||

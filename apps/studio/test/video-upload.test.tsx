@@ -6,7 +6,7 @@ import { starterChannel } from '@firelaunch/channel-engine';
 import { getSession, readVideoAssetStatus } from '../src/api.js';
 import { validateVideoFile, uploadVideo } from '../src/video-upload.js';
 import { LivePublication } from '../src/LivePublication.js';
-import { VideoUpload } from '../src/VideoUpload.js';
+import { VideoUpload, videoProcessingMessage } from '../src/VideoUpload.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://studio.example/' });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement });
@@ -22,6 +22,15 @@ test('MP4 type, filename and bounded size are checked before any request', () =>
   const huge = new File(['x'], 'good.mp4', { type: 'video/mp4' });
   Object.defineProperty(huge, 'size', { value: 250_000_001 });
   assert.throws(() => validateVideoFile(huge), /250 MB/);
+});
+
+test('managed progress, failure, private ready state and legacy status have clear copy', () => {
+  const base = { id: uploadId, state: 'verified', verification: 'sha256_verified', expectedBytes: 1,
+    expiresAt: new Date().toISOString(), partSize: 1, partCount: 1 } as const;
+  assert.match(videoProcessingMessage({ ...base, processing: { state: 'pending', failureCode: null } }), /private/);
+  assert.match(videoProcessingMessage({ ...base, processing: { state: 'failed', failureCode: 'verification_failed' } }), /Retry processing/);
+  assert.match(videoProcessingMessage({ ...base, processing: { state: 'ready', failureCode: null } }), /separate approval/);
+  assert.match(videoProcessingMessage({ ...base, processing: { state: 'leased', failureCode: null } }), /Legacy/);
 });
 
 test('multipart failure aborts server session and retry creates a fresh session; CSRF stays on control calls', async () => {
@@ -93,9 +102,9 @@ test('video picker attaches to the selected item and reports completed but unver
     }
     if (url.endsWith('/media-uploads') && init?.method === 'POST') return json({ id: uploadId, state: 'initiated', partSize: 8_388_608, partCount: 1, expiresAt: new Date(Date.now() + 300000).toISOString() }, 201);
     if (url.endsWith('/part')) return json({ url: 'https://s3.example/part', contentLength: 1, expiresInSeconds: 300 });
-    if (url.endsWith('/finalize')) return json({ id: uploadId, state: 'completed', verification: 'pending_worker_sha256', processing: null });
+    if (url.endsWith('/finalize')) return json({ id: uploadId, state: 'completed', verification: 'pending_sha256', processing: null });
     if (url.endsWith('/media-uploads') && init?.method !== 'POST') return json({ uploadId, uploadState: 'completed', processing: null });
-    if (url.endsWith(`/${uploadId}`)) return json({ id: uploadId, state: 'completed', verification: 'pending_worker_sha256', processing: null });
+    if (url.endsWith(`/${uploadId}`)) return json({ id: uploadId, state: 'completed', verification: 'pending_sha256', processing: null });
     throw new Error(url);
   }) as typeof fetch;
   try {
@@ -108,10 +117,42 @@ test('video picker attaches to the selected item and reports completed but unver
     fireEvent.click(screen.getByLabelText(/I have television display rights/));
     fireEvent.click(screen.getByLabelText(/I have television playback rights/));
     fireEvent.click(screen.getByRole('button', { name: 'Upload video master' }));
-    await screen.findByText(/pending_worker_sha256/);
+    await screen.findByText(/verifying source/);
     assert.match(screen.getByRole('status').textContent ?? '', /Unavailable for live publication/);
     assert.equal(calls.some(url => url.endsWith('/publish')), false);
   } finally { cleanup(); globalThis.fetch = previousFetch; globalThis.XMLHttpRequest = previousXHR; }
+});
+
+test('failed video offers an explicit CSRF-bound processing retry without another upload', async () => {
+  const previous = globalThis.fetch;
+  const item = { id: itemId, kind: 'video', mediaAssetIds: [assetId] } as any;
+  const inventory = { revision: 1, mediaAssets: [{ id: assetId, catalogItemId: itemId,
+    kind: 'video', location: { type: 'managed_hls' } }] } as any;
+  let retries = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === '/api/auth/session') return json({ accountId: owner, email: 'creator@example.test',
+      csrfToken: 'csrf-proof', expiresAt: new Date().toISOString() });
+    if (url.endsWith('/retry')) {
+      assert.equal(new Headers(init?.headers).get('x-csrf-token'), 'csrf-proof');
+      assert.deepEqual(JSON.parse(String(init?.body)), { mediaAssetId: assetId });
+      retries++;
+      return json({ id: uploadId, state: 'verified', verification: 'sha256_verified',
+        processing: { state: 'pending', failureCode: null } });
+    }
+    if (url.endsWith('/media-uploads')) return json({ uploadId, uploadState: 'verified',
+      processing: { state: 'failed', failureCode: 'encode_failed' } });
+    if (url.endsWith(`/${uploadId}`)) return json({ id: uploadId, state: 'verified',
+      verification: 'sha256_verified', processing: { state: 'failed', failureCode: 'encode_failed' } });
+    throw new Error(url);
+  }) as typeof fetch;
+  try {
+    await getSession();
+    render(createElement(VideoUpload, { projectId, item, inventory, refresh: async () => inventory }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry processing' }));
+    await screen.findByText(/queued or running/);
+    assert.equal(retries, 1);
+  } finally { cleanup(); globalThis.fetch = previous; }
 });
 
 test('managed HLS remains unavailable for publication while processing, then requires explicit approval', async () => {

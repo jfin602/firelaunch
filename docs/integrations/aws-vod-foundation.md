@@ -26,7 +26,7 @@ Target workflow:
 - Use EventBridge completion with AWS-native verified source/account/region and idempotent DB transitions, or an authenticated bounded queue/API consumer with explicit trust. Default SNS notifications / jobs-manifest.json may aid reconciliation but cannot authorize publication or be treated as tenant-authenticated evidence.
 - Ensure unique safe output prefixes, fixed profile settings, job counts/rate limits, CloudWatch errors, dead-letter/replay semantics, reconciliation polling and rollbacks; keep AWS secrets out of browser and generated applications.
 - Inspect prior `infra/aws-media/template.yaml` resources before replacement to prevent deletion of buckets/media, IAM trust regression, origin path mismatch or other services. Use planned CloudFormation change set; operator approval required to execute.
-- Retain separate P2/P3 private evidence storage. Decommission FFmpeg host permissions and `media:worker:once` only after new workflow acceptance; provide explicit migration/rollback for already encoded assets and in-flight legacy jobs.
+- Retain separate P2/P3 private evidence storage. The c6 P4 code has retired `media:worker:once` and its executable; no host should run the old worker. Inventory legacy pending/leased rows and private staged prefixes before enabling managed jobs. Preserve READY renditions and published delivery objects; migrate unfinished rows only through an owner/rights-checked, operator-reviewed procedure. Do not delete legacy media as part of the source change.
 
 ## Spend and qualification
 

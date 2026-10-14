@@ -1,22 +1,12 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
 import { Readable } from 'node:stream';
 import test from 'node:test';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
 import { S3Client } from '@aws-sdk/client-s3';
-import { mediaStorageConfigFromEnv, S3MediaStorage, type MediaScope, type MediaStorageConfig } from '../src/media-storage.js';
-import { MediaUploadService } from '../src/media-upload-service.js';
-import { runOneMediaJob } from '../src/media-worker.js';
-import type { MediaPipelineRepository } from '../src/media-pipeline-repository.js';
-import type { MediaWorkerRepository, WorkerClaim } from '../src/media-worker-repository.js';
-import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
-import { assertClientCompatible, projectApprovedManifest, type MediaRenditionSet } from '@firelaunch/contracts';
-import { RepositoryError } from '../src/repository.js';
+import { assertClientCompatible, projectApprovedManifest } from '@firelaunch/contracts';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
 import { canonicalBytes } from '../src/publication-repository.js';
+import { mediaStorageConfigFromEnv, S3MediaStorage, type MediaScope, type MediaStorageConfig } from '../src/media-storage.js';
 
 const scope: MediaScope = { creatorAccountId: `cr_${'a'.repeat(32)}`, projectId: `ch_${'b'.repeat(32)}`,
   mediaAssetId: `ma_${'c'.repeat(32)}` };
@@ -243,104 +233,8 @@ test('complete READY graph promotes a stable master only after all staged segmen
   assert.equal(await storage.removePublishedAsset(other), 0);
 });
 
-test('two-owner upload, verified worker graph and immutable public HLS converge offline', async context => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'firelaunch-convergence-'));
-  context.after(() => rm(directory, { recursive: true, force: true }));
-  const source = path.join(directory, 'owned.mp4');
-  const encoded = spawnSync('/usr/bin/ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi',
-    '-i', 'testsrc2=size=854x480:rate=2', '-f', 'lavfi', '-i', 'sine=frequency=1000:sample_rate=44100',
-    '-t', '12', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-g', '12',
-    '-keyint_min', '12', '-sc_threshold', '0', '-c:a', 'aac', '-shortest', source], { timeout: 30_000 });
-  assert.equal(encoded.status, 0, encoded.stderr?.toString());
-  const body = await readFile(source);
-  const { storage, originals, delivery } = setup();
-  const principal: AuthenticatedPrincipal = { accountId: scope.creatorAccountId, issuer: 'test', subject: 'owner' };
-  const foreign = { ...principal, accountId: other.creatorAccountId, subject: 'foreign' };
-  const row = { id: session, state: 'initiated', version: 0, originalKey: storage.originalKey(scope, session),
-    s3UploadId: null as string | null, expectedBytes: body.length, expectedSha256: sha(body),
-    expiresAt: new Date(Date.now() + 60_000).toISOString(), claimedDurationSeconds: 12, partSize: 8 * 1024 * 1024,
-    partCount: 1 };
-  const owned = (actor: AuthenticatedPrincipal, projectId: string, assetId: string) => {
-    if (actor.accountId !== principal.accountId || actor.subject !== principal.subject ||
-      projectId !== scope.projectId || assetId !== scope.mediaAssetId)
-      throw new RepositoryError('NOT_FOUND', 'Media asset not found');
-  };
-  const records = {
-    createUpload: async (actor: AuthenticatedPrincipal, projectId: string, assetId: string) => {
-      owned(actor, projectId, assetId); return { id: session, originalKey: row.originalKey, state: row.state };
-    },
-    upload: async (actor: AuthenticatedPrincipal, projectId: string, assetId: string, uploadId: string) => {
-      owned(actor, projectId, assetId);
-      if (uploadId !== session) throw new RepositoryError('NOT_FOUND', 'Upload not found');
-      return { ...row };
-    },
-    attachS3Upload: async (actor: AuthenticatedPrincipal, projectId: string, assetId: string, _uploadId: string, s3Id: string) => {
-      owned(actor, projectId, assetId); row.s3UploadId = s3Id; return true;
-    },
-    recordCompletedOriginal: async (actor: AuthenticatedPrincipal, projectId: string, assetId: string,
-      _uploadId: string, version: number) => {
-      owned(actor, projectId, assetId);
-      if (row.version !== version) throw new RepositoryError('CONFLICT', 'Stale upload');
-      row.state = 'completed'; row.version++;
-    }
-  };
-  const service = new MediaUploadService(records as unknown as MediaPipelineRepository, storage);
-  const request = { mediaAssetId: scope.mediaAssetId, idempotencyKey: 'convergence-upload-001',
-    fileName: 'owned.mp4', contentType: 'video/mp4', expectedBytes: body.length,
-    expectedSha256: sha(body), claimedDurationSeconds: 12 };
-  await assert.rejects(service.start(foreign, scope.projectId, request), { code: 'NOT_FOUND' });
-  await assert.rejects(service.start(principal, scope.projectId, { ...request, fileName: '../unsafe.mp4' }));
-  assert.equal((await service.start(principal, scope.projectId, request)).state, 'initiated');
-  const started = await service.start(principal, scope.projectId, request);
-  assert.equal(started.id, session);
-  assert.equal(originals.calls.filter(call => call.name === 'CreateMultipartUploadCommand').length, 1);
-  const part = await storage.uploadOriginalPart(scope, session, row.s3UploadId!, 1, body);
-  await assert.rejects(service.finalize(foreign, scope.projectId, session,
-    { mediaAssetId: scope.mediaAssetId, parts: [part] }), { code: 'NOT_FOUND' });
-  const finalized = await Promise.all([service.finalize(principal, scope.projectId, session,
-    { mediaAssetId: scope.mediaAssetId, parts: [part] }), service.finalize(principal, scope.projectId, session,
-    { mediaAssetId: scope.mediaAssetId, parts: [part] })]);
-  assert.deepEqual(finalized.map(result => result.state), ['completed', 'completed']);
-  assert.equal(row.version, 1);
-  await assert.rejects(storage.verifyOriginal(other, session, { bytes: body.length, sha256: sha(body) }));
-  await assert.rejects(storage.verifyOriginal(scope, session, { bytes: body.length, sha256: '0'.repeat(64) }));
-  await storage.verifyOriginal(scope, session, { bytes: body.length, sha256: sha(body) });
-  row.state = 'verified';
-  const claim: WorkerClaim = { jobId: `job_${'2'.repeat(32)}`, token: 'f39b2e47-cd73-4e47-89a5-d3a16320297d',
-    attempts: 1, scope, itemId: `ci_${'1'.repeat(32)}`, uploadId: session, bytes: body.length, sha256: sha(body) };
-  let leased = true;
-  let ready: MediaRenditionSet | undefined;
-  const worker = { claim: async () => leased ? claim : null, renew: async () => leased,
-    fail: async () => { leased = false; return true; },
-    complete: async (_claim: WorkerClaim, rendition: MediaRenditionSet) => {
-      if (!leased) return false;
-      ready = rendition; leased = false; return true;
-    } } as unknown as MediaWorkerRepository;
-  assert.equal(await runOneMediaJob(worker, storage), 'ready');
-  assert.ok(ready);
-  assert.equal(await runOneMediaJob(worker, storage), 'idle');
-  assert.deepEqual(ready.variants.map(variant => variant.height), [480]);
-  const expected = storage.publishedMasterUrl(scope, ready);
-  assert.match(expected, /^https:\/\/media\.example\.org\/media\/.+\/delivery\/.+\/master\.m3u8$/);
-  await assert.rejects(storage.publishVerifiedHls(other, ready));
-  const segmentKey = storage.stagedKey(scope, ready.id, 'v480-000.ts');
-  const segment = delivery.objects.get(segmentKey)!;
-  delivery.objects.delete(segmentKey);
-  await assert.rejects(storage.publishVerifiedHls(scope, ready), /S3 request failed/);
-  assert.equal([...delivery.objects.keys()].some(key => key.includes('/delivery/')), false);
-  delivery.objects.set(segmentKey, segment);
-  const playlistKey = storage.stagedKey(scope, ready.id, 'v480.m3u8');
-  const playlist = delivery.objects.get(playlistKey)!;
-  delivery.objects.set(playlistKey, { ...playlist, body: Buffer.from('#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI="https://secrets.example/key"\n') });
-  await assert.rejects(storage.publishVerifiedHls(scope, ready), /checksum mismatch/);
-  assert.equal([...delivery.objects.keys()].some(key => key.includes('/delivery/')), false);
-  delivery.objects.set(playlistKey, playlist);
-  assert.equal(await storage.publishVerifiedHls(scope, ready), expected);
-  assert.equal(await storage.publishVerifiedHls(scope, ready), expected);
-  assert.equal([...delivery.objects.keys()].filter(key => key.includes('/delivery/')).length,
-    [...delivery.objects.keys()].filter(key => key.includes('/staged/')).length);
-  assert.equal(expected.includes('original/') || expected.includes('staged/') || expected.includes('X-Amz-'), false);
-  assert.equal(originals.objects.has(storage.originalKey(scope, session)), true);
+test('approved managed HLS keeps public manifest v1 and rejects private or revoked media', () => {
+  const expected = `https://media.example.org/media/${'a'.repeat(32)}/${'b'.repeat(32)}/${'c'.repeat(32)}/delivery/${'f'.repeat(32)}/${'1'.repeat(64)}/master.m3u8`;
   const timestamp = '2026-10-12T00:00:00.000Z';
   const sourceId = `src_${'3'.repeat(32)}`;
   const artworkId = `ma_${'4'.repeat(32)}`;
@@ -355,16 +249,16 @@ test('two-owner upload, verified worker graph and immutable public HLS converge 
     projectId: scope.projectId, type: 'creator_json' as const, state: 'verified' as const,
     permission: { retrieval: 'creator_asserted' as const, tvDisplay: 'creator_asserted' as const,
       verificationEvidenceId: `ev_${'5'.repeat(32)}` } };
-  const item = { schemaVersion: 1 as const, id: claim.itemId, creatorAccountId: scope.creatorAccountId,
+  const item = { schemaVersion: 1 as const, id: `ci_${'1'.repeat(32)}`, creatorAccountId: scope.creatorAccountId,
     projectId: scope.projectId, kind: 'video' as const,
     sourceRecord: { sourceId, externalId, observedAt: timestamp, metadata: { title: 'Owned film' } },
     externalIdentifiers: [externalId], mediaAssetIds: [scope.mediaAssetId, artworkId] };
   const video = { schemaVersion: 1 as const, id: scope.mediaAssetId, creatorAccountId: scope.creatorAccountId,
-    projectId: scope.projectId, catalogItemId: claim.itemId, kind: 'video' as const,
+    projectId: scope.projectId, catalogItemId: `ci_${'1'.repeat(32)}`, kind: 'video' as const,
     location: { type: 'managed_hls' as const }, tvDisplayRights: rights('television_display'),
     tvPlaybackRights: rights('television_playback'), deliveryEligible: true };
   const artwork = { schemaVersion: 1 as const, id: artworkId, creatorAccountId: scope.creatorAccountId,
-    projectId: scope.projectId, catalogItemId: claim.itemId, kind: 'artwork' as const,
+    projectId: scope.projectId, catalogItemId: `ci_${'1'.repeat(32)}`, kind: 'artwork' as const,
     location: { type: 'https' as const, url: artworkUrl }, rights: rights('television_display'),
     deliveryEligible: true };
   const releaseInput = { approval: { state: 'approved', creatorAccountId: scope.creatorAccountId,
@@ -384,7 +278,7 @@ test('two-owner upload, verified worker graph and immutable public HLS converge 
   const bytes = canonicalBytes(manifest);
   assert.doesNotMatch(bytes, /creatorAccountId|verificationEvidenceId|original|staged|X-Amz-|private|transcript/);
   assert.throws(() => projectApprovedManifest({ ...releaseInput,
-    inventory: { ...releaseInput.inventory, mediaAssets: [{ ...video, creatorAccountId: foreign.accountId }, artwork] } }));
+    inventory: { ...releaseInput.inventory, mediaAssets: [{ ...video, creatorAccountId: other.creatorAccountId }, artwork] } }));
   assert.throws(() => projectApprovedManifest({ ...releaseInput,
     inventory: { ...releaseInput.inventory, mediaAssets: [{ ...video,
       tvPlaybackRights: { ...rights('television_playback'), status: 'revoked' as const } }, artwork] } }));
@@ -413,25 +307,4 @@ test('operator cleanup refuses oversized delivery prefixes before deleting anyth
     etag: '"x"' });
   await assert.rejects(storage.removePublishedAsset(scope), /1000-object/);
   assert.equal(delivery.calls.some(call => call.name === 'DeleteObjectCommand'), false);
-});
-
-test('worker download binds owned S3 original to full SHA-256 and deletes corrupt staging', async t => {
-  const { storage, originals } = setup();
-  const dir = await mkdtemp(path.join(os.tmpdir(), 'firelaunch-storage-test-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const body = Buffer.from('owned original bytes');
-  const key = storage.originalKey(scope, session);
-  originals.objects.set(key, { body, type: 'video/mp4', encryption: 'AES256', checksumType: 'FULL_OBJECT',
-    crc: 'aGVsbG8=', etag: '"original"' });
-  const good = path.join(dir, 'good.mp4');
-  await storage.downloadOriginal(scope, session, { bytes: body.length, sha256: sha(body) }, good);
-  assert.deepEqual(await readFile(good), body);
-  await assert.rejects(storage.downloadOriginal(other, session, { bytes: body.length, sha256: sha(body) },
-    path.join(dir, 'foreign.mp4')), /S3 request failed/);
-  const bad = path.join(dir, 'bad.mp4');
-  await assert.rejects(storage.downloadOriginal(scope, session, { bytes: body.length, sha256: '0'.repeat(64) },bad),
-    /integrity/);
-  await assert.rejects(readFile(bad), /ENOENT/);
-  await assert.rejects(storage.downloadOriginal(scope, session, { bytes: 2_000_000_001, sha256: sha(body) },
-    path.join(dir, 'oversized.mp4')), /limit/);
 });

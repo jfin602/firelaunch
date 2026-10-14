@@ -111,7 +111,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
         if (hostedRepository && hostedWorkspace) {
           const principal = session.principal;
           if (segments[3] === 'media-uploads') {
-            if (!mediaUploads) { respond(response, 503, { error: { code: 'STORAGE_ERROR', message: 'Media upload storage unavailable' } }); return; }
+            if (!mediaUploads) { respond(response, 503, { error: { code: 'STORAGE_ERROR', message: 'Managed media upload or processing unavailable' } }); return; }
             if (url.search) { respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return; }
             const projectId = segments[2]!;
             if (segments.length === 4 && request.method === 'GET') {
@@ -130,6 +130,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             if (segments.length === 6 && request.method === 'POST') {
               if (segments[5] === 'part') { respond(response, 200, await mediaUploads.part(principal, projectId, uploadId, await body(request))); return; }
               if (segments[5] === 'finalize') { respond(response, 200, await mediaUploads.finalize(principal, projectId, uploadId, await body(request))); return; }
+              if (segments[5] === 'retry') { respond(response, 200, await mediaUploads.retryProcessing(principal, projectId, uploadId, await body(request))); return; }
               if (segments[5] === 'abort') { respond(response, 200, await mediaUploads.abort(principal, projectId, uploadId, await body(request))); return; }
             }
             respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return;
