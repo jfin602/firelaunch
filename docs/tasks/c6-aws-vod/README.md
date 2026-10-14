@@ -34,8 +34,6 @@ Correction LOCAL GREEN means managed-only code path is coherent, FFmpeg no longe
 ```bash
 cd /home/jfin/dev/firelaunch
 git status --short
-git fetch origin
-git pull --ff-only
 node --version
 npm --version
 npm run codex:stack:validate -- c6-aws-vod
