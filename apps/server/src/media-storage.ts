@@ -6,6 +6,7 @@ import {
 } from '@aws-sdk/client-s3';
 import type { Readable } from 'node:stream';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { fromTemporaryCredentials, type FromTemporaryCredentialsOptions } from '@aws-sdk/credential-providers';
 import { mediaRenditionSetSchema, type MediaRenditionSet } from '@firelaunch/contracts';
 
 /** Storage primitives only. Auth, rights, upload quotas and release approval belong to the caller. */
@@ -15,6 +16,7 @@ export type MediaStorageConfig = Readonly<{
   cloudFrontOrigin: string; allowedCloudFrontHosts: readonly string[];
 }>;
 export type StoredObject = Readonly<{ key: string; bytes: number; sha256: string }>;
+export type PublisherRoleConfig = Readonly<{ accountId: string; roleArn: string }>;
 
 const hex64 = /^[a-f0-9]{64}$/;
 const bucketName = /^(?!\d+\.\d+\.\d+\.\d+$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
@@ -67,9 +69,30 @@ export function mediaStorageConfigFromEnv(env: NodeJS.ProcessEnv): MediaStorageC
   });
 }
 
+export function publisherRoleConfigFromEnv(env: NodeJS.ProcessEnv): PublisherRoleConfig {
+  const accountId = env.FIRELAUNCH_MEDIACONVERT_ACCOUNT ?? '';
+  const roleArn = env.FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN ?? '';
+  const match = /^arn:aws:iam::([0-9]{12}):role\/(?:[A-Za-z0-9+=,.@_-]+\/)*[A-Za-z0-9+=,.@_-]+$/.exec(roleArn);
+  if (!/^[0-9]{12}$/.test(accountId) || !match || match[1] !== accountId ||
+    roleArn.slice(roleArn.indexOf(':role/') + 6).split('/').some(segment => segment === '.' || segment === '..'))
+    reject('missing or invalid same-account publisher role');
+  return { accountId, roleArn };
+}
+
+export function publisherCredentialsFromEnv(env: NodeJS.ProcessEnv,
+  options: Pick<FromTemporaryCredentialsOptions, 'masterCredentials' | 'clientConfig'> = {}) {
+  const role = publisherRoleConfigFromEnv(env);
+  const region = mediaStorageConfigFromEnv(env).region;
+  return fromTemporaryCredentials({
+    params: { RoleArn: role.roleArn, RoleSessionName: 'firelaunch-media-publisher', DurationSeconds: 3600 },
+    ...options, clientConfig: { ...options.clientConfig, region }
+  });
+}
+
 export class S3MediaStorage {
   private readonly config: MediaStorageConfig;
-  constructor(config: MediaStorageConfig, private readonly originals: S3Client, private readonly delivery: S3Client) {
+  constructor(config: MediaStorageConfig, private readonly originals: S3Client, private readonly staging: S3Client,
+    private readonly publisher?: S3Client, private readonly operator?: S3Client) {
     this.config = validateMediaStorageConfig(config);
   }
 
@@ -200,7 +223,8 @@ export class S3MediaStorage {
   }
 
   private async verifyOutput(key: string, expected: { bytes: number; sha256: string }, name: string): Promise<string> {
-    const head = await this.request(() => this.delivery.send(new HeadObjectCommand({ Bucket: this.config.deliveryBucket,
+    const client = key.includes('/delivery/') ? this.requirePublisher() : this.staging;
+    const head = await this.request(() => client.send(new HeadObjectCommand({ Bucket: this.config.deliveryBucket,
       Key: key, ChecksumMode: 'ENABLED' })));
     if (head.ContentLength !== expected.bytes || head.ContentType !== contentType(name) ||
       head.ServerSideEncryption !== 'AES256' || head.ChecksumType !== 'FULL_OBJECT' ||
@@ -212,7 +236,8 @@ export class S3MediaStorage {
     if (!Buffer.isBuffer(body) || body.length < 1 || body.length > maxOutputBytes || !hex64.test(sha256) || digest(body) !== sha256)
       reject('rendition body checksum or size mismatch');
     try {
-      await this.delivery.send(new PutObjectCommand({ Bucket: this.config.deliveryBucket, Key: key, Body: body,
+      const client = key.includes('/delivery/') ? this.requirePublisher() : this.staging;
+      await client.send(new PutObjectCommand({ Bucket: this.config.deliveryBucket, Key: key, Body: body,
         ContentType: contentType(name), ContentLength: body.length, ServerSideEncryption: 'AES256',
         ChecksumSHA256: checksum(sha256), IfNoneMatch: '*',
         CacheControl: key.includes('/staged/') ? 'private, no-store' : 'public, max-age=60' }));
@@ -232,7 +257,7 @@ export class S3MediaStorage {
     const ownedPrefix = `${scopePath(scope)}/staged/`;
     if (!new RegExp(`^${ownedPrefix}[a-f0-9]{32}/$`).test(rawPrefix) ||
       rawPrefix === `${ownedPrefix}${renditionId(setId)}/`) reject('managed output prefix differs from reserved scope');
-    const listed = await this.request(() => this.delivery.send(new ListObjectsV2Command({
+    const listed = await this.request(() => this.staging.send(new ListObjectsV2Command({
       Bucket: this.config.deliveryBucket, Prefix: rawPrefix, MaxKeys: 1000 })));
     if (listed.IsTruncated || !listed.Contents?.length || listed.Contents.length > 600) reject('managed HLS graph missing or too large');
     const keys = listed.Contents!.map(value => value.Key);
@@ -243,13 +268,13 @@ export class S3MediaStorage {
     const read = async (name: string): Promise<Buffer> => {
       if (!names.has(name)) reject('managed HLS object missing');
       const key = `${rawPrefix}${outputName(name)}`;
-      const head = await this.request(() => this.delivery.send(new HeadObjectCommand({
+      const head = await this.request(() => this.staging.send(new HeadObjectCommand({
         Bucket: this.config.deliveryBucket, Key: key })));
       if (!head.ETag || !head.ContentLength || head.ContentLength > maxOutputBytes ||
         head.ContentType !== contentType(name) || head.ServerSideEncryption !== 'AES256')
         reject('managed HLS object metadata invalid');
       const expectedLength = head.ContentLength!;
-      const object = await this.request(() => this.delivery.send(new GetObjectCommand({
+      const object = await this.request(() => this.staging.send(new GetObjectCommand({
         Bucket: this.config.deliveryBucket, Key: key, IfMatch: head.ETag })));
       if (!object.Body || object.ContentLength !== expectedLength) reject('managed HLS object changed');
       const chunks: Buffer[] = []; let bytes = 0;
@@ -260,7 +285,7 @@ export class S3MediaStorage {
         chunks.push(data);
       }
       if (bytes !== expectedLength) reject('managed HLS object length changed');
-      const after = await this.request(() => this.delivery.send(new HeadObjectCommand({
+      const after = await this.request(() => this.staging.send(new HeadObjectCommand({
         Bucket: this.config.deliveryBucket, Key: key })));
       if (after.ETag !== head.ETag || after.ContentLength !== expectedLength) reject('managed HLS object mutated');
       return Buffer.concat(chunks);
@@ -360,7 +385,7 @@ export class S3MediaStorage {
     if (!Number.isInteger(expected.bytes) || expected.bytes < 1 || expected.bytes > maxOutputBytes || !hex64.test(expected.sha256))
       reject('invalid rendition expectation');
     const etag = await this.verifyOutput(sourceKey, expected, name);
-    const source = await this.request(() => this.delivery.send(new GetObjectCommand({ Bucket: this.config.deliveryBucket, Key: sourceKey, IfMatch: etag })));
+    const source = await this.request(() => this.staging.send(new GetObjectCommand({ Bucket: this.config.deliveryBucket, Key: sourceKey, IfMatch: etag })));
     if (!source.Body || source.ContentLength !== expected.bytes) reject('staged rendition changed');
     const chunks: Buffer[] = [];
     let bytes = 0;
@@ -389,14 +414,14 @@ export class S3MediaStorage {
       reject('rendition identity or staging scope mismatch');
     const read = async (name: string): Promise<StoredObject & { body: Buffer }> => {
       const key = this.stagedKey(scope, set.id, name);
-      const head = await this.request(() => this.delivery.send(new HeadObjectCommand({
+      const head = await this.request(() => this.staging.send(new HeadObjectCommand({
         Bucket: this.config.deliveryBucket, Key: key, ChecksumMode: 'ENABLED' })));
       const length = head.ContentLength;
       if (!length || length > maxOutputBytes || !head.ETag ||
         head.ContentType !== contentType(name) || head.ServerSideEncryption !== 'AES256' ||
         head.ChecksumType !== 'FULL_OBJECT' || !head.ChecksumSHA256) return reject('staged HLS metadata incomplete');
       const expectedBytes: number = length;
-      const object = await this.request(() => this.delivery.send(new GetObjectCommand({
+      const object = await this.request(() => this.staging.send(new GetObjectCommand({
         Bucket: this.config.deliveryBucket, Key: key, IfMatch: head.ETag })));
       if (!object.Body || object.ContentLength !== expectedBytes) reject('staged HLS object changed');
       const chunks: Buffer[] = []; let bytes = 0;
@@ -453,22 +478,38 @@ export class S3MediaStorage {
 
   /** Operator-only cleanup after a recorded revocation; never accepts a caller-supplied prefix. */
   async removePublishedAsset(scope: MediaScope): Promise<number> {
+    if (!this.operator) reject('operator credentials required for delivery cleanup');
     const prefix = `${scopePath(scope)}/delivery/`;
-    const listed = await this.request(() => this.delivery.send(new ListObjectsV2Command({
+    const listed = await this.request(() => this.operator!.send(new ListObjectsV2Command({
       Bucket: this.config.deliveryBucket, Prefix: prefix, MaxKeys: 1000 })));
     if (listed.IsTruncated || (listed.Contents?.length ?? 0) > 1000) reject('delivery cleanup exceeds 1000-object operator limit');
     const keys = listed.Contents?.map(object => object.Key) ?? [];
     if (keys.some(key => !key || !key.startsWith(prefix) || !/^media\/[a-f0-9]{32}\/[a-f0-9]{32}\/[a-f0-9]{32}\/delivery\/[a-f0-9]{32}\/[a-f0-9]{64}\/[a-z0-9_-]+\.(?:m3u8|ts|m4s|mp4)$/.test(key)))
       reject('delivery cleanup found an unsafe key');
-    for (const key of keys) await this.request(() => this.delivery.send(new DeleteObjectCommand({
+    for (const key of keys) await this.request(() => this.operator!.send(new DeleteObjectCommand({
       Bucket: this.config.deliveryBucket, Key: key! })));
     return keys.length;
   }
+
+  private requirePublisher(): S3Client {
+    if (!this.publisher) reject('publisher credentials required for delivery publication');
+    return this.publisher!;
+  }
 }
 
-export function mediaStorageFromEnv(env: NodeJS.ProcessEnv, clients?: { originals: S3Client; delivery: S3Client }): S3MediaStorage {
+export function mediaStorageFromEnv(env: NodeJS.ProcessEnv,
+  clients?: { originals: S3Client; staging: S3Client; publisher: S3Client; operator?: S3Client }): S3MediaStorage {
   const config = mediaStorageConfigFromEnv(env);
+  publisherRoleConfigFromEnv(env);
   const originals = clients?.originals ?? new S3Client({ region: config.region });
-  const delivery = clients?.delivery ?? new S3Client({ region: config.region });
-  return new S3MediaStorage(config, originals, delivery);
+  const staging = clients?.staging ?? new S3Client({ region: config.region });
+  const publisher = clients?.publisher ?? new S3Client({ region: config.region, credentials: publisherCredentialsFromEnv(env) });
+  return new S3MediaStorage(config, originals, staging, publisher, clients?.operator);
+}
+
+/** The standalone revocation command uses its separately selected operator profile. */
+export function mediaStorageForOperatorFromEnv(env: NodeJS.ProcessEnv, operator: S3Client): S3MediaStorage {
+  const config = mediaStorageConfigFromEnv(env);
+  return new S3MediaStorage(config, new S3Client({ region: config.region }), new S3Client({ region: config.region }),
+    undefined, operator);
 }

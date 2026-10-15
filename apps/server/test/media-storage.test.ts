@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
 import test from 'node:test';
-import { S3Client } from '@aws-sdk/client-s3';
+import { HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { assertClientCompatible, projectApprovedManifest } from '@firelaunch/contracts';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
 import { canonicalBytes } from '../src/publication-repository.js';
-import { mediaStorageConfigFromEnv, S3MediaStorage, type MediaScope, type MediaStorageConfig } from '../src/media-storage.js';
+import { mediaStorageConfigFromEnv, mediaStorageFromEnv, publisherCredentialsFromEnv, publisherRoleConfigFromEnv, S3MediaStorage,
+  type MediaScope, type MediaStorageConfig } from '../src/media-storage.js';
 
 const scope: MediaScope = { creatorAccountId: `cr_${'a'.repeat(32)}`, projectId: `ch_${'b'.repeat(32)}`,
   mediaAssetId: `ma_${'c'.repeat(32)}` };
@@ -16,10 +17,14 @@ const set = `rs_${'f'.repeat(32)}`;
 const config: MediaStorageConfig = { region: 'us-east-2', originalsBucket: 'firelaunch-originals-test',
   deliveryBucket: 'firelaunch-delivery-test', cloudFrontOrigin: 'https://media.example.org/',
   allowedCloudFrontHosts: ['media.example.org'] };
+const roleEnv = { FIRELAUNCH_MEDIA_AWS_REGION: config.region, FIRELAUNCH_MEDIA_ORIGINALS_BUCKET: config.originalsBucket,
+  FIRELAUNCH_MEDIA_DELIVERY_BUCKET: config.deliveryBucket, FIRELAUNCH_MEDIA_CLOUDFRONT_HOSTS: 'media.example.org',
+  FIRELAUNCH_MEDIA_CLOUDFRONT_ORIGIN: config.cloudFrontOrigin, FIRELAUNCH_MEDIACONVERT_ACCOUNT: '363242105231',
+  FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN: 'arn:aws:iam::363242105231:role/firelaunch/media-publisher' };
 const sha = (value: Buffer) => createHash('sha256').update(value).digest('hex');
 type ObjectRecord = { body: Buffer; type: string; encryption: string; checksumType: string; crc?: string; sha?: string; etag: string };
 class FakeS3 {
-  readonly objects = new Map<string, ObjectRecord>();
+  constructor(readonly objects = new Map<string, ObjectRecord>()) {}
   readonly calls: { name: string; input: Record<string, unknown> }[] = [];
   readonly parts = new Map<number, Buffer>();
   failNext = '';
@@ -67,7 +72,10 @@ class FakeS3 {
   }
 }
 const setup = () => { const originals = new FakeS3(); const delivery = new FakeS3();
-  return { originals, delivery, storage: new S3MediaStorage(config, originals as unknown as S3Client, delivery as unknown as S3Client) }; };
+  const publisher = new FakeS3(delivery.objects); const operator = new FakeS3(delivery.objects);
+  return { originals, delivery, publisher, operator, storage: mediaStorageFromEnv(roleEnv, {
+    originals: originals as unknown as S3Client, staging: delivery as unknown as S3Client,
+    publisher: publisher as unknown as S3Client, operator: operator as unknown as S3Client }) }; };
 
 test('media AWS configuration and CloudFront origin fail closed without echoing secrets', () => {
   assert.throws(() => mediaStorageConfigFromEnv({}), /invalid/);
@@ -83,6 +91,73 @@ test('media AWS configuration and CloudFront origin fail closed without echoing 
   }
   assert.throws(() => mediaStorageConfigFromEnv({ ...env, FIRELAUNCH_MEDIA_DELIVERY_BUCKET: config.originalsBucket }), /invalid/);
   assert.throws(() => mediaStorageConfigFromEnv({ ...env, FIRELAUNCH_MEDIA_CLOUDFRONT_HOSTS: 'media.example.org,127.0.0.1' }), /invalid/);
+});
+
+test('publisher role must be a same-account IAM role and is mandatory for hosted media storage', () => {
+  const env = roleEnv;
+  assert.equal(publisherRoleConfigFromEnv(env).accountId, '363242105231');
+  for (const roleArn of ['', 'arn:aws:iam::000000000000:role/firelaunch/media-publisher',
+    'arn:aws:iam::363242105231:user/media-publisher', 'arn:aws:iam::363242105231:role/../publisher',
+    'arn:aws:iam::363242105231:role/publisher*']) {
+    assert.throws(() => publisherRoleConfigFromEnv({ ...env, FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN: roleArn }), /publisher role/);
+  }
+  assert.throws(() => publisherRoleConfigFromEnv({ ...env, FIRELAUNCH_MEDIACONVERT_ACCOUNT: '' }), /publisher role/);
+  assert.throws(() => mediaStorageFromEnv({ ...env, FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN: '' }), /publisher role/);
+});
+
+test('STS publisher credentials refresh without falling back to control credentials', async () => {
+  const assumed: string[] = [];
+  let fail = false;
+  const requestHandler = { handle: async (request: { body: string }) => {
+    assert.match(String(request.body), /RoleArn=arn%3Aaws%3Aiam%3A%3A363242105231%3Arole%2Ffirelaunch%2Fmedia-publisher/);
+    if (fail) throw new Error('simulated STS denial: private-detail');
+    const accessKeyId = `ASIAFAKE${assumed.length + 1}`;
+    assumed.push(accessKeyId);
+    const xml = `<AssumeRoleResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/"><AssumeRoleResult><Credentials>` +
+      `<AccessKeyId>${accessKeyId}</AccessKeyId><SecretAccessKey>fake-secret</SecretAccessKey>` +
+      `<SessionToken>fake-session</SessionToken><Expiration>${new Date(Date.now() + 3_600_000).toISOString()}</Expiration>` +
+      `</Credentials></AssumeRoleResult></AssumeRoleResponse>`;
+    return { response: { statusCode: 200, headers: {}, body: Readable.from([Buffer.from(xml)]) } };
+  } };
+  const provider = publisherCredentialsFromEnv(roleEnv, {
+    masterCredentials: { accessKeyId: 'CONTROLFAKE', secretAccessKey: 'control-secret' },
+    clientConfig: { requestHandler: requestHandler as never }
+  });
+  const first = await provider();
+  const refreshed = await provider();
+  assert.deepEqual(assumed, ['ASIAFAKE1', 'ASIAFAKE2']);
+  assert.notEqual(first.accessKeyId, refreshed.accessKeyId);
+  assert.notEqual(refreshed.accessKeyId, 'CONTROLFAKE');
+  fail = true;
+  await assert.rejects(provider(), /simulated STS denial/);
+});
+
+test('S3 client refreshes near-expiry publisher credentials through STS', async () => {
+  let stsCalls = 0;
+  const authorizations: string[] = [];
+  const provider = publisherCredentialsFromEnv(roleEnv, {
+    masterCredentials: { accessKeyId: 'CONTROLFAKE', secretAccessKey: 'control-secret' },
+    clientConfig: { requestHandler: { handle: async () => {
+      const index = ++stsCalls;
+      const expiration = new Date(Date.now() + (index === 1 ? 60_000 : 3_600_000)).toISOString();
+      const xml = `<AssumeRoleResponse><AssumeRoleResult><Credentials><AccessKeyId>ASIAFAKE${index}</AccessKeyId>` +
+        `<SecretAccessKey>fake-secret</SecretAccessKey><SessionToken>fake-session</SessionToken>` +
+        `<Expiration>${expiration}</Expiration></Credentials></AssumeRoleResult></AssumeRoleResponse>`;
+      return { response: { statusCode: 200, headers: {}, body: Readable.from([Buffer.from(xml)]) } };
+    } } as never }
+  });
+  const client = new S3Client({ region: config.region, endpoint: 'https://s3.example.org', forcePathStyle: true,
+    credentials: provider, requestHandler: { handle: async (request: { headers: Record<string, string> }) => {
+      authorizations.push(request.headers.authorization ?? '');
+      return { response: { statusCode: 200, headers: { etag: '"fixture"', 'content-length': '1' } } };
+    } } as never });
+  try {
+    await client.send(new HeadObjectCommand({ Bucket: config.deliveryBucket, Key: 'media/fixture/delivery/master.m3u8' }));
+    await client.send(new HeadObjectCommand({ Bucket: config.deliveryBucket, Key: 'media/fixture/delivery/master.m3u8' }));
+    assert.equal(stsCalls, 2);
+    assert.equal(authorizations.length, 2);
+    assert.equal(authorizations.every(value => value.includes('ASIAFAKE2') && !value.includes('CONTROLFAKE')), true);
+  } finally { client.destroy(); }
 });
 
 test('scoped opaque keys reject foreign and path-like identities before S3 requests', () => {
@@ -101,7 +176,7 @@ test('multipart part presigning creates a short-lived scoped S3 PUT capability w
   const client = new S3Client({ region: config.region, endpoint: 'https://s3.example.org', forcePathStyle: true,
     credentials: { accessKeyId: 'test-uploader', secretAccessKey: 'private-fixture-secret' } });
   try {
-    const storage = new S3MediaStorage(config, client, client);
+    const storage = new S3MediaStorage(config, client, client, client);
     const signed = await storage.signOriginalPart(scope, session, 'opaque-s3-upload', 1, 8 * 1024 * 1024);
     const url = new URL(signed.url);
     assert.equal(url.protocol, 'https:');
@@ -153,7 +228,7 @@ test('multipart invalid input, S3 errors and abort do not report verified media'
 });
 
 test('staged output and immutable publication are idempotent and URL is allowlisted HTTPS', async () => {
-  const { storage, delivery } = setup();
+  const { storage, originals, delivery, publisher } = setup();
   const body = Buffer.from('#EXTM3U\n');
   const expected = { bytes: body.length, sha256: sha(body) };
   const staged = await storage.putStaged(scope, set, 'master.m3u8', body, expected.sha256);
@@ -162,13 +237,53 @@ test('staged output and immutable publication are idempotent and URL is allowlis
   assert.deepEqual(second, first);
   assert.equal(staged.key.includes('/staged/'), true);
   assert.match(first.url, /^https:\/\/media\.example\.org\/media\/.*\/delivery\/.*\/master\.m3u8$/);
-  assert.equal(delivery.calls.filter(call => call.name === 'PutObjectCommand').every(call => call.input.IfNoneMatch === '*'), true);
+  assert.equal(originals.calls.length, 0);
+  assert.equal(delivery.calls.every(call => String(call.input.Key).includes('/staged/')), true);
+  assert.equal(publisher.calls.length > 0, true);
+  assert.equal(publisher.calls.every(call => String(call.input.Key).includes('/delivery/')), true);
+  assert.equal(publisher.calls.filter(call => call.name === 'PutObjectCommand').every(call => call.input.IfNoneMatch === '*'), true);
   assert.equal(delivery.objects.get(first.object.key)?.type, 'application/vnd.apple.mpegurl');
   await assert.rejects(storage.putStaged(scope, set, 'master.m3u8', Buffer.from('different'), sha(Buffer.from('different'))), /mismatch/);
   await assert.rejects(storage.publishStaged(other, set, '1'.repeat(64), 'master.m3u8', expected), /S3 request failed/);
   await assert.rejects(storage.publishStaged(scope, set, '1'.repeat(64), 'master.m3u8', { ...expected, sha256: '0'.repeat(64) }), /mismatch/);
   delivery.objects.get(staged.key)!.body = Buffer.from('tampered');
   await assert.rejects(storage.publishStaged(scope, set, '2'.repeat(64), 'master.m3u8', expected), /mismatch/);
+});
+
+test('missing or failing publisher client cannot use control credentials for publication', async () => {
+  const { storage, originals, delivery, publisher } = setup();
+  const body = Buffer.from('#EXTM3U\n');
+  await storage.putStaged(scope, set, 'master.m3u8', body, sha(body));
+  publisher.failNext = 'PutObjectCommand';
+  await assert.rejects(storage.publishStaged(scope, set, '1'.repeat(64), 'master.m3u8',
+    { bytes: body.length, sha256: sha(body) }), /S3 request failed/);
+  assert.equal([...delivery.objects.keys()].some(key => key.includes('/delivery/')), false);
+  assert.equal(originals.calls.length, 0);
+  assert.equal(delivery.calls.some(call => String(call.input.Key).includes('/delivery/')), false);
+  const noPublisher = new S3MediaStorage(config, originals as unknown as S3Client, delivery as unknown as S3Client);
+  await assert.rejects(noPublisher.publishStaged(scope, set, '1'.repeat(64), 'master.m3u8',
+    { bytes: body.length, sha256: sha(body) }), /S3 request failed/);
+});
+
+test('STS AssumeRole failure blocks publication before a delivery S3 request', async () => {
+  const originals = new FakeS3(); const staging = new FakeS3();
+  const body = Buffer.from('#EXTM3U\n');
+  let stsCalls = 0; let deliveryRequests = 0;
+  const credentials = publisherCredentialsFromEnv(roleEnv, {
+    masterCredentials: { accessKeyId: 'CONTROLFAKE', secretAccessKey: 'control-secret' },
+    clientConfig: { requestHandler: { handle: async () => { stsCalls++; throw new Error('STS denied'); } } as never }
+  });
+  const publisher = new S3Client({ region: config.region, endpoint: 'https://s3.example.org',
+    credentials, requestHandler: { handle: async () => { deliveryRequests++; throw new Error('unexpected S3 delivery'); } } as never });
+  try {
+    const storage = new S3MediaStorage(config, originals as unknown as S3Client, staging as unknown as S3Client, publisher);
+    await storage.putStaged(scope, set, 'master.m3u8', body, sha(body));
+    await assert.rejects(storage.publishStaged(scope, set, '1'.repeat(64), 'master.m3u8',
+      { bytes: body.length, sha256: sha(body) }), /S3 request failed/);
+    assert.equal(stsCalls > 0, true);
+    assert.equal(deliveryRequests, 0);
+    assert.equal(staging.calls.some(call => String(call.input.Key).includes('/delivery/')), false);
+  } finally { publisher.destroy(); }
 });
 
 test('managed private HLS graph is bounded, hashed and normalized before approved publication', async () => {
@@ -198,7 +313,7 @@ test('managed private HLS graph is bounded, hashed and normalized before approve
 });
 
 test('complete READY graph promotes a stable master only after all staged segments verify', async () => {
-  const { storage, delivery } = setup();
+  const { storage, delivery, publisher, operator } = setup();
   const master = Buffer.from('#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-STREAM-INF:BANDWIDTH=1500000,RESOLUTION=854x480\nv480.m3u8\n');
   const playlist = Buffer.from('#EXTM3U\n#EXT-X-INDEPENDENT-SEGMENTS\n#EXTINF:6.0,\nv480-000.ts\n#EXT-X-ENDLIST\n');
   const segment = Buffer.from('synthetic segment');
@@ -228,6 +343,8 @@ test('complete READY graph promotes a stable master only after all staged segmen
   delivery.objects.get(storage.stagedKey(scope, set, 'v480-000.ts'))!.body = Buffer.from('changed');
   await assert.rejects(storage.publishVerifiedHls(scope, rendition), /checksum mismatch/);
   assert.equal(await storage.removePublishedAsset(scope), 3);
+  assert.equal(operator.calls.some(call => call.name === 'DeleteObjectCommand'), true);
+  assert.equal(publisher.calls.some(call => call.name === 'DeleteObjectCommand' || call.name === 'ListObjectsV2Command'), false);
   assert.equal(delivery.objects.has(storage.deliveryKey(scope, set, sha(master), 'master.m3u8')), false);
   assert.equal(delivery.objects.has(storage.stagedKey(scope, set, 'master.m3u8')), true);
   assert.equal(await storage.removePublishedAsset(other), 0);

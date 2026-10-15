@@ -28,6 +28,8 @@ cp -a "$repo/templates" "$tmp/release/"
   node --input-type=module -e "import('@firelaunch/generator').then(() => console.log('Runtime workspace imports OK'))"
 )
 mkdir -p "$(dirname "$output")"
+mkdir -p "$tmp/release/infra/aws-media"
+cp "$repo/infra/aws-media/hls-avc-aac-v1.settings.json" "$tmp/release/infra/aws-media/"
 tar -C "$tmp/release" --sort=name --owner=0 --group=0 --numeric-owner -czf "$output" .
 sha256sum "$output" > "$output.sha256"
 echo "Release artifact: $output"
