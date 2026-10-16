@@ -1,0 +1,525 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  FireLaunch staging - CLIENT-OWNED access stack. Deployer role for JFin, the
+  CloudFormation execution role used for the foundation stack, the KMS key that
+  acts as the Roles Anywhere certificate authority, the staging budget and an
+  external-access analyzer. Deploy and update ONLY with the client admin role.
+
+Parameters:
+  BudgetEmail:
+    Type: String
+    Description: Address that receives budget alerts.
+  BudgetLimitUsd:
+    Type: Number
+    Default: 20
+  ClientAdminRoleArn:
+    Type: String
+    Default: arn:aws:iam::363242105231:role/managed/AccountFullAccessRole
+    Description: The only principal (besides the account root user) allowed to sign with or administer the CA key.
+  DeveloperBoundaryArn:
+    Type: String
+    Default: arn:aws:iam::363242105231:policy/firelaunch-access/firelaunch-developer-boundary
+  BedrockModelArns:
+    Type: CommaDelimitedList
+    Default: ""
+    Description: Approved Bedrock model / inference-profile ARNs the deployer may invoke. Empty = no Bedrock access.
+  AllowDeployerPublisherTesting:
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "false"
+    Description: Lets the deployer role assume the publisher role for publication tests (must also be enabled in the workload-identity stack).
+  AllowQueueCreation:
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "false"
+    Description: >-
+      CLIENT-ONLY switch. MediaConvert CreateQueue is also how reserved (paid
+      commitment) queues are bought, and IAM cannot restrict the pricing plan, so the
+      execution role may create queues only while the client temporarily sets "true".
+
+Conditions:
+  HasBedrock: !Not [!Equals [!Join ["", !Ref BedrockModelArns], ""]]
+  DeployerCanTestPublisher: !Equals [!Ref AllowDeployerPublisherTesting, "true"]
+  QueueCreationAllowed: !Equals [!Ref AllowQueueCreation, "true"]
+
+Resources:
+  # ---------------------------------------------------------------- CA key
+  RolesAnywhereCaKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: FireLaunch staging Roles Anywhere certificate authority signing key (private key never leaves KMS)
+      KeySpec: ECC_NIST_P256
+      KeyUsage: SIGN_VERIFY
+      PendingWindowInDays: 30
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AccountAdministrationViaIam
+            Effect: Allow
+            Principal: {AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"}
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: OnlyClientAdminMaySignCertificates
+            Effect: Deny
+            Principal: "*"
+            Action: kms:Sign
+            Resource: "*"
+            Condition:
+              ArnNotLike:
+                aws:PrincipalArn:
+                  - !Ref ClientAdminRoleArn
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:root"
+          - Sid: OnlyClientAdminMayChangeOrDestroyKey
+            Effect: Deny
+            Principal: "*"
+            Action:
+              - kms:PutKeyPolicy
+              - kms:ScheduleKeyDeletion
+              - kms:DisableKey
+              - kms:CreateGrant
+            Resource: "*"
+            Condition:
+              ArnNotLike:
+                aws:PrincipalArn:
+                  - !Ref ClientAdminRoleArn
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:root"
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  RolesAnywhereCaKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/firelaunch-staging-roles-anywhere-ca
+      TargetKeyId: !Ref RolesAnywhereCaKey
+
+  # ------------------------------------------- CloudFormation execution role
+  FoundationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: firelaunch-cfn-deployer
+      Path: /firelaunch-access/
+      Description: Assumed by CloudFormation to deploy the firelaunch-staging-foundation stack only
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: cloudformation.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: foundation-deploy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: FireLaunchBuckets
+                Effect: Allow
+                Action: "s3:*"
+                Resource: arn:aws:s3:::firelaunch-staging-*
+              - Sid: MediaConvertQueuesAndTemplates
+                Effect: Allow
+                Action:
+                  - mediaconvert:UpdateQueue
+                  - mediaconvert:GetQueue
+                  - mediaconvert:UpdatePreset
+                  - mediaconvert:DeletePreset
+                  - mediaconvert:GetPreset
+                  - mediaconvert:UpdateJobTemplate
+                  - mediaconvert:DeleteJobTemplate
+                  - mediaconvert:GetJobTemplate
+                  - mediaconvert:TagResource
+                  - mediaconvert:UntagResource
+                  - mediaconvert:ListTagsForResource
+                Resource:
+                  - !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:queues/firelaunch-staging-*
+                  - !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:presets/firelaunch-staging-*
+                  - !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:jobTemplates/firelaunch-staging-*
+              - Sid: MediaConvertTaggingAndReadsAuthorizedOnQueuePath
+                Effect: Allow
+                Action: [mediaconvert:TagResource, mediaconvert:UntagResource, mediaconvert:ListTagsForResource, mediaconvert:GetQueue]
+                Resource: !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:queues/*
+              - Sid: MediaConvertPresetAndTemplateCreation
+                Effect: Allow
+                Action: [mediaconvert:CreatePreset, mediaconvert:CreateJobTemplate]
+                Resource:
+                  - !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:presets/*
+                  - !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:jobTemplates/*
+              - !If
+                - QueueCreationAllowed
+                - Sid: TemporaryClientApprovedQueueCreation
+                  Effect: Allow
+                  Action: [mediaconvert:CreateQueue, mediaconvert:DeleteQueue]
+                  Resource: !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:queues/*
+                - !Ref AWS::NoValue
+              - Sid: MediaConvertDiscovery
+                Effect: Allow
+                Action: [mediaconvert:DescribeEndpoints, mediaconvert:ListQueues, mediaconvert:ListPresets, mediaconvert:ListJobTemplates]
+                Resource: "*"
+              - Sid: EventQueues
+                Effect: Allow
+                Action: "sqs:*"
+                Resource: !Sub arn:aws:sqs:us-east-2:${AWS::AccountId}:firelaunch-staging-*
+              - Sid: EventRules
+                Effect: Allow
+                Action: "events:*"
+                Resource: !Sub arn:aws:events:us-east-2:${AWS::AccountId}:rule/firelaunch-staging-*
+              - Sid: LogGroups
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DeleteLogGroup
+                  - logs:PutRetentionPolicy
+                  - logs:DeleteRetentionPolicy
+                  - logs:TagResource
+                  - logs:UntagResource
+                  - logs:TagLogGroup
+                  - logs:UntagLogGroup
+                  - logs:ListTagsForResource
+                  - logs:ListTagsLogGroup
+                  - logs:GetDataProtectionPolicy
+                  - logs:DeleteDataProtectionPolicy
+                  - logs:DeleteIndexPolicy
+                Resource:
+                  - !Sub arn:aws:logs:us-east-2:${AWS::AccountId}:log-group:/firelaunch/staging/*
+              - Sid: LogDiscoveryAndDeliveryPolicy
+                Effect: Allow
+                Action: [logs:DescribeLogGroups, logs:DescribeIndexPolicies, logs:PutResourcePolicy, logs:DeleteResourcePolicy, logs:DescribeResourcePolicies]
+                Resource: "*"
+              - Sid: Alarms
+                Effect: Allow
+                Action: [cloudwatch:PutMetricAlarm, cloudwatch:DeleteAlarms, cloudwatch:TagResource, cloudwatch:UntagResource, cloudwatch:ListTagsForResource]
+                Resource: !Sub arn:aws:cloudwatch:us-east-2:${AWS::AccountId}:alarm:firelaunch-staging-*
+              - Sid: AlarmDiscovery
+                Effect: Allow
+                Action: cloudwatch:DescribeAlarms
+                Resource: "*"
+              - Sid: CloudFront
+                Effect: Allow
+                Action: "cloudfront:*"
+                Resource: "*"
+              # IAM may authorize a just-created role by name without its path, so both ARN
+              # forms are listed; role names are unique per account, so both mean this one role.
+              - Sid: MediaConvertServiceRoleOnlyWithBoundary
+                Effect: Allow
+                Action: [iam:CreateRole, iam:PutRolePermissionsBoundary]
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/firelaunch/firelaunch-mediaconvert
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/firelaunch-mediaconvert
+                Condition:
+                  StringEquals: {iam:PermissionsBoundary: !Ref DeveloperBoundaryArn}
+              - Sid: MediaConvertServiceRolePoliciesCappedByBoundary
+                Effect: Allow
+                Action: [iam:PutRolePolicy, iam:DeleteRolePolicy, iam:AttachRolePolicy, iam:DetachRolePolicy]
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/firelaunch/firelaunch-mediaconvert
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/firelaunch-mediaconvert
+              - Sid: MediaConvertServiceRoleMaintenance
+                Effect: Allow
+                Action: [iam:GetRole, iam:GetRolePolicy, iam:ListRolePolicies, iam:ListAttachedRolePolicies, iam:ListRoleTags, iam:TagRole, iam:UntagRole, iam:UpdateRole, iam:UpdateRoleDescription]
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/firelaunch/firelaunch-mediaconvert
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/firelaunch-mediaconvert
+              - Sid: ApplicationPermissionPolicies
+                Effect: Allow
+                Action:
+                  - iam:CreatePolicy
+                  - iam:CreatePolicyVersion
+                  - iam:DeletePolicy
+                  - iam:DeletePolicyVersion
+                  - iam:GetPolicy
+                  - iam:GetPolicyVersion
+                  - iam:ListPolicyVersions
+                  - iam:SetDefaultPolicyVersion
+                  - iam:ListEntitiesForPolicy
+                  - iam:ListPolicyTags
+                  - iam:TagPolicy
+                  - iam:UntagPolicy
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:policy/firelaunch/firelaunch-staging-*
+                  - !Sub arn:aws:iam::${AWS::AccountId}:policy/firelaunch-staging-*
+              - Sid: NoTrustChangesOrRoleDeletion
+                Effect: Deny
+                Action: [iam:UpdateAssumeRolePolicy, iam:DeleteRole, iam:DeleteRolePermissionsBoundary]
+                Resource: "*"
+              - Sid: NoIdentityAccountOrGuardrailChanges
+                Effect: Deny
+                Action:
+                  - iam:CreateUser
+                  - iam:CreateAccessKey
+                  - iam:CreateLoginProfile
+                  - iam:CreateSAMLProvider
+                  - iam:CreateOpenIDConnectProvider
+                  - iam:PassRole
+                  - sts:AssumeRole
+                  - organizations:*
+                  - account:*
+                  - account-access:*
+                  - sso:*
+                  - identitystore:*
+                  - kms:*
+                  - rolesanywhere:*
+                  - acm-pca:*
+                  - cloudtrail:StopLogging
+                  - cloudtrail:DeleteTrail
+                  - s3:PutAccountPublicAccessBlock
+                Resource: "*"
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  # --------------------------------------------------------- Deployer role
+  DeployerPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: firelaunch-staging-deployer
+      Path: /firelaunch-access/
+      Description: FireLaunch staging deployment and operations for JFin
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: FoundationStackThroughExecutionRoleOnly
+            Effect: Allow
+            Action:
+              - cloudformation:CreateStack
+              - cloudformation:UpdateStack
+              - cloudformation:CreateChangeSet
+              - cloudformation:ExecuteChangeSet
+              - cloudformation:DeleteChangeSet
+              - cloudformation:DescribeChangeSet
+              - cloudformation:ListChangeSets
+              - cloudformation:DescribeStacks
+              - cloudformation:DescribeStackEvents
+              - cloudformation:DescribeStackResource
+              - cloudformation:DescribeStackResources
+              - cloudformation:ListStackResources
+              - cloudformation:GetTemplate
+              - cloudformation:GetTemplateSummary
+              - cloudformation:DetectStackDrift
+              - cloudformation:DetectStackResourceDrift
+              - cloudformation:DescribeStackDriftDetectionStatus
+              - cloudformation:DescribeStackResourceDrifts
+              - cloudformation:CancelUpdateStack
+              - cloudformation:ContinueUpdateRollback
+              - cloudformation:RollbackStack
+            Resource:
+              - !Sub arn:aws:cloudformation:us-east-2:${AWS::AccountId}:stack/firelaunch-staging-foundation/*
+              - !Sub arn:aws:cloudformation:us-east-2:${AWS::AccountId}:changeSet/*/*
+          - Sid: RequireExecutionRole
+            Effect: Deny
+            Action: [cloudformation:CreateStack, cloudformation:UpdateStack, cloudformation:CreateChangeSet]
+            Resource: "*"
+            Condition:
+              StringNotEquals: {cloudformation:RoleArn: !GetAtt FoundationExecutionRole.Arn}
+          - Sid: TemplateHelpers
+            Effect: Allow
+            Action: [cloudformation:ValidateTemplate, cloudformation:EstimateTemplateCost, cloudformation:ListStacks]
+            Resource: "*"
+          - Sid: PassExecutionRoleToCloudFormation
+            Effect: Allow
+            Action: iam:PassRole
+            Resource: !GetAtt FoundationExecutionRole.Arn
+            Condition:
+              StringEquals: {iam:PassedToService: cloudformation.amazonaws.com}
+          - Sid: MediaObjects
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:GetObjectTagging
+              - s3:PutObject
+              - s3:PutObjectTagging
+              - s3:DeleteObject
+              - s3:AbortMultipartUpload
+              - s3:ListMultipartUploadParts
+            Resource:
+              - !Sub arn:aws:s3:::firelaunch-staging-originals-${AWS::AccountId}-use2/media/*/*/*/original/*
+              - !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2/media/*/*/*/staged/*
+          - Sid: ReadDeliveryForVerification
+            Effect: Allow
+            Action: [s3:GetObject, s3:GetObjectVersion]
+            Resource: !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2/media/*/*/*/delivery/*
+          - Sid: DeliveryCleanupForOperators
+            Effect: Allow
+            Action: [s3:DeleteObject, s3:DeleteObjectVersion]
+            Resource: !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2/media/*/*/*/delivery/*
+          - Sid: PublicationOnlyThroughPublisherRole
+            Effect: Deny
+            Action: [s3:PutObject, s3:PutObjectAcl, s3:PutObjectTagging, s3:RestoreObject]
+            Resource: !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2/media/*/*/*/delivery/*
+          - Sid: ListMediaBuckets
+            Effect: Allow
+            Action: [s3:ListBucket, s3:ListBucketVersions, s3:ListBucketMultipartUploads, s3:GetBucketLocation]
+            Resource:
+              - !Sub arn:aws:s3:::firelaunch-staging-originals-${AWS::AccountId}-use2
+              - !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2
+          - Sid: MediaConvertJobsOnFireLaunchQueue
+            Effect: Allow
+            Action: mediaconvert:CreateJob
+            Resource:
+              - !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:queues/firelaunch-staging-encode
+              - !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:presets/*
+              - !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:jobTemplates/*
+          - Sid: MediaConvertJobInspection
+            Effect: Allow
+            Action: [mediaconvert:GetJob, mediaconvert:CancelJob]
+            Resource: !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:jobs/*
+          - Sid: MediaConvertDiscovery
+            Effect: Allow
+            Action: [mediaconvert:DescribeEndpoints, mediaconvert:ListJobs, mediaconvert:ListQueues, mediaconvert:GetQueue, mediaconvert:ListPresets, mediaconvert:GetPreset, mediaconvert:ListJobTemplates, mediaconvert:GetJobTemplate]
+            Resource: "*"
+          - Sid: PassMediaConvertServiceRole
+            Effect: Allow
+            Action: iam:PassRole
+            Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/firelaunch/firelaunch-mediaconvert
+            Condition:
+              StringEquals: {iam:PassedToService: mediaconvert.amazonaws.com}
+          - Sid: EventQueueOperations
+            Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:GetQueueAttributes
+              - sqs:GetQueueUrl
+              - sqs:SendMessage
+              - sqs:PurgeQueue
+              - sqs:StartMessageMoveTask
+              - sqs:ListMessageMoveTasks
+              - sqs:CancelMessageMoveTask
+            Resource: !Sub arn:aws:sqs:us-east-2:${AWS::AccountId}:firelaunch-staging-*
+          - Sid: LogInvestigation
+            Effect: Allow
+            Action: [logs:StartQuery, logs:StopQuery, logs:GetQueryResults, logs:FilterLogEvents, logs:GetLogEvents, logs:StartLiveTail, logs:StopLiveTail]
+            Resource: "*"
+          - Sid: CloudFrontInvalidation
+            Effect: Allow
+            Action: [cloudfront:CreateInvalidation, cloudfront:GetInvalidation, cloudfront:ListInvalidations]
+            Resource: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/*
+          - !If
+            - DeployerCanTestPublisher
+            - Sid: AssumePublisherForApprovedTests
+              Effect: Allow
+              Action: sts:AssumeRole
+              Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/firelaunch/firelaunch-staging-publisher
+            - !Ref AWS::NoValue
+          - !If
+            - HasBedrock
+            - Sid: ApprovedBedrockModels
+              Effect: Allow
+              Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
+              Resource: !Ref BedrockModelArns
+            - !Ref AWS::NoValue
+          - Sid: DenyAccountIdentityBillingAndGuardrailChanges
+            Effect: Deny
+            Action:
+              - organizations:*
+              - account:*
+              - account-access:*
+              - sso:*
+              - sso-directory:*
+              - identitystore:*
+              - aws-portal:Modify*
+              - payments:*
+              - tax:*
+              - billing:Put*
+              - billing:Update*
+              - billing:Create*
+              - billing:Delete*
+              - budgets:Modify*
+              - budgets:Create*
+              - budgets:Delete*
+              - budgets:Update*
+              - aws-marketplace:Subscribe
+              - iam:CreateUser
+              - iam:CreateAccessKey
+              - iam:CreateLoginProfile
+              - iam:UpdateLoginProfile
+              - iam:DeleteRolePermissionsBoundary
+              - rolesanywhere:Create*
+              - rolesanywhere:Update*
+              - rolesanywhere:Delete*
+              - rolesanywhere:Put*
+              - rolesanywhere:Import*
+              - rolesanywhere:Enable*
+              - rolesanywhere:Disable*
+              - kms:Sign
+              - kms:ScheduleKeyDeletion
+              - kms:PutKeyPolicy
+              - cloudtrail:StopLogging
+              - cloudtrail:DeleteTrail
+              - cloudtrail:UpdateTrail
+              - s3:PutAccountPublicAccessBlock
+            Resource: "*"
+
+  DeployerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: FireLaunch-Staging-Deployer
+      Path: /firelaunch-access/
+      Description: JFin - FireLaunch staging deployment through CloudFormation plus media pipeline operations
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: account-access.amazonaws.com}
+            Action: [sts:AssumeRole, sts:SetContext]
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+        - !Ref DeployerPolicy
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  # ---------------------------------------------------------- Cost + audit
+  StagingBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: firelaunch-staging-monthly
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit: {Amount: !Ref BudgetLimitUsd, Unit: USD}
+      NotificationsWithSubscribers:
+        - Notification: {NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 50, ThresholdType: PERCENTAGE}
+          Subscribers: [{SubscriptionType: EMAIL, Address: !Ref BudgetEmail}]
+        - Notification: {NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 80, ThresholdType: PERCENTAGE}
+          Subscribers: [{SubscriptionType: EMAIL, Address: !Ref BudgetEmail}]
+        - Notification: {NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 100, ThresholdType: PERCENTAGE}
+          Subscribers: [{SubscriptionType: EMAIL, Address: !Ref BudgetEmail}]
+        - Notification: {NotificationType: FORECASTED, ComparisonOperator: GREATER_THAN, Threshold: 100, ThresholdType: PERCENTAGE}
+          Subscribers: [{SubscriptionType: EMAIL, Address: !Ref BudgetEmail}]
+
+  ExternalAccessAnalyzer:
+    Type: AWS::AccessAnalyzer::Analyzer
+    Properties:
+      AnalyzerName: firelaunch-staging-external-access
+      Type: ACCOUNT
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+Outputs:
+  DeployerRoleArn:
+    Value: !GetAtt DeployerRole.Arn
+  FoundationExecutionRoleArn:
+    Value: !GetAtt FoundationExecutionRole.Arn
+    Export: {Name: firelaunch-staging-access-ExecutionRoleArn}
+  RolesAnywhereCaKeyArn:
+    Value: !GetAtt RolesAnywhereCaKey.Arn
+  RolesAnywhereCaKeyAlias:
+    Value: !Ref RolesAnywhereCaKeyAlias
+  BudgetName:
+    Value: !Ref StagingBudget
+  ExternalAccessAnalyzerArn:
+    Value: !GetAtt ExternalAccessAnalyzer.Arn

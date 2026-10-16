@@ -1,43 +1,57 @@
 #!/usr/bin/env bash
+# Run on muffinos as root after separately copying a reviewed release archive.
 set -euo pipefail
-artifact="${1:?Usage: deploy-release.sh /absolute/release.tar.gz}"
-[[ -f "$artifact" && -f "$artifact.sha256" ]] || { echo 'Artifact and checksum are required' >&2; exit 1; }
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+
+artifact="${1:?Usage: sudo deploy-release.sh /home/deploy/firelaunch-incoming/release.tar.gz EXPECTED_SHA256}"
+operator_hash="${2:?Record the build workstation SHA-256 independently before deployment}"
+[[ $# = 2 ]] || die 'Schema-changing cutover is disabled pending an isolated restore rehearsal and reviewed procedure'
+[[ "$operator_hash" =~ ^[a-f0-9]{64}$ ]] || die 'Invalid operator-provided SHA-256'
+require_operator
+require_layout
+health || die 'Existing staging HTTPS health check failed'
+[[ "$artifact" = /home/deploy/firelaunch-incoming/*.tar.gz && -f "$artifact" && ! -L "$artifact" && -f "$artifact.sha256" ]] || die 'Release archive must be a regular file in the staging incoming directory'
 expected="$(cut -d' ' -f1 "$artifact.sha256")"
-[[ "$expected" =~ ^[a-f0-9]{64}$ ]] || exit 1
-actual="$(sha256sum "$artifact" | cut -d' ' -f1)"
-[[ "$actual" = "$expected" ]] || { echo 'Artifact checksum mismatch' >&2; exit 1; }
+[[ "$expected" = "$operator_hash" && "$(sha256sum "$artifact" | cut -d' ' -f1)" = "$operator_hash" ]] || die 'Release checksum mismatch'
+validate_archive "$artifact"
+
 release="$(date -u +%Y%m%dT%H%M%SZ)-${expected:0:12}"
-remote=deploy@muffinos
-base=/srv/firelaunch-staging
-ssh "$remote" "test -d '$base/releases' && test -f '$base/shared/backend.env' && test -x '$base/shared/start-server.sh'"
-scp "$artifact" "$remote:$base/incoming/$release.tar.gz"
-ssh "$remote" bash -s -- "$release" "$expected" <<'REMOTE'
-set -euo pipefail
-release="$1"; expected="$2"; base=/srv/firelaunch-staging
-[[ "$release" =~ ^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}$ ]] || exit 1
-archive="$base/incoming/$release.tar.gz"
-[[ "$(sha256sum "$archive" | cut -d' ' -f1)" = "$expected" ]] || exit 1
-mkdir "$base/releases/$release"
-tar -xzf "$archive" -C "$base/releases/$release" --no-same-owner
-rm "$archive"
-old="$(readlink -f "$base/current" 2>/dev/null || true)"
-ln -s "$base/releases/$release" "$base/.current-next"
-mv -Tf "$base/.current-next" "$base/current"
-if [[ -n "$old" ]]; then ln -s "$old" "$base/.previous-next"; mv -Tf "$base/.previous-next" "$base/previous"; fi
-if pm2 describe firelaunch-staging >/dev/null 2>&1; then
-  pm2 restart firelaunch-staging --update-env
-else
-  pm2 start "$base/shared/start-server.sh" --name firelaunch-staging --cwd "$base/shared"
+target="$base/releases/$release"
+[[ ! -e "$target" ]] || die 'Release already exists'
+mkdir -m 0755 "$target"
+trap '[[ -n "${activated:-}" ]] || rm -rf -- "$target"' EXIT
+tar -xzf "$artifact" -C "$target" --no-same-owner
+chown -R root:root "$target"
+chmod -R go-w "$target"
+[[ -f "$target/apps/server/dist/index.js" && -f "$target/apps/server/dist/operations-cli.js" && -f "$target/scripts/staging/schema-version.mjs" ]] || die 'Release is incomplete'
+old="$(readlink -f "$base/current")"
+old_schema="$(schema_max "$old")"
+new_schema="$(schema_max "$target")"
+db_schema="$(database_schema "$target")"
+[[ "$db_schema" = "$old_schema" ]] || die 'Live database schema differs from running release'
+[[ "$new_schema" = "$old_schema" ]] || die 'Schema-changing cutover is disabled; use a separately rehearsed database and object recovery procedure'
+
+# This path is schema-compatible only. The independent backup procedure checks
+# capacity and validates the encrypted archive before the release link changes.
+backup_script="$(dirname "${BASH_SOURCE[0]}")/backup.sh"
+[[ -f "$backup_script" && ! -L "$backup_script" && "$(stat -c '%U' "$backup_script")" = root ]] || die 'Backup script must be root owned'
+backup_mode="$(stat -c '%a' "$backup_script")"
+[[ $((8#$backup_mode & 022)) = 0 ]] || die 'Backup script is writable by another user'
+"$backup_script" "${release}-pre-deploy"
+
+systemctl daemon-reload
+[[ "$(systemctl show "$unit" -p DropInPaths --value)" = "$drop_in" ]] || die 'Unexpected staging systemd drop-ins'
+require_layout
+switch_release "$release"
+activated=1
+if systemctl restart "$unit" && wait_health; then
+  set_previous "$old"
+  echo "Staging release active: $release; schema $db_schema -> $new_schema"
+  exit 0
 fi
-for attempt in {1..20}; do
-  code="$(curl -sS -o /dev/null -w '%{http_code}' -H 'Host: firelaunch.jfin.dev' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4175/api/auth/session || true)"
-  [[ "$code" = 401 ]] && { pm2 save; echo "Deployed $release; hosted API returned 401 without session"; exit 0; }
-  sleep 1
-done
-if [[ -n "$old" ]]; then
-  ln -s "$old" "$base/.current-next"; mv -Tf "$base/.current-next" "$base/current"
-  pm2 restart firelaunch-staging --update-env || true
+
+switch_release "$(basename "$old")"
+if systemctl restart "$unit" && wait_health; then
+  die 'Candidate failed health; prior compatible release restored'
 fi
-echo 'Deployment health check failed; previous release restored if available' >&2
-exit 1
-REMOTE
+die 'Candidate and prior release failed health; operator intervention required'

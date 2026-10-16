@@ -1,0 +1,12 @@
+diff --git a/infra/aws/staging/cloudformation/03-firelaunch-staging-workload-identity.yaml b/infra/aws/staging/cloudformation/03-firelaunch-staging-workload-identity.yaml
+--- a/infra/aws/staging/cloudformation/03-firelaunch-staging-workload-identity.yaml
++++ b/infra/aws/staging/cloudformation/03-firelaunch-staging-workload-identity.yaml
+@@ -88,7 +88,7 @@ Resources:
+           - Sid: ApplicationRoleOnly
+             Effect: Allow
+             Principal: {AWS: !GetAtt ApplicationRole.Arn}
+-            Action: [sts:AssumeRole, sts:TagSession]
++            Action: [sts:AssumeRole, sts:TagSession, sts:SetSourceIdentity]
+           - !If
+             - DeployerCanTestPublisher
+             - Sid: ApprovedDeveloperTestingPrincipal

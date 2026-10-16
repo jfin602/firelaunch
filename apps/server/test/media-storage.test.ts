@@ -327,6 +327,7 @@ test('complete READY graph promotes a stable master only after all staged segmen
   await storage.putStaged(scope, set, 'master.m3u8', master, sha(master));
   await storage.putStaged(scope, set, 'v480.m3u8', playlist, sha(playlist));
   const expected = storage.publishedMasterUrl(scope, rendition);
+  assert.equal(new URL(expected).pathname.slice(1), storage.deliveryKey(scope, set, sha(master), 'master.m3u8'));
   assert.equal(expected.includes('/delivery/'), true);
   assert.equal(expected.includes('/staged/'), false);
   await assert.rejects(storage.publishVerifiedHls(scope, rendition), /S3 request failed/);

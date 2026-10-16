@@ -1,0 +1,50 @@
+{
+  "account": "363242105231",
+  "region": "us-east-2",
+  "deployed": "2026-10-15",
+  "stacks": {
+    "firelaunch-staging-access": {
+      "owner": "client",
+      "status": "UPDATE_COMPLETE",
+      "DeployerRoleArn": "arn:aws:iam::363242105231:role/firelaunch-access/FireLaunch-Staging-Deployer",
+      "FoundationExecutionRoleArn": "arn:aws:iam::363242105231:role/firelaunch-access/firelaunch-cfn-deployer",
+      "RolesAnywhereCaKeyArn": "arn:aws:kms:us-east-2:363242105231:key/a3d28f70-60ff-4316-b670-d415551d1b0e",
+      "RolesAnywhereCaKeyAlias": "alias/firelaunch-staging-roles-anywhere-ca",
+      "BudgetName": "firelaunch-staging-monthly",
+      "ExternalAccessAnalyzerArn": "arn:aws:access-analyzer:us-east-2:363242105231:analyzer/firelaunch-staging-external-access"
+    },
+    "firelaunch-staging-foundation": {
+      "owner": "developer (via FireLaunch-Staging-Deployer + firelaunch-cfn-deployer)",
+      "status": "CREATE_COMPLETE",
+      "OriginalsBucketName": "firelaunch-staging-originals-363242105231-use2",
+      "MediaBucketName": "firelaunch-staging-media-363242105231-use2",
+      "MediaConvertQueueArn": "arn:aws:mediaconvert:us-east-2:363242105231:queues/firelaunch-staging-encode",
+      "MediaConvertRoleArn": "arn:aws:iam::363242105231:role/firelaunch/firelaunch-mediaconvert",
+      "JobEventsQueueUrl": "https://sqs.us-east-2.amazonaws.com/363242105231/firelaunch-staging-mediaconvert-events",
+      "JobEventsQueueArn": "arn:aws:sqs:us-east-2:363242105231:firelaunch-staging-mediaconvert-events",
+      "JobEventsDeadLetterQueueUrl": "https://sqs.us-east-2.amazonaws.com/363242105231/firelaunch-staging-mediaconvert-events-dlq",
+      "JobEventsRuleArn": "arn:aws:events:us-east-2:363242105231:rule/firelaunch-staging-mediaconvert-jobs",
+      "JobAuditLogGroupName": "/firelaunch/staging/mediaconvert-job-events",
+      "DistributionId": "E3E4ESF38V413L",
+      "DistributionDomainName": "dl2jzii5bnotd.cloudfront.net",
+      "OriginAccessControlId": "E3FC82P2MZSJ0K",
+      "ApplicationPermissionsPolicyArn": "arn:aws:iam::363242105231:policy/firelaunch/firelaunch-staging-app-permissions",
+      "PublisherPermissionsPolicyArn": "arn:aws:iam::363242105231:policy/firelaunch/firelaunch-staging-publisher-permissions"
+    },
+    "firelaunch-staging-workload-identity": {
+      "owner": "client",
+      "status": "CREATE_COMPLETE",
+      "TrustAnchorArn": "arn:aws:rolesanywhere:us-east-2:363242105231:trust-anchor/a6180607-0f41-4054-9654-d5f16df17d56",
+      "ProfileArn": "arn:aws:rolesanywhere:us-east-2:363242105231:profile/709699e9-1312-4eb6-ac48-9bb129335911",
+      "ApplicationRoleArn": "arn:aws:iam::363242105231:role/firelaunch/firelaunch-staging-app",
+      "PublisherRoleArn": "arn:aws:iam::363242105231:role/firelaunch/firelaunch-staging-publisher"
+    }
+  },
+  "ca_certificate": {
+    "file": "ca/firelaunch-staging-ca.pem",
+    "subject": "O=FireLaunch, CN=FireLaunch Staging Roles Anywhere CA",
+    "serial_hex": "746d3750273f690a52a228022c9efc03",
+    "not_after": "2036-10-12T14:21:24Z",
+    "sha256_fingerprint": "fb96f129c077bba3c42cfd42d7a689f6fa5c342ddaeaaee6a13e8b8b686d9bb7"
+  }
+}

@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
+# Run on muffinos as root. Refuses binary rollback across an incompatible schema.
 set -euo pipefail
-base=/srv/firelaunch-staging
-[[ -L "$base/current" && -L "$base/previous" ]] || { echo 'Current and previous releases are required' >&2; exit 1; }
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+require_operator
+require_layout
+[[ -L "$base/previous" ]] || die 'No previous release is recorded'
 old="$(readlink -f "$base/current")"
 prior="$(readlink -f "$base/previous")"
-[[ "$old" = "$base"/releases/* && "$prior" = "$base"/releases/* ]] || exit 1
-ln -s "$prior" "$base/.current-next"
-mv -Tf "$base/.current-next" "$base/current"
-pm2 restart firelaunch-staging --update-env
-code="$(curl -sS -o /dev/null -w '%{http_code}' -H 'Host: firelaunch.jfin.dev' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4175/api/auth/session || true)"
-[[ "$code" = 401 ]] || { ln -s "$old" "$base/.current-next"; mv -Tf "$base/.current-next" "$base/current"; pm2 restart firelaunch-staging --update-env; echo 'Rollback target failed health check' >&2; exit 1; }
-ln -s "$old" "$base/.previous-next"
-mv -Tf "$base/.previous-next" "$base/previous"
-pm2 save
-echo "Rolled back to $prior"
+[[ "$prior" = "$base"/releases/* && -d "$prior" && ! -L "$prior" ]] || die 'Previous release is unsafe'
+current_schema="$(database_schema "$old")"
+prior_max="$(schema_max "$prior")"
+rollback_schema_safe "$current_schema" "$prior_max" || die "Database schema $current_schema exceeds rollback binary maximum $prior_max; use reviewed database recovery"
+switch_release "$(basename "$prior")"
+if systemctl restart "$unit" && wait_health; then
+  set_previous "$old"
+  echo "Staging rolled back to $(basename "$prior")"
+  exit 0
+fi
+switch_release "$(basename "$old")"
+systemctl restart "$unit" || true
+die 'Rollback target failed health; original release link restored'

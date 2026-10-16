@@ -1,0 +1,57 @@
+# Client-owned IAM handoff — staging nested media keys
+
+Status: REVIEW ONLY / NOT DEPLOYED. Prepared 2026-10-15 from repository HEAD `01069f0` plus the current untracked staging infrastructure bundle. Target account **363242105231**, region **us-east-2**. Never use account **309403336615**.
+
+## Ownership and exact change
+
+The client owns `firelaunch-staging-access` and `firelaunch-staging-workload-identity`. JFin owns `firelaunch-staging-foundation`. The only proposed client-owned edit is the four ARN lines in [`client-access.patch`](client-access.patch), applied to `infra/aws/staging/cloudformation/01-firelaunch-staging-access.yaml`. Do not edit or update stack 03: its Roles Anywhere, app and publisher trust, permission boundaries, and attached foundation-policy imports already express the required role separation. Do not create unmanaged policies.
+
+| Existing `DeployerPolicy` statement in stack 01 | Exact proposed object ARN suffix | Reason |
+| --- | --- | --- |
+| `MediaObjects`, originals resource | `/media/*/*/*/original/*` | Match generated owned upload objects; retain operator verification and cleanup. |
+| `MediaObjects`, media resource | `/media/*/*/*/staged/*` | Match private MediaConvert and normalized staged HLS. |
+| `ReadDeliveryForVerification` | `/media/*/*/*/delivery/*` | Preserve bounded delivery inspection. |
+| `DeliveryCleanupForOperators` | `/media/*/*/*/delivery/*` | Let the separately gated revocation command delete the owned delivery objects. |
+| `PublicationOnlyThroughPublisherRole` explicit deny | `/media/*/*/*/delivery/*` | Keep the deployer from publishing through the nested path. |
+
+The target full ARN uses `arn:aws:s3:::firelaunch-staging-originals-${AWS::AccountId}-use2` or `arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2` as already expressed by `!Sub` in the template. No bucket wildcard, role trust, CA, billing, queue or global policy change is proposed. The existing operator bucket-level list, queue, and CloudFront invalidation grants are unchanged. CloudFront invalidation remains necessary after revoked delivery deletion; already fetched or cached bytes cannot be recalled.
+
+**Foundation change is separate and JFin-owned.** Its local template narrows the app, MediaConvert, publisher and OAC object resources to the same nested keys, adds app staged `PutObject` for graph normalization, explicitly denies direct app delivery writes, removes CloudFront `OriginPath: /delivery`, adds the strict viewer URI guard, and adds `DeliveryDistributionEnabled=false` by default. JFin must prepare and inspect its own change set with `firelaunch-deployer`; the client assistant must not deploy it. The new enable switch and signing key are not approval to turn the CDN on. No foundation update has been executed.
+
+## Client review and validation sequence
+
+1. On the client's machine, use an approved client administrator role/profile. Verify `aws sts get-caller-identity` returns account `363242105231` and a client-admin ARN. Stop on any mismatch. Keep `AWS_DEFAULT_REGION=us-east-2`. Do not use the JFin `firelaunch-deployer` profile to update client-owned stacks.
+2. In a clean copy of this repository, read the live `firelaunch-staging-access` template and compare the five object ARN entries against this patch. Run `git apply --check docs/tasks/c6-aws-integration-contracts/client-access.patch`, inspect `git diff --check`, then apply only this patch. Preserve unrelated working-tree files. The provided patch is reviewable; it has **not** been applied to the client template in JFin's working tree.
+3. Validate the edited template with `aws cloudformation validate-template --region us-east-2 --template-body file://infra/aws/staging/cloudformation/01-firelaunch-staging-access.yaml`.
+4. Create an UPDATE change set for **only** `firelaunch-staging-access` with `CAPABILITY_NAMED_IAM`, preserving current values for all seven existing parameters: `BudgetEmail`, `BudgetLimitUsd`, `ClientAdminRoleArn`, `DeveloperBoundaryArn`, `BedrockModelArns`, `AllowDeployerPublisherTesting`, `AllowQueueCreation`. Each parameter should use `UsePreviousValue=true`. Inspect every `ResourceChange` and `Replacement`. Expect only the existing `DeployerPolicy` managed policy to update without replacement. Stop if anything else changes.
+5. Obtain the client's explicit approval of that exact change set before execution. Execute and wait for `UPDATE_COMPLETE` only after approval. Never update stack 03 or the JFin-owned foundation stack in this step.
+6. After deployment, use read-only IAM simulation with `aws:RequestedRegion=us-east-2` and `s3:ResourceAccount=363242105231`. Check positive operator staged `GetObject` and delivery `DeleteObject`, negative operator delivery `PutObject`, app delivery `PutObject`, MediaConvert delivery `PutObject`, and publisher originals `PutObject`. Note that the app/MediaConvert/publisher nested-path positives depend on the **separate, still-unexecuted foundation update**; do not mark those live-allowed until JFin deploys it. Confirm queue `PAUSED`, event rule `DISABLED`, distribution `Disabled`, and no jobs or content publication.
+7. Return account/role identity, exact template hash, change-set ID and reviewed resource changes, stack status/output names, IAM simulation matrix, and unchanged queue/rule/distribution states. Redact any credentials, certificates or private media keys. Report missing permissions or evidence plainly.
+
+Representative commands (set `CLIENT_AWS_PROFILE` to the client's approved administrator profile; stop if the first identity is not the expected account and role):
+
+```bash
+AWS_PROFILE="$CLIENT_AWS_PROFILE" aws sts get-caller-identity --output json
+git apply --check docs/tasks/c6-aws-integration-contracts/client-access.patch
+git apply docs/tasks/c6-aws-integration-contracts/client-access.patch
+git diff --check
+sha256sum infra/aws/staging/cloudformation/01-firelaunch-staging-access.yaml
+AWS_PROFILE="$CLIENT_AWS_PROFILE" aws cloudformation validate-template --region us-east-2 --template-body file://infra/aws/staging/cloudformation/01-firelaunch-staging-access.yaml
+AWS_PROFILE="$CLIENT_AWS_PROFILE" aws cloudformation create-change-set --region us-east-2 --stack-name firelaunch-staging-access --change-set-name firelaunch-client-iam-review-$(date -u +%Y%m%dT%H%M%SZ) --change-set-type UPDATE --template-body file://infra/aws/staging/cloudformation/01-firelaunch-staging-access.yaml --capabilities CAPABILITY_NAMED_IAM --parameters ParameterKey=BudgetEmail,UsePreviousValue=true ParameterKey=BudgetLimitUsd,UsePreviousValue=true ParameterKey=ClientAdminRoleArn,UsePreviousValue=true ParameterKey=DeveloperBoundaryArn,UsePreviousValue=true ParameterKey=BedrockModelArns,UsePreviousValue=true ParameterKey=AllowDeployerPublisherTesting,UsePreviousValue=true ParameterKey=AllowQueueCreation,UsePreviousValue=true
+```
+
+Capture the returned change-set ID. Run `aws cloudformation describe-change-set --region us-east-2 --change-set-name <returned-id>` with the same client profile and inspect every change. **The block above does not execute a change set.** After explicit client approval, execute only that ID with `aws cloudformation execute-change-set --region us-east-2 --change-set-name <approved-id>` and wait for `stack-update-complete`. For read-only role checks, use `aws iam simulate-principal-policy --policy-source-arn arn:aws:iam::363242105231:role/firelaunch-access/FireLaunch-Staging-Deployer --action-names s3:GetObject s3:DeleteObject s3:PutObject --resource-arns <exact canonical S3 object ARN> --context-entries ContextKeyName=aws:RequestedRegion,ContextKeyValues=us-east-2,ContextKeyType=string ContextKeyName=s3:ResourceAccount,ContextKeyValues=363242105231,ContextKeyType=string`. Test each canonical staged/delivery object and a foreign bucket/path separately, reporting `allowed`, `explicitDeny` or `implicitDeny` verbatim. Confirm service state with `aws mediaconvert get-queue --name firelaunch-staging-encode`, `aws events describe-rule --name firelaunch-staging-mediaconvert-jobs`, and `aws cloudfront get-distribution --id E3E4ESF38V413L` using the same verified profile.
+
+## Copy-paste Claude Code prompt for the client
+
+```text
+Work in the FireLaunch repository as the client-owned AWS administrator. Target only AWS account 363242105231, region us-east-2. Never access or modify account 309403336615. The client owns firelaunch-staging-access and firelaunch-staging-workload-identity; JFin owns firelaunch-staging-foundation. Your only authorized template correction is docs/tasks/c6-aws-integration-contracts/client-access.patch against infra/aws/staging/cloudformation/01-firelaunch-staging-access.yaml. Do not touch stack 03 or the foundation stack, do not attach unmanaged IAM policies, and preserve unrelated local edits.
+
+First read docs/tasks/c6-aws-integration-contracts/client-iam-handoff.md, its patch, and the current stack 01 template. Use the client's approved admin AWS profile (ask the client for it if unknown); confirm STS account 363242105231 and an approved client-admin role before any AWS operation. Set region us-east-2. Read the live stack template and parameter values. Review the patch line by line: narrow operator originals to media/*/*/*/original/*, staged to media/*/*/*/staged/*, and the three delivery allow/deny entries to media/*/*/*/delivery/*. Preserve the explicit delivery publication deny, role trust, permissions boundary, CA, billing controls, and unrelated grants. Check the patch applies cleanly, apply only it, run git diff --check, and validate the template with CloudFormation.
+
+Prepare a CloudFormation UPDATE change set for firelaunch-staging-access only, with CAPABILITY_NAMED_IAM. Preserve all current parameter values (BudgetEmail, BudgetLimitUsd, ClientAdminRoleArn, DeveloperBoundaryArn, BedrockModelArns, AllowDeployerPublisherTesting, AllowQueueCreation) using UsePreviousValue=true. Inspect the complete change set. Expect only the DeployerPolicy managed policy to update with no replacement. If the account, diff, parameters, change set or role scope differ, stop and report. Get the client's explicit approval of the reviewed change set before executing it. If approved, execute that exact change set and wait for UPDATE_COMPLETE. Do not update any other stack.
+
+After execution, run read-only IAM simulation with RequestedRegion us-east-2 and s3:ResourceAccount 363242105231. Verify operator staged read and delivery delete are allowed, operator delivery put is explicitly denied, and unrelated buckets/paths stay denied. Check app delivery put, MediaConvert delivery put and publisher originals put remain denied. App staged read/write, MediaConvert staged write and publisher delivery write must be verified again only after JFin separately deploys the foundation template; do not call them qualified now. Confirm the MediaConvert queue remains PAUSED, EventBridge completion rule remains DISABLED and CloudFront distribution remains DISABLED. Do not submit jobs, enable services, issue viewer-signing keys, publish content or touch the VPS.
+
+Return the verified STS account and role, template SHA-256, change-set ID and exact resource changes, resulting stack status and output names, positive/negative IAM simulation results, and unchanged queue/rule/distribution states. Redact credentials, private certificates and private object identifiers. State plainly whether execution was approved and completed, or whether work stopped before deployment.
+```

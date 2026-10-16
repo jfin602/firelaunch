@@ -1,0 +1,28 @@
+--- a/infra/aws/staging/cloudformation/01-firelaunch-staging-access.yaml
++++ b/infra/aws/staging/cloudformation/01-firelaunch-staging-access.yaml
+@@ -338,20 +338,20 @@
+               - s3:AbortMultipartUpload
+               - s3:ListMultipartUploadParts
+             Resource:
+-              - !Sub arn:aws:s3:::firelaunch-staging-originals-${AWS::AccountId}-use2/*
+-              - !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2/staged/*
++              - !Sub arn:aws:s3:::firelaunch-staging-originals-${AWS::AccountId}-use2/media/*/*/*/original/*
++              - !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2/media/*/*/*/staged/*
+           - Sid: ReadDeliveryForVerification
+             Effect: Allow
+             Action: [s3:GetObject, s3:GetObjectVersion]
+-            Resource: !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2/delivery/*
++            Resource: !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2/media/*/*/*/delivery/*
+           - Sid: DeliveryCleanupForOperators
+             Effect: Allow
+             Action: [s3:DeleteObject, s3:DeleteObjectVersion]
+-            Resource: !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2/delivery/*
++            Resource: !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2/media/*/*/*/delivery/*
+           - Sid: PublicationOnlyThroughPublisherRole
+             Effect: Deny
+             Action: [s3:PutObject, s3:PutObjectAcl, s3:PutObjectTagging, s3:RestoreObject]
+-            Resource: !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2/delivery/*
++            Resource: !Sub arn:aws:s3:::firelaunch-staging-media-${AWS::AccountId}-use2/media/*/*/*/delivery/*
+           - Sid: ListMediaBuckets
+             Effect: Allow
+             Action: [s3:ListBucket, s3:ListBucketVersions, s3:ListBucketMultipartUploads, s3:GetBucketLocation]

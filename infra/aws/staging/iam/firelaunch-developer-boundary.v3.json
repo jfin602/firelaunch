@@ -1,0 +1,42 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "MaxPermissionsForFireLaunchWorkloadRoles",
+      "Effect": "Allow",
+      "Action": [
+        "s3:*", "mediaconvert:*", "cloudfront:*", "events:*", "sqs:*", "logs:*",
+        "cloudwatch:PutMetricData", "cloudwatch:GetMetricData",
+        "bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream",
+        "sts:GetCallerIdentity"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "S3OnlyFireLaunchBuckets",
+      "Effect": "Deny",
+      "Action": "s3:*",
+      "NotResource": ["arn:aws:s3:::firelaunch-*"]
+    },
+    {
+      "Sid": "S3OnlyThisAccount",
+      "Effect": "Deny",
+      "Action": "s3:*",
+      "Resource": "*",
+      "Condition": {"StringNotEquals": {"s3:ResourceAccount": "363242105231"}}
+    },
+    {
+      "Sid": "PassOnlyFireLaunchRoles",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::363242105231:role/firelaunch/*",
+      "Condition": {"StringEquals": {"iam:PassedToService": ["mediaconvert.amazonaws.com", "events.amazonaws.com"]}}
+    },
+    {
+      "Sid": "AssumeOnlyThePublisherRole",
+      "Effect": "Allow",
+      "Action": ["sts:AssumeRole", "sts:TagSession", "sts:SetSourceIdentity"],
+      "Resource": "arn:aws:iam::363242105231:role/firelaunch/firelaunch-staging-publisher"
+    }
+  ]
+}

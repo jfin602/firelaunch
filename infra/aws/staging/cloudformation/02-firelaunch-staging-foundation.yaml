@@ -1,0 +1,608 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  FireLaunch staging - foundation stack (developer-maintainable through the
+  FireLaunch-Staging-Deployer role and the firelaunch-cfn-deployer execution role).
+  Private S3 storage, paused MediaConvert queue and service role, MediaConvert
+  job-event pipeline (EventBridge -> SQS + DLQ), CloudWatch observability,
+  CloudFront delivery with Origin Access Control and signed-request enforcement,
+  and the permission policies used by the application and publisher roles.
+
+Parameters:
+  QueueStatus:
+    Type: String
+    AllowedValues: [PAUSED, ACTIVE]
+    Default: PAUSED
+    Description: Keep PAUSED until the client authorizes billable encoding.
+  QueueConcurrentJobs:
+    Type: Number
+    Default: 2
+    MinValue: 1
+    MaxValue: 10
+  EventProcessingState:
+    Type: String
+    AllowedValues: [DISABLED, ENABLED]
+    Default: DISABLED
+    Description: Routes MediaConvert job completion events to the application queue.
+  CloudFrontSigningPublicKeyPem:
+    Type: String
+    Default: ""
+    Description: >-
+      PEM public key whose private key the application holds for signed URLs/cookies.
+      While empty, CloudFront refuses every delivery request.
+  CloudFrontSigningKeyVersion:
+    Type: String
+    Default: v1
+    Description: Change when rotating the signing key (CloudFront public keys are immutable).
+  DeliveryDistributionEnabled:
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "false"
+    Description: Keep false until signed HLS playback is qualified on the installed Vega client.
+  BedrockModelArns:
+    Type: CommaDelimitedList
+    Default: ""
+    Description: Approved Bedrock model / inference-profile ARNs for the application role. Empty = no Bedrock access.
+  DeveloperBoundaryArn:
+    Type: String
+    Default: arn:aws:iam::363242105231:policy/firelaunch-access/firelaunch-developer-boundary
+
+Conditions:
+  HasSigningKey: !Not [!Equals [!Ref CloudFrontSigningPublicKeyPem, ""]]
+  NoSigningKey: !Equals [!Ref CloudFrontSigningPublicKeyPem, ""]
+  EnableSignedDelivery: !And
+    - !Condition HasSigningKey
+    - !Equals [!Ref DeliveryDistributionEnabled, "true"]
+  HasBedrock: !Not [!Equals [!Join ["", !Ref BedrockModelArns], ""]]
+
+Resources:
+  # ------------------------------------------------------------- Storage
+  OriginalsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub firelaunch-staging-originals-${AWS::AccountId}-use2
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules: [{ObjectOwnership: BucketOwnerEnforced}]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      VersioningConfiguration: {Status: Enabled}
+      LifecycleConfiguration:
+        Rules:
+          - Id: abort-incomplete-multipart-uploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload: {DaysAfterInitiation: 7}
+          - Id: expire-replaced-or-deleted-versions-after-30-days
+            Status: Enabled
+            NoncurrentVersionExpiration: {NoncurrentDays: 30}
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  OriginalsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref OriginalsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource: [!GetAtt OriginalsBucket.Arn, !Sub "${OriginalsBucket.Arn}/*"]
+            Condition: {Bool: {aws:SecureTransport: "false"}}
+
+  MediaBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub firelaunch-staging-media-${AWS::AccountId}-use2
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules: [{ObjectOwnership: BucketOwnerEnforced}]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      VersioningConfiguration: {Status: Enabled}
+      LifecycleConfiguration:
+        Rules:
+          - Id: abort-incomplete-multipart-uploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload: {DaysAfterInitiation: 7}
+          - Id: expire-replaced-or-deleted-versions-after-30-days
+            Status: Enabled
+            NoncurrentVersionExpiration: {NoncurrentDays: 30}
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  MediaBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref MediaBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource: [!GetAtt MediaBucket.Arn, !Sub "${MediaBucket.Arn}/*"]
+            Condition: {Bool: {aws:SecureTransport: "false"}}
+          - Sid: CloudFrontReadsPublishedDeliveryObjectsOnly
+            Effect: Allow
+            Principal: {Service: cloudfront.amazonaws.com}
+            Action: s3:GetObject
+            Resource: !Sub "${MediaBucket.Arn}/media/*/*/*/delivery/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${DeliveryDistribution}
+
+  # --------------------------------------------------------- MediaConvert
+  MediaConvertServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: firelaunch-mediaconvert
+      Path: /firelaunch/
+      Description: Used only by AWS Elemental MediaConvert for the firelaunch-staging-encode queue
+      PermissionsBoundary: !Ref DeveloperBoundaryArn
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: mediaconvert.amazonaws.com}
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals: {aws:SourceAccount: !Ref AWS::AccountId}
+              ArnLike: {aws:SourceArn: !Sub "arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:queues/firelaunch-staging-encode"}
+      Policies:
+        - PolicyName: read-originals-write-staged
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadAuthorizedOriginals
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${OriginalsBucket.Arn}/media/*/*/*/original/*"
+              - Sid: WriteStagedOutputOnly
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub "${MediaBucket.Arn}/media/*/*/*/staged/*"
+              - Sid: BucketMetadata
+                Effect: Allow
+                Action: [s3:ListBucket, s3:GetBucketLocation]
+                Resource: [!GetAtt OriginalsBucket.Arn, !GetAtt MediaBucket.Arn]
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  EncodeQueue:
+    Type: AWS::MediaConvert::Queue
+    Properties:
+      Name: firelaunch-staging-encode
+      Description: FireLaunch staging on-demand encode queue (H.264/AAC HLS 480p + 720p). Paused until encoding is authorized.
+      PricingPlan: ON_DEMAND
+      Status: !Ref QueueStatus
+      ConcurrentJobs: !Ref QueueConcurrentJobs
+      Tags:
+        Project: FireLaunch
+        Environment: Staging
+        Owner: Client
+        ManagedBy: IaC
+
+  # ------------------------------------------------- Job event pipeline
+  JobEventsDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: firelaunch-staging-mediaconvert-events-dlq
+      SqsManagedSseEnabled: true
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  JobEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: firelaunch-staging-mediaconvert-events
+      SqsManagedSseEnabled: true
+      VisibilityTimeout: 120
+      MessageRetentionPeriod: 345600
+      ReceiveMessageWaitTimeSeconds: 20
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt JobEventsDeadLetterQueue.Arn
+        maxReceiveCount: 5
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  # SQS requires exactly one resource per policy statement, so each queue has its own policy.
+  JobEventsQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref JobEventsQueue]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: OnlyTheFireLaunchJobRuleMaySend
+            Effect: Allow
+            Principal: {Service: events.amazonaws.com}
+            Action: sqs:SendMessage
+            Resource: !GetAtt JobEventsQueue.Arn
+            Condition:
+              ArnEquals: {aws:SourceArn: !GetAtt JobEventsRule.Arn}
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: "sqs:*"
+            Resource: !GetAtt JobEventsQueue.Arn
+            Condition: {Bool: {aws:SecureTransport: "false"}}
+
+  JobEventsDeadLetterQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref JobEventsDeadLetterQueue]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: OnlyTheFireLaunchJobRuleMaySend
+            Effect: Allow
+            Principal: {Service: events.amazonaws.com}
+            Action: sqs:SendMessage
+            Resource: !GetAtt JobEventsDeadLetterQueue.Arn
+            Condition:
+              ArnEquals: {aws:SourceArn: !GetAtt JobEventsRule.Arn}
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: "sqs:*"
+            Resource: !GetAtt JobEventsDeadLetterQueue.Arn
+            Condition: {Bool: {aws:SecureTransport: "false"}}
+
+  JobEventsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: firelaunch-staging-mediaconvert-jobs
+      Description: Final MediaConvert job states from the FireLaunch queue to the application event queue
+      State: !Ref EventProcessingState
+      EventPattern:
+        source: [aws.mediaconvert]
+        detail-type: [MediaConvert Job State Change]
+        detail:
+          status: [COMPLETE, ERROR, CANCELED]
+          queue: [!Sub "arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:queues/firelaunch-staging-encode"]
+      Targets:
+        - Id: application-event-queue
+          Arn: !GetAtt JobEventsQueue.Arn
+          DeadLetterConfig: {Arn: !GetAtt JobEventsDeadLetterQueue.Arn}
+          RetryPolicy: {MaximumRetryAttempts: 20, MaximumEventAgeInSeconds: 86400}
+
+  # ------------------------------------------------------ Observability
+  JobAuditLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /firelaunch/staging/mediaconvert-job-events
+      RetentionInDays: 30
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  JobAuditLogDeliveryPolicy:
+    Type: AWS::Logs::ResourcePolicy
+    Properties:
+      PolicyName: firelaunch-staging-eventbridge-to-logs
+      PolicyDocument: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Sid": "EventBridgeToFireLaunchJobAuditLog",
+            "Effect": "Allow",
+            "Principal": {"Service": ["events.amazonaws.com", "delivery.logs.amazonaws.com"]},
+            "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+            "Resource": "${JobAuditLogGroup.Arn}"
+          }]
+        }
+
+  JobAuditRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: firelaunch-staging-mediaconvert-audit
+      Description: Every FireLaunch MediaConvert job state change to CloudWatch Logs for troubleshooting (no application processing)
+      State: ENABLED
+      EventPattern:
+        source: [aws.mediaconvert]
+        detail-type: [MediaConvert Job State Change]
+        detail:
+          queue: [!Sub "arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:queues/firelaunch-staging-encode"]
+      Targets:
+        - Id: job-audit-log
+          Arn: !GetAtt JobAuditLogGroup.Arn
+
+  DeadLetterAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: firelaunch-staging-job-events-dlq-not-empty
+      AlarmDescription: MediaConvert job events failed delivery or processing and are waiting in the DLQ
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions: [{Name: QueueName, Value: !GetAtt JobEventsDeadLetterQueue.QueueName}]
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  BacklogAgeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: firelaunch-staging-job-events-backlog-age
+      AlarmDescription: Oldest unprocessed job event is older than 15 minutes
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions: [{Name: QueueName, Value: !GetAtt JobEventsQueue.QueueName}]
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 900
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  # ------------------------------------------------------------ Delivery
+  DeliveryOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: firelaunch-staging-media-oac
+        Description: CloudFront access to the delivery/ prefix of the FireLaunch staging media bucket
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  DeliveryLockFunction:
+    Type: AWS::CloudFront::Function
+    Condition: NoSigningKey
+    Properties:
+      Name: firelaunch-staging-delivery-lock
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Refuses all delivery requests until a signing key group is configured
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          return { statusCode: 403, statusDescription: 'Forbidden' };
+        }
+
+  DeliveryPathFunction:
+    Type: AWS::CloudFront::Function
+    Condition: HasSigningKey
+    Properties:
+      Name: firelaunch-staging-delivery-path
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Reject every path outside a canonical published HLS object
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var uri = event.request.uri;
+          if (!/^\/media\/[a-f0-9]{32}\/[a-f0-9]{32}\/[a-f0-9]{32}\/delivery\/[a-f0-9]{32}\/[a-f0-9]{64}\/[a-z0-9_-]+\.(m3u8|ts|m4s|mp4)$/.test(uri)) {
+            return { statusCode: 403, statusDescription: 'Forbidden' };
+          }
+          return event.request;
+        }
+
+  DeliverySigningPublicKey:
+    Type: AWS::CloudFront::PublicKey
+    Condition: HasSigningKey
+    Properties:
+      PublicKeyConfig:
+        Name: !Sub firelaunch-staging-signing-key-${CloudFrontSigningKeyVersion}
+        CallerReference: !Sub firelaunch-staging-signing-key-${CloudFrontSigningKeyVersion}
+        EncodedKey: !Ref CloudFrontSigningPublicKeyPem
+        Comment: FireLaunch staging application signing key
+
+  DeliverySigningKeyGroup:
+    Type: AWS::CloudFront::KeyGroup
+    Condition: HasSigningKey
+    Properties:
+      KeyGroupConfig:
+        Name: firelaunch-staging-delivery-signers
+        Comment: Keys trusted to sign FireLaunch staging delivery URLs and cookies
+        Items: [!Ref DeliverySigningPublicKey]
+
+  DeliveryDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: !If [EnableSignedDelivery, true, false]
+        Comment: FireLaunch staging HLS delivery (signed requests only; disabled until a signing key group exists)
+        PriceClass: PriceClass_100
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        Origins:
+          - Id: media-delivery
+            DomainName: !GetAtt MediaBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt DeliveryOriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        DefaultCacheBehavior:
+          TargetOriginId: media-delivery
+          ViewerProtocolPolicy: https-only
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          TrustedKeyGroups: !If [HasSigningKey, [!Ref DeliverySigningKeyGroup], !Ref AWS::NoValue]
+          FunctionAssociations: !If
+            - NoSigningKey
+            - - EventType: viewer-request
+                FunctionARN: !GetAtt DeliveryLockFunction.FunctionMetadata.FunctionARN
+            - - EventType: viewer-request
+                FunctionARN: !GetAtt DeliveryPathFunction.FunctionMetadata.FunctionARN
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  # -------------------------------- Application + publisher permissions
+  ApplicationPermissions:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: firelaunch-staging-app-permissions
+      Path: /firelaunch/
+      Description: Permissions for the FireLaunch staging VPS workload role (no delivery writes)
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: OriginalsReadWrite
+            Effect: Allow
+            Action: [s3:PutObject, s3:GetObject, s3:DeleteObject, s3:AbortMultipartUpload, s3:ListMultipartUploadParts]
+            Resource: !Sub "${OriginalsBucket.Arn}/media/*/*/*/original/*"
+          - Sid: OriginalsList
+            Effect: Allow
+            Action: [s3:ListBucket, s3:ListBucketMultipartUploads, s3:GetBucketLocation]
+            Resource: !GetAtt OriginalsBucket.Arn
+          - Sid: StagedReadAndNormalize
+            Effect: Allow
+            Action: [s3:GetObject, s3:PutObject]
+            Resource: !Sub "${MediaBucket.Arn}/media/*/*/*/staged/*"
+          - Sid: StagedList
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource: !GetAtt MediaBucket.Arn
+            Condition:
+              StringLike: {s3:prefix: ["media/*/*/*/staged/", "media/*/*/*/staged/*"]}
+          - Sid: DenyDirectDeliveryPublication
+            Effect: Deny
+            Action: [s3:PutObject, s3:PutObjectTagging, s3:DeleteObject]
+            Resource: !Sub "${MediaBucket.Arn}/media/*/*/*/delivery/*"
+          - Sid: SubmitJobsToFireLaunchQueueOnly
+            Effect: Allow
+            Action: mediaconvert:CreateJob
+            Resource:
+              - !GetAtt EncodeQueue.Arn
+              - !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:presets/*
+              - !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:jobTemplates/*
+          - Sid: InspectAndCancelJobs
+            Effect: Allow
+            Action: [mediaconvert:GetJob, mediaconvert:CancelJob]
+            Resource: !Sub arn:aws:mediaconvert:us-east-2:${AWS::AccountId}:jobs/*
+          - Sid: MediaConvertDiscovery
+            Effect: Allow
+            Action: [mediaconvert:DescribeEndpoints, mediaconvert:ListJobs, mediaconvert:GetQueue]
+            Resource: "*"
+          - Sid: PassOnlyTheMediaConvertServiceRole
+            Effect: Allow
+            Action: iam:PassRole
+            Resource: !GetAtt MediaConvertServiceRole.Arn
+            Condition:
+              StringEquals: {iam:PassedToService: mediaconvert.amazonaws.com}
+          - Sid: ConsumeJobEvents
+            Effect: Allow
+            Action: [sqs:ReceiveMessage, sqs:DeleteMessage, sqs:ChangeMessageVisibility, sqs:GetQueueAttributes, sqs:GetQueueUrl]
+            Resource: !GetAtt JobEventsQueue.Arn
+          - Sid: AssumeOnlyThePublisherRole
+            Effect: Allow
+            Action: [sts:AssumeRole, sts:TagSession, sts:SetSourceIdentity]
+            Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/firelaunch/firelaunch-staging-publisher
+          - !If
+            - HasBedrock
+            - Sid: ApprovedBedrockModels
+              Effect: Allow
+              Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
+              Resource: !Ref BedrockModelArns
+            - !Ref AWS::NoValue
+
+  PublisherPermissions:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: firelaunch-staging-publisher-permissions
+      Path: /firelaunch/
+      Description: Permissions for the FireLaunch staging publisher role (staged -> delivery, revocation)
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ReadVerifiedStagedOutput
+            Effect: Allow
+            Action: [s3:GetObject, s3:GetObjectTagging]
+            Resource: !Sub "${MediaBucket.Arn}/media/*/*/*/staged/*"
+          - Sid: PublishAndRevokeDeliveryObjects
+            Effect: Allow
+            Action: [s3:PutObject, s3:GetObject, s3:DeleteObject, s3:PutObjectTagging, s3:GetObjectTagging]
+            Resource: !Sub "${MediaBucket.Arn}/media/*/*/*/delivery/*"
+          - Sid: ListStagedAndDelivery
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource: !GetAtt MediaBucket.Arn
+            Condition:
+              StringLike: {s3:prefix: ["media/*/*/*/staged/", "media/*/*/*/staged/*", "media/*/*/*/delivery/", "media/*/*/*/delivery/*"]}
+          - Sid: InvalidateRevokedContent
+            Effect: Allow
+            Action: [cloudfront:CreateInvalidation, cloudfront:GetInvalidation]
+            Resource: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${DeliveryDistribution}
+
+Outputs:
+  OriginalsBucketName:
+    Value: !Ref OriginalsBucket
+  MediaBucketName:
+    Value: !Ref MediaBucket
+  MediaConvertQueueArn:
+    Value: !GetAtt EncodeQueue.Arn
+  MediaConvertRoleArn:
+    Value: !GetAtt MediaConvertServiceRole.Arn
+  JobEventsQueueUrl:
+    Value: !Ref JobEventsQueue
+  JobEventsQueueArn:
+    Value: !GetAtt JobEventsQueue.Arn
+  JobEventsDeadLetterQueueUrl:
+    Value: !Ref JobEventsDeadLetterQueue
+  JobEventsRuleArn:
+    Value: !GetAtt JobEventsRule.Arn
+  JobAuditLogGroupName:
+    Value: !Ref JobAuditLogGroup
+  DistributionId:
+    Value: !Ref DeliveryDistribution
+  DistributionDomainName:
+    Value: !GetAtt DeliveryDistribution.DomainName
+  OriginAccessControlId:
+    Value: !GetAtt DeliveryOriginAccessControl.Id
+  SigningKeyGroupId:
+    Condition: HasSigningKey
+    Value: !Ref DeliverySigningKeyGroup
+  SigningPublicKeyId:
+    Condition: HasSigningKey
+    Value: !Ref DeliverySigningPublicKey
+  ApplicationPermissionsPolicyArn:
+    Value: !Ref ApplicationPermissions
+    Export: {Name: firelaunch-staging-foundation-AppPermissionsPolicyArn}
+  PublisherPermissionsPolicyArn:
+    Value: !Ref PublisherPermissions
+    Export: {Name: firelaunch-staging-foundation-PublisherPermissionsPolicyArn}
