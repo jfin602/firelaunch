@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
@@ -79,5 +80,29 @@ test('Preview offers book detail and audio controls without a fake film player',
     ? { id: audio.id, title: audio.title, description: audio.description, artwork: audio.artwork, presentation: 'information' as const }
     : item) });
   assert.equal(reconcile(changed, playback).screen, 'detail');
+  cleanup();
+});
+
+test('Studio theme seam leaves creator TV colors and directional focus independent', () => {
+  const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
+  const theme = css.split('/* Desert Heat Studio chrome.')[1];
+  assert.ok(theme);
+  assert.match(theme, /--fl-canyon-image: url\('\/studio-canyon\.svg'\)/);
+  assert.match(theme, /prefers-reduced-data: reduce/);
+  assert.doesNotMatch(theme, /\.tv-screen\s*\{|--tv-(?:accent|bg|text)\s*:/);
+  assert.match(readFileSync(new URL('../public/studio-canyon.svg', import.meta.url), 'utf8'), /<svg\b/);
+
+  const spec = fixtureChannel();
+  spec.brand = { ...spec.brand, primaryColor: '#398ae8', backgroundColor: '#102746', textColor: '#f1e8d1' };
+  const view = render(createElement(Preview, { spec }));
+  const frame = view.container.querySelector<HTMLElement>('.tv-frame')!;
+  assert.equal(frame.style.getPropertyValue('--tv-accent'), '#398ae8');
+  assert.equal(frame.style.getPropertyValue('--tv-bg'), '#102746');
+  assert.equal(frame.style.getPropertyValue('--tv-text'), '#f1e8d1');
+  assert.ok(view.container.querySelector('.tv-nav-button.focused'));
+  fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+  assert.ok(view.container.querySelector('.tv-card.focused'));
+  fireEvent.keyDown(window, { key: 'Enter' });
+  assert.ok(screen.getByRole('button', { name: /Play film/ }));
   cleanup();
 });

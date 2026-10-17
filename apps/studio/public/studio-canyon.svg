@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" role="img" aria-label="Abstract red sandstone canyon">
+  <!-- Original FireLaunch illustration drawn from SVG paths for this Studio theme; no third-party image or composite screenshot. -->
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#29191b"/><stop offset=".52" stop-color="#9c4330"/><stop offset="1" stop-color="#251619"/></linearGradient>
+    <linearGradient id="left" x2="1" y2=".55"><stop stop-color="#170e12"/><stop offset=".6" stop-color="#703026"/><stop offset="1" stop-color="#b05232"/></linearGradient>
+    <linearGradient id="right" x2="0" y2=".7"><stop stop-color="#a7462e"/><stop offset=".42" stop-color="#63251f"/><stop offset="1" stop-color="#190e11"/></linearGradient>
+    <linearGradient id="floor" x2="0" y2="1"><stop stop-color="#8d3e2a"/><stop offset="1" stop-color="#190d10"/></linearGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1440v900H0z"/>
+  <path fill="#d4884c" opacity=".38" d="M606 0h220L705 164l-113 94 45-152z"/>
+  <path fill="url(#left)" d="M0 0h610c-116 98-20 164-130 249-87 68 12 116-93 190-106 75 30 147-120 233-65 38-47 119-94 228H0z"/>
+  <path fill="#d27043" opacity=".36" d="M0 0h581c-171 83-145 152-218 222C205 374 410 415 266 548 193 616 199 727 98 900H0z"/>
+  <path fill="#1b0e12" opacity=".5" d="M0 41c183 36 174 114 402 144-141 34-208 41-402 13zm0 329c148 44 211 12 344 52-131 24-200 45-344 50zm0 311c107-34 200-25 268 0-90 21-148 36-268 46z"/>
+  <path fill="url(#right)" d="M865 0h575v900H782c170-140 117-205 193-313 87-123-27-134 93-249 77-75-30-149-102-197C905 101 953 48 865 0z"/>
+  <path fill="#e07846" opacity=".34" d="M933 0h507v145c-193 38-219 86-428 100 99-59 5-113-79-245zm507 370v317c-179-40-298-12-459 21 135-86 46-164 169-236 91-52 133-83 290-102z"/>
+  <path fill="#200e12" opacity=".48" d="M1440 197c-98 11-191 69-359 81 128 26 226 39 359 17zm0 446c-154-22-248 12-439 45 162 24 287 24 439 18z"/>
+  <path fill="url(#floor)" d="M175 900c147-198 323-287 541-304 229-17 392 111 552 304z"/>
+  <path fill="#e48a51" opacity=".26" d="M432 900c117-178 179-229 279-234 105-6 199 67 307 234z"/>
+</svg>

@@ -7,3 +7,124 @@
 .catalog-upload-entry{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:22px 0;padding:18px;border:1px solid #526442;border-radius:10px;background:#253020}.catalog-upload-entry p{margin:5px 0 0}.catalog-upload-entry button{white-space:nowrap}.video-upload-panel{padding:20px;margin:18px 0;border:1px solid #586a49;border-radius:10px;background:#1d261d}.video-upload-heading{display:flex;align-items:start;justify-content:space-between;gap:12px}.video-upload-heading h3{font:600 22px 'Space Grotesk';margin:8px 0}.video-dropzone{display:grid;justify-items:center;gap:7px;padding:22px 12px;border:2px dashed #63745a;border-radius:8px;background:#202c21;text-align:center}.video-dropzone.dragging{border-color:#d8f66c;background:#30412b}.video-dropzone span,.video-file{font-size:12px;color:#b2bcae}.video-dropzone input{max-width:100%;font-size:11px}.video-upload-panel progress{width:100%;height:12px;margin-top:18px;accent-color:#d8f66c}.catalog-library{display:grid;gap:8px;margin:16px 0}.catalog-panel .catalog-library-item{display:flex;align-items:center;gap:12px;width:100%;padding:9px;text-align:left;border:1px solid #424e3d;background:#202820;border-radius:8px}.catalog-panel .catalog-library-item.selected{border-color:#d8f66c}.catalog-library-art{display:grid;place-items:center;flex:none;width:80px;height:54px;overflow:hidden;border-radius:5px;background:#344339;color:#d8f66c;font-size:21px}.catalog-library-art img{width:100%;height:100%;object-fit:cover}.catalog-library-copy{display:grid;gap:4px;min-width:0}.catalog-library-copy strong{font-size:13px;overflow:hidden;text-overflow:ellipsis}.catalog-library-copy small{font-size:11px;color:#aab8a4}@media(max-width:690px){.catalog-upload-entry{align-items:start;flex-direction:column}}
 .video-form-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(180px,1fr);gap:12px}.video-form-grid .field{min-width:0}.catalog-management{margin:16px 0;padding:12px 16px;border:1px solid #424e3d;border-radius:8px;background:#202820}.catalog-management summary{cursor:pointer;font-weight:600;color:#e7eee0}.catalog-management summary:focus-visible,.video-dropzone input:focus-visible{outline:2px solid #d8f66c;outline-offset:3px}.catalog-video-actions{margin:14px 0}@media(max-width:690px){.video-form-grid{grid-template-columns:1fr}.video-upload-panel{padding:14px}.video-dropzone{padding:16px 8px}}
 .video-upload-panel{container-type:inline-size}@container (max-width:420px){.video-form-grid{grid-template-columns:1fr}.video-upload-panel .button-row{flex-wrap:wrap}}
+
+/* Desert Heat Studio chrome. The TV Preview keeps its independent --tv-* brand. */
+:root {
+  --fl-bg: #0e0b0d;
+  --fl-nav: #191315;
+  --fl-surface: #261a1b;
+  --fl-surface-raised: #302123;
+  --fl-field: #211a1c;
+  --fl-text: #f7f3f0;
+  --fl-muted: #baaaa7;
+  --fl-border: #59413f;
+  --fl-border-soft: #463436;
+  --fl-canyon-red: #a52d1c;
+  --fl-fire-red: #e94728;
+  --fl-orange: #ff7a1a;
+  --fl-amber: #ffb15c;
+  --fl-focus: #ffd29b;
+  --fl-error: #ffb4aa;
+  --fl-warning: #ffd099;
+  --fl-success: #a9dbc0;
+  --fl-primary: linear-gradient(115deg, #ff8c29, #e94728);
+  --fl-nav-selected: linear-gradient(110deg, #843325, #572320);
+  --fl-radius-sm: 7px;
+  --fl-radius: 12px;
+  --fl-radius-lg: 16px;
+  --fl-space-1: 4px;
+  --fl-space-2: 8px;
+  --fl-space-3: 12px;
+  --fl-space-4: 16px;
+  --fl-space-6: 24px;
+  --fl-space-8: 32px;
+  --fl-shadow: 0 12px 32px #08050666;
+  --fl-canyon-image: url('/studio-canyon.svg');
+  color: var(--fl-text);
+  background: var(--fl-bg);
+}
+
+body { background: var(--fl-bg); }
+.app-shell, .welcome { color: var(--fl-text); }
+.sidebar { background: var(--fl-nav); border-color: var(--fl-border-soft); }
+.mark, .topbar .eyebrow, .preview-heading .eyebrow, .panel-content .eyebrow,
+.under-preview .eyebrow, .welcome .eyebrow, .welcome-symbol, .welcome h1 em, .steps .current,
+.placeholder-icon { color: var(--fl-amber); }
+.wordmark small, .project-switch small, .sidebar-label, .section-label,
+.sidebar-footer small, .status, .live-dot, .under-preview p, .panel-content p,
+.welcome > p, .welcome-form p, .field, .check, .remote-bar span {
+  color: var(--fl-muted);
+}
+.sidebar-footer, .section-label, .topbar, .under-preview { border-color: var(--fl-border-soft); }
+.sidebar-footer, .signal { color: var(--fl-muted); }
+.topbar { background: var(--fl-nav); }
+.inspector { background: var(--fl-nav); border-color: var(--fl-border-soft); }
+.project-switch, .welcome-form, .module-editor, .agent-transcript,
+.catalog-preview, .catalog-upload-entry, .video-upload-panel, .catalog-management,
+.catalog-panel .catalog-library-item {
+  background: var(--fl-surface);
+  border-color: var(--fl-border-soft);
+  border-radius: var(--fl-radius);
+  box-shadow: var(--fl-shadow);
+}
+.project-avatar { background: var(--fl-surface-raised); color: var(--fl-amber); }
+.sidebar-nav button { color: var(--fl-muted); }
+.sidebar-nav button.active { background: var(--fl-nav-selected); color: var(--fl-text); box-shadow: 0 3px 14px #c7442733; }
+.sidebar-nav button:hover:not(.active) { background: var(--fl-surface-raised); color: var(--fl-text); }
+.sidebar-nav small { color: var(--fl-muted); }
+
+/* A separate illustration sits below a roughly 70% dark overlay. */
+.workspace-main, .fl-canyon-backdrop {
+  background-color: var(--fl-bg);
+  background-image: linear-gradient(110deg, #0e0b0dbd, #0e0b0db3 45%, #0e0b0dbf),
+    linear-gradient(0deg, #0e0b0d, transparent 70%), var(--fl-canyon-image);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.fl-canyon-backdrop { color: var(--fl-text); }
+.tv-frame { border-color: var(--fl-surface-raised); box-shadow: var(--fl-shadow), 0 0 0 1px var(--fl-border); }
+.remote button, .topbar button, .panel-content button:not(.primary),
+.welcome-form button:not(.primary), .catalog-panel .catalog-library-item,
+.field input, .field textarea, .field select, .inline-form input,
+.inline-form select, .project-select, .color-input, .module-editor textarea {
+  background: var(--fl-field);
+  border-color: var(--fl-border);
+  color: var(--fl-text);
+  border-radius: var(--fl-radius-sm);
+}
+.remote button:hover, .topbar button:hover, .panel-content button:not(.primary):hover,
+.welcome-form button:not(.primary):hover { background: var(--fl-surface-raised); }
+.panel-content button.primary, .welcome-form button.primary, .catalog-panel button.primary,
+.remote > div button:nth-child(2), .welcome a.primary {
+  background: var(--fl-primary);
+  border: 1px solid var(--fl-fire-red);
+  color: #1b0d0b;
+  border-radius: var(--fl-radius-sm);
+  box-shadow: 0 4px 16px #e9472830;
+}
+.panel-content button.primary:hover, .welcome-form button.primary:hover,
+.catalog-panel button.primary:hover { filter: brightness(1.08); }
+.app-shell :is(button, input, textarea, select, summary):focus-visible:not(.tv-nav-button):not(.tv-card):not(.tv-play),
+.welcome :is(button, input, textarea, select, a):focus-visible {
+  outline: 3px solid var(--fl-focus);
+  outline-offset: 3px;
+}
+.app-shell :is(button, input, textarea, select):disabled,
+.welcome :is(button, input, textarea, select):disabled { opacity: .52; cursor: not-allowed; box-shadow: none; }
+.check input, .video-upload-panel progress { accent-color: var(--fl-orange); }
+.chips button.active, .catalog-panel .catalog-library-item.selected { border-color: var(--fl-orange) !important; }
+.chips button.active { background: var(--fl-surface-raised) !important; color: var(--fl-text) !important; }
+.agent-status, .catalog-panel .catalog-status { color: var(--fl-success) !important; }
+.error, .catalog-panel .catalog-error, .agent-transcript .agent-error,
+.delivery-warning, .delivery-error, .danger { color: var(--fl-error) !important; }
+.error { background: #512528; border-left: 3px solid var(--fl-error); }
+.delivery-warning { color: var(--fl-warning) !important; }
+.loading { color: var(--fl-muted); }
+
+@media (prefers-reduced-data: reduce) {
+  .workspace-main, .fl-canyon-backdrop { background-image: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace-main, .fl-canyon-backdrop { background-attachment: scroll; animation: none; }
+}
