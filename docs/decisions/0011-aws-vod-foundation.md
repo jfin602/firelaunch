@@ -35,3 +35,8 @@ At the accepted decision GitHub main is at root `0.6.7` with completed P6 P1–P
 ## Non-goals and consequence
 
 No automatic AWS deployment/purchase, no media from Amazon/Prime/YouTube without independently documented rights, no provider-agnostic transcoding marketplace, no full Video on Demand on AWS Step Functions solution, no Fire OS/Roku/physical device certification. Additional MediaConvert charges replace worker operations; CloudFront/storage/request costs still apply. Use offline tests for implementation, with live cloud proof ONLY at authorized manual closeout.
+
+## 2026-10-17 hybrid access clarification (ADR 0013)
+
+[ADR 0013](0013-hybrid-video-access.md) is the accepted access-policy refinement for subsequent live P6 qualification. The production encoder and private original/staging model in this ADR remain unchanged. For **approved free-to-view** renditions, the final rights-approved CloudFront `delivery/` graph may be anonymously readable after explicit creator approval and separately authorized operator CDN activation. The client may use stable unsigned v1 media URLs, but only for approved `free` publications. No user-uploaded or staged media becomes accessible because an encode completed. Future `purchase`, `rental` and `subscription` content must use independent qualified entitlement/protected HLS authorization, not this open CDN path. There is no paid feature or CloudFront activation in the documentation decision.
+
