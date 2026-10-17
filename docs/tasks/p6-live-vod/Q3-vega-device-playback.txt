@@ -1,0 +1,209 @@
+You are GPT-6 Sol High operating manually in /home/jfin/dev/firelaunch.
+
+TASK: p6-live-vod / Q3 - Real Vega HLS playback and same-app releases
+TYPE: Manual one-off device qualification + bounded native-player repair
+VERSION: Preserve 0.6.7 until separate version authorization.
+MODEL: GPT-6 Sol High
+RESULT FILE: docs/tasks/p6-live-vod/Q3-closeout.md
+GOAL: One real creator-owned VPKG installed ONCE on Vega VirtualDevice,
+      HLS start/pause/seek/Back + same-binary v1/v2/LKG/v3 rollback.
+HARD BOUNDARY: No physical Fire TV, Appstore or paid playback claim.
+
+READ FIRST
+
+- BOOT.md, AGENTS.md and docs/workflow.md.
+- docs/tasks/p6-live-vod/{README.md,prompt-assessment.md,
+  implementation-plan.md,qualification-matrix.md,
+  Q1-closeout.md,Q2-closeout.md}.
+- docs/decisions/{0011-aws-vod-foundation.md,
+  0013-hybrid-video-access.md,0009-live-channel-delivery.md}.
+- docs/tasks/{c5-vega/device-runbook.md,p5/public-https-staging.md,
+  p6/deferred-qualification.md}.
+- Current generator, native template and tested Vega SDK documentation.
+
+If approved docs are only on remote branch
+docs/p6-live-vod-hybrid-20261017, inspect/fetch non-destructively
+and reconcile. Do not reset, clean, force checkout or overwrite
+uncommitted work. Never resurrect old FFmpeg worker paths.
+
+PRECONDITION
+
+Read and independently verify Q1 GREEN for real private verified
+HLS and Q2 GREEN for exactly this creator/deployment's approved
+free CloudFront HLS + real public-only manifest. Check actual
+source, rights, current revisions, HTTPS and exact public
+release before native testing. A Mock Preview, browser player
+or prior fixture VPKG does not satisfy this precondition.
+
+If Q1/Q2 are NOT GREEN or required public endpoints are missing,
+document Q3 BLOCKED/NOT GREEN without inventing installed-device
+or playback evidence. A small offline native player repair may
+still be performed if safe, but cannot qualify Q3 live.
+
+1. REAL NATIVE TARGET RECON
+
+Inspect current HEAD, root version and working tree, current
+Vega CLI and SDK versions, Metro dependencies, VirtualDevice
+state/OS/architecture and exact deployment/package identity.
+Confirm graphical device is actually running and commands work.
+
+Inspect:
+templates/vega-channel/src/App.js
+templates/vega-channel/src/{release-client.js,remote-release.js}
+packages/generator/src/index.ts
+packages/tv/src/runtime.ts
+docs/tasks/c5-vega/device-runbook.md
+
+Current template creates @amazon-devices/react-native-w3cmedia
+VideoPlayer, then assigns item.mediaUrl to player.src. This is
+not proof that an adaptive CloudFront HLS master works natively.
+
+Read the ACTUAL installed SDK/player documentation and native
+samples for supported adaptive HLS mode, Media Source Extensions,
+correct streaming-player integration, events, surface lifecycle,
+seeking, pause, error states, cleanup and return-from-playback.
+Do not guess unsupported API calls, use browser HTML players,
+or import a library incompatible with installed Vega SDK/Metro.
+
+2. TARGETED PLAYER CORRECTION (ONLY IF NEEDED)
+
+Implement the smallest compatible adaptive HLS playback path
+needed for the native device, using tested MSE or the supported
+SDK equivalent, while preserving:
+- TV focus/select/detail/Back semantics.
+- Correct video and audio/media routing.
+- Pause, resume and seek behavior.
+- Surface creation/destruction and cancellation cleanup.
+- Consistent state when moving between items or screens.
+- Remote manifest refresh and last-known-good release logic.
+- HTTPS public-only media URL contract; no S3 key/signed secret.
+- Existing creator source override protection.
+
+Add focused regression tests for player state/lifecycle and
+feature gates where the actual SDK supports them. No broad
+generator rewrite, alternate standalone TV app or silent
+fallback to an unsupported URL-only path merely to pass tests.
+
+At most 3 bounded repair/retest cycles; resolve evidenced
+device/build defects rather than overhauling native architecture.
+
+3. FRESH CREATOR VPKG BUILD
+
+From Q2's REAL owned ChannelDeployment, generated ChannelSpec and
+stable public-only HTTPS manifest origin, export or generate a
+fresh native project using existing protected hosted source path.
+Confirm the exact package ID, release-config deployment ID and
+origin and verify generated code/assets contain no creator
+private account data, S3 original/staged paths, tokens or secrets.
+
+Do NOT use example-origin fixtures or claim a historical built
+package qualifies this real creator release. Do not start native
+builds on muffinos; build locally with the installed supported
+Vega CLI/SDK, Metro and verified dependencies. Verify CLI
+project doctor, compatible manifest, actual release build exit,
+nonempty VPKG, version, SHA-256 and package/app component ID.
+
+Keep the original source/release history intact. Ask for narrow
+authorization if changing shared staging, DNS, creator metadata
+or releasing a newly generated artifact would alter external
+systems outside Q3's observed scope.
+
+4. REAL DEVICE ONE-INSTALL TEST
+
+Record time, VirtualDevice serial, Vega OS/SDK/CLI, package
+identity/hash and exact install command. Install the new owned
+VPKG ONCE; launch that same package. Observe actual device
+network requests for public resolver and HLS master, variants
+and segments, not only server-side curl.
+
+In the visible native UI:
+- Home/shelf has expected rights-approved v1 video.
+- D-pad focus/navigation/select and detail work.
+- HLS video starts, pauses, resumes and seeks.
+- Back exits playback to the appropriate detail/focus.
+- Leave/reenter playback without stale surfaces or leaks.
+- Network error/recovery is handled without blanking the app.
+- No unverified/draft/foreign content becomes playable.
+
+Capture redacted native screenshots, logs and request evidence.
+Browser-only playback or a generated manifest cannot be GREEN.
+
+5. SAME INSTALLED APP V1 -> V2 -> V3
+
+Preserve Q2's existing owner-approved immutable v1 release
+and its exact hash. With separate explicit creator approval
+for each changed release:
+
+A. Publish a meaningfully changed v2 with the existing P5
+   readiness, rights, revision, approval and publish flow.
+   Observe updated content in the SAME installed VPKG after
+   remote refresh, with no rebuild or second install.
+   Record v2 release/sequence/hash.
+
+B. Cold stop and relaunch with network disconnected. Observe
+   last-known-good v2 content and usable TV navigation.
+   Reconnect and verify real public origin updates resume.
+
+C. Using only an isolated, authorized test-origin or response
+   control, inject malformed JSON, wrong digest/deployment,
+   bad schema, 404, 5xx and timeouts. Verify the same installed
+   app rejects faulty remote revisions and retains usable
+   v2 LKG. Restore the actual origin and confirm recovery.
+   Do NOT corrupt real public releases, S3 HLS bytes, TLS or
+   a shared live content pointer to simulate these faults.
+
+D. Recheck current TV display/playback rights and source
+   authority, then explicitly approve a new v3 rollback to
+   the previous v1 content through P5. Confirm new release
+   ID, increasing sequence, rollback lineage and unchanged
+   historical v1/v2 bytes. Observe the SAME installed app
+   returning visibly to v1 content without reinstall.
+
+If owner consent, isolated fault tooling or device access is
+unavailable, STOP the affected gate and record the gap.
+Do not silently publish additional creator revisions.
+
+6. NEGATIVE AND REGRESSION CHECKS
+
+Verify public-only HTTPS manifest routing denies all /api,
+Studio and private content from the target network, and valid
+release digest/ETag behavior. Recheck foreign owner/CSRF
+server gates without fabricating a second principal.
+
+If exercising media revocation, use only a separately approved
+disposable fixture, preserving historical releases and realistic
+CDN/offline cache retention. Record Ngest existing health before
+and after without restarting or reconfiguring it.
+
+Run focused native/generator/release tests for the exact change,
+then one final aggregate npm run check with Node 24/npm 12 after
+source converges and git diff --check. Preserve exact test
+pass/fail/skip counts; do not rerun historic stacks.
+
+7. INDEPENDENT DEVICE CLOSEOUT
+
+Write Q3-closeout.md with:
+- Matrix F8-F9 GREEN or NOT GREEN and per-gate status.
+- Exact source SHA/dirty files, artifact path/hash, installed
+  Vega SDK/CLI/VirtualDevice OS and package identity.
+- Evidence of ONE install and actual native HLS start/pause/
+  seek/Back/recovery and request graph.
+- Approved v1/v2/v3 release IDs/sequences/hashes, no reinstall,
+  LKG offline and controlled invalid-origin test evidence.
+- Explicit creator consents, rollback behavior, unrelated
+  service/Ngest safety and what was left active.
+- Validation counts, screenshots/log references, redactions,
+  outstanding security and platform qualifications.
+- P5/c5 historical NOT GREEN retained; physical Fire TV and
+  Appstore approval are STILL NOT QUALIFIED.
+- Precise next handoff for independent P6 end-to-end F10
+  review, with separate approval required before 0.6.8 bump.
+
+GREEN requires directly observed real Vega VirtualDevice HLS
+playback AND same-installed-package v1/v2/offline/fault/v3
+qualification. If any required external gate is missing, report
+NOT GREEN even if the source builds or browser media plays.
+
+Do not commit, push, merge, change version, deploy a different
+staging installation, start paid AWS jobs, add entitlement/paywall
+logic, publish unapproved creator media or claim real Fire TV.
