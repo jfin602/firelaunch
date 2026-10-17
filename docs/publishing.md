@@ -119,3 +119,12 @@ Relevant official references:
 ### Real launch gate
 
 At least one creator-owned Appstore **approval**, verified physical Fire TV package/navigation/playback and installed-app remote catalog refresh; plus source export, tenant isolation, backup and support qualification. A submitted app or draft bundle alone does not satisfy launch Green.
+
+## Creator video publishing UX correction - c6-video-publishing-ux (2026-10-16)
+
+For an owned uploaded video, distinguish three operations: **Upload private original**, **prepare and review TV-ready media**, and **explicitly publish a rights-approved immutable channel revision**. The Studio's Add Video flow accepts a selected file, editable title (prefilled), optional description/category/thumbnail and one explicit unchecked combined rights confirmation. This simplified visible confirmation MUST preserve distinct internal TV display and TV playback permissions, provenance and revocation gates. A successful upload is not a verified playable rendition; provider completion is not publication approval.
+
+Ordinary ungrouped videos appear through the project's default Videos category/rail after validated draft association and eventual approved manifest publication; creating a Collection is not a prerequisite. A thumbnail may default to a safely generated frame when actually available; absent qualified artwork blocks TV publication, not draft saving. Duration, encoding, original object key and provider/job information are system responsibilities, not creator form inputs.
+
+When MediaConvert, EventBridge handling or CloudFront delivery are disabled, the creator may save a private Uploaded draft with an honest processing-unavailable state, but cannot Publish it as playable. Keep original P5 immutable manifest revision/pointer, creator rights review, live HTTPS output checks and real Vega evidence requirements. This video-content publish path is separate from the Amazon Developer Console binary submission path above. See [c6-video-publishing-ux](tasks/c6-video-publishing-ux/README.md).
+
