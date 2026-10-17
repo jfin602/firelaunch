@@ -1,0 +1,178 @@
+You are GPT-6 Sol High operating manually in /home/jfin/dev/firelaunch.
+
+TASK: p6-live-vod / Q1 - Real managed encoding into private HLS
+TYPE: Manual one-off qualification and bounded correction; NOT a runner prompt
+VERSION: Preserve 0.6.7. No automatic commit or version bump.
+RESULT FILE: docs/tasks/p6-live-vod/Q1-closeout.md
+MODEL: GPT-6 Sol High
+GOAL: Actual rights-owned MP4 -> real MediaConvert job -> fully verified private READY HLS.
+HARD BOUNDARY: Do NOT activate CloudFront or publish any TV content.
+
+READ FIRST
+
+- BOOT.md, AGENTS.md, docs/workflow.md.
+- docs/tasks/p6-live-vod/README.md, prompt-assessment.md,
+  implementation-plan.md, qualification-matrix.md.
+- docs/decisions/0011-aws-vod-foundation.md.
+- docs/decisions/0013-hybrid-video-access.md.
+- docs/tasks/c6-aws-vod/closeout.md.
+- docs/tasks/c6-video-publishing-ux/closeout.md.
+- docs/tasks/c6-aws-integration-contracts/foundation-change-set-review.md.
+- docs/integrations/aws-vod-foundation.md.
+- infra/aws-media/README.md and scripts/staging/README.md.
+
+These approved docs may currently exist only on remote branch
+docs/p6-live-vod-hybrid-20261017. Inspect it read-only if needed.
+Integrate documents non-destructively. Do not force-pull, reset,
+clean, discard dirty work, merge unrelated edits, or trust an old
+GitHub commit over the working code.
+
+LAST OBSERVED BASELINE (MUST REVERIFY)
+
+- Canonical staging service: firelaunch-staging.service on muffinos.
+- API loopback port: 4184. PostgreSQL schema: 13.
+- Staging UX GREEN release: 20261017T025825Z-59a5a1e6921b.
+- Exact source: 86af42f4dc9ba48a8c5c823e59f100fa10698026.
+- Client AWS account: 363242105231. Region: us-east-2.
+- Existing foundation UPDATE_COMPLETE, MediaConvert queue PAUSED,
+  EventBridge processing DISABLED, CloudFront DISABLED.
+- Earlier Add Video fixture was a 22,083-byte MP4, not established
+  to be suitable for the 480p/720p managed HLS profile.
+- Managed provider code is offline LOCAL GREEN only.
+
+1. SOURCE AND HOST RECON
+
+Inspect git HEAD/status, exact deployed release, config (without
+printing secrets), database, backups and application rollback.
+Confirm one canonical FireLaunch service and no competing install.
+Verify the actual role identities, AWS account and region using
+STS and inspect current Foundation stack, S3 buckets, queue, event
+rule, private SQS and DLQ, service/publisher/control roles and
+policies, budgets, credits, usage, quotas and in-flight jobs.
+
+Important source seams:
+apps/server/src/media-upload-service.ts
+apps/server/src/media-convert-provider.ts
+apps/server/src/managed-media-coordinator.ts
+apps/server/src/managed-media-job-repository.ts
+apps/server/src/media-convert-event.ts
+apps/server/src/media-convert-events-queue.ts
+apps/server/src/media-storage.ts
+apps/server/src/media-pipeline-repository.ts
+infra/aws-media/hls-avc-aac-v1.settings.json
+infra/aws/staging/cloudformation/02-firelaunch-staging-foundation.yaml
+
+Preserve original/source SHA-256 identity, creator, project, asset,
+upload, processing attempt, profile hash, queue/role/account/region,
+rights and private staging prefix. Review legacy unfinished jobs
+rather than treating them as READY. Do not resurrect FFmpeg or
+deploy upstream Foundation stacks. Never use account 309403336615.
+
+2. READ-ONLY SAFETY QUALIFICATION
+
+Validate actual IAM and bucket policy boundaries, and make
+authorized harmless positive/negative requests where possible.
+App/control credentials handle owned originals and private
+staging, NOT publication. Separate assumed publisher can handle
+approved delivery, but must not be used in this Q1 workflow.
+MediaConvert role reads scoped originals and writes scoped staged.
+Use an independently owned rights-cleared test input with a
+supported resolution/duration appropriate for the fixed profile.
+
+Prove current private S3 anonymous denial and that CloudFront
+remains disabled. No public URL, original, staged path, token or
+AWS secret may be exposed in generated code/logs/evidence.
+
+Verify cost admission limits and the actual projected scope of
+ONE paid encode, including job concurrency, 480p/720p variants,
+source minutes, output bytes, S3/SQS/EventBridge requests, account
+credit/plan and the budget alert. An AWS budget is not a hard cap.
+
+3. EXPLICIT APPROVAL CHECKPOINT - STOP BEFORE MUTATION
+
+Provide a concise authorization summary identifying exact AWS
+account/region, proposed existing queue/event resources, allowed
+one-fixture source, expected maximum source duration/size,
+job/profile settings, bounded financial exposure, rollback/pause
+plan, and any IAM/change-set, env, VPS restart or deployment need.
+
+Do NOT unpause a queue, enable event handling, submit a paid job,
+execute CloudFormation, change IAM, deploy, alter DNS, publish or
+enable a CDN without explicit separate owner/operator approval
+for those precise actions. An approved /docs-apply or the Q1
+prompt itself is NOT activation authorization.
+
+If a necessary grant or billing/prerequisite is absent, STOP
+and record the exact blocker; do not use broad sudo, root AWS
+keys, unrelated client permissions, or an unapproved account.
+After approval, continue this SAME manual prompt session.
+
+4. CONTROLLED ONE-JOB QUALIFICATION (ONLY IF APPROVED)
+
+Make only the specific approved, least-privilege configuration
+changes; inspect CloudFormation UPDATE change set, expected
+resources, replacements and drift BEFORE any execution. Preserve
+pre-change state and rollback controls.
+
+Upload or select exactly one approved small real MP4 through
+authenticated owner/CSRF flow. Verify private S3 bytes, checksum,
+owner rights and durable DB intent. Admit one job using the
+fixed checked-in MediaConvert profile and the existing
+authenticated coordinator (not a raw arbitrary S3 trigger).
+
+Observe actual CreateJob, job ID, provider GetJob account/region/
+queue/role/input/output, status transitions and private staging
+objects. Verify EventBridge -> private SQS consumer/reconciliation,
+duplicate/out-of-order/lost-event protections and retry handling;
+safe injected failure cases may supplement, but never replace,
+real job and event evidence. Do not submit extra paid jobs to
+exercise errors without another explicit approval.
+
+On completion, verify and hash the complete HLS master, variants
+and segments. Validate paths, content-type, sizes, duration/
+resolution and fixed profile; ensure normalized private READY
+is an owner/rights-checked durable DB state. Restart/reconcile
+only if service restart was separately authorized.
+
+Hard requirements:
+- Neither uploaded nor staged media is published.
+- CloudFront remains DISABLED.
+- No public manifest or delivery/ key is produced by completion.
+- Failed/unknown/revoked/wrong account attempts cannot be READY.
+- Retry/replayed callbacks do not duplicate paid jobs.
+- Previous media, rights and catalog stay intact.
+
+5. FINISH AND RECORD
+
+Do not leave unintended queue/event consumers running if the
+approved test plan called for temporary activation. Never pause
+an in-flight job without checking the provider consequences.
+Reconcile the one job and leave all artifacts available for Q2,
+with required private S3 retention. No bulk deletions.
+
+Run focused server/media/DB tests for any repairs. Use one
+aggregate npm run check only if final source requires it and
+avoid repeated full runs. Run git diff --check.
+
+Write Q1-closeout.md including:
+- GREEN or NOT GREEN for matrix F0-F4.
+- Exact HEAD, working tree, candidate/release and schema.
+- Real AWS account/region/role/queue/job observations.
+- Operator approvals, change-set IDs and before/after states.
+- Actual billable activity/estimated vs observed charge limits.
+- Source SHA and full private HLS graph/hashes with secret paths
+  redacted.
+- Private S3/CDN negative results, DB durable READY and rights.
+- Event and restart/retry/reconciliation evidence.
+- Test results with exact passes/fails/skips.
+- Remaining blockers and Q2 handoff (asset/rendition identity,
+  rights and qualified private outputs).
+- What was reverted, paused or deliberately left configured.
+
+GREEN requires a real correctly correlated MediaConvert job
+and complete private verified READY output with security gates.
+If approvals, service, output verification or real proof is
+missing, close Q1 NOT GREEN, not an assumed success.
+
+Do not start Q2, change publication pointers, create public
+media, enable CloudFront, commit, push, merge or bump versions.
