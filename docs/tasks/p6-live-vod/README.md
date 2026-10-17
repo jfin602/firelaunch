@@ -36,8 +36,18 @@ No authorization to turn on a queue, submit paid encoding, execute CloudFormatio
 
 Future viewer restrictions (`purchase`, `rental`, `subscription`) are **architecture-only** in ADR 0013. P6 creates no billing, entitlement, paid catalog UI or signed-playback feature. Unknown or restricted access policy must not be delivered on free public paths.
 
-## Execution workflow
+## Manual prompt assessment, plan and execution
 
-This plan is a documentation output, not executable runner commands. After `/docs-apply`, use `/prompt-ass`, `/prompt-plan`, and `/prompt-write p6-live-vod` for manual Q1-Q3 prompts if approved. The repository's `docs/workflow.md` Prompt Stack grammar is not activated; do not run `npm run codex:stack -- p6-live-vod`.
+Documentation assessment and plan: [prompt-assessment.md](prompt-assessment.md) and [implementation-plan.md](implementation-plan.md).
 
-Record each checkpoint in `docs/tasks/p6-live-vod/Q1-closeout.md`, `Q2-closeout.md`, `Q3-closeout.md` when exercised; summarize independent P6 result in `closeout.md` only after real testing. Do not create those files preemptively or pretend a pass.
+Run the following **manually and in order**, never through the Prompt Stack runner:
+
+1. [Q1-managed-private-hls.txt](Q1-managed-private-hls.txt) - controlled real MediaConvert and private verified HLS. Requires separate AWS operator authorization and spend consent before live activation.
+2. [Q2-free-cloudfront-publication.txt](Q2-free-cloudfront-publication.txt) - a real rights-approved FREE release over public-only HTTPS and CloudFront. Requires separate operator CDN and explicit creator publication approvals.
+3. [Q3-vega-device-playback.txt](Q3-vega-device-playback.txt) - adaptive HLS on the real installed Vega VirtualDevice, v1/v2 remote update, offline LKG, isolated fault handling and new approved v3 rollback. Requires Q1/Q2 GREEN and additional release consent.
+
+Prompts are ASCII-only text and may use up to three focused fix/retest cycles inside their own boundaries. They are authored instructions, **not executions or permission to incur AWS charges**. This manual task does not have a runner manifest, /activate gate or runner-owned commit. Do not run `npm run codex:stack -- p6-live-vod`.
+
+The documentation was authored on branch `docs/p6-live-vod-hybrid-20261017`. If the local checkout lacks it, inspect/fetch that branch first and integrate the docs without overwriting the active implementation or unrelated local work. Do not assume the remote docs branch is already the staging/source baseline.
+
+Record each checkpoint in `docs/tasks/p6-live-vod/Q1-closeout.md`, `Q2-closeout.md`, `Q3-closeout.md` only when actually exercised; summarize independent P6 result in `closeout.md` only after real testing. Keep separate UNKNOWN/NOT GREEN gates visible, avoid preemptive closeout files and do not claim execution from prompt authoring.
