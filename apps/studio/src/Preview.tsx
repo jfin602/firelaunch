@@ -20,7 +20,7 @@ export function Preview({ spec }: { spec: ChannelSpec }) {
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
-      if (event.target instanceof HTMLElement && (event.target.closest('input, textarea, select, [contenteditable="true"]'))) return;
+      if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"], a, summary, button:not(.tv-nav-button):not(.tv-card):not(.tv-play)')) return;
       const command = keyboardCommand(event);
       if (command) { event.preventDefault(); dispatch(command); }
     };

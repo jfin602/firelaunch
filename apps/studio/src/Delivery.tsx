@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { ChannelProject } from '@firelaunch/contracts';
 import { buildStatus, codeOverview, createBundle, generateCode, readSource, readiness, runBuild, saveSource, type BuildEvidence, type CodeOverview, type Readiness, type SourceFile } from './api.js';
 import { LivePublication } from './LivePublication.js';

@@ -128,3 +128,131 @@ body { background: var(--fl-bg); }
 @media (prefers-reduced-motion: reduce) {
   .workspace-main, .fl-canyon-backdrop { background-attachment: scroll; animation: none; }
 }
+
+/* P2 shell: the browser viewport is the canvas; each rail owns its own scroll. */
+html, body, #root { width: 100%; min-height: 100%; }
+body { min-width: 0; }
+.app-shell {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: clamp(212px, 17vw, 264px) minmax(0, 1fr);
+  overflow-x: clip;
+  background: var(--fl-bg);
+}
+.sidebar {
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100vh;
+  height: 100dvh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px 15px;
+  z-index: 20;
+}
+.sidebar-head { min-width: 0; }
+.wordmark { margin: 0 10px 32px; }
+.sidebar-account { display: grid; gap: 6px; min-width: 0; margin: 0 10px 24px; font-size: 11px; color: var(--fl-muted); }
+.sidebar-account span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-account button { width: fit-content; padding: 3px 0; color: var(--fl-text); background: none; border: 0; text-decoration: underline; font-size: 11px; }
+.sidebar-project, .studio-main, .topbar-title { min-width: 0; }
+.sidebar-project .project-switch { margin-bottom: 22px; }
+.sidebar-project .project-select { margin: -10px 0 22px; }
+.sidebar-nav button { min-height: 44px; }
+.studio-main { width: 100%; min-height: 100vh; min-height: 100dvh; }
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  min-height: 82px;
+  height: auto;
+  padding: 16px clamp(18px, 2.4vw, 38px);
+  gap: 16px;
+}
+.topbar h1 { overflow-wrap: anywhere; }
+.topbar-right { flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(340px, 30%, 430px);
+  align-items: stretch;
+  min-height: calc(100vh - 82px);
+  min-height: calc(100dvh - 82px);
+}
+.workspace-main { width: 100%; min-width: 0; padding: clamp(22px, 2.8vw, 42px); }
+.inspector { min-width: 0; overflow-wrap: anywhere; }
+.panel-content { max-width: none; }
+.preview-wrap, .tv-frame, .remote-bar, .under-preview { min-width: 0; }
+.workspace-jump { display: none; }
+
+/* At tablet widths the real inspector flows after Preview instead of hiding in a drawer. */
+@media (max-width: 1180px) {
+  .workspace { grid-template-columns: minmax(0, 1fr); }
+  .workspace-jump { grid-column: 1 / -1; display: flex; gap: 16px; flex-wrap: wrap; padding: 12px clamp(18px, 2.8vw, 34px); background: var(--fl-surface); }
+  .workspace-jump a { color: var(--fl-amber); font-size: 13px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+  .workspace-main { padding: clamp(18px, 2.8vw, 34px); }
+  .inspector { border-left: 0; border-top: 1px solid var(--fl-border-soft); }
+  .panel-content { max-width: 760px; }
+  #tv-preview, #studio-controls { scroll-margin-top: 95px; }
+}
+
+/* The project picker and sign out stay available in the compact top rail. */
+@media (max-width: 900px) {
+  .app-shell { display: block; }
+  .sidebar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    padding: 10px 14px 8px;
+    overflow: visible;
+    border-right: 0;
+    border-bottom: 1px solid var(--fl-border-soft);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 38%);
+    gap: 6px 12px;
+  }
+  .sidebar-head { display: flex; align-items: center; gap: 12px; }
+  .wordmark { margin: 0; font-size: 20px; }
+  .wordmark small { font-size: 7px; }
+  .sidebar-account { margin: 0; }
+  .sidebar-project .sidebar-label, .sidebar-sections-label, .sidebar-footer { display: none; }
+  .sidebar-project .project-switch { margin: 0; min-height: 40px; padding: 5px 8px; }
+  .project-avatar { width: 28px; height: 28px; flex: none; }
+  .sidebar-project .project-select { display: block; margin: 6px 0 0; }
+  .sidebar-nav { grid-column: 1 / -1; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: thin; }
+  .sidebar-nav button { white-space: nowrap; min-height: 38px; padding: 7px 12px; }
+  .topbar { position: relative; padding: 14px 18px; }
+  #tv-preview, #studio-controls { scroll-margin-top: 125px; }
+}
+
+@media (max-width: 600px) {
+  .sidebar { display: block; padding: 8px 10px; }
+  .sidebar-head { justify-content: space-between; }
+  .sidebar-account { text-align: right; justify-items: end; }
+  .sidebar-account span { max-width: 125px; }
+  .sidebar-project { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+  .sidebar-project .project-switch { flex: 1; min-width: 0; }
+  .sidebar-project .project-select { flex: 1; min-width: 0; width: auto; margin: 0; }
+  .sidebar-nav button { font-size: 12px; }
+  .topbar { align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+  .topbar-right { width: 100%; justify-content: space-between; }
+  .topbar-right .status { display: inline; white-space: normal; }
+  .workspace-jump { padding: 10px 14px; }
+  .workspace-main { padding: 18px 12px; }
+  .under-preview { display: block; }
+  .panel-content { padding: 22px 16px; }
+  .inline-form, .button-row { flex-wrap: wrap; }
+  .inline-form > input, .inline-form > select { flex: 1 1 160px; }
+  .color-fields { grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); }
+  .preview-heading { flex-wrap: wrap; }
+  .remote-bar { flex-wrap: wrap; }
+  .remote-bar span { display: inline; }
+  .welcome { width: 100%; margin: 0; padding: 28px 18px; }
+  .welcome-form { padding: 18px; }
+  #tv-preview, #studio-controls { scroll-margin-top: 155px; }
+}
