@@ -119,3 +119,10 @@ Relevant official references:
 ### Real launch gate
 
 At least one creator-owned Appstore **approval**, verified physical Fire TV package/navigation/playback and installed-app remote catalog refresh; plus source export, tenant isolation, backup and support qualification. A submitted app or draft bundle alone does not satisfy launch Green.
+
+## Initial free-video and future paid-video publication policy (ADR 0013, 2026-10-17)
+
+The initial Phase 6 creator-uploaded VOD publishing path supports rights-cleared **free-to-view** media only. Publishing is a distinct explicit creator action after private original verification, managed HLS READY, artwork and playback rights, catalog/ChannelSpec binding, and P5 immutable release approval. Only the approved HLS delivery graph can be read through CloudFront; its stable public master URL is not a paywall or proof of an entitlement. S3 originals and staged output remain private, and failed/unapproved/revoked assets are not newly published. Live CloudFront enablement requires a separately approved operator change set and access testing; accepting this design does not enable it.
+
+Future `purchase`, `rental`, and `subscription` restriction requires separately versioned viewer entitlement, cryptographically protected full-graph HLS playback and native Vega qualification; never expose paid works through the free delivery path or store short-lived viewer credentials in immutable PublishedManifest bytes. Sponsorship or ads may monetize a public free-to-view item without claiming viewer paywall protection. An already-public URL and cached/downloaded copies cannot be recalled fully by a later paywall; require explicit transition/revocation, a new approved release and honest caching limits. See [ADR 0013](decisions/0013-hybrid-video-access.md) and [p6-live-vod Q1-Q3](tasks/p6-live-vod/qualification-matrix.md).
+
