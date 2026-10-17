@@ -1,0 +1,31 @@
+TASK: Correction 6 / P1 — Desert Heat tokens and canyon asset seam
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Build the coherent reusable dark-cinematic Studio visual foundation without changing user flows or creator-owned TV theme variables.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/design/studio-visual-baseline.md, docs/decisions/0012-studio-visual-identity.md and docs/tasks/c6-desert-heat-studio/{README.md,prompt-assessment.md,implementation-plan.md}. Inspect actual CSS/App/Preview and current tests. Confirm git status, actual root version, previous work and legal asset availability. Stop on changed version or incompatible local state; do not overwrite or reset.
+
+IMPLEMENT
+In apps/studio/src/style.css (optionally narrow imported theme stylesheet), introduce semantic --fl-* design tokens: charcoal root/nav/cards, off-white/muted text, subtle borders, restrained orange/red gradients for major actions, neutral secondary buttons/inputs, selected nav, consistent type/radii/shadows/spacing, usable focus, disabled/warning/error/success states. Current CSS is dense and selector-heavy: do not replace every green hex blindly or rewrite unrelated TV Preview behavior. Keep .tv-screen/--tv-* controlled solely by spec.brand; add targeted tests or style assertions proving that non-Desert creator branding and D-pad focus remain intact.
+
+Establish a separate background image seam in apps/studio/public (owned/legally permissible original minimalist canyon artwork if no separately licensed image is available), CSS dark/gradient overlay of approximately 60-75 percent where text overlays art, coherent solid-color fallback and reduced-motion/low-resource behavior. Never use the approved composite screenshot as a CSS wallpaper, fetch unrelated copyrighted photos, invent image rights or claim exact photographic fidelity. Document provenance and any unsatisfied asset quality/reference dependency in the P1 handoff. Avoid excessive blur/background filters.
+
+LIMITS
+No new dashboard/Home yet, no App navigation rearchitecture, no catalog/API/MediaConvert/TV changes, no deployment, no version/lock changes. Keep one readable theme/source of truth, no dependency spree.
+
+VALIDATION
+Run focused Studio styling or Preview-focused tests (add a small regression where meaningful), npm run typecheck -w @firelaunch/studio, npm run build -w @firelaunch/studio and git diff --check. Do NOT pay the global check cost here. Report counts honestly.
+
+GIT / VERSION
+Do not commit, amend or move HEAD; runner owns P1 commit. All root/workspace/lock versions stay exactly 0.6.7. Handoff tokens/asset path, Preview isolation evidence, any visual asset gap and selectors P2 should consume.
+
+FINAL RESPONSE
+List exact modified files, focused tests/results, typecheck/build, screenshot/asset limitations and P2 input. Styling source passes are not browser visual GREEN.

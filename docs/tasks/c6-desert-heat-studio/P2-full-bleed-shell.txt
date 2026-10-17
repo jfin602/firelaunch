@@ -1,0 +1,31 @@
+TASK: Correction 6 / P2 — Full-bleed responsive Studio shell
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Make the creator Studio actually reach browser edges, with persistent functional nav/topbar, legible central content and usable contextual inspector/Preview at desktop/tablet/mobile widths.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, ADR 0012 and docs/tasks/c6-desert-heat-studio/{README.md,prompt-assessment.md,implementation-plan.md}; inspect P1 commit/source/theme handoff, App.tsx, Preview.tsx, CSS and current auth/workflow tests. Inspect git status/version, preserve owner data and accepted work. The outer black frame of the reference is a screenshot artifact: exclude it from UI.
+
+IMPLEMENT
+Refactor only the shell presentation/composition in apps/studio/src/App.tsx and scoped CSS: app root full 100vw/100% width and min-height 100dvh with correct overflow; left project-aware nav, topbar and central flexible workspace, right existing inspector/real actions. Keep responsive top/left navigation, use a documented breakpoint/drawer or inline inspector strategy, restore focus on close where applicable, avoid panel/viewport horizontal overflow. Preserve existing Catalog/Create/Design/Content/Code/Build/Publish surface selection, session/logout, project switching/revisions, initial/no-project onboarding and error/loading state. Keep TV Preview discoverable and operable during channel editing; no dark theme override of channel brand; ensure form keyboard does not trigger TV hotkeys. Only make a minimal shell-level Home/Overview route seam if needed for P3, with no fake widgets or unsupported functionality; leave data-rich Home to P3.
+
+Keep operations bounded and testable; prefer splitting JSX from huge App render into existing components/helper where useful, but do not build a parallel router, workspace or state system.
+
+LIMITS
+No media API changes, new server routes, authentication modification, fictional nav features, publish behavior change, version bump, deployment or inferred Chrome screenshot approval.
+
+VALIDATION
+Focused App/auth/workflow/Preview and responsive semantic tests for no project, existing project, switch, nav, inspector keyboard access, and selected states; npm run typecheck -w @firelaunch/studio; npm run build -w @firelaunch/studio; git diff --check. No full aggregate/browser claim.
+
+GIT / VERSION
+Runner owns commits. Do not self-commit or amend; all versions unchanged 0.6.7.
+
+FINAL RESPONSE
+Document affected files, exact test totals, shell scroll/breakpoint/inspector decisions and handoff to P3. Leave genuine browser screenshot comparison for manual P6.

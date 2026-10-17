@@ -1,0 +1,33 @@
+TASK: Correction 6 / P4 — Catalog and video upload visual convergence
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Apply the approved charcoal/orange-red visual system to the REAL media library, catalog editing, Add Video flow, thumbnail presentation, progress/error states and rights controls.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/design/studio-visual-baseline.md, ADR 0012, docs/tasks/c6-desert-heat-studio/{README.md,prompt-assessment.md,implementation-plan.md}, P1-P3 source/handoffs. Inspect Catalog.tsx, VideoUpload.tsx, api.ts, existing video/upload/csv/import tests, style.css and latest local changes. Confirm unchanged 0.6.7 and no unsafe dirty state.
+
+IMPLEMENT
+Polish existing Catalog + NewVideoUpload, not a competing media upload form. Preserve simple primary "Add Video" and optional advanced source controls; make form fields/dropzone accessible, concise, legible and visually harmonious on dimmed background. Use consistent card material, borders, corner radius, text hierarchy, dark inputs and warm key CTA; avoid full-bleed orange focus outlines, opaque canyon over form copy, or all-orange movie thumbnails.
+
+Upgrade catalog-library tiles only within existing data/asset authorization: stable 16:9 film/thumb and appropriate other-kind ratios, creator/source override priority, native artwork color, image error fallback and accurate kind/Collection/private media status labels. Existing thumbnails may be unset or inaccessible: placeholders and clear review states are preferable to unapproved cross-origin/private object fetches.
+
+Preserve exact present restrictions and behavior of MP4 selection/drop, duration validation, metadata entry, current single combined TV rights checkbox, optional image and thumbnail generation, pending/verified/failed/retry/abort states, owner-scoped request, duplicate avoidance and upload progress. Style existing semantics instead of weakening them. Error and success states need proper role/status/contrast; do not cosmetically relabel unready HLS as live playback. Include at least one focused accessible upload workflow regression and a media-card rights/fallback test.
+
+LIMITS
+No upload API/backend or MediaConvert changes, no new public image endpoint, rights model migration, publication change, fake progress, new movie content, app version change or deployment.
+
+VALIDATION
+Focused Studio catalog, video-upload and relevant workflow tests, npm run typecheck -w @firelaunch/studio, npm run build -w @firelaunch/studio and git diff --check. No full aggregate/browser qualification.
+
+GIT / VERSION
+Runner owns checkpoint commit. Do not commit/amend/move HEAD; root/lock/workspaces 0.6.7 unchanged.
+
+FINAL RESPONSE
+State changed files/tests, before/after upload state and display/TV rights preservation, fallback/image provenance and remaining P5 UI gaps.

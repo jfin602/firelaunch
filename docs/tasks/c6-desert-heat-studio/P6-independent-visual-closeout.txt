@@ -1,0 +1,36 @@
+TASK: Correction 6 / P6 — Independent visual and functional closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Independently qualify the actual Desert Heat Studio candidate against the owner-approved reference, existing creator workflows and browser accessibility/performance. Report bounded success or NOT GREEN with evidence; do not deploy or conflate this with native Vega/AWS qualifications.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/design/studio-visual-baseline.md, ADR 0012, docs/design/references/README.md and docs/tasks/c6-desert-heat-studio/{README.md,prompt-assessment.md,implementation-plan.md}. Inspect exact git HEAD/history, P1-P5 checkpoint commits, local state/root 0.6.7, test logs, source/asset provenance, build output and any P1-P5 marked gaps. Verify Node >=24.15 and npm 12 and that no application/source change is needed to establish the selected test candidate. If a critical bug is found, report NOT GREEN and recommend bounded repair, not an unreviewed broad P6 rewrite.
+
+INDEPENDENT REAL BROWSER QUALIFICATION
+- Check that browser UI reaches the physical viewport edges at ~1440/1024/390 widths, with no black mockup matte or horizontal scroll, functioning nav/topbar/inspector, keyboard focus, usable mobile upload/rights and TV Preview/remote/Back.
+- Capture labeled screenshots and viewport data in docs/tasks/c6-desert-heat-studio/evidence/ or other clearly identified local evidence location. Compare layout/color/canyon hierarchy to the **exact approved `trailers.png`**, using the documented SHA-256 of that uploaded reference; screenshot is NOT itself the deployable background. If source bytes unavailable/unverified, label visual parity **NOT VERIFIED** and do not claim screenshot comparison.
+- Confirm separate licensed/owned canyon asset, meaningful dimming, legible text/interactive contrast across bright/dark zones, fallback when art disabled, no expensive parallax/blur and acceptable image loading/layout shift.
+- Inspect real authorized projects: no-project onboarding, existing project/Home, project switch, correct owner-only catalog/media cards with varied **unaltered** creator art, broken/unavailable image fallback and stale project response isolation. Zero fictional movie entries/percentages/features in live creator data.
+- Exercise real Studio catalog and Add Video/MP4 form (use synthetic rights-safe disposable file only in permitted nonproduction environment), incomplete rights denial, private upload/status/retry as available, Preview navigation/edit, and Publish/Build readiness. Do not publish live or incur AWS costs without explicit authorization. Real external processing unavailable must be marked NOT TESTED, not faked.
+- Test interaction/keyboard screen-reader semantics, mobile touch-sized controls, focus restoration when using overlays, typing in fields without moving TV focus, hover/disabled/loading/error/revoked/offline cases and no contrast leak into arbitrary creator ChannelSpec brand (e.g., green/blue TV brand). Use measured or honestly scoped contrast checks; do not invent WCAG results.
+
+INDEPENDENT CODE / TEST GATES
+Perform exactly one final `npm run check` on Node24/npm12 and one `npm run build` if the check does not already build all workspaces; record exact test pass/fail/skip totals and seven workspace typecheck/build outcomes. Run `npm run codex:stack:validate -- c6-desert-heat-studio` and `git diff --check`; inspect owner/CSRF/rights/post-upload/Preview regressions. If browser/tooling unavailable, explicitly record NOT VERIFIED rather than representing unit tests as real browser proof.
+
+CLOSEOUT
+Write docs/tasks/c6-desert-heat-studio/closeout.md with exact HEAD/version, executed P1-P5 commits, unchanged version check, test counts, screenshots/asset hashes/provenance, desktop/tablet/mobile observations, rights/tenant/TV Preview checks, failures and disposition:
+- **LOCAL STUDIO VISUAL GREEN** only if actual approved reference comparison, lawful standalone canyon, full-bleed/responsive/accessible product and relevant functional tests are directly evidenced; otherwise **NOT GREEN** with repairs.
+- Separate remaining hosted S1-S6, AWS/MediaConvert, real creator playback on Vega, original P0/P4/P5/c5, physical Fire TV and Appstore outcomes. Never mark them qualified by this visual correction.
+
+GIT / VERSION
+This is MANUAL independent closeout. Do not commit, amend, reset or move HEAD; report any evidence/closeout worktree edits. Keep package.json, lockfile and workspace versions 0.6.7. Do not deploy, change live cloud infrastructure or touch customer data.
+
+FINAL RESPONSE
+Give explicit LOCAL STUDIO VISUAL GREEN / NOT GREEN with SHA/version, exact automated totals, screenshot and reference evidence, functional/contrast/accessibility disposition and bounded next action, without claims of unobserved TV/AWS success.

@@ -1,0 +1,33 @@
+TASK: Correction 6 / P5 — Editor accessibility and responsive convergence
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Converge the Desert Heat styling across existing editor/Preview/delivery surfaces and perform bounded accessibility, responsive and functional regressions before independent manual closeout.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, design baseline, ADR 0012, docs/tasks/c6-desert-heat-studio/{README.md,prompt-assessment.md,implementation-plan.md}; inspect P1-P4 commits/handoffs, actual current UI/code and focused Studio tests. Check 0.6.7 root and worktree status. Do not reuse any fictional screenshot feature as real product scope.
+
+IMPLEMENT
+Polish existing Create/Agent, Design, Content, Code, Build, Publish/Delivery and source-related forms with the same token/material/type/spacing system. Preserve the real App surface model, TV Preview central availability and author-brand isolation. Keep 16:9 TV geometry and spec.brand-controlled --tv-* values; arbitrary non-Desert creator channel colors and D-pad focused states must render independent from Studio shell. Address observed responsive issues across desktop ~1440, narrow ~1024 and phone ~390 CSS px conceptually using tests/layout rules; ensure sidebar/menu/right inspector, upload dropzone, selected form, Preview/remote, and publication controls are discoverable without horizontal overflow, inadvertent scroll traps, or hidden focus.
+
+Audit input keyboard priority vs TV Preview key handler; focus-visible, dialog/drawer keyboard and focus restoration (if present), touch target accessibility, selected/disabled/loading/error/status announcements, file/image failure fallback, reduced-motion and contrast of content over bright canyon. Use semantic style labels and minimal React changes needed to fix concrete issues; avoid changing security/media state machines, revising publication semantics or creating new workspaces/components merely for styling. Improve small relevant regressions, including screenshot-placeholder navigation absence and no leak of Studio accent into ChannelSpec.
+
+P5 is **convergence**, not a new feature batch. If one major missing asset or architecture issue cannot be fixed within scope, record the blocker and hand to manual closeout instead of silently broadening. Only tested product states may be described as qualified.
+
+LIMITS
+No server/API/MCP/MediaConvert work, package/lock/version bump, new TV native support, deployment, or historical closeout rewrite.
+
+VALIDATION
+Run focused plus Studio-wide tests (`npm run test:studio` once when feasible), Studio typecheck/build, any focused preview and auth regression; `git diff --check`. Keep one final root `npm run check` and actual browser proof for P6. Record test counts, failures/skips, remaining style issues and exact MANUAL P6 acceptance handoff.
+
+GIT / VERSION
+Do not self-commit or amend; runner owns P5 commit. Version everywhere remains exactly 0.6.7.
+
+FINAL RESPONSE
+Source files, changed behavior, typecheck/build and focused/Studio test counts, cross-screen regression findings, pending asset/reference/browser gates and manual P6 steps. Do not claim GREEN from jsdom, static or CSS checks.

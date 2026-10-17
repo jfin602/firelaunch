@@ -1,0 +1,33 @@
+TASK: Correction 6 / P3 — Real project Home and authentic media cards
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Fill the new Desert Heat dashboard with real, authenticated creator-project data and media cards without inventing mockup features, cross-tenant images, or false playback/progress status.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, design baseline, ADR 0012 and docs/tasks/c6-desert-heat-studio/{README.md,prompt-assessment.md,implementation-plan.md}; inspect P1/P2 commits, App.tsx project state, api.ts listProjects/readCatalog, Catalog.tsx artwork selection/VideoLibraryStatus and auth/media tests. Confirm real repo/0.6.7/dirty state.
+
+IMPLEMENT
+Use an existing App surface switch (not new global router) for a truthful Home/Overview. Authenticated existing projects should be discoverable through the new Home; no-project onboarding stays clear, and Catalog/Create/Design/Content/Code/Build/Publish and TV Preview remain one action away. Populate real project title, context, owner-safe project cards and actual scoped library items via already-available API calls only. Provide real click-through controls such as New Channel, Catalog/Add Video entry, edit/Preview where implemented; if uploader is embedded in Catalog, direct there instead of creating a second upload experience. Do not create fake Templates, Community, Analytics, dashboard percentages, publish success or movie entries.
+
+For film/media cards prefer original authorized item.creatorOverrides.artworkUrl then source metadata artworkUrl, retain image colors (no gradient wash), stable 16:9 or content-kind aspect ratio, accessible title/status/empty/fallback states, and explicit nonplayable/private/rights-unknown/processing semantics. Use diverse-color right-safe fixtures only in tests or clearly synthetic local demos; never insert them into hosted creator data. No guessed public stream/thumb access from private S3, no foreign project/media fetches. Protect asynchronous responses with project+session identity/cancellation or generation token to prevent stale thumbnails/status after switching project/accounts or logout. Avoid sensitive URLs in logs. Add focused tests for fast project switch, session expiry, blank/one/many project, load failure, broken image and click-through.
+
+Keep existing Catalog upload path and its rights gates. No server/DB/media pipeline change; if an approved private image cannot be rendered through current routes, show safe placeholder and document gap rather than bypass authentication.
+
+LIMITS
+No fictitious data widgets, full editor restyle (P4/P5), native TV changes, version/deploy/cloud changes.
+
+VALIDATION
+Focused Home, auth and Catalog interactions, npm run typecheck -w @firelaunch/studio, npm run build -w @firelaunch/studio, git diff --check; no full root aggregate.
+
+GIT / VERSION
+Do not commit: runner commits P3. All versions exactly 0.6.7.
+
+FINAL RESPONSE
+Exact files/test totals, data source and stale response strategy, safe artwork and rights behavior, unresolved media-image access if any, and P4 handoff.
