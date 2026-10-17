@@ -1,0 +1,212 @@
+You are GPT-6 Sol High operating manually in /home/jfin/dev/firelaunch.
+
+TASK: p6-live-vod / Q2 - Public free delivery and immutable TV publication
+TYPE: Manual one-off qualification and bounded correction; NOT runner
+VERSION: Preserve current root version unless separately authorized.
+RESULT FILE: docs/tasks/p6-live-vod/Q2-closeout.md
+MODEL: GPT-6 Sol High
+GOAL: Privately verified READY HLS -> creator-approved FREE publication ->
+      exact protected-origin CloudFront delivery + public TV manifest.
+HARD BOUNDARY: Do NOT claim Vega VirtualDevice playback or paid access.
+
+READ FIRST
+
+- docs/tasks/p6-live-vod/{README.md,prompt-assessment.md,
+  implementation-plan.md,qualification-matrix.md,Q1-closeout.md}.
+- docs/decisions/{0011-aws-vod-foundation.md,
+  0013-hybrid-video-access.md,0009-live-channel-delivery.md}.
+- docs/tasks/c6-aws-integration-contracts/foundation-change-set-review.md.
+- docs/tasks/p5/public-https-staging.md.
+- docs/integrations/aws-vod-foundation.md.
+- docs/tasks/p6/operator-runbook.md.
+- scripts/staging/README.md and current CloudFormation runbook.
+- BOOT.md, AGENTS.md, docs/workflow.md.
+
+Approved docs may still be on remote
+docs/p6-live-vod-hybrid-20261017. Inspect and reconcile them
+non-destructively. Do not reset, clean, force checkout or trust
+historical instructions over current live policies.
+
+PRECONDITION
+
+Q1 must be documented GREEN for the exact privately verified
+ready rendition chosen for this stage. Check it against real
+private media records, rights, source, owner and managed job.
+A Q1 mocked/local pass or a raw uploaded MP4 is not sufficient.
+
+If no eligible Q1 output exists, STOP with a truthful Q2 BLOCKED/
+NOT GREEN closeout. Do not secretly reencode or bypass READY.
+
+1. RECOVER EXACT CURRENT STATE
+
+Inspect HEAD, working tree, current canonical staging service,
+schema 13 or actually deployed schema, encrypted backup and
+schema-compatible application rollback, real client AWS account
+363242105231 in us-east-2 and current Foundation stack.
+
+Inspect actual creator project and ChannelDeployment. The prior
+upload qualification project had no live deployment; do not
+assume a current one exists. Identify validated ChannelSpec,
+CatalogItem, MediaAsset, rights-cleared artwork, private READY
+HLS and persisted Videos/custom shelf selection. Upload intent
+does not automatically imply playable ChannelSpec content.
+
+Relevant source:
+apps/server/src/{publication-repository.ts,public-resolver.ts,
+media-storage.ts,api.ts,catalog-projection.ts}
+apps/studio/src/LivePublication.tsx
+infra/aws/staging/cloudformation/02-firelaunch-staging-foundation.yaml
+docs/tasks/p5/public-https-staging.md
+
+Do not create a second FireLaunch installation or replay P5
+automated stacks. Do not touch unrelated projects or Ngest.
+
+2. REVIEW PUBLIC FREE-ONLY ACCESS POLICY
+
+ADR 0013 authorizes a free public delivery DESIGN, not CDN
+activation. Qualified free HLS must become viewer-readable only
+through verified delivery/ paths after explicit owner approval.
+This is intentionally not a paywall; do not add signed viewer
+tokens merely to make free video work.
+
+Inspect the actual distribution, OAC, no OriginPath, S3 Block
+Public Access, viewer request path guard, allowed exact canonical
+nested delivery keys, CloudFront host allowlist, TLS, cache/error
+TTL and disabled/policy state. Check which delivery/ objects
+already exist and confirm none would expose an unapproved,
+unknown, foreign, restricted or revoked asset on enablement.
+
+Validate real role split:
+- Control/app may not publish directly into delivery/.
+- Publisher role alone promotes verified approved rendition.
+- CloudFront OAC reads only canonical delivery/.
+- Neither original/ nor staged/ is reachable by CDN.
+- Direct anonymous S3 reads are denied.
+- Future purchase/rental/subscription or unknown access policy
+  is fail-closed, NEVER served as free public HLS.
+
+Prepare exact path/resource tests for malformed traversal,
+original/staged paths, unapproved delivery, foreign-private
+API, spoofed project owner, CSRF and revoked media.
+
+3. PUBLIC TV RESOLVER AND OWNED DEPLOYMENT
+
+Review the dedicated public-only HTTPS vhost contract. The
+actual anonymous endpoints are:
+GET /public/v1/deployments/<deployment-id>/current
+GET /public/v1/deployments/<deployment-id>/releases/<release-id>
+
+Do NOT use old /tv/v1 sample paths or expose the private
+Studio, /api, database, object store, account information or
+creator sessions through the TV hostname.
+
+Only the verified owned ChannelDeployment may publish. Use
+the existing hosted project/deployment creation with explicit
+real creator approval for app/package identity and a separate
+device-reachable HTTPS origin. If the needed TLS/DNS/Nginx
+change is not already qualified and authorized, prepare
+reviewable changes, then STOP and request approval.
+
+Confirm source provenance and both TV rights, cleared artwork,
+ready managed video status, validated ChannelSpec draft/selection,
+stable catalog binding, project revision and permission scope.
+Do not rewrite creator-owned media or overwrite manual edits.
+
+4. EXPLICIT OPERATOR AND CREATOR APPROVAL - STOP HERE
+
+Before any mutation, show:
+- Exact CloudFront distribution, current settings and proposed
+  access-policy changes (including any viewer function).
+- AWS account/region, stack UPDATE change set and precise
+  add/modify/remove/replacement inventory, IAM and rollback.
+- Which current objects would become reachable and how
+  unapproved delivery objects are excluded.
+- Exact separate public-only hostname/router changes, if any.
+- Explicit creator-owned project/deployment/artwork/video.
+- Versioned manifest release target and creator consent.
+- Expected metered CloudFront and object costs.
+
+Require distinct approval to execute any CloudFormation
+change set, enable distribution, modify DNS/Nginx/IAM/service,
+deploy a candidate or publish creator content. Approval of
+Q1 or this docs plan does NOT imply any of those permissions.
+Do not route around failure using a public S3 bucket, a
+staged prefix, weakened guard, global wildcard, broad sudo
+or paid viewer credentials.
+
+After exact approvals, continue in this same manual session.
+
+5. ONE SAFE PUBLIC FREE RELEASE (ONLY IF APPROVED)
+
+Use only the existing approved resources. Review actual changes
+and perform negative access tests around activation. If enabling
+CloudFront would expose unapproved existing delivery keys, STOP
+and fix the exposure design BEFORE activation.
+
+Validate direct S3 403/404 for original, staged and delivery
+objects, while permitting OAC CloudFront reads only for vetted
+immutable approved free delivery paths. Check viewer-path guard,
+wrong host/canonical path, malformed URL and unrelated content.
+
+In authenticated Studio:
+- Refresh actual catalog, current rights, revisions and state.
+- Ensure artwork really can be served publicly and is licensed.
+- Bind verified READY video and artwork into a validated
+  ChannelSpec draft without altering prior published releases.
+- Create/verify owned ChannelDeployment with correct package
+  identity and dedicated HTTPS public manifest origin.
+- Obtain explicit creator approval and perform existing P5
+  readiness -> approve -> publish transaction (not a backdoor).
+- Promote only verified private HLS graph to immutable approved
+  delivery prefix with publisher role.
+- Confirm manifest resolver release SHA-256, pointer, sequence,
+  ETag/caching and exact stable HTTPS CloudFront master URI.
+- Fetch master, each variant and representative/all required
+  segments over external public HTTPS with expected MIME/bytes,
+  no credentials and no raw bucket paths leaked.
+
+Check the post-publication API and CDN:
+- Anonymous/foreign users cannot mutate creator catalog/releases.
+- An unpublished, processing, failed, stale or revoked item
+  cannot pass the readiness or publish gate.
+- Revocation/new release blocks fresh resolution/new publication
+  as designed; test only on disposable approved fixture.
+- CloudFront invalidation and offline/cached-byte limitations
+  are recorded accurately; no claim of instant global erasure.
+- No paid/unknown-policy media enters the free viewer path.
+
+No native playback claim here. Do not mutate an actual shared
+public resolver or published media to inject failure responses.
+
+6. FOCUSED REPAIR LOOP AND CLOSEOUT
+
+Use at most 3 focused fix/retest cycles for newly observed
+source or configuration errors, preserving existing releases,
+backups, IAM and object history. Any unexpected replacement,
+new permission class or additional public exposure requires
+new approval. Do not wipe media or modify historical manifest
+bytes. Test owner/CSRF/release/invalidation path with focused
+unit/integration and real HTTPS probes. Run one full npm run check
+only at final convergence when needed; run git diff --check.
+
+Write Q2-closeout.md:
+- Matrix F5-F7 as GREEN or NOT GREEN with exact evidence.
+- Source/host/AWS identity, backups and approvals.
+- Change set, distribution config, precise access-negative
+  HTTP results, any rollbacks and public bytes scope.
+- Creator rights, published release ID/sequence/digest,
+  public-only resolver and immutable history.
+- CDN complete HLS graph, MIME, mapped canonical key and cost.
+- Revocation/cache/foreign/CSRF results and explicit gaps.
+- Test pass/fail/skip counts and Q3 handoff (owner deployment,
+  approved master URL, v1 release/hash, real origin, package ID).
+- Whether distribution and service were left enabled/disabled
+  per approved operating plan.
+
+GREEN requires directly verified approved free release and
+full CloudFront/resolver security proof, not AWS templates alone.
+If missing approval, public host, producer READY, permission or
+content rights, leave Q2 NOT GREEN without unsafe workaround.
+
+Do not create a paid entitlement system, commit/push/merge,
+advance version to 0.6.8, claim Vega device playback, or run Q3.
