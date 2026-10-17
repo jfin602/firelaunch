@@ -114,7 +114,7 @@ test('missing file, empty title and rights prevent catalog creation', async () =
 test('private video draft links one item and asset; failed part retries without duplicate records or publication', async () => {
   const restoreDuration = mockDuration();
   const previousFetch = globalThis.fetch, previousXHR = globalThis.XMLHttpRequest;
-  const sourceId = id('src', 'f'), collectionId = id('col', '1');
+  const sourceId = id('src', 'f'), collectionId = id('col', '1'), videosId = id('col', '2');
   const inventory = { revision: 1, sources: [], items: [], mediaAssets: [], collections: [
     { id: collectionId, title: 'Films', itemIds: [], kind: 'series' }
   ] } as any;
@@ -135,8 +135,14 @@ test('private video draft links one item and asset; failed part retries without 
     if (url.endsWith('/catalog/sources')) { counts.source++; inventory.sources.push({ id: sourceId, ...body.record }); return json({ revision: ++inventory.revision, record: inventory.sources[0] }, 201); }
     if (url.endsWith('/catalog/items')) { counts.item++; assert.equal(body.record.sourceRecord.metadata.description, 'A short description.');
       inventory.items.push({ id: itemId, ...body.record, mediaAssetIds: [] }); return json({ revision: ++inventory.revision, record: inventory.items[0] }, 201); }
+    if (url.endsWith('/catalog/collections') && init?.method === 'POST') { counts.collection++;
+      assert.equal(body.record.title, 'Videos'); assert.equal(body.record.kind, 'series');
+      const record = { id: videosId, ...body.record }; inventory.collections.push(record);
+      return json({ revision: ++inventory.revision, record }, 201); }
     if (url.endsWith(`/catalog/collections/${collectionId}`)) { counts.collection++; inventory.collections[0].itemIds = body.record.itemIds;
       return json({ revision: ++inventory.revision, record: inventory.collections[0] }); }
+    if (url.endsWith(`/catalog/collections/${videosId}`)) { counts.collection++; inventory.collections[1].itemIds = body.record.itemIds;
+      return json({ revision: ++inventory.revision, record: inventory.collections[1] }); }
     if (url.endsWith('/catalog/media-assets')) { counts.asset++; assert.equal(body.record.tvDisplayRights.status, 'cleared'); assert.equal(body.record.tvPlaybackRights.status, 'cleared');
       inventory.mediaAssets.push({ id: assetId, ...body.record }); return json({ revision: ++inventory.revision, record: inventory.mediaAssets[0] }, 201); }
     if (url.endsWith('/media-uploads') && init?.method === 'POST') { counts.upload++; assert.equal(body.claimedDurationSeconds, 12);
@@ -159,11 +165,12 @@ test('private video draft links one item and asset; failed part retries without 
     fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
     await screen.findByText('Temporary upload error');
     assert.deepEqual(created, [itemId]);
-    assert.deepEqual(counts, { source: 1, item: 1, asset: 1, upload: 1, collection: 0 });
+    assert.deepEqual(counts, { source: 1, item: 1, asset: 1, upload: 1, collection: 1 });
+    assert.deepEqual(inventory.collections[1].itemIds, [itemId], 'default channel placement survives upload failure');
     failPart = false;
     fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
     await screen.findByText(/processing is unavailable here/);
-    assert.deepEqual(counts, { source: 1, item: 1, asset: 1, upload: 2, collection: 0 });
+    assert.deepEqual(counts, { source: 1, item: 1, asset: 1, upload: 2, collection: 1 });
     assert.deepEqual(inventory.collections[0].itemIds, []);
     cleanup();
     render(createElement(NewVideoUpload, { projectId, inventory, refresh: async () => inventory, onCreated: id => created.push(id), onClose: () => {} }));
@@ -173,9 +180,20 @@ test('private video draft links one item and asset; failed part retries without 
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
     await screen.findByText(/processing is unavailable here/);
-    assert.deepEqual(counts, { source: 1, item: 1, asset: 1, upload: 3, collection: 1 });
+    assert.deepEqual(counts, { source: 1, item: 1, asset: 1, upload: 3, collection: 3 });
     assert.deepEqual(inventory.collections[0].itemIds, [itemId]);
+    assert.deepEqual(inventory.collections[1].itemIds, [], 'a chosen category replaces the default placement');
     assert.deepEqual(created, [itemId]);
+    cleanup();
+    render(createElement(NewVideoUpload, { projectId, inventory, refresh: async () => inventory, onCreated: id => created.push(id), onClose: () => {} }));
+    fireEvent.change(screen.getByLabelText('Video file'), { target: { files: [validFile()] } });
+    fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'A short description.' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
+    await screen.findByText(/processing is unavailable here/);
+    assert.equal(counts.collection, 3, 'repeat upload preserves the existing custom placement');
+    assert.deepEqual(inventory.collections[0].itemIds, [itemId]);
+    assert.deepEqual(inventory.collections[1].itemIds, []);
   } finally { cleanup(); restoreDuration(); globalThis.fetch = previousFetch; globalThis.XMLHttpRequest = previousXHR; }
 });
 

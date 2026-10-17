@@ -136,7 +136,9 @@ const database = process.env.FIRELAUNCH_TEST_DATABASE_URL;
     assert.equal((await projection.project(owner, project.id, choose([book.id]))).bindings[0]?.blockedReason, 'source_revoked');
   } finally {
     await repository?.pool.end();
-    await admin.query(`DROP DATABASE ${name} WITH (FORCE)`);
+    // The repository pool is closed above; a normal DROP catches leaked clients
+    // instead of terminating an in-flight assertion after the test returns.
+    await admin.query(`DROP DATABASE ${name}`);
     await admin.end();
   }
 });

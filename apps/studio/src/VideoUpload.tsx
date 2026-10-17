@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { CatalogItem } from '@firelaunch/contracts';
+import type { CatalogItem, Collection } from '@firelaunch/contracts';
 import { ApiError, deletePrivateObject, readVideoAssetStatus, readVideoUpload, retryVideoProcessing, uploadPrivateMedia, writeCatalog, type CatalogSnapshot, type VideoUploadStatus } from './api.js';
 import { extractVideoThumbnail, hashVideoFile, readVideoDuration, titleFromFilename, uploadVideo, validateVideoFile } from './video-upload.js';
 
@@ -29,6 +29,51 @@ async function saveThumbnail(projectId: string, itemId: string, thumbnail: File,
     if (!attached) await deletePrivateObject(projectId, uploaded.id).catch(() => undefined);
     throw new Error(`Thumbnail could not be attached: ${reason instanceof Error ? reason.message : String(reason)}`);
   }
+}
+
+// Catalog collections are project-owned draft curation. They record the intended shelf
+// while a private upload waits for processing, without putting unplayable media in ChannelSpec.
+async function saveVideoPlacement(projectId: string, itemId: string, requestedCollectionId: string,
+  refresh: () => Promise<CatalogSnapshot>): Promise<CatalogSnapshot> {
+  let current = await refresh();
+  if (!requestedCollectionId && current.collections.some(value => value.itemIds.includes(itemId))) return current;
+  let collection: Collection | undefined = requestedCollectionId
+    ? current.collections.find(value => value.id === requestedCollectionId)
+    : current.collections.find(value => value.kind === 'series' && value.title === 'Videos');
+  if (requestedCollectionId && !collection) throw new Error('Selected category is unavailable. Refresh the library.');
+  if (!collection) {
+    try {
+      const added = await writeCatalog(projectId, 'collections', current.revision,
+        { schemaVersion: 1, kind: 'series', title: 'Videos', itemIds: [itemId] });
+      collection = added.record as Collection;
+    } catch (reason) {
+      if (!(reason instanceof ApiError && reason.status === 409)) throw reason;
+    }
+    current = await refresh();
+    collection ??= current.collections.find(value => value.kind === 'series' && value.title === 'Videos');
+    if (!collection) throw new Error('Video category could not be saved. Refresh and retry.');
+  }
+  if (!collection.itemIds.includes(itemId)) {
+    try {
+      const { id, creatorAccountId: _owner, projectId: _project, ...record } = collection;
+      await writeCatalog(projectId, 'collections', current.revision, { ...record, itemIds: [...record.itemIds, itemId] }, id);
+    } catch (reason) {
+      if (!(reason instanceof ApiError && reason.status === 409)) throw reason;
+      current = await refresh();
+      if (!current.collections.find(value => value.id === collection!.id)?.itemIds.includes(itemId)) throw reason;
+    }
+  }
+  current = await refresh();
+  if (requestedCollectionId) {
+    const defaultShelf = current.collections.find(value => value.kind === 'series' && value.title === 'Videos' && value.id !== requestedCollectionId);
+    if (defaultShelf?.itemIds.includes(itemId)) {
+      const { id, creatorAccountId: _owner, projectId: _project, ...record } = defaultShelf;
+      await writeCatalog(projectId, 'collections', current.revision,
+        { ...record, itemIds: record.itemIds.filter(value => value !== itemId) }, id);
+      current = await refresh();
+    }
+  }
+  return current;
 }
 
 export function videoProcessingMessage(session: VideoUploadStatus): string {
@@ -78,7 +123,7 @@ export function NewVideoUpload({ projectId, inventory, refresh, onCreated, onClo
   const [title, setTitle] = useState(existingItem?.creatorOverrides?.title ?? existingItem?.sourceRecord.metadata.title ?? '');
   const [titleEdited, setTitleEdited] = useState(false);
   const [description, setDescription] = useState(existingItem?.creatorOverrides?.description ?? existingItem?.sourceRecord.metadata.description ?? '');
-  const [collectionId, setCollectionId] = useState(() => inventory.collections.find(value => existingItem && value.itemIds.includes(existingItem.id))?.id ?? '');
+  const [collectionId, setCollectionId] = useState(() => inventory.collections.find(value => existingItem && value.itemIds.includes(existingItem.id) && !(value.kind === 'series' && value.title === 'Videos'))?.id ?? '');
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [thumbnailNotice, setThumbnailNotice] = useState('');
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
@@ -163,12 +208,9 @@ export function NewVideoUpload({ projectId, inventory, refresh, onCreated, onClo
           current = await refresh();
         }
       }
-      const chosenCollection = current.collections.find(value => value.id === collectionId);
-      if (chosenCollection && !chosenCollection.itemIds.includes(ownedItemId)) {
-        const { id, creatorAccountId: _owner, projectId: _project, ...record } = chosenCollection;
-        await writeCatalog(projectId, 'collections', current.revision, { ...record, itemIds: [...record.itemIds, ownedItemId] }, id);
-        current = await refresh();
-      }
+      const savedCollectionId = collectionId || current.collections.find(value => value.itemIds.includes(ownedItemId) && !(value.kind === 'series' && value.title === 'Videos'))?.id || '';
+      if (!collectionId && savedCollectionId) setCollectionId(savedCollectionId);
+      current = await saveVideoPlacement(projectId, ownedItemId, savedCollectionId, refresh);
       let ownedAssetId = assetId || current.mediaAssets.find(value => value.catalogItemId === ownedItemId && value.kind === 'video' && value.location.type === 'managed_hls')?.id || '';
       if (!ownedAssetId) {
         const assertedAt = new Date().toISOString();
@@ -215,7 +257,7 @@ export function NewVideoUpload({ projectId, inventory, refresh, onCreated, onClo
     </div>
     {file && <p className="video-file">{file.name} · {(file.size / 1_000_000).toFixed(1)} MB</p>}
     <div className="video-form-grid"><label className="field"><span>Title *</span><input required maxLength={160} value={title} onChange={event => { setTitleEdited(true); setTitle(event.target.value); }}/></label>
-      <label className="field"><span>Category</span><select value={collectionId} onChange={event => setCollectionId(event.target.value)}><option value="">Videos</option>{inventory.collections.map(value => <option key={value.id} value={value.id}>{value.title}</option>)}</select></label></div>
+      <label className="field"><span>Category</span><select value={collectionId} onChange={event => setCollectionId(event.target.value)}><option value="">Videos</option>{inventory.collections.filter(value => !(value.kind === 'series' && value.title === 'Videos')).map(value => <option key={value.id} value={value.id}>{value.title}</option>)}</select></label></div>
     <label className="field"><span>Description (optional)</span><textarea maxLength={4000} value={description} onChange={event => setDescription(event.target.value)}/></label>
     <label className="field"><span>Custom thumbnail (optional)</span><input type="file" accept="image/png,image/jpeg" onChange={event => setThumbnail(event.target.files?.[0] ?? null)}/></label>
     <p className="video-file">Without a custom thumbnail, a draft placeholder appears until reviewed TV artwork is available.</p>
