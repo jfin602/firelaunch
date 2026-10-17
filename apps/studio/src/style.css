@@ -337,3 +337,74 @@ body { min-width: 0; }
 }
 .home-media-copy { display: grid; gap: 4px; padding: 14px; }
 @media (max-width: 600px) { .home { padding: 18px 12px; } .home-hero { padding: 20px 16px; } }
+
+/* P5 editor and delivery convergence. Keep creator TV colors under --tv-*. */
+.panel-content { min-width: 0; }
+.panel-content h2, .panel-content h3 { color: var(--fl-text); }
+.panel-content p, .delivery li { color: var(--fl-muted); }
+.panel-content .field { color: var(--fl-text); font-size: 11px; letter-spacing: .04em; }
+.panel-content .field :is(input, textarea, select),
+.panel-content .inline-form :is(input, select), .module-editor textarea {
+  min-height: 44px;
+  background: var(--fl-field);
+  border: 1px solid var(--fl-border);
+  color: var(--fl-text);
+  font-size: 13px;
+}
+.panel-content :is(input, textarea)::placeholder { color: var(--fl-muted); opacity: .86; }
+.panel-content :is(button, summary), .welcome-form button, .topbar button { min-height: 44px; }
+.panel-content .check { min-height: 44px; color: var(--fl-text); font-size: 12px; }
+.panel-content .check input { flex: none; width: 18px; height: 18px; }
+.color-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--fl-space-2); }
+.color-fields .field { font-size: 11px; }
+.color-input { min-width: 0; min-height: 44px; background: var(--fl-field); border-radius: var(--fl-radius-sm); }
+.color-input input { flex: none; width: 32px; height: 32px; }
+.panel-content .color-input input[type="color"] { width: 32px; height: 32px; min-height: 32px; padding: 0; border: 0; }
+.color-input code { color: var(--fl-text); overflow-wrap: anywhere; }
+.module-editor { padding: var(--fl-space-4); }
+.module-top { gap: var(--fl-space-2); }
+.section-label { color: var(--fl-muted); border-color: var(--fl-border-soft); }
+.chips button.active { box-shadow: inset 0 0 0 1px var(--fl-orange); }
+.agent-transcript { border-color: var(--fl-border); background: var(--fl-field); }
+.agent-transcript strong { color: var(--fl-amber); }
+.agent-transcript .agent-error { color: var(--fl-error); }
+.agent-status { color: var(--fl-success) !important; }
+.delivery pre { background: var(--fl-field); border: 1px solid var(--fl-border); border-radius: var(--fl-radius-sm); }
+.delivery :is(pre, code) { overflow-wrap: anywhere; }
+.delivery fieldset { min-width: 0; margin: 16px 0; padding: 12px; border: 1px solid var(--fl-border); border-radius: var(--fl-radius-sm); background: var(--fl-surface); }
+.delivery legend { max-width: 100%; padding: 0 5px; color: var(--fl-text); font-weight: 700; overflow-wrap: anywhere; }
+.delivery ul { padding-left: 20px; overflow-wrap: anywhere; }
+.delivery li { margin: 12px 0; }
+.file-list .active { border-color: var(--fl-orange) !important; color: var(--fl-text) !important; background: var(--fl-surface-raised) !important; }
+.delivery-warning { color: var(--fl-warning) !important; }
+.delivery-error { color: var(--fl-error) !important; }
+.tv-frame:focus-visible, .agent-transcript:focus-visible, .delivery pre:focus-visible,
+.workspace-jump a:focus-visible, .sidebar-account button:focus-visible {
+  outline: 3px solid var(--fl-focus); outline-offset: 3px;
+}
+.remote button { min-width: 44px; min-height: 44px; width: 44px; height: 44px; }
+.remote .remote-back { min-width: 44px; }
+.remote-bar { flex-wrap: wrap; }
+.tv-frame { min-width: 0; aspect-ratio: 16 / 9; }
+.tv-overlay { min-width: 0; overflow: auto; }
+.tv-detail-copy, .tv-player-footer { min-width: 0; }
+.tv-detail-copy :is(h2, p), .tv-player-footer strong { overflow-wrap: anywhere; }
+.tv-player-footer { gap: 8px; }
+.tv-screen .focused { border-color: var(--tv-accent) !important; }
+
+@media (max-width: 600px) {
+  .sidebar { position: relative; }
+  .sidebar-head { flex-wrap: wrap; }
+  .sidebar-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: visible; }
+  .sidebar-nav button { min-width: 0; min-height: 44px; justify-content: center; flex-wrap: wrap; gap: 2px 5px; white-space: normal; overflow-wrap: anywhere; padding: 6px 3px; text-align: center; }
+  .sidebar-nav button > span { width: auto; }
+  .sidebar-project { flex-wrap: wrap; }
+  .sidebar-project .project-switch, .sidebar-project .project-select { flex: 1 1 170px; }
+  .color-fields { grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); }
+  .inline-form > :is(input, select, button) { min-width: 0; }
+  .button-row > button { flex: 1 1 auto; }
+  .remote-bar { align-items: flex-start; }
+  .remote { width: 100%; }
+  .tv-player-footer { flex-wrap: wrap; }
+  .delivery fieldset { padding: 10px; }
+}

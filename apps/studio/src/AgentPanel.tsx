@@ -32,7 +32,7 @@ export function AgentPanel({ project, onUpdate, events, onEvents, catalogSelecti
   };
   return <div className="panel-content agent-panel"><span className="eyebrow">CHANNEL AGENT</span><h2>Describe a change.</h2><p>Validated tools save to ChannelSpec; Preview updates after each request. Mock is deterministic and offline. Bedrock configuration does not prove model access until a request succeeds.</p>
     <p className="agent-status" role="status">{status}</p>
-    <div className="agent-transcript" aria-label="Agent activity" aria-live="polite">{events.length === 0 ? <p>No agent activity yet.</p> : events.map((entry, index) => <p key={index} className={`agent-${entry.kind}`}><strong>{entry.kind.toUpperCase()}</strong> {entry.text}</p>)}</div>
+    <div className="agent-transcript" aria-label="Agent activity" aria-live="polite" tabIndex={0}>{events.length === 0 ? <p>No agent activity yet.</p> : events.map((entry, index) => <p key={index} className={`agent-${entry.kind}`}><strong>{entry.kind.toUpperCase()}</strong> {entry.text}</p>)}</div>
     <form onSubmit={event => void submit(event)}><label className="field">REQUEST<textarea maxLength={2000} value={message} onChange={event => setMessage(event.target.value)} placeholder="e.g. Add page Explore" /></label><button className="primary" type="submit" disabled={busy || !available || !message.trim()}>{busy ? 'Working…' : 'Send request →'}</button></form>
   </div>;
 }

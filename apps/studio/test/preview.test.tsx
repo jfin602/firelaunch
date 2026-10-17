@@ -38,11 +38,12 @@ test('virtual remote and keyboard select the same P2 transitions in TV Preview',
   assert.ok(view.container.querySelector('.tv-nav-button.focused'));
   fireEvent.click(screen.getByRole('button', { name: 'Down' }));
   assert.ok(view.container.querySelector('.tv-card.focused'));
-  fireEvent.keyDown(window, { key: 'Enter' });
+  const frame = screen.getByLabelText('TV screen, use arrow keys, Enter and Escape');
+  fireEvent.keyDown(frame, { key: 'Enter' });
   assert.ok(screen.getByRole('button', { name: /Play film/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Select' }));
   assert.ok(view.container.querySelector('video'));
-  fireEvent.keyDown(window, { key: 'Escape' });
+  fireEvent.keyDown(frame, { key: 'Escape' });
   assert.ok(screen.getByRole('button', { name: /Play film/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Back' }));
   assert.ok(view.container.querySelector('.tv-card.focused'));
@@ -83,6 +84,22 @@ test('Preview offers book detail and audio controls without a fake film player',
   cleanup();
 });
 
+test('Preview keyboard commands stay inside the TV frame and leave editor controls alone', () => {
+  const view = render(createElement(Preview, { spec: fixtureChannel() }));
+  const frame = screen.getByLabelText('TV screen, use arrow keys, Enter and Escape');
+  const editor = document.createElement('textarea');
+  document.body.append(editor);
+  fireEvent.keyDown(editor, { key: 'ArrowDown' });
+  fireEvent.keyDown(window, { key: 'ArrowDown' });
+  assert.ok(view.container.querySelector('.tv-nav-button.focused'));
+  fireEvent.keyDown(frame, { key: 'ArrowDown' });
+  assert.ok(view.container.querySelector('.tv-card.focused'));
+  fireEvent.keyDown(editor, { key: 'Enter' });
+  assert.equal(view.container.querySelector('.tv-detail'), null);
+  editor.remove();
+  cleanup();
+});
+
 test('Studio theme seam leaves creator TV colors and directional focus independent', () => {
   const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
   const theme = css.split('/* Desert Heat Studio chrome.')[1];
@@ -102,7 +119,7 @@ test('Studio theme seam leaves creator TV colors and directional focus independe
   assert.ok(view.container.querySelector('.tv-nav-button.focused'));
   fireEvent.click(screen.getByRole('button', { name: 'Down' }));
   assert.ok(view.container.querySelector('.tv-card.focused'));
-  fireEvent.keyDown(window, { key: 'Enter' });
+  fireEvent.keyDown(frame, { key: 'Enter' });
   assert.ok(screen.getByRole('button', { name: /Play film/ }));
   cleanup();
 });

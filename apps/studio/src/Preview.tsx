@@ -12,6 +12,7 @@ export function Preview({ spec }: { spec: ChannelSpec }) {
   const [state, setState] = useState<TvState | null>(null);
   const current = reconcile(tv, state);
   const screenRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const tvRef = useRef(tv);
   const stateRef = useRef(current);
   tvRef.current = tv;
@@ -20,8 +21,12 @@ export function Preview({ spec }: { spec: ChannelSpec }) {
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
-      if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"], a, summary, button:not(.tv-nav-button):not(.tv-card):not(.tv-play)')) return;
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || !frameRef.current?.contains(target)) return;
+      if (target.closest('input, textarea, select, audio, video, [contenteditable="true"]')) return;
       const command = keyboardCommand(event);
+      // Native Enter activates a focused TV button once; the frame itself uses the TV command.
+      if (command === 'select' && target.closest('button')) return;
       if (command) { event.preventDefault(); dispatch(command); }
     };
     window.addEventListener('keydown', handleKey);
@@ -42,7 +47,7 @@ export function Preview({ spec }: { spec: ChannelSpec }) {
 
   return <section className="preview-wrap" aria-label="Interactive TV Preview">
     <div className="preview-heading"><span className="eyebrow">LIVE CHANNEL PREVIEW</span><span className="live-dot">● &nbsp;16:9 · INTERACTIVE</span></div>
-    <div className="tv-frame" tabIndex={0} style={style} aria-label="TV screen, use arrow keys, Enter and Escape">
+    <div className="tv-frame" ref={frameRef} tabIndex={0} style={style} aria-label="TV screen, use arrow keys, Enter and Escape">
       <div className="tv-screen" ref={screenRef}>
         {current.screen === 'page' ? <>
           <header className="tv-header">

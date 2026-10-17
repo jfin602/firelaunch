@@ -46,6 +46,7 @@ test('shell preserves project switch, selected surfaces, inspector and Preview k
     render(createElement(App));
     await screen.findByRole('heading', { name: first.spec.title, level: 1 });
     assert.equal(screen.getByRole('button', { name: 'Home' }).getAttribute('aria-current'), 'page');
+    for (const invented of ['Templates', 'Analytics', 'Community']) assert.equal(screen.queryByRole('button', { name: invented }), null);
     fireEvent.click(screen.getByRole('button', { name: 'Catalog' }));
     assert.ok(screen.getByRole('region', { name: 'Interactive TV Preview' }));
     assert.equal(screen.getByRole('button', { name: 'Catalog' }).getAttribute('aria-current'), 'page');
@@ -81,4 +82,7 @@ test('responsive shell declares edge-to-edge canvas and inline tablet inspector'
   assert.match(shell, /@media \(max-width: 900px\)/);
   assert.match(shell, /\.sidebar-project \.project-select\s*\{\s*display:\s*block/);
   assert.match(shell, /\.sidebar-nav\s*\{[^}]*overflow-x:\s*auto/s);
+  assert.match(css, /@media \(max-width: 600px\)\s*\{\s*\.sidebar\s*\{\s*position:\s*relative/s);
+  assert.match(css, /\.sidebar-nav\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/s);
+  assert.match(css, /\.remote button\s*\{\s*min-width:\s*44px;\s*min-height:\s*44px/s);
 });
