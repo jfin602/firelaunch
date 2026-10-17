@@ -76,3 +76,11 @@ Probe first, reuse compatible encoded streams only when keyframes/timestamps are
 
 24. Processing is not permission.
 Upload, technical readiness, media rights, public approval and viewer entitlement are separate states. CloudFront OAC is not a paywall. Keep provider and worker adapters replaceable, budgets bounded and revocation honest about caches.
+## Studio visual design principles — owner approved 2026-10-17 UTC
+
+25. **Studio styling is not creator TV channel styling.** Dark Desert Heat is for the authoring UI, not a mandatory creator-owned `ChannelSpec.brand`, Vega app, or uploaded artwork.
+26. **Cinematic atmosphere serves the workflow.** Full-bleed viewport, deliberately dimmed canyon, legible dark panels and controlled orange-red high-action emphasis cannot compromise responsive forms, accessibility or TV Preview.
+27. **Content has its own colors and rights.** Genre art is varied and shown faithfully, not globally tinted orange. Only licensed/creator-owned images may be used for non-fictional catalog data.
+28. **A mockup never proves delivery.** Sample account details, fake features, film titles and progress do not establish product features, permissions, processing, publishing, device or external qualification.
+
+See [Studio visual baseline](design/studio-visual-baseline.md) and [ADR 0012](decisions/0012-studio-visual-identity.md).

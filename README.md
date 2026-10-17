@@ -2,6 +2,10 @@
 
 FireLaunch is a local, code-optional studio for designing a TV channel and generating a creator-owned React Native for Vega project. **0.0.7 is NOT GREEN:** the browser Studio was exercised, but no real Vega build or simulator/device run was possible in the qualification environment. See [P7 closeout](docs/tasks/p0/closeout.md) and the [active real-TV qualification correction](docs/tasks/c0-real-tv-qualification/README.md). No VPKG, live Bedrock success, device pass, or Amazon submission is claimed.
 
+## Approved future Studio visual baseline
+
+The owner-approved [Desert Heat Studio visual baseline](docs/design/studio-visual-baseline.md), [ADR 0012](docs/decisions/0012-studio-visual-identity.md) and [approved screenshot provenance](docs/design/references/README.md) establish the new **future** full-bleed dark cinematic creator Studio UI, dimmed canyon background, warm restrained orange-red controls and independently colored media artwork. **Documentation only:** this is not the currently shipped Studio style or a qualified deployment.
+
 ## Current hosted video operation (root 0.6.7)
 
 New creator video uses private S3 direct upload, full source verification, an owned MediaConvert job, private HLS graph verification and a separate creator-approved immutable CloudFront release. Hosted video upload routes return unavailable until both S3 media storage and the managed MediaConvert coordinator are configured. There is no local FFmpeg worker command or supported laptop encoder path. Existing READY rendition records retain their publication checks; unfinished legacy worker jobs need operator inventory before migration or retry. See [managed VOD operator runbook](docs/integrations/aws-vod-foundation.md) and [c6 P5 handoff](docs/tasks/c6-aws-vod/p5-handoff.md). Source implementation and offline fakes do not establish a deployed AWS stack or Vega playback.
