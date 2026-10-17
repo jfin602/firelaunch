@@ -7,15 +7,16 @@ import { Preview } from './Preview.js';
 import { AgentPanel } from './AgentPanel.js';
 import { Delivery } from './Delivery.js';
 import { Catalog } from './Catalog.js';
+import { Home } from './Home.js';
 import { SAMPLE_ART, newFilmMediaUrl, sampleMutations } from './sample.js';
 
 function newId(kind: 'page' | 'mod' | 'item'): string {
   return `${kind}_${crypto.randomUUID().replaceAll('-', '')}`;
 }
 
-type Surface = 'Catalog' | 'Create' | 'Design' | 'Content' | 'Code' | 'Build' | 'Publish';
-const surfaces: Surface[] = ['Catalog', 'Create', 'Design', 'Content', 'Code', 'Build', 'Publish'];
-const icons: Record<Surface, string> = { Catalog: '▤', Create: '✳', Design: '◈', Content: '▦', Code: '⌘', Build: '⬡', Publish: '↗' };
+type Surface = 'Home' | 'Catalog' | 'Create' | 'Design' | 'Content' | 'Code' | 'Build' | 'Publish';
+const surfaces: Surface[] = ['Home', 'Catalog', 'Create', 'Design', 'Content', 'Code', 'Build', 'Publish'];
+const icons: Record<Surface, string> = { Home: '⌂', Catalog: '▤', Create: '✳', Design: '◈', Content: '▦', Code: '⌘', Build: '⬡', Publish: '↗' };
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="field"><span>{label}</span>{children}</label>;
@@ -114,10 +115,12 @@ export default function App() {
   const [session, setSession] = useState<StudioSession | null>(null);
   const [signedOut, setSignedOut] = useState(false);
   const accountRef = useRef<string | null>(null);
+  const identityGeneration = useRef(0);
+  const switchGeneration = useRef(0);
   const select = (next: ChannelProject) => { projectRef.current = next; setProject(next); window.history.replaceState(null, '', `?project=${next.id}`); };
   const acceptProject = (next: ChannelProject) => { select(next); setProjects(previous => previous.map(item => item.id === next.id ? next : item)); };
   useEffect(() => {
-    const expired = () => { accountRef.current = null; setSignedOut(true); setSession(null); setProjects([]); setProject(null); setAgentEvents({}); setCatalogSelections({}); projectRef.current = null; window.history.replaceState(null, '', window.location.pathname); };
+    const expired = () => { identityGeneration.current++; switchGeneration.current++; accountRef.current = null; setSignedOut(true); setSession(null); setProjects([]); setProject(null); setAgentEvents({}); setCatalogSelections({}); projectRef.current = null; window.history.replaceState(null, '', window.location.pathname); };
     const checkSession = () => { if (!accountRef.current) return; void getSession().then(active => {
       if (!active || active.accountId !== accountRef.current) { expired(); return; }
       setSession(active);
@@ -125,7 +128,9 @@ export default function App() {
     window.addEventListener('firelaunch-session-expired', expired);
     window.addEventListener('focus', checkSession);
     const interval = window.setInterval(checkSession, 60_000);
-    void getSession().then(active => { accountRef.current = active?.accountId ?? null; setSession(active); setSurface(active ? 'Catalog' : 'Create'); return listProjects(); }).then(items => {
+    const generation = identityGeneration.current;
+    void getSession().then(active => { if (generation !== identityGeneration.current) return null; accountRef.current = active?.accountId ?? null; setSession(active); setSurface(active ? 'Home' : 'Create'); return listProjects(); }).then(items => {
+      if (!items || generation !== identityGeneration.current) return;
       setProjects(items);
       const requested = new URLSearchParams(window.location.search).get('project');
       const choice = items.find(item => item.id === requested) ?? items[0];
@@ -135,12 +140,18 @@ export default function App() {
     return () => { window.removeEventListener('firelaunch-session-expired', expired); window.removeEventListener('focus', checkSession); window.clearInterval(interval); };
   }, []);
   const switchProject = async (id: string) => {
+    const generation = ++switchGeneration.current;
+    const identity = identityGeneration.current;
+    if (id === projectRef.current?.id) return;
     try {
       const active = await getSession();
+      if (generation !== switchGeneration.current || identity !== identityGeneration.current) return;
       if (active?.accountId !== accountRef.current) { window.dispatchEvent(new window.Event('firelaunch-session-expired')); return; }
-      select(await getProject(id));
+      const next = await getProject(id);
+      if (generation !== switchGeneration.current || identity !== identityGeneration.current || active?.accountId !== accountRef.current || next.id !== id) return;
+      select(next);
       setNewChannel(false);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
+    } catch (reason) { if (generation === switchGeneration.current && identity === identityGeneration.current) setError(reason instanceof Error ? reason.message : String(reason)); }
   };
   const commit = async (mutation: ChannelMutation): Promise<boolean> => {
     const current = projectRef.current;
@@ -181,7 +192,7 @@ export default function App() {
     <div className="sidebar-label sidebar-sections-label">CHANNEL WORKSPACE</div><nav className="sidebar-nav" aria-label="Studio surfaces">{surfaces.map(target => <button key={target} disabled={!project} aria-current={surface === target && project && !newChannel ? 'page' : undefined} className={surface === target && project && !newChannel ? 'active' : ''} onClick={() => { setSurface(target); setNewChannel(false); }}><span aria-hidden="true">{icons[target]}</span>{target}</button>)}</nav><div className="sidebar-footer">✧ &nbsp; Vega-first creation<br/><small>{session ? 'Hosted studio' : 'Local studio'}</small></div></aside>
     <main className="studio-main"><header className="topbar"><div className="topbar-title"><span className="eyebrow">STUDIO / {newChannel || !project ? 'NEW CHANNEL' : surface.toUpperCase()}</span><h1>{newChannel ? 'Your next channel' : project?.spec.title ?? 'Your next channel'}</h1></div><div className="topbar-right"><span className="status"><i/> {busy ? 'SAVING' : project ? session ? 'SAVED PRIVATELY' : 'SAVED LOCALLY' : 'READY'}</span><button onClick={() => setNewChannel(previous => !previous)}>{newChannel && project ? '← Current channel' : '＋ New channel'}</button></div></header>
       {error && <div className="error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></div>}
-      {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : <div className="workspace"><div className="workspace-jump"><a href="#tv-preview">TV Preview</a><a href="#studio-controls">{surface} controls</a></div><div className="workspace-main" id="tv-preview"><Preview key={project.id} spec={project.spec}/><div className="under-preview"><div><span className="eyebrow">TV-FIRST INTERACTION</span><h2>From idea to living room.</h2><p>Navigate every tile with the remote. Changes you save on the right appear here immediately. Device playback still needs separate qualification.</p></div><span className="signal">◉ &nbsp; SHARED TV SEMANTICS</span></div></div><aside className="inspector" id="studio-controls" aria-label={`${surface} controls`} key={`${project.id}:${surface}`}>
+      {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : surface === 'Home' ? <Home key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} projects={projects} accountId={session?.accountId ?? null} hosted={!!session} onSelectProject={id => void switchProject(id)} onNewChannel={() => setNewChannel(true)} onSurface={setSurface} onPreview={() => { setSurface('Design'); window.setTimeout(() => document.getElementById('tv-preview')?.scrollIntoView(), 0); }}/> : <div className="workspace"><div className="workspace-jump"><a href="#tv-preview">TV Preview</a><a href="#studio-controls">{surface} controls</a></div><div className="workspace-main" id="tv-preview"><Preview key={project.id} spec={project.spec}/><div className="under-preview"><div><span className="eyebrow">TV-FIRST INTERACTION</span><h2>From idea to living room.</h2><p>Navigate every tile with the remote. Changes you save on the right appear here immediately. Device playback still needs separate qualification.</p></div><span className="signal">◉ &nbsp; SHARED TV SEMANTICS</span></div></div><aside className="inspector" id="studio-controls" aria-label={`${surface} controls`} key={`${project.id}:${surface}`}>
         {surface === 'Catalog' ? <Catalog project={project} hosted={!!session} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => setSurface('Create')}/> : surface === 'Design' ? <Design project={project} commit={commit}/> : surface === 'Content' ? <Content project={project} commit={commit} hosted={!!session}/> : surface === 'Create' ? <AgentPanel key={project.id} project={project} {...(draftSelection ? { catalogSelection: draftSelection.selection } : {})} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery project={project} surface={surface} hosted={!!session} />}
       </aside></div>}
     </main></div>;

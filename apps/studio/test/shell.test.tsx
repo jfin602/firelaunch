@@ -45,6 +45,8 @@ test('shell preserves project switch, selected surfaces, inspector and Preview k
   try {
     render(createElement(App));
     await screen.findByRole('heading', { name: first.spec.title, level: 1 });
+    assert.equal(screen.getByRole('button', { name: 'Home' }).getAttribute('aria-current'), 'page');
+    fireEvent.click(screen.getByRole('button', { name: 'Catalog' }));
     assert.ok(screen.getByRole('region', { name: 'Interactive TV Preview' }));
     assert.equal(screen.getByRole('button', { name: 'Catalog' }).getAttribute('aria-current'), 'page');
     fireEvent.click(screen.getByRole('button', { name: 'Design' }));
