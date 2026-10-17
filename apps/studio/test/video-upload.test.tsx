@@ -107,6 +107,8 @@ test('missing file, empty title and rights prevent catalog creation', async () =
     fireEvent.change(screen.getByLabelText('Title *'), { target: { value: 'Film' } });
     fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
     await screen.findByText(/Confirm your television display/);
+    assert.match(screen.getByRole('alert').textContent ?? '', /Confirm your television display/);
+    assert.equal(screen.getByRole('region', { name: 'Add Video' }).querySelectorAll('input[type="checkbox"]').length, 1);
     assert.equal(requests, 0);
   } finally { cleanup(); globalThis.fetch = priorFetch; }
 });

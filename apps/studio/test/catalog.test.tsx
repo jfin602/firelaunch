@@ -142,3 +142,39 @@ test('Studio file preview belongs to its source and rejects a later oversized fi
     assert.match(screen.getByRole('alert').textContent ?? '', /exceeds 512 KB/);
   } finally { cleanup(); globalThis.fetch = previous; }
 });
+
+test('library cards keep artwork provenance, rights truth and image fallback', async () => {
+  const previous = globalThis.fetch;
+  const inventory = base();
+  const videoId = `ci_${'e'.repeat(32)}`;
+  const identifier = (value: string) => ({ provider: 'creator', kind: 'feed_item_id', value });
+  const common = { schemaVersion: 1, creatorAccountId: owner, projectId };
+  const sourceRecord = (value: string, title: string, artworkUrl: string) => ({ sourceId, externalId: identifier(value), observedAt: new Date().toISOString(), metadata: { title, artworkUrl } });
+  inventory.sources = [{ ...common, id: sourceId, type: 'creator_upload', state: 'discovered', permission: { retrieval: 'unknown', tvDisplay: 'unknown' } }];
+  inventory.items = [
+    { ...common, id: itemId, kind: 'video', creatorOverrides: { title: 'Creator cut', artworkUrl: 'https://art.example/creator.jpg', editedAt: new Date().toISOString() }, sourceRecord: sourceRecord('film-1', 'Source cut', 'https://art.example/source.jpg'), externalIdentifiers: [identifier('film-1')], mediaAssetIds: [`ma_${'f'.repeat(32)}`] },
+    { ...common, id: videoId, kind: 'video', sourceRecord: sourceRecord('film-2', 'Private film', 'https://bucket.s3.amazonaws.com/private.jpg'), externalIdentifiers: [identifier('film-2')], mediaAssetIds: [`ma_${'9'.repeat(32)}`] }
+  ];
+  inventory.collections = [{ schemaVersion: 1, creatorAccountId: owner, projectId, id: `col_${'f'.repeat(32)}`, title: 'Films', kind: 'series', itemIds: [itemId] }];
+  inventory.mediaAssets = [
+    { schemaVersion: 1, creatorAccountId: owner, projectId, id: `ma_${'f'.repeat(32)}`, catalogItemId: itemId, kind: 'video', location: { type: 'managed_hls' }, deliveryEligible: false, tvDisplayRights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_display', assertedAt: new Date().toISOString() }, tvPlaybackRights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_playback', assertedAt: new Date().toISOString() } },
+    { schemaVersion: 1, creatorAccountId: owner, projectId, id: `ma_${'9'.repeat(32)}`, catalogItemId: videoId, kind: 'artwork', location: { type: 'private_object', objectId: `ma_${'8'.repeat(32)}` }, deliveryEligible: false, tvDisplayRights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_display', assertedAt: new Date().toISOString() }, tvPlaybackRights: { status: 'unknown', basis: 'none', permittedUse: 'none' } }
+  ];
+  globalThis.fetch = (async input => {
+    if (String(input) === `/api/projects/${projectId}/catalog`) return json(inventory);
+    return json({ uploadId: null, uploadState: null, processingAvailable: false, processing: null });
+  }) as typeof fetch;
+  try {
+    render(createElement(Catalog, { projectId, hosted: true }));
+    const creator = await screen.findByRole('button', { name: 'Select Creator cut · video' });
+    assert.equal(creator.querySelector('img')?.getAttribute('src'), 'https://art.example/creator.jpg');
+    assert.match(creator.textContent ?? '', /video · Films/);
+    assert.match(creator.textContent ?? '', /TV display cleared · playback cleared/);
+    const privateFilm = screen.getByRole('button', { name: 'Select Private film · video' });
+    assert.equal(privateFilm.querySelector('img'), null, 'private S3 artwork is never fetched');
+    assert.match(privateFilm.textContent ?? '', /Private artwork attached · no public thumbnail/);
+    fireEvent.error(creator.querySelector('img')!);
+    assert.equal(creator.querySelector('img'), null);
+    assert.ok(creator.querySelector('[aria-label="Artwork unavailable"]'));
+  } finally { cleanup(); globalThis.fetch = previous; }
+});

@@ -247,7 +247,7 @@ export function NewVideoUpload({ projectId, inventory, refresh, onCreated, onClo
     catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
     finally { setBusy(false); }
   };
-  return <section className="video-upload-panel" aria-label="Add Video">
+  return <section className="video-upload-panel" aria-label={existingItem ? 'Replace video' : 'Add Video'}>
     <div className="video-upload-heading"><div><span className="eyebrow">PRIVATE VIDEO DRAFT</span><h3>{existingItem ? 'Replace video' : 'Add Video'}</h3></div><button type="button" disabled={busy} onClick={onClose}>Close</button></div>
     <p>Your video stays private. Processing and TV publication require separate review.</p>
     <div className={`video-dropzone${dragging ? ' dragging' : ''}`} onDragEnter={event => { event.preventDefault(); setDragging(true); }} onDragOver={event => event.preventDefault()}
@@ -255,20 +255,20 @@ export function NewVideoUpload({ projectId, inventory, refresh, onCreated, onClo
       <strong>Drop an MP4 here</strong><span>or choose a file · up to 250 MB · 30 minutes</span>
       <input aria-label="Video file" type="file" accept=".mp4,video/mp4" disabled={busy} onChange={event => chooseFile(event.target.files?.[0] ?? null)}/>
     </div>
-    {file && <p className="video-file">{file.name} · {(file.size / 1_000_000).toFixed(1)} MB</p>}
+    {file && <p className="video-file" role="status">Selected: {file.name} · {(file.size / 1_000_000).toFixed(1)} MB</p>}
     <div className="video-form-grid"><label className="field"><span>Title *</span><input required maxLength={160} value={title} onChange={event => { setTitleEdited(true); setTitle(event.target.value); }}/></label>
       <label className="field"><span>Category</span><select value={collectionId} onChange={event => setCollectionId(event.target.value)}><option value="">Videos</option>{inventory.collections.filter(value => !(value.kind === 'series' && value.title === 'Videos')).map(value => <option key={value.id} value={value.id}>{value.title}</option>)}</select></label></div>
     <label className="field"><span>Description (optional)</span><textarea maxLength={4000} value={description} onChange={event => setDescription(event.target.value)}/></label>
     <label className="field"><span>Custom thumbnail (optional)</span><input type="file" accept="image/png,image/jpeg" onChange={event => setThumbnail(event.target.files?.[0] ?? null)}/></label>
     <p className="video-file">Without a custom thumbnail, a draft placeholder appears until reviewed TV artwork is available.</p>
-    {thumbnailNotice && <p role="status">{thumbnailNotice}</p>}
-    <label className="check"><input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)}/> I own or license TV display rights for this video and its artwork, and TV playback and streaming rights.</label>
+    {thumbnailNotice && <p role="status" className="video-upload-notice">{thumbnailNotice}</p>}
+    <label className="check video-rights"><input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)}/> I own or license TV display rights for this video and its artwork, and TV playback and streaming rights.</label>
     <div className="button-row"><button className="primary" disabled={busy} onClick={() => void submit()}>{busy ? 'Uploading…' : 'Upload Video'}</button>
       {existingItem && thumbnail && <button type="button" disabled={busy || !rightsConfirmed} onClick={() => void updateThumbnail()}>Save thumbnail only</button>}
       {session?.processing?.state === 'failed' && <button type="button" disabled={busy} onClick={() => void retry()}>Retry processing</button>}
       {busy && controller.current && <button type="button" onClick={() => controller.current?.abort()}>Stop upload</button>}</div>
-    {busy && <><progress aria-label="Video upload progress" value={progress} max="100"/><p role="status">{progress < 100 ? `Uploading ${progress}%` : 'Upload sent; finishing private verification…'}</p></>}
-    {session && <p role="status">{videoProcessingMessage(session)}</p>}
+    {busy && <><progress aria-label="Video upload progress" value={progress} max="100"/><p role="status" className="video-upload-notice">{progress < 100 ? `Uploading ${progress}%` : 'Upload sent; finishing private verification…'}</p></>}
+    {session && <p role="status" className={`video-upload-notice${session.processing?.state === 'failed' ? ' video-upload-failed' : ''}`}>{videoProcessingMessage(session)}</p>}
     {itemId && error && <p>Draft saved in your library. Select it to continue after reload.</p>}
     {error && <p role="alert" className="catalog-error">{error}</p>}
   </section>;

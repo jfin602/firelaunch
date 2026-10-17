@@ -2,19 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { ChannelProject, CatalogItem } from '@firelaunch/contracts';
 import { ApiError, readCatalog, type CatalogSnapshot } from './api.js';
 import { VideoLibraryStatus } from './VideoUpload.js';
-
-function safeArtwork(item: CatalogItem): string | null {
-  const value = item.creatorOverrides?.artworkUrl ?? item.sourceRecord.metadata.artworkUrl;
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    // Signed object links and credential-bearing URLs must never enter the page or logs.
-    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash ||
-      (url.origin === window.location.origin && url.pathname.startsWith('/api/')) ||
-      /(^|\.)s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com$/i.test(url.hostname)) return null;
-    return url.href;
-  } catch { return null; }
-}
+import { safeArtwork } from './artwork-url.js';
 
 function Artwork({ item }: { item: CatalogItem }) {
   const [failed, setFailed] = useState(false);
