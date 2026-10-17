@@ -45,7 +45,8 @@ test('catalog-first Studio reviews import, preserves draft books and lets creato
   }) as typeof fetch;
   try {
     render(createElement(Catalog, { projectId, hosted: true }));
-    await screen.findByRole('heading', { name: 'Start with your work.' });
+    await screen.findByRole('heading', { name: 'Build your channel library.' });
+    fireEvent.click(await screen.findByText('Import or enter other catalog content'));
     fireEvent.change(await screen.findByRole('combobox', { name: 'Creator type' }), { target: { value: 'writing' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add source' }));
     await waitFor(() => assert.equal(inventory.sources.length, 1));
@@ -59,10 +60,12 @@ test('catalog-first Studio reviews import, preserves draft books and lets creato
     await waitFor(() => assert.equal(inventory.items.length, 1));
     assert.equal(inventory.items[0].mediaAssetIds.length, 0);
     fireEvent.change(screen.getByRole('combobox', { name: 'Select catalog item' }), { target: { value: itemId } });
+    fireEvent.click(screen.getByText('Edit selected item metadata'));
     fireEvent.change(screen.getByLabelText('CREATOR TITLE OVERRIDE'), { target: { value: 'My Edition' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save override' }));
     await waitFor(() => assert.equal(inventory.items[0].creatorOverrides?.title, 'My Edition'));
     assert.equal(inventory.items[0].sourceRecord.metadata.title, 'First Book');
+    fireEvent.click(screen.getByText('Manage collections (optional)'));
     fireEvent.change(screen.getByLabelText('COLLECTION NAME'), { target: { value: 'Bookshelf' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Collection' }));
     await waitFor(() => assert.equal(inventory.collections.length, 1));

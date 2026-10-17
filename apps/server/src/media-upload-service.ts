@@ -63,6 +63,7 @@ export class MediaUploadService {
     return { id: current.id, state: current.state, expectedBytes: current.expectedBytes,
       expectedSha256: current.expectedSha256, expiresAt: current.expiresAt,
       partSize: current.partSize, partCount: current.partCount,
+      processingAvailable: !!this.managed,
       verification: current.state === 'verified' ? 'sha256_verified' :
         current.state === 'completed' ? 'pending_sha256' : 'unverified' };
   }
@@ -77,7 +78,8 @@ export class MediaUploadService {
 
   async assetStatus(principal: AuthenticatedPrincipal, projectId: string, raw: unknown) {
     const { mediaAssetId } = uploadAssetSchema.parse(raw);
-    return this.records.latestAssetStatus(principal, projectId, mediaAssetId);
+    const status = await this.records.latestAssetStatus(principal, projectId, mediaAssetId);
+    return status && { ...status, processingAvailable: !!this.managed };
   }
 
   async retryProcessing(principal: AuthenticatedPrincipal, projectId: string, uploadId: string, raw: unknown) {
