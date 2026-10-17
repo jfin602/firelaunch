@@ -27,3 +27,8 @@ P6 P1–P7 may run with mocked S3, synthetic local test media and headless check
 ## New managed provider carry-forward (2026-10-14)
 
 Historical original P6 FFmpeg rows above are superseded as *future execution requirements* only by ADR 0011. Root 0.6.7 contains the historical FFmpeg implementation and must undergo fixed-version [c6-aws-vod](../c6-aws-vod/README.md) before live AWS-managed qualification. Future P6 P8 must demonstrate actual authorized S3 -> MediaConvert/Foundation -> private staged verified HLS -> explicit approved CloudFront -> installed Vega. All P5/c5 external gates, authorized rights, owner isolation and failed/retried-job safeguards remain open until directly proven. Do not reinterpret original NOT GREEN outcomes.
+
+## Accepted live qualification override (2026-10-17)
+
+The live [p6-live-vod](../p6-live-vod/README.md) plan and [Q1-Q3 matrix](../p6-live-vod/qualification-matrix.md) now organize future manual integration. [ADR 0013](../../decisions/0013-hybrid-video-access.md) permits **only explicitly approved free-to-view** CloudFront delivery with stable unsigned HLS URLs, subject to current IAM, OAC, exact `delivery/` path, private-origin negative tests, rights, publication and new operator authorization. Viewer-signature testing belongs to a future paid/protected delivery qualification; do not misstate this as an already-implemented paywall. Replace historical FFmpeg-only execution instructions with the managed AWS provider in new runs. Preserve historical P5/c5/P6 NOT GREEN evidence, real same-installed-VPKG refresh/offline/fault/rollback requirements and physical Fire TV/Appstore/hosted release gates.
+
