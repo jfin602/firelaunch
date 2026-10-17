@@ -8,7 +8,10 @@ const pg = require('pg');
 const url = process.env.FIRELAUNCH_DATABASE_URL;
 if (!url || !/^[a-f0-9]{64}$/i.test(process.env.FIRELAUNCH_RECOVERY_KEY ?? '') ||
     process.env.FIRELAUNCH_OBJECT_STORE !== 's3' || !process.env.FIRELAUNCH_OBJECT_BUCKET ||
-    !process.env.FIRELAUNCH_OBJECT_ACCESS_KEY_ID || !process.env.FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY) {
+    (process.env.FIRELAUNCH_OBJECT_AUTH === 'aws-profile'
+      ? (!process.env.AWS_PROFILE || Boolean(process.env.FIRELAUNCH_OBJECT_ENDPOINT))
+      : (Boolean(process.env.FIRELAUNCH_OBJECT_AUTH && process.env.FIRELAUNCH_OBJECT_AUTH !== 'static') ||
+        !process.env.FIRELAUNCH_OBJECT_ACCESS_KEY_ID || !process.env.FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY))) {
   throw new Error('Staging backup configuration incomplete');
 }
 const pool = new pg.Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 5000 });

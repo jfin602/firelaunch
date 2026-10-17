@@ -6,7 +6,7 @@ unit=firelaunch-staging.service
 env_file=/etc/firelaunch/staging.env
 drop_in=/etc/systemd/system/firelaunch-staging.service.d/aws.conf
 backup_dir=/var/backups/firelaunch-staging
-node_bin=/home/deploy/.nvm/versions/node/v24.15.0/bin/node
+node_bin=/opt/firelaunch-staging-runtime/node24/bin/node
 die() { echo "$*" >&2; exit 1; }
 
 require_operator() {
@@ -54,7 +54,9 @@ require_layout() {
   trusted_path "$base/releases"
   active_release="$(readlink -f "$base/current")"
   trusted_path "$active_release"
-  [[ -z "$(find "$active_release" -xdev \( ! -user root -o -perm /022 \) -print -quit)" ]] || die 'Running release contains deploy-writable code'
+  # Link mode is conventionally 0777 and does not grant write access. Check
+  # link ownership and target containment separately from regular file modes.
+  [[ -z "$(find "$active_release" -xdev \( ! -user root -o \( ! -type l -a -perm /022 \) \) -print -quit)" ]] || die 'Running release contains deploy-writable code'
   while IFS= read -r -d '' link; do
     resolved="$(readlink -f "$link")"
     [[ "$resolved" = "$active_release"/* ]] || die 'Running release contains an escaping link'
@@ -63,8 +65,12 @@ require_layout() {
   [[ -f "$drop_in" && "$(stat -c '%U:%G' "$drop_in")" = root:root ]] || die 'Prepared AWS service drop-in missing'
   grep -Fxq 'Environment=AWS_PROFILE=firelaunch-staging-app' "$drop_in" || die 'Unexpected AWS service profile'
   grep -Fxq 'Environment=AWS_CONFIG_FILE=/home/deploy/.aws/config' "$drop_in" || die 'Unexpected AWS config path'
-  grep -Eq '^FIRELAUNCH_OBJECT_ACCESS_KEY_ID=' "$env_file" || die 'Existing object access key missing'
-  grep -Eq '^FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY=' "$env_file" || die 'Existing object secret key missing'
+  if grep -Fxq 'FIRELAUNCH_OBJECT_AUTH=aws-profile' "$env_file"; then
+    ! grep -Eq '^FIRELAUNCH_OBJECT_ENDPOINT=.+' "$env_file" || die 'AWS profile cannot use a custom private-object endpoint'
+  else
+    grep -Eq '^FIRELAUNCH_OBJECT_ACCESS_KEY_ID=' "$env_file" || die 'Existing object access key missing'
+    grep -Eq '^FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY=' "$env_file" || die 'Existing object secret key missing'
+  fi
 }
 
 health() {

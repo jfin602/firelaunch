@@ -48,9 +48,14 @@ function validHost(value: string): boolean {
 export function validateMediaStorageConfig(raw: MediaStorageConfig): MediaStorageConfig {
   if (!regionName.test(raw.region) || !bucketName.test(raw.originalsBucket) || !bucketName.test(raw.deliveryBucket) ||
     [raw.originalsBucket, raw.deliveryBucket].some(value => value.includes('..') || value.includes('.-') || value.includes('-.')) ||
-    raw.originalsBucket === raw.deliveryBucket || !raw.allowedCloudFrontHosts.length ||
+    raw.originalsBucket === raw.deliveryBucket ||
     !raw.allowedCloudFrontHosts.every(validHost) || new Set(raw.allowedCloudFrontHosts).size !== raw.allowedCloudFrontHosts.length)
     reject('invalid region, buckets or CloudFront host allowlist');
+  // A private-originals upload does not need an active CDN origin. Public
+  // delivery methods still reject this upload-only configuration.
+  if (!raw.cloudFrontOrigin && !raw.allowedCloudFrontHosts.length)
+    return { ...raw, allowedCloudFrontHosts: [] };
+  if (!raw.allowedCloudFrontHosts.length) reject('invalid CloudFront HTTPS origin');
   let url: URL;
   try { url = new URL(raw.cloudFrontOrigin); } catch { return reject('invalid CloudFront HTTPS origin'); }
   if (url.protocol !== 'https:' || url.username || url.password || url.port || url.pathname !== '/' || url.search || url.hash ||
@@ -101,6 +106,11 @@ export class S3MediaStorage {
     catch { return reject('S3 request failed'); }
   }
 
+  private deliveryOrigin(): string {
+    if (!this.config.cloudFrontOrigin || !this.publisher) reject('CloudFront publication unavailable');
+    return this.config.cloudFrontOrigin;
+  }
+
   originalKey(scope: MediaScope, sessionId: string): string {
     return `${scopePath(scope)}/original/${uploadId(sessionId)}.mp4`;
   }
@@ -119,7 +129,7 @@ export class S3MediaStorage {
       set.masterKey !== this.stagedKey(scope, set.id, 'master.m3u8') ||
       set.variants.some(v => v.playlistKey !== this.stagedKey(scope, set.id, `v${v.height}.m3u8`)))
       reject('rendition identity or staging scope mismatch');
-    return new URL(this.deliveryKey(scope, set.id, set.masterSha256, 'master.m3u8'), this.config.cloudFrontOrigin).toString();
+    return new URL(this.deliveryKey(scope, set.id, set.masterSha256, 'master.m3u8'), this.deliveryOrigin()).toString();
   }
 
   async createOriginal(scope: MediaScope, sessionId: string): Promise<{ key: string; uploadId: string }> {
@@ -380,6 +390,7 @@ export class S3MediaStorage {
   /** Storage copy only; the caller must enforce owner, READY state and reviewed rights before calling. */
   async publishStaged(scope: MediaScope, setId: string, versionSha256: string, name: string,
     expected: { bytes: number; sha256: string }): Promise<{ object: StoredObject; url: string }> {
+    const origin = this.deliveryOrigin();
     const sourceKey = this.stagedKey(scope, setId, name);
     const key = this.deliveryKey(scope, setId, versionSha256, name);
     if (!Number.isInteger(expected.bytes) || expected.bytes < 1 || expected.bytes > maxOutputBytes || !hex64.test(expected.sha256))
@@ -401,7 +412,7 @@ export class S3MediaStorage {
     const body = Buffer.concat(chunks);
     await this.putImmutable(key, name, body, expected.sha256);
     return { object: { key, bytes: expected.bytes, sha256: expected.sha256 },
-      url: new URL(key, this.config.cloudFrontOrigin).toString() };
+      url: new URL(key, origin).toString() };
   }
 
   /** Verify every staged HLS object before copying any of it to the CDN-readable prefix. */
@@ -498,12 +509,14 @@ export class S3MediaStorage {
 }
 
 export function mediaStorageFromEnv(env: NodeJS.ProcessEnv,
-  clients?: { originals: S3Client; staging: S3Client; publisher: S3Client; operator?: S3Client }): S3MediaStorage {
+  clients?: { originals: S3Client; staging: S3Client; publisher?: S3Client; operator?: S3Client }): S3MediaStorage {
   const config = mediaStorageConfigFromEnv(env);
-  publisherRoleConfigFromEnv(env);
+  if (env.FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN) publisherRoleConfigFromEnv(env);
   const originals = clients?.originals ?? new S3Client({ region: config.region });
   const staging = clients?.staging ?? new S3Client({ region: config.region });
-  const publisher = clients?.publisher ?? new S3Client({ region: config.region, credentials: publisherCredentialsFromEnv(env) });
+  const publisher = env.FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN
+    ? clients?.publisher ?? new S3Client({ region: config.region, credentials: publisherCredentialsFromEnv(env) })
+    : undefined;
   return new S3MediaStorage(config, originals, staging, publisher, clients?.operator);
 }
 

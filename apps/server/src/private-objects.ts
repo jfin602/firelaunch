@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { mkdir, open, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { fromIni } from '@aws-sdk/credential-providers';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
@@ -55,14 +56,17 @@ export class IsolatedObjectStore implements PrivateObjectStore {
 
 export class S3PrivateObjectStore implements PrivateObjectStore {
   private readonly client: S3Client;
-  constructor(private readonly bucket: string, options: { region: string; endpoint?: string; accessKeyId: string; secretAccessKey: string; allowLocalHttp?: boolean }) {
-    if (!/^[a-z0-9][a-z0-9.-]{2,62}$/.test(bucket) || !options.region || !options.accessKeyId || !options.secretAccessKey) throw new Error('Private S3 configuration incomplete');
+  constructor(private readonly bucket: string, options: PrivateS3Options) {
+    if (!/^[a-z0-9][a-z0-9.-]{2,62}$/.test(bucket) || !options.region) throw new Error('Private S3 configuration incomplete');
+    if (options.auth === 'aws-profile' && (options.endpoint || !options.profile)) throw new Error('Private AWS profile requires native S3 and a named profile');
+    if (options.auth !== 'aws-profile' && (!options.accessKeyId || !options.secretAccessKey)) throw new Error('Private S3 configuration incomplete');
     if (options.endpoint) {
       const endpoint = new URL(options.endpoint);
       if ((endpoint.protocol !== 'https:' && !(options.allowLocalHttp && process.env.NODE_ENV === 'development' && ['localhost', '127.0.0.1'].includes(endpoint.hostname) && endpoint.protocol === 'http:' && endpoint.pathname === '/')) || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) throw new Error('Private S3 endpoint must be HTTPS');
     }
     this.client = new S3Client({ region: options.region, ...(options.endpoint ? { endpoint: options.endpoint } : {}), forcePathStyle: Boolean(options.endpoint),
-      credentials: { accessKeyId: options.accessKeyId, secretAccessKey: options.secretAccessKey } });
+      credentials: options.auth === 'aws-profile' ? fromIni({ profile: options.profile }) :
+        { accessKeyId: options.accessKeyId, secretAccessKey: options.secretAccessKey } });
   }
   async put(key: string, content: Buffer, contentType: string): Promise<void> {
     await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: keySchema.parse(key), Body: content,
@@ -76,13 +80,27 @@ export class S3PrivateObjectStore implements PrivateObjectStore {
   async delete(key: string): Promise<void> { await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: keySchema.parse(key) })); }
 }
 
+export type PrivateS3Options = { region: string; endpoint?: string; allowLocalHttp?: boolean } & (
+  { auth?: 'static'; accessKeyId: string; secretAccessKey: string } |
+  { auth: 'aws-profile'; profile: string }
+);
+
+export function privateS3OptionsFromEnv(env: NodeJS.ProcessEnv): PrivateS3Options {
+  const region = env.FIRELAUNCH_OBJECT_REGION ?? '';
+  const endpoint = env.FIRELAUNCH_OBJECT_ENDPOINT;
+  const auth = env.FIRELAUNCH_OBJECT_AUTH;
+  if (auth === 'aws-profile') {
+    if (endpoint || !env.AWS_PROFILE) throw new Error('Private AWS profile requires native S3 and a named profile');
+    return { region, auth, profile: env.AWS_PROFILE };
+  }
+  if (auth && auth !== 'static') throw new Error('Unsupported private object authentication');
+  return { region, ...(endpoint ? { endpoint, allowLocalHttp: localHostedHttp(new URL(endpoint), env) } : {}),
+    accessKeyId: env.FIRELAUNCH_OBJECT_ACCESS_KEY_ID ?? '', secretAccessKey: env.FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY ?? '' };
+}
+
 export function privateObjectStoreFromEnv(env: NodeJS.ProcessEnv): PrivateObjectStore {
   if (env.FIRELAUNCH_OBJECT_STORE !== 's3') throw new Error('Hosted private S3 object storage is required');
-  const endpoint = env.FIRELAUNCH_OBJECT_ENDPOINT;
-  return new S3PrivateObjectStore(env.FIRELAUNCH_OBJECT_BUCKET ?? '', {
-    region: env.FIRELAUNCH_OBJECT_REGION ?? '', ...(endpoint ? { endpoint, allowLocalHttp: localHostedHttp(new URL(endpoint), env) } : {}),
-    accessKeyId: env.FIRELAUNCH_OBJECT_ACCESS_KEY_ID ?? '', secretAccessKey: env.FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY ?? ''
-  });
+  return new S3PrivateObjectStore(env.FIRELAUNCH_OBJECT_BUCKET ?? '', privateS3OptionsFromEnv(env));
 }
 
 export type PrivateObjectMetadata = Readonly<{

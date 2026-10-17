@@ -6,7 +6,7 @@ import { starterChannel } from '@firelaunch/channel-engine';
 import { getSession, readVideoAssetStatus } from '../src/api.js';
 import { validateVideoFile, uploadVideo } from '../src/video-upload.js';
 import { LivePublication } from '../src/LivePublication.js';
-import { VideoUpload, videoProcessingMessage } from '../src/VideoUpload.js';
+import { NewVideoUpload, VideoUpload, videoProcessingMessage } from '../src/VideoUpload.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://studio.example/' });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement });
@@ -117,10 +117,85 @@ test('video picker attaches to the selected item and reports completed but unver
     fireEvent.click(screen.getByLabelText(/I have television display rights/));
     fireEvent.click(screen.getByLabelText(/I have television playback rights/));
     fireEvent.click(screen.getByRole('button', { name: 'Upload video master' }));
-    await screen.findByText(/verifying source/);
+    await screen.findByText(/awaiting source verification/);
     assert.match(screen.getByRole('status').textContent ?? '', /Unavailable for live publication/);
     assert.equal(calls.some(url => url.endsWith('/publish')), false);
   } finally { cleanup(); globalThis.fetch = previousFetch; globalThis.XMLHttpRequest = previousXHR; }
+});
+
+test('new video drop creates one private draft and retries the same item after upload failure', async () => {
+  const previousFetch = globalThis.fetch, previousXHR = globalThis.XMLHttpRequest;
+  const sourceId = id('src', 'f');
+  const collectionId = id('col', '1');
+  const inventory = { revision: 1, sources: [], items: [], mediaAssets: [], collections: [
+    { id: collectionId, title: 'Films', itemIds: [], kind: 'series' }
+  ] } as any;
+  const counts = { source: 0, item: 0, asset: 0, upload: 0, collection: 0 };
+  let failPart = true;
+  class GoodXHR {
+    status = 200; upload = { onprogress: (_event: ProgressEvent) => {} };
+    onload = () => {}; onerror = () => {}; onabort = () => {};
+    open() {} set withCredentials(value: boolean) { assert.equal(value, false); }
+    getResponseHeader() { return 'a'.repeat(32); }
+    send() { queueMicrotask(() => this.onload()); }
+    abort() { this.onabort(); }
+  }
+  globalThis.XMLHttpRequest = GoodXHR as unknown as typeof XMLHttpRequest;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input), body = init?.body ? JSON.parse(String(init.body)) : {};
+    if (url.endsWith('/catalog/sources')) { counts.source++; inventory.sources.push({ id: sourceId, ...body.record }); return json({ revision: ++inventory.revision, record: inventory.sources[0] }, 201); }
+    if (url.endsWith('/catalog/items')) { counts.item++; assert.equal(body.record.sourceRecord.metadata.title, 'My film');
+      inventory.items.push({ id: itemId, ...body.record }); return json({ revision: ++inventory.revision, record: inventory.items[0] }, 201); }
+    if (url.endsWith(`/catalog/collections/${collectionId}`)) { counts.collection++; inventory.collections[0].itemIds = body.record.itemIds; return json({ revision: ++inventory.revision, record: inventory.collections[0] }); }
+    if (url.endsWith('/catalog/media-assets')) { counts.asset++; assert.equal(body.record.deliveryEligible, true);
+      inventory.mediaAssets.push({ id: assetId, ...body.record }); return json({ revision: ++inventory.revision, record: inventory.mediaAssets[0] }, 201); }
+    if (url.endsWith('/media-uploads') && init?.method === 'POST') { counts.upload++; return json({ id: uploadId, state: 'initiated', partSize: 8_388_608, partCount: 1, expiresAt: new Date(Date.now() + 300000).toISOString() }, 201); }
+    if (url.endsWith('/part')) return failPart ? json({ error: { message: 'Temporary upload error' } }, 503) : json({ url: 'https://s3.example/part', contentLength: 1, expiresInSeconds: 300 });
+    if (url.endsWith('/abort')) return json({ id: uploadId, state: 'aborted' });
+    if (url.endsWith('/finalize')) return json({ id: uploadId, state: 'completed', verification: 'pending_sha256', processing: null });
+    throw new Error(url);
+  }) as typeof fetch;
+  try {
+    const created: string[] = [];
+    render(createElement(NewVideoUpload, { projectId, inventory, refresh: async () => inventory, onCreated: id => created.push(id), onClose: () => {} }));
+    const file = new File(['x'], 'my-film.mp4', { type: 'video/mp4' });
+    Object.defineProperty(file, 'arrayBuffer', { value: async () => new Uint8Array([120]).buffer });
+    fireEvent.drop(screen.getByText('Drop an MP4 here'), { dataTransfer: { files: [file] } });
+    fireEvent.change(screen.getByLabelText('TITLE *'), { target: { value: 'My film' } });
+    fireEvent.change(screen.getByLabelText(/APPROXIMATE DURATION/), { target: { value: '12' } });
+    fireEvent.change(screen.getByLabelText('CATEGORY / COLLECTION'), { target: { value: collectionId } });
+    fireEvent.click(screen.getByLabelText(/television display rights/));
+    fireEvent.click(screen.getByLabelText(/television playback rights/));
+    fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
+    await screen.findByText('Temporary upload error');
+    assert.deepEqual(created, [itemId]);
+    assert.deepEqual(counts, { source: 1, item: 1, asset: 1, upload: 1, collection: 1 });
+    failPart = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry upload' }));
+    await screen.findByText(/awaiting source verification/);
+    assert.deepEqual(counts, { source: 1, item: 1, asset: 1, upload: 2, collection: 1 });
+  } finally { cleanup(); globalThis.fetch = previousFetch; globalThis.XMLHttpRequest = previousXHR; }
+});
+
+test('new video requires title, duration and rights before creating catalog records', async () => {
+  const previous = globalThis.fetch;
+  let requests = 0;
+  globalThis.fetch = (async () => { requests++; throw new Error('Unexpected request'); }) as typeof fetch;
+  try {
+    render(createElement(NewVideoUpload, { projectId, inventory: { revision: 0, sources: [], items: [], mediaAssets: [], collections: [] } as any,
+      refresh: async () => { throw new Error('Unexpected refresh'); }, onCreated: () => {}, onClose: () => {} }));
+    const file = new File(['x'], 'film.mp4', { type: 'video/mp4' });
+    fireEvent.change(screen.getByLabelText('Choose video file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
+    await screen.findByText('Enter a video title.');
+    fireEvent.change(screen.getByLabelText('TITLE *'), { target: { value: 'Film' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
+    await screen.findByText(/Enter a duration/);
+    fireEvent.change(screen.getByLabelText(/APPROXIMATE DURATION/), { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
+    await screen.findByText(/Confirm both television/);
+    assert.equal(requests, 0);
+  } finally { cleanup(); globalThis.fetch = previous; }
 });
 
 test('failed video offers an explicit CSRF-bound processing retry without another upload', async () => {

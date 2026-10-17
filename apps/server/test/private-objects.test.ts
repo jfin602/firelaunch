@@ -16,6 +16,18 @@ test('private S3 configuration fails closed without server-only credentials or H
     FIRELAUNCH_OBJECT_ACCESS_KEY_ID: 'test', FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY: 'test', FIRELAUNCH_OBJECT_ENDPOINT: 'http://example.com' }), /HTTPS/);
 });
 
+test('private AWS profile is explicit, native-S3 only, and does not fall back to static keys', () => {
+  const base = { FIRELAUNCH_OBJECT_STORE: 's3', FIRELAUNCH_OBJECT_BUCKET: 'approved-private-bucket',
+    FIRELAUNCH_OBJECT_REGION: 'us-east-2', FIRELAUNCH_OBJECT_ACCESS_KEY_ID: 'invalid-static-key',
+    FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY: 'invalid-static-secret' };
+  assert.ok(privateObjectStoreFromEnv({ ...base, FIRELAUNCH_OBJECT_AUTH: 'aws-profile', AWS_PROFILE: 'firelaunch-staging-app' }));
+  assert.throws(() => privateObjectStoreFromEnv({ ...base, FIRELAUNCH_OBJECT_AUTH: 'aws-profile' }), /named profile/);
+  assert.throws(() => privateObjectStoreFromEnv({ ...base, FIRELAUNCH_OBJECT_AUTH: 'aws-profile', AWS_PROFILE: 'firelaunch-staging-app',
+    FIRELAUNCH_OBJECT_ENDPOINT: 'https://s3.example.test' }), /native S3/);
+  assert.throws(() => privateObjectStoreFromEnv({ ...base, FIRELAUNCH_OBJECT_AUTH: 'unknown' }), /Unsupported/);
+  assert.ok(privateObjectStoreFromEnv({ ...base }));
+});
+
 test('local S3 HTTP requires explicit development and loopback', () => {
   const previous = process.env.NODE_ENV;
   const base = { FIRELAUNCH_OBJECT_STORE: 's3', FIRELAUNCH_OBJECT_BUCKET: 'firelaunch-source', FIRELAUNCH_OBJECT_REGION: 'us-east-1',

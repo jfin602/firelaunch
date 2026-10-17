@@ -7,6 +7,9 @@ label="${1:?Usage: backup.sh YYYYMMDDTHHMMSSZ-label}"
 [[ $# = 1 && "$label" =~ ^[0-9]{8}T[0-9]{6}Z-[a-zA-Z0-9_-]{1,48}$ ]] || die 'Invalid backup label'
 require_operator
 require_layout
+if grep -Fxq 'FIRELAUNCH_OBJECT_AUTH=aws-profile' "$env_file"; then
+  export AWS_PROFILE=firelaunch-staging-app AWS_CONFIG_FILE=/home/deploy/.aws/config
+fi
 for helper in backup-preflight.mjs inspect-archive.mjs; do
   helper_path="$(dirname "${BASH_SOURCE[0]}")/$helper"
   [[ -f "$helper_path" && ! -L "$helper_path" && "$(stat -c '%U' "$helper_path")" = root ]] || die 'Backup helper must be root owned'
@@ -15,6 +18,10 @@ for helper in backup-preflight.mjs inspect-archive.mjs; do
 done
 release="$(readlink -f "$base/current")"
 [[ -f "$release/apps/server/dist/operations-cli.js" ]] || die 'Running release backup command missing'
+if grep -Fxq 'FIRELAUNCH_OBJECT_AUTH=aws-profile' "$env_file"; then
+  grep -Fq 'export function privateS3OptionsFromEnv' "$release/apps/server/dist/private-objects.js" ||
+    die 'Running release does not support named-profile private objects'
+fi
 schema="$(schema_max "$release")"
 preflight_output="$("$node_bin" --env-file="$env_file" "$(dirname "${BASH_SOURCE[0]}")/backup-preflight.mjs" "$release")"
 read -r live_schema db_bytes object_count object_bytes <<< "$preflight_output"

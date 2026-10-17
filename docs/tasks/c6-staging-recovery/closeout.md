@@ -1,4 +1,80 @@
-# C6 staging recovery qualification — NOT GREEN
+# C6 staging recovery qualification — GREEN (isolated gates only)
+
+## 2026-10-16 AWS synthetic S3 follow-up
+
+The client-owned S3 recovery leg and the one-time developer cleanup have now completed for two approved 69-byte synthetic objects. The returned client archive passed integrity/hash checks, and `muffinos` produced two source current-key delete markers without version-targeted deletion. The app role returned 403 for both destination current keys after the client had already delete-marked them; this does **not** independently prove denial of a present current object. Full AWS object-bearing archive restoration, real Google/HTTPS candidate testing, timed service rollback and live cutover remain open. The bounded evidence, exact version IDs, access-check interpretation and shortest remaining path are recorded in [the cutover qualification](../c6-staging-cutover/qualification.md) and its evidence files. The isolated recovery preparation result below is unchanged; no 0.6.7 deployment, migration or restart occurred in this follow-up.
+
+---
+
+## 2026-10-16 staging recovery iteration (current disposition)
+
+The earlier database backup/restore and migration evidence below remains valid. This iteration completed the **isolated private-object and authenticated-service rehearsals** and the supervised privileged host preparation. The three requested **recovery preparation gates are GREEN in their bounded, isolated scope**. This does not qualify or authorize live cutover. No live service, release link, unit, database schema, staging object store, IAM policy or Nginx configuration was changed. The live service remained on 0.5.8/schema 10 with PID `486903` and `/srv/firelaunch/current` still targeting `/srv/firelaunch/releases/20261011T163833Z` at the final read-only check. Repository HEAD at this iteration was `7bf2c332bf9169246c3139c7c2c2c8791e091b22`, with the staging helper edits listed below left in the working tree; the 0.6.7 application modules are unchanged.
+
+### 1. Private-object restore evidence
+
+- A read-only fresh PostgreSQL custom-format snapshot of the live schema-10 database (SHA-256 `18ca90be4cb45300ac84299a23bf35469d435ae298ff560583602d9a2051a02e`) was streamed into a private local rehearsal area. Its baseline was one creator, two projects and **zero** private objects. The temporary plaintext dump was removed after the rehearsal; no fixture record or object was created on live staging.
+- On the restored local copy, two synthetic owners and two synthetic private objects were created through the 0.5.8 repository and S3 storage implementation: one PDF evidence object and one PNG media object. The source and restore targets were separate private local MinIO buckets, `firelaunch-source` and `firelaunch-restore`, on loopback only. Database `object_key`, content type, byte size and SHA-256 matched the original bytes.
+- The 0.5.8 AES-256-GCM `FLREC1` archive included both objects and the database snapshot. The format and object metadata were independently read by 0.6.7; plaintext fixture bytes did not appear in the ciphertext. The final in-memory archive's database-dump digest was `f788cced918a85a0dd9646e65c47d52849ce14972bdcb4334d5585276006d6ad`. Restore into a new database and separate bucket reproduced both checksums. The archive was ephemeral rehearsal material, not a new live backup or retained recovery point.
+- Missing source bytes and altered source bytes both caused backup failure. Tampered archive ciphertext failed inspection. A destination that returned corrupted bytes caused restore failure, removal of the partially written objects, and removal of the disposable database. Repeating a successful restore to the same destination was rejected; the existing restored objects retained their checksums.
+- A separate real CLI test, `FIRELAUNCH_LOCAL_S3_TEST=1 ... local-s3-recovery.test.ts`, passed against local PostgreSQL and private MinIO buckets. This complements the versioned-module rehearsal with the product `ops backup`/`ops restore` entrypoint. The test cleans its fixture databases and objects.
+
+These are **synthetic object** results using the current S3 API implementation and recovery format. The real staging database had no referenced objects, so this does **not** prove access to the client AWS private bucket, real customer-object restoration, or future schema-13 media originals/delivery recovery. The existing encrypted schema-10 preflight archive described below remains the only actual live-data archive and has zero object payloads.
+
+### 2. Authenticated service and migration results
+
+Four isolated loopback HTTP server instances were started from copied versioned release modules, each with its own disposable database and private storage destination. A local OIDC fixture signed RS256 ID tokens; each instance exercised the release's **real verifier, callback, account mapping, session, CSRF guard, API routes and private-object capability path**. No session was injected and no caller-supplied owner ID was trusted. Fixture endpoints, credentials, storage and ports were separate from live staging. The production `index.js` Google configuration and a real Google account were not exercised.
+
+| Instance | Database/storage | Authenticated result | Health/compatibility |
+| --- | --- | --- | --- |
+| 0.5.8 source | Restored live schema 10 plus synthetic objects / source MinIO | PASS | PASS, migration 10 |
+| 0.5.8 recovered | Encrypted-archive restore to new schema 10 / restore MinIO | PASS | PASS, migration 10 |
+| 0.6.7 candidate | Same recovered data migrated to schema 13 / restore MinIO | PASS | PASS, migration 13 |
+| 0.5.8 rollback | Fresh independent archive restore to schema 10 / isolated private filesystem backend | PASS | PASS, migration 10 |
+
+At each phase: signed login and session returned 200; owner project read, object metadata and byte-exact capability download succeeded; anonymous requests returned 401; foreign project/object/capability requests returned 404; missing capability returned 404; invalid CSRF returned 403. The product health function reported database and object-store `ok` at the appropriate migration ceiling. The rollback phase restored the fixture-bearing **schema-10 encrypted archive**, not merely the original zero-object live snapshot. The earlier 0.5.8/schema-13 rejection and separate database-only migration/rollback results below are preserved.
+
+The test provider proves the authentication implementation under signed OIDC. It does not qualify real Google callback registration, HTTPS secure-cookie behavior, the live S3 bucket, or the exact production `index.js` wiring. Those remain release/hosting gates rather than simulated successes.
+
+### 3. Privileged release preparation
+
+Read-only host inspection found `/srv/firelaunch/releases` and its live 0.5.8 tree owned by `deploy`; the active Node 24.15.0 binary is under deploy's writable home. `/etc/firelaunch/staging.env` remains root:root mode 0600. The staging service has `ProtectSystem=strict`, runs as `deploy`, and still points at that existing binary. `sudo -l` shows supervised interactive sudo for `deploy`, but no passwordless permission to restart `firelaunch-staging.service`; a noninteractive restart authorization probe was rejected **before execution**. The unit still reports `NeedDaemonReload=yes`. Root SSH was not changed.
+
+`scripts/staging/lib.sh` now requires a root-owned Node path, `/opt/firelaunch-staging-runtime/node24/bin/node`. New `scripts/staging/prepare-privileged.sh` is a bounded operator preparation step: it verifies the exact candidate and Node hashes, active PID/link and protected environment; stages root-owned copies of the old and candidate releases under `/srv/firelaunch/recovery-prep`; installs reviewed helpers under `/opt/firelaunch-staging-ops`; creates a root-only backup directory; and checks ownership, permissions, links and version. It does not switch `/srv/firelaunch/current`, change the unit or restart the service. `build-release.sh` excludes this operator-only script from the runtime package, avoiding a circular artifact hash.
+
+The reviewed package and preparation script are present in deploy-owned `/home/deploy/firelaunch-incoming` with mode 0600. Their independent hashes are:
+
+| Item | SHA-256 |
+| --- | --- |
+| 0.6.7 prepared package | `672450904c2ae959dbaf4e0c59a0c5ee2014ff066e9e0817ac6b146691453289` |
+| supervised preparation script | `c29c4288d0d39287e93144cf09ef358e8cd9a7bfcdb8c280f8fdbe6fe2f3cb12` |
+
+The corrected supervised run **passed**. The operator command checked the script hash before and after installing it in the root-owned operator directory, then reported: `Prepared root-owned runtime, two release copies, operator and backup directories. Live PID and release link unchanged.` The script validated both release copies' owner, file modes, contained links, version and required files before reporting success. Independent read-only host checks confirmed root-owned `/opt/firelaunch-staging-ops` mode 0700, `/opt/firelaunch-staging-runtime/node24/bin/node` mode 0755, `/srv/firelaunch/recovery-prep` mode 0700, `/var/backups/firelaunch-staging` mode 0700, and the unchanged PID/link. The root-only directory contents cannot be enumerated by unprivileged `deploy`; the supervised script's own checks are the direct evidence for those contents. No passwordless sudo or root SSH was added.
+
+The live `/srv/firelaunch/releases` and active 0.5.8 tree remain deploy-owned by design until a separately approved, quiesced cutover. The unit still uses the old deploy-owned Node path and reports `NeedDaemonReload=yes`; the protected environment remains root:root mode 0600 and was never printed or copied. These changes are intentionally **not** part of this no-live-modification qualification. The reviewed candidate and rollback copies are secured in the root-only preparation directory. Backup archives use unique labels, mode 0600, 30-day retention metadata and no overwrite; no scheduled rotation/deletion or actual quiesced cutover backup has been performed. Atomic link changes, rejection of unsafe paths, schema-incompatible binary rollback and safe preparation failure passed focused tests. Supervised sudo was demonstrated by the successful preparation run, but no live restart/switch was attempted.
+
+The owner's first sudo attempt used the superseded `ce66515e…` script hash and failed its **first** checksum check. Subsequent read-only inspection confirmed the staged script's actual `380f994b…` hash, no root-owned preparation paths created, and the same live service PID/release link. That failed attempt is not preparation evidence.
+
+The next supervised run reached `Prepared release contains writable code`. Investigation found that `find -perm /022` treated safe root-owned symbolic links as writable because Unix link mode displays `0777`; the temp copy was removed by the failure trap. The new predicate still rejects non-root link ownership, checks link targets stay inside the release, and rejects group/other writable regular files/directories. A focused link-mode regression test passed. This is the second bounded preparation repair; the root-owned directories/runtime created before the failure remain and were read-only verified.
+
+The following single bounded command was **executed successfully** by the owner from the `deploy` shell on muffinos. It is retained as evidence; do not rerun it against already staged release destinations:
+
+```bash
+sudo /bin/bash -c 'set -euo pipefail; f=/home/deploy/firelaunch-incoming/prepare-privileged.sh; h=c29c4288d0d39287e93144cf09ef358e8cd9a7bfcdb8c280f8fdbe6fe2f3cb12; test "$(sha256sum "$f" | cut -d " " -f1)" = "$h"; install -D -o root -g root -m 0700 "$f" /opt/firelaunch-staging-ops/prepare-privileged.sh; test "$(sha256sum /opt/firelaunch-staging-ops/prepare-privileged.sh | cut -d " " -f1)" = "$h"; exec /opt/firelaunch-staging-ops/prepare-privileged.sh /home/deploy/firelaunch-incoming/firelaunch-c6-staging-recovery-candidate-prepared-v3.tar.gz'
+```
+
+### 4. Validation and safe cutover boundary
+
+- Focused release tests: 6/6 PASS, including the root-owned Node path and link-mode assertions. Shell syntax validation and `git diff --check`: PASS. The packaged 0.6.7 runtime import: PASS. Local S3/CLI recovery integration: 1/1 PASS. The versioned HTTP/object rehearsal above: PASS. The prior full `npm run check`, schema migration and packaging results below remain valid for unchanged application code; the new shell helper changes were checked with focused tests and a fresh package build.
+- The earlier live preflight `.flrec` remains encrypted, checked and untouched; its archive hash, database digest and object count are recorded below. The fresh read-only dump used for this rehearsal is not a replacement for a root-owned, quiesced final backup. No stored backup or credential was deleted.
+- **Safe cutover, after separate approval only:** (1) receive the supervised preparation result and review the root-owned copies and hashes; (2) establish the exact root-owned `/srv/firelaunch/releases` layout and update the staging unit to the prepared Node path in an approved maintenance window; (3) prove a disposable database/private-bucket restore using operator credentials and record a maximum downtime threshold; (4) drain writes and stop only `firelaunch-staging.service`; (5) create and verify a new root-owned encrypted backup while quiesced, and keep writers stopped; (6) migrate live schema 10→13 only after that go/no-go; (7) atomically select the reviewed 0.6.7 release, reload/restart only the staging unit and verify authenticated API/object and HTTPS health; (8) if any check fails, keep writes stopped, restore the final archive to a **new** database and separate private object destination, verify schema 10 and hashes with 0.5.8, make an operator-reviewed database/storage endpoint cutover, then restart the old binary. Never use a binary-only schema-13→0.5.8 symlink rollback. The current `deploy-release.sh` correctly rejects schema-changing candidates, so this is a human-controlled plan, **not** an executable cutover authorization.
+
+**Remaining limitations / disposition:** Gates 1, 2 and 3 passed for the explicitly requested **isolated fixture and no-live-modification preparation scope**. Real Google/HTTPS staging identity, client AWS object recovery, root-owned quiesced cutover backup, actual service restart, operational rollback and the wider release gates are still open. **GREEN for C6 isolated recovery preparation; live cutover remains NOT QUALIFIED and is stopped.** No 0.6.7 deployment or live schema migration occurred.
+
+---
+
+## Earlier preflight and database-only rehearsal (historical NOT GREEN evidence preserved)
+
+The following earlier findings describe the state before the isolated object, HTTP and privileged-preparation work above. They are preserved as recorded; their earlier `NOT GREEN` recommendation is historical and does not describe the bounded current disposition.
 
 Date: 2026-10-16. Repository HEAD `01069f0dedc7275136f88bbc9e2d0628ff5edf66`, root `0.6.7`, with pre-existing unrelated working-tree changes preserved. This report covers a safe preparation and isolated **database** rehearsal. It does not authorize the 0.5.8 → 0.6.7 live cutover. No live migration, service restart, systemd reload, Nginx change, AWS IAM change, media job or publication occurred.
 

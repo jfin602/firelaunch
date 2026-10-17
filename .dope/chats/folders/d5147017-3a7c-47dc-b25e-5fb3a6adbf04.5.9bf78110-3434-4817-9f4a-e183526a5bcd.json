@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "id": "d5147017-3a7c-47dc-b25e-5fb3a6adbf04",
+  "revision": 5,
+  "folderPath": "",
+  "title": "New Chat",
+  "titleSource": "placeholder",
+  "color": "red",
+  "createdAt": "2026-10-16T21:48:02.594Z",
+  "updatedAt": "2026-10-16T21:52:36.251Z",
+  "lastInteractedAt": "2026-10-16T21:52:36.241Z",
+  "settings": {
+    "schemaVersion": 1,
+    "modelPolicy": {
+      "type": "follow-interactive"
+    },
+    "context": {
+      "maxInputTokens": 8192,
+      "reservedOutputTokens": 1024,
+      "history": "recent",
+      "savedChatSearch": false,
+      "allowedSources": [
+        "roadmap-checkpoint"
+      ]
+    }
+  },
+  "messages": [
+    {
+      "schemaVersion": 1,
+      "id": "a13ad39b-c4f1-46c1-b952-73466ee15b0e",
+      "createdAt": "2026-10-16T21:52:23.187Z",
+      "content": "We need to unlink the current mvp-roadmap.md file from the roadmap",
+      "role": "user",
+      "contextRefs": [
+        {
+          "schemaVersion": 1,
+          "kind": "roadmap-checkpoint",
+          "id": "roadmap:docs/roadmap/mvp-roadmap.md#correction-window-c0",
+          "label": "Roadmap checkpoint: Correction window — c0-*",
+          "estimatedTokens": 339,
+          "includedBytes": 846,
+          "contentHash": "5f17fe814451f226f8844733afad2e15d5180cd0655d6fa984d80ccc28873f41",
+          "projectId": "997cc71e-514b-4912-839c-4ba23f2b2d40",
+          "ownerRevision": 1,
+          "sourceHash": "3000d39dd7502cd6f29a6d0af801a17500b2a8212bca86956075f93a1244f307"
+        },
+        {
+          "schemaVersion": 1,
+          "kind": "project-orientation",
+          "id": "project:orientation",
+          "label": "Project orientation",
+          "estimatedTokens": 45,
+          "origin": "automatic",
+          "includedBytes": 71,
+          "contentHash": "9b33caeaaa12af131e62240eedf6635b8c8503b0a7fba10ef6da7697077493e3",
+          "projectId": "bc3ab52e51594f4f5c4bf75310e21495578724e06c46c3301a4ce69345444c1c"
+        },
+        {
+          "schemaVersion": 1,
+          "kind": "file",
+          "id": "mvp-roadmap.md",
+          "label": "mvp-roadmap.md",
+          "estimatedTokens": 26,
+          "origin": "automatic",
+          "includedBytes": 35,
+          "contentHash": "497e5914b24b561591ed8a6f44c3580622756627f202f3354453ca2c996081c1",
+          "projectId": "bc3ab52e51594f4f5c4bf75310e21495578724e06c46c3301a4ce69345444c1c"
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "ca27717d-5397-4d86-9d84-aa603dd64f90",
+      "createdAt": "2026-10-16T21:52:23.196Z",
+      "content": "{\"type\":\"no-action\",\"message\":\"The roadmap checkpoint is currently not editable because it is linked to a source that does not allow objective edits. The project file 'mvp-roadmap.md' is absent from the project, which may affect the ability to unlink or modify the checkpoint.\"}",
+      "role": "assistant",
+      "execution": {
+        "schemaVersion": 1,
+        "id": "08c3cbae-7046-4c91-8b82-fcfa0cdab0ac",
+        "status": "complete",
+        "selectedModel": {
+          "connectionId": "98c9cf59-9550-4e91-a63f-141f990d5913",
+          "modelId": "qwen3-coder-30b-a3b-instruct@q4_k_m"
+        },
+        "startedAt": "2026-10-16T21:52:23.196Z",
+        "actualModel": {
+          "schemaVersion": 1,
+          "connectionId": "98c9cf59-9550-4e91-a63f-141f990d5913",
+          "modelId": "qwen3-coder-30b-a3b-instruct@q4_k_m",
+          "providerId": "local",
+          "modelLabel": "qwen3-coder-30b-a3b-instruct@q4_k_m"
+        },
+        "resolutionSource": "explicit-turn",
+        "routingProvenance": {
+          "version": 1,
+          "source": "explicit-turn",
+          "effectiveHard": {
+            "requiredCapabilities": [
+              "conversationalText",
+              "streaming"
+            ],
+            "locality": "any",
+            "enabledOnly": true,
+            "usableOnly": true,
+            "hostedProjectData": "requires-feature-authorization",
+            "minimumKnownContextTokens": 1050
+          },
+          "actualTarget": {
+            "connectionId": "98c9cf59-9550-4e91-a63f-141f990d5913",
+            "modelId": "qwen3-coder-30b-a3b-instruct@q4_k_m"
+          },
+          "executionLabels": {
+            "connection": "local",
+            "provider": "local",
+            "model": "qwen3-coder-30b-a3b-instruct@q4_k_m"
+          },
+          "attempts": [
+            {
+              "target": {
+                "connectionId": "98c9cf59-9550-4e91-a63f-141f990d5913",
+                "modelId": "qwen3-coder-30b-a3b-instruct@q4_k_m"
+              },
+              "outcome": "selected"
+            }
+          ]
+        },
+        "finishedAt": "2026-10-16T21:52:36.241Z"
+      },
+      "planningActivity": {
+        "schemaVersion": 1,
+        "kind": "no-action",
+        "status": "no-action",
+        "refs": [
+          {
+            "schemaVersion": 1,
+            "kind": "roadmap-checkpoint",
+            "id": "roadmap:docs/roadmap/mvp-roadmap.md#correction-window-c0",
+            "label": "Roadmap checkpoint: Correction window — c0-*",
+            "estimatedTokens": 339,
+            "includedBytes": 846,
+            "contentHash": "5f17fe814451f226f8844733afad2e15d5180cd0655d6fa984d80ccc28873f41",
+            "projectId": "997cc71e-514b-4912-839c-4ba23f2b2d40",
+            "ownerRevision": 1,
+            "sourceHash": "3000d39dd7502cd6f29a6d0af801a17500b2a8212bca86956075f93a1244f307"
+          },
+          {
+            "schemaVersion": 1,
+            "kind": "project-orientation",
+            "id": "project:orientation",
+            "label": "Project orientation",
+            "estimatedTokens": 45,
+            "origin": "automatic",
+            "includedBytes": 71,
+            "contentHash": "9b33caeaaa12af131e62240eedf6635b8c8503b0a7fba10ef6da7697077493e3",
+            "projectId": "bc3ab52e51594f4f5c4bf75310e21495578724e06c46c3301a4ce69345444c1c"
+          },
+          {
+            "schemaVersion": 1,
+            "kind": "file",
+            "id": "mvp-roadmap.md",
+            "label": "mvp-roadmap.md",
+            "estimatedTokens": 26,
+            "origin": "automatic",
+            "includedBytes": 35,
+            "contentHash": "497e5914b24b561591ed8a6f44c3580622756627f202f3354453ca2c996081c1",
+            "projectId": "bc3ab52e51594f4f5c4bf75310e21495578724e06c46c3301a4ce69345444c1c"
+          }
+        ]
+      }
+    }
+  ]
+}

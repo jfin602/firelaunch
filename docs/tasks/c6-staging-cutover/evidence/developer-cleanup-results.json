@@ -1,0 +1,19 @@
+{
+  "status": "COMPLETE",
+  "accountId": "363242105231",
+  "region": "us-east-2",
+  "sourceBucket": "firelaunch-staging-originals-363242105231-use2",
+  "roleArn": "arn:aws:sts::363242105231:assumed-role/firelaunch-staging-app/7ef4d254904bcd15c3bc157fdeed0ddd",
+  "sourceDeleteMarkers": [
+    {
+      "key": "private/b55302647afed0370adb163c318827bc5eed1bd9de2960a0e56e063d585e20fd",
+      "priorCurrentVersionId": "FoQeBZYY8Nm.dS1DP3H_oWqDNtJGiJ4Q",
+      "deleteMarkerVersionId": "1eOH8rhSWuT3cQIG75nMgcrLgkvqJUk_"
+    },
+    {
+      "key": "private/c4789ea25b0f3a17a166bb2389d0a790688408b1b44f894241cfaafff34485c9",
+      "priorCurrentVersionId": "MRzMWAkfiNyVHd3uoofpEzeg5zl9nwRK",
+      "deleteMarkerVersionId": "xngEffp2ky.e7NuqfQmI7ojNtJyiMfin"
+    }
+  ]
+}

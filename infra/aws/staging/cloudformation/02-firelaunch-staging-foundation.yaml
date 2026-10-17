@@ -73,6 +73,13 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
       VersioningConfiguration: {Status: Enabled}
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: ["https://firelaunch.jfin.dev"]
+            AllowedMethods: [PUT]
+            AllowedHeaders: ["content-type", "x-amz-checksum-*", "x-amz-sdk-checksum-algorithm"]
+            ExposedHeaders: [ETag]
+            MaxAge: 300
       LifecycleConfiguration:
         Rules:
           - Id: abort-incomplete-multipart-uploads

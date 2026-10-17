@@ -83,6 +83,7 @@ test('media AWS configuration and CloudFront origin fail closed without echoing 
     FIRELAUNCH_MEDIA_DELIVERY_BUCKET: config.deliveryBucket, FIRELAUNCH_MEDIA_CLOUDFRONT_HOSTS: 'media.example.org',
     FIRELAUNCH_MEDIA_CLOUDFRONT_ORIGIN: config.cloudFrontOrigin, AWS_SECRET_ACCESS_KEY: 'secret-value' };
   assert.equal(mediaStorageConfigFromEnv(env).cloudFrontOrigin, config.cloudFrontOrigin);
+  assert.equal(mediaStorageConfigFromEnv({ ...env, FIRELAUNCH_MEDIA_CLOUDFRONT_ORIGIN: '', FIRELAUNCH_MEDIA_CLOUDFRONT_HOSTS: '' }).cloudFrontOrigin, '');
   for (const origin of ['http://media.example.org/', 'https://evil.example.org/', 'https://media.example.org.evil.test/',
     'https://user:secret-value@media.example.org/', 'https://media.example.org/path', 'https://media.example.org/?sig=secret-value',
     'https://media.example.org:444/', 'https://127.0.0.1/']) {
@@ -93,7 +94,7 @@ test('media AWS configuration and CloudFront origin fail closed without echoing 
   assert.throws(() => mediaStorageConfigFromEnv({ ...env, FIRELAUNCH_MEDIA_CLOUDFRONT_HOSTS: 'media.example.org,127.0.0.1' }), /invalid/);
 });
 
-test('publisher role must be a same-account IAM role and is mandatory for hosted media storage', () => {
+test('publisher role must be a same-account IAM role when publication is configured', () => {
   const env = roleEnv;
   assert.equal(publisherRoleConfigFromEnv(env).accountId, '363242105231');
   for (const roleArn of ['', 'arn:aws:iam::000000000000:role/firelaunch/media-publisher',
@@ -102,7 +103,7 @@ test('publisher role must be a same-account IAM role and is mandatory for hosted
     assert.throws(() => publisherRoleConfigFromEnv({ ...env, FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN: roleArn }), /publisher role/);
   }
   assert.throws(() => publisherRoleConfigFromEnv({ ...env, FIRELAUNCH_MEDIACONVERT_ACCOUNT: '' }), /publisher role/);
-  assert.throws(() => mediaStorageFromEnv({ ...env, FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN: '' }), /publisher role/);
+  assert.ok(mediaStorageFromEnv({ ...env, FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN: '' }));
 });
 
 test('STS publisher credentials refresh without falling back to control credentials', async () => {
@@ -262,7 +263,7 @@ test('missing or failing publisher client cannot use control credentials for pub
   assert.equal(delivery.calls.some(call => String(call.input.Key).includes('/delivery/')), false);
   const noPublisher = new S3MediaStorage(config, originals as unknown as S3Client, delivery as unknown as S3Client);
   await assert.rejects(noPublisher.publishStaged(scope, set, '1'.repeat(64), 'master.m3u8',
-    { bytes: body.length, sha256: sha(body) }), /S3 request failed/);
+    { bytes: body.length, sha256: sha(body) }), /CloudFront publication unavailable/);
 });
 
 test('STS AssumeRole failure blocks publication before a delivery S3 request', async () => {

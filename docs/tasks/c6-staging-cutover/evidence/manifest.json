@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "qualificationId": "c6-private-recovery-20261016",
+  "accountId": "363242105231",
+  "region": "us-east-2",
+  "sourceBucket": "firelaunch-staging-originals-363242105231-use2",
+  "destinationBucket": "firelaunch-staging-media-363242105231-use2",
+  "administratorRoleArn": "arn:aws:iam::363242105231:role/managed/AccountFullAccessRole",
+  "recoveryRoleArn": "arn:aws:iam::363242105231:role/firelaunch/firelaunch-staging-private-recovery",
+  "sourceAppRoleArn": "arn:aws:iam::363242105231:role/firelaunch/firelaunch-staging-app",
+  "sourceVerifiedAtUtc": "2026-10-16T20:06:58Z",
+  "fixtures": [
+    {
+      "id": "evidence-red",
+      "sourceKey": "private/b55302647afed0370adb163c318827bc5eed1bd9de2960a0e56e063d585e20fd",
+      "destinationKey": "private/b55302647afed0370adb163c318827bc5eed1bd9de2960a0e56e063d585e20fd",
+      "sizeBytes": 69,
+      "sha256Hex": "b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640",
+      "checksumSHA256Base64": "sf+cjqOngLrQmzRsQj0tDkaBWSaHmxjoQdkoN2qUZkA=",
+      "contentType": "image/png",
+      "sourceVersionId": "FoQeBZYY8Nm.dS1DP3H_oWqDNtJGiJ4Q",
+      "sourceETag": "\"ee76702403cd15dbc71587365494cbe5\"",
+      "sourceUpload": {
+        "method": "PutObject",
+        "ifNoneMatch": "*",
+        "serverSideEncryption": "AES256",
+        "singleRequest": true,
+        "putVersionId": "FoQeBZYY8Nm.dS1DP3H_oWqDNtJGiJ4Q",
+        "headAndGetVerified": true
+      }
+    },
+    {
+      "id": "media-blue",
+      "sourceKey": "private/c4789ea25b0f3a17a166bb2389d0a790688408b1b44f894241cfaafff34485c9",
+      "destinationKey": "private/c4789ea25b0f3a17a166bb2389d0a790688408b1b44f894241cfaafff34485c9",
+      "sizeBytes": 69,
+      "sha256Hex": "fce481932ea5d07a91c7991c09fdadb4bf78f9b4cc8f927188384231f9d12679",
+      "checksumSHA256Base64": "/OSBky6l0HqRx5kcCf2ttL94+bTMj5JxiDhCMfnRJnk=",
+      "contentType": "image/png",
+      "sourceVersionId": "MRzMWAkfiNyVHd3uoofpEzeg5zl9nwRK",
+      "sourceETag": "\"6c0cf0948e03090bd23e53d44953fbfe\"",
+      "sourceUpload": {
+        "method": "PutObject",
+        "ifNoneMatch": "*",
+        "serverSideEncryption": "AES256",
+        "singleRequest": true,
+        "putVersionId": "MRzMWAkfiNyVHd3uoofpEzeg5zl9nwRK",
+        "headAndGetVerified": true
+      }
+    }
+  ],
+  "approvedBoundaries": {
+    "sourcePutObjectCount": 2,
+    "destinationCopyObjectCount": 2,
+    "bytesPerFixture": 69,
+    "totalPayloadBytesAcrossBothBuckets": 276,
+    "destinationCleanup": "DeleteObject current key only, creating versioned delete marker",
+    "sourceCleanup": "separate later developer-cleanup.sh on muffinos",
+    "forbidden": [
+      "IAM changes",
+      "CloudFormation changes",
+      "application deployment",
+      "database migration",
+      "MediaConvert activation",
+      "CloudFront activation",
+      "customer object access",
+      "unlisted S3 keys",
+      "historical version deletion"
+    ]
+  }
+}

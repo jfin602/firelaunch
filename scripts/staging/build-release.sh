@@ -31,6 +31,8 @@ mkdir -p "$(dirname "$output")"
 mkdir -p "$tmp/release/infra/aws-media" "$tmp/release/scripts"
 cp "$repo/infra/aws-media/hls-avc-aac-v1.settings.json" "$tmp/release/infra/aws-media/"
 cp -a "$repo/scripts/staging" "$tmp/release/scripts/"
+# Privileged host preparation is an operator-only input, never release runtime.
+rm -f "$tmp/release/scripts/staging/prepare-privileged.sh"
 tar -C "$tmp/release" --sort=name --owner=0 --group=0 --numeric-owner -czf "$output" .
 sha256sum "$output" > "$output.sha256"
 echo "Release artifact: $output"

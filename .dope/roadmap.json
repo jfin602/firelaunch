@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "projectId": "997cc71e-514b-4912-839c-4ba23f2b2d40",
+  "projectRoot": "/home/jfin/dev/firelaunch",
+  "revision": 1,
+  "checkpoints": [
+    {
+      "id": "roadmap:docs/roadmap/mvp-roadmap.md#correction-window-c0",
+      "kind": "correction",
+      "title": "Correction window — c0-*",
+      "objective": "",
+      "order": 0,
+      "dependencies": [],
+      "links": [],
+      "status": "not-green",
+      "readOnly": true,
+      "source": {
+        "path": "docs/roadmap/mvp-roadmap.md",
+        "sha256": "3000d39dd7502cd6f29a6d0af801a17500b2a8212bca86956075f93a1244f307",
+        "line": 48,
+        "text": "## Correction window — c0-*"
+      },
+      "evidence": [
+        {
+          "path": "docs/tasks/p0/closeout.md",
+          "sha256": "012cf24b3253dc93135e70d1b68f8e23d41d01fb3beaf8196fc98b37a94ccc2c",
+          "line": 1,
+          "text": "# P0 / P7 qualification closeout — NOT GREEN",
+          "status": "not-green",
+          "statusText": "# P0 / P7 qualification closeout — NOT GREEN"
+        }
+      ]
+    },
+    {
+      "id": "roadmap:docs/roadmap/mvp-roadmap.md#c0-real-tv-qualification",
+      "kind": "correction",
+      "title": "`c0-real-tv-qualification` — executed repair loop: BLOCKED / NOT GREEN (2026-10-09)",
+      "objective": "",
+      "order": 1,
+      "dependencies": [],
+      "links": [],
+      "status": "unknown",
+      "readOnly": true,
+      "source": {
+        "path": "docs/roadmap/mvp-roadmap.md",
+        "sha256": "3000d39dd7502cd6f29a6d0af801a17500b2a8212bca86956075f93a1244f307",
+        "line": 52,
+        "text": "### `c0-real-tv-qualification` — executed repair loop: BLOCKED / NOT GREEN (2026-10-09)"
+      },
+      "evidence": []
+    },
+    {
+      "id": "roadmap:docs/roadmap/mvp-roadmap.md#c5-vega",
+      "kind": "correction",
+      "title": "c5-vega — Phase 5 native qualification correction (approved 2026-10-12)",
+      "objective": "",
+      "order": 2,
+      "dependencies": [],
+      "links": [],
+      "status": "not-green",
+      "readOnly": true,
+      "source": {
+        "path": "docs/roadmap/mvp-roadmap.md",
+        "sha256": "3000d39dd7502cd6f29a6d0af801a17500b2a8212bca86956075f93a1244f307",
+        "line": 200,
+        "text": "## c5-vega — Phase 5 native qualification correction (approved 2026-10-12)"
+      },
+      "evidence": [
+        {
+          "path": "docs/tasks/c5-vega/closeout.md",
+          "sha256": "630ac2bf294c825997513c6ee6cd5662ad232ca47b92704fcc6667bba5f478aa",
+          "line": 1,
+          "text": "# c5-vega / P3 independent installed-Vega closeout — NOT GREEN",
+          "status": "not-green",
+          "statusText": "# c5-vega / P3 independent installed-Vega closeout — NOT GREEN"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+# SUPERSEDED REVIEW DRAFT — DO NOT DEPLOY.
+# It grants the ordinary app role write/delete access to isolated recovery copies
+# and targets a stack the available deployer is not authorized to create.
+# Review workload-identity-private-recovery.yaml instead.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Review-only C6 staging private-object access. Reuses the client-owned originals
+  and media buckets; attaches one narrow inline policy to the existing app role.
+  Do not create or execute a change set without owner approval.
+Resources:
+  PrivateObjectAccess:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: firelaunch-staging-private-object-access
+      Roles:
+        - firelaunch-staging-app
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ReadWritePrimaryPrivateObjects
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: arn:aws:s3:::firelaunch-staging-originals-363242105231-use2/private/*
+          - Sid: ReadWriteIsolatedRestoreObjects
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: arn:aws:s3:::firelaunch-staging-media-363242105231-use2/private/*
+          - Sid: ListIsolatedRestorePrefix
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource: arn:aws:s3:::firelaunch-staging-media-363242105231-use2
+            Condition:
+              StringLike:
+                s3:prefix:
+                  - private/
+                  - private/*

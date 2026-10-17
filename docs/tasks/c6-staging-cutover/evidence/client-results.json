@@ -1,0 +1,18 @@
+{
+  "status": "COMPLETE",
+  "accountId": "363242105231",
+  "region": "us-east-2",
+  "sourceVersions": [
+    "FoQeBZYY8Nm.dS1DP3H_oWqDNtJGiJ4Q",
+    "MRzMWAkfiNyVHd3uoofpEzeg5zl9nwRK"
+  ],
+  "destinationVersions": [
+    ".Ws6coJuMS_hzKygL_PTvWrFYrxHLfaO",
+    "GZElHC2eyHaJOO6ZToLfOmcqT5Ohlb5v"
+  ],
+  "destinationDeleteMarkers": [
+    "WiCZlw9f9YLw0uRJVLa5biMyyizMmDAj",
+    "Vbw04qVVQw71OAGOt305Q5dWXae_k38G"
+  ],
+  "sourceCurrentKeysIntact": true
+}

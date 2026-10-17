@@ -22,7 +22,7 @@ const repository = new ProjectRepository(process.env.FIRELAUNCH_DATA_DIR ?? '.fi
 const privateObjects = hostedRepository ? new PrivateObjectService(hostedRepository, privateObjectStoreFromEnv(process.env)) : undefined;
 const mediaStorage = hostedRepository && process.env.FIRELAUNCH_MEDIA_AWS_REGION
   ? mediaStorageFromEnv(process.env) : undefined;
-const managed = hostedRepository && mediaStorage && process.env.FIRELAUNCH_MEDIACONVERT_ACCOUNT
+const managed = hostedRepository && mediaStorage && process.env.FIRELAUNCH_MEDIACONVERT_ACCOUNT && process.env.FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN
   ? await (async () => {
     const config = mediaConvertConfigFromEnv(process.env);
     const profile = await fixedMediaConvertProfile();
@@ -30,8 +30,9 @@ const managed = hostedRepository && mediaStorage && process.env.FIRELAUNCH_MEDIA
       new ManagedMediaJobRepository(hostedRepository.pool), mediaStorage,
       new AwsMediaConvertProvider(config, profile), config, profile);
   })() : undefined;
-// A hosted upload must never be accepted without its managed processing path.
-const mediaUploads = hostedRepository && mediaStorage && managed
+// Private originals may be uploaded while managed processing is paused. Finalization
+// remains completed/unverified until the separate processing path is enabled.
+const mediaUploads = hostedRepository && mediaStorage
   ? new MediaUploadService(new MediaPipelineRepository(hostedRepository), mediaStorage, managed) : undefined;
 if (mediaUploads) {
   void mediaUploads.cleanupExpired();

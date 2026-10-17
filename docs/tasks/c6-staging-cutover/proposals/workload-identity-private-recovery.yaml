@@ -1,0 +1,194 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  FireLaunch staging - CLIENT-OWNED workload identity stack. IAM Roles Anywhere
+  trust anchor (client CA), the VPS profile, the firelaunch-staging-app role and
+  the separate firelaunch-staging-publisher role. Trust relationships live here so
+  the developer-maintainable foundation stack cannot change who may assume them.
+  Deploy and update ONLY with the client admin role.
+
+Parameters:
+  CaCertificatePem:
+    Type: String
+    Description: Public PEM certificate of the client-controlled FireLaunch staging CA (no private key).
+  VpsCertificateCommonName:
+    Type: String
+    Default: firelaunch-staging-vps
+  CaCommonName:
+    Type: String
+    Default: FireLaunch Staging Roles Anywhere CA
+  DeveloperBoundaryArn:
+    Type: String
+    Default: arn:aws:iam::363242105231:policy/firelaunch-access/firelaunch-developer-boundary
+  AllowDeployerPublisherTesting:
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "false"
+  DeployerRoleArn:
+    Type: String
+    Default: arn:aws:iam::363242105231:role/firelaunch-access/FireLaunch-Staging-Deployer
+
+Conditions:
+  DeployerCanTestPublisher: !Equals [!Ref AllowDeployerPublisherTesting, "true"]
+
+Resources:
+  ClientCaTrustAnchor:
+    Type: AWS::RolesAnywhere::TrustAnchor
+    Properties:
+      Name: firelaunch-staging-client-ca
+      Enabled: true
+      Source:
+        SourceType: CERTIFICATE_BUNDLE
+        SourceData:
+          X509CertificateData: !Ref CaCertificatePem
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  ApplicationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: firelaunch-staging-app
+      Path: /firelaunch/
+      Description: FireLaunch staging application on the external VPS (IAM Roles Anywhere only)
+      PermissionsBoundary: !Ref DeveloperBoundaryArn
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: VpsCertificateFromClientCaOnly
+            Effect: Allow
+            Principal: {Service: rolesanywhere.amazonaws.com}
+            Action: [sts:AssumeRole, sts:TagSession, sts:SetSourceIdentity]
+            Condition:
+              ArnEquals: {aws:SourceArn: !GetAtt ClientCaTrustAnchor.TrustAnchorArn}
+              StringEquals:
+                aws:PrincipalTag/x509Subject/CN: !Ref VpsCertificateCommonName
+                aws:PrincipalTag/x509Issuer/CN: !Ref CaCommonName
+      ManagedPolicyArns:
+        - !ImportValue firelaunch-staging-foundation-AppPermissionsPolicyArn
+      Policies:
+        - PolicyName: firelaunch-staging-active-private-objects
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadDeleteActivePrivateObjects
+                Effect: Allow
+                Action: [s3:GetObject, s3:DeleteObject]
+                Resource: arn:aws:s3:::firelaunch-staging-originals-363242105231-use2/private/*
+              - Sid: WriteEncryptedActivePrivateObjects
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: arn:aws:s3:::firelaunch-staging-originals-363242105231-use2/private/*
+                Condition:
+                  StringEquals: {s3:x-amz-server-side-encryption: AES256}
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  PublisherRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: firelaunch-staging-publisher
+      Path: /firelaunch/
+      Description: FireLaunch staging rights-controlled publication (assumed by the application role)
+      PermissionsBoundary: !Ref DeveloperBoundaryArn
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ApplicationRoleOnly
+            Effect: Allow
+            Principal: {AWS: !GetAtt ApplicationRole.Arn}
+            Action: [sts:AssumeRole, sts:TagSession, sts:SetSourceIdentity]
+          - !If
+            - DeployerCanTestPublisher
+            - Sid: ApprovedDeveloperTestingPrincipal
+              Effect: Allow
+              Principal: {AWS: !Ref DeployerRoleArn}
+              Action: sts:AssumeRole
+            - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - !ImportValue firelaunch-staging-foundation-PublisherPermissionsPolicyArn
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  PrivateRecoveryRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: firelaunch-staging-private-recovery
+      Path: /firelaunch/
+      Description: Client-admin-assumed isolated private-object recovery only
+      PermissionsBoundary: !Ref DeveloperBoundaryArn
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ClientAdministratorOnly
+            Effect: Allow
+            Principal:
+              AWS: arn:aws:iam::363242105231:role/managed/AccountFullAccessRole
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: firelaunch-staging-private-recovery
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadActivePrivateObjectsForRecovery
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: arn:aws:s3:::firelaunch-staging-originals-363242105231-use2/private/*
+              - Sid: ReadDeleteIsolatedRecoveryObjects
+                Effect: Allow
+                Action: [s3:GetObject, s3:DeleteObject]
+                Resource: arn:aws:s3:::firelaunch-staging-media-363242105231-use2/private/*
+              - Sid: WriteEncryptedIsolatedRecoveryObjects
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: arn:aws:s3:::firelaunch-staging-media-363242105231-use2/private/*
+                Condition:
+                  StringEquals: {s3:x-amz-server-side-encryption: AES256}
+              - Sid: ListIsolatedRecoveryObjects
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: arn:aws:s3:::firelaunch-staging-media-363242105231-use2
+                Condition:
+                  StringLike:
+                    s3:prefix: [private/, private/*]
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+  VpsProfile:
+    Type: AWS::RolesAnywhere::Profile
+    Properties:
+      Name: firelaunch-staging-vps
+      Enabled: true
+      RoleArns: [!GetAtt ApplicationRole.Arn]
+      DurationSeconds: 3600
+      Tags:
+        - {Key: Project, Value: FireLaunch}
+        - {Key: Environment, Value: Staging}
+        - {Key: Owner, Value: Client}
+        - {Key: ManagedBy, Value: IaC}
+
+Outputs:
+  TrustAnchorArn:
+    Value: !GetAtt ClientCaTrustAnchor.TrustAnchorArn
+  ProfileArn:
+    Value: !GetAtt VpsProfile.ProfileArn
+  ApplicationRoleArn:
+    Value: !GetAtt ApplicationRole.Arn
+  PublisherRoleArn:
+    Value: !GetAtt PublisherRole.Arn
+  PrivateRecoveryRoleArn:
+    Value: !GetAtt PrivateRecoveryRole.Arn
+
