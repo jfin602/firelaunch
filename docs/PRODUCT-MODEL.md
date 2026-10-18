@@ -211,13 +211,17 @@ P4 maps creator-selected, persisted approved CatalogItems and Collections into a
 P4 uses bounded server-authorized catalog inspection and provider-neutral ChannelAgent structured mutations, never raw model-generated JSON replacement or client-provided creator IDs. A successful real non-mock model call grounding on imported catalog plus persisted, valid ChannelSpec change and interactive Preview is required for P4 GREEN. Deterministic starter layouts work offline for video, audio and writing; mock tests do not prove live provider qualification. Authentication/private Preview and generated-source sanitization remain separate from P5 public immutable media/manifest delivery; P6 owns automatic sync. Full hosted release security readiness remains unqualified until inherited S1–S6 gates pass.
 
 
-## Planned P6 — AWS media delivery extension (not implemented)
+## Historical P6 AWS media plan (initial FFmpeg design; superseded by ADR 0011)
 
 P5's historical approved PublishedManifest/ChannelSpec contracts remain the compatible native client baseline. P6 extends existing `MediaAsset` with owner-scoped original upload identity, content hash, probe metadata, rendition-set version, encoding profile, FFmpeg job/attempt, verification results and delivery-ready state. Do not substitute media assets for ChannelSpec presentation identity or replace previously approved publication releases. All private originals, upload sessions, worker credentials and evidence remain outside public/exported contracts. Encode jobs and HLS rendition metadata have independent revisions and retries.
 
 Media moves through upload pending -> uploaded -> probing -> processing -> verified/ready or failed; separately track TV-display/playback rights, approval, revocation and delivery eligibility. FFprobe can approve safe stream copy/repackaging, otherwise transcode a bounded two-quality HLS profile (480p/720p initially, optional 1080p). Every rendition-set publication must resolve to stable validated CloudFront HTTPS media usable by the P5 wire format, with no signed private S3 URL or temporary query credentials. Private storage from P2/P3 for small evidence and uploads remains distinct; P6 handles scalable video masters.
 
 For **future** subscribers, public playback manifests must not contain per-viewer credentials. Viewer identity, Amazon/Roku billing and playback entitlements require a separately approved device/provider contract. Initial P6 is free-to-view rights-cleared video. P6 (0.6.x) precedes planned P7 sync (0.7.x), P8 publishing/SaaS (0.8.x), P9 launch (0.9.x); all earlier P6/P7/P8 references in historical phase plans remain historical, not renamed evidence.
+
+## Current verified video baseline and future access (2026-10-18)
+
+The minimal Add Video form and actual authenticated, owner/project-scoped private S3 upload are **staging qualified** with persistent catalog, distinct TV display/playback rights, selected Videos/custom shelf, artwork and reload/restart; [evidence](tasks/c6-video-publishing-ux/closeout.md). A verified upload preserves *placement intent*, not a public playable ChannelSpec binding. Real MediaConvert HLS, CloudFront publication and Vega playback remain unqualified under [p6-live-vod](tasks/p6-live-vod/README.md). Free approved delivery is distinct from conceptual future paid purchase/rental/subscription access; neither a public URL nor in-app paywall grants restricted viewer access. See [current state](CURRENT-STATE.md) and ADR 0013.
 
 ## Accepted managed VOD media lifecycle (2026-10-14, ADR 0011)
 
