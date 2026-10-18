@@ -24,6 +24,8 @@ Each checkpoint stops on missing approval or essential evidence and produces its
 
 ## Q2 - Public free-only delivery and creator release
 
+**Scope amendment (2026-10-18):** Do not build broader video placement tools before Q3. For the first real publication, use the existing default Videos shelf and current catalog/ChannelSpec/immutable P5 contracts. Current catalog projection may block `managed_hls` assets because it only admits direct public HTTPS assets; Q2 may implement a narrow trusted server-side bridge from the exact owned READY rendition to the validated stable approved free CDN URL needed by ChannelSpec, with source/rights/revision checks and no placeholder, private URL or early public release. Preserve manually curated draft state. No multi-shelf UI, ordering controls, drag-and-drop, featured merchandising or new publishing system.
+
 **Preflight:** Read Q1-closeout.md GREEN and verify actual ready rendition for authorized creator; verify no paid or unknown access policy can flow to the free public delivery. Recheck separate studio owner, rights/provenance, owned artwork, ChannelDeployment, persisted shelf intent and ChannelSpec draft content. Establish the P5 public-only dedicated TLS manifest origin with exact `/public/v1/deployments/...` GET allowlist; never expose Studio or authenticated /api.
 
 **Operator boundary:** Inspect actual existing CloudFront distribution, OAC S3 bucket policy and disabled state, viewer path function, cache TTLs, allowed hosts, role trust, current CloudFormation parameters. Public approved HLS is unsigned per ADR 0013; originals, staged and unapproved/foreign/malformed keys remain inaccessible, and no purchase/rental/subscription content is eligible. Prepare *review-only* narrow change set and rollback strategy. Obtain separate explicit approval before execution, CDN activation, DNS/HTTPS changes or creator publication. Test access path policy under the real distribution, not templates alone.
@@ -34,6 +36,8 @@ Each checkpoint stops on missing approval or essential evidence and produces its
 
 ## Q3 - Real Vega adaptive HLS and same installed VPKG
 
+Use Q2's minimal published Videos shelf and focus only on real device HLS/remote-release qualification. Placement enhancements are not a prerequisite and must not expand Q3 scope.
+
 **Preflight:** Read Q1 and Q2 GREEN, inspect creator-bound source/build/manifest and live resolver, actual Vega CLI/SDK/VirtualDevice OS and log capture. Check native player support and SDK docs for adaptive HLS (MSE vs URL) at installed version. Current `templates/vega-channel/src/App.js` uses `VideoPlayer.src = item.mediaUrl` unqualified for HLS. If correction needed, implement smallest provider-compatible adaptive player with cleanup, pause/seek/Back and error behavior; preserve audio/content detail and remote release integrity.
 
 **Local tests/build:** Use a distinct creator-owned package identity, genuine deployment HTTPS manifest origin, generated source with no secret/tenant data, SDK-compatible release build, exact VPKG hash. Host native builds stay disabled. Install the same VPKG once on VirtualDevice and record native launch/focus/detail/Back, actual HLS master/variants/segments requests, start/pause/seek, failure/recovery.
@@ -41,6 +45,10 @@ Each checkpoint stops on missing approval or essential evidence and produces its
 **P5/c5 carry-forward:** With explicit creator approvals, publish visible v1 already qualified in Q2; publish distinct v2 without rebuild/reinstall; verify same installed client refresh and pointer/hash. Network-off cold restart should render LKG v2. Controlled isolated test origin may return 404/5xx/bad-hash/bad-schema/timeouts, but do not mutate real immutable DB release bytes or a public shared origin. Restore real origin. Publish rights-checked new v3 rollback to old v1 content without overwriting v1/v2 release history; verify same installed package visibly rolls back. Record unchanged Ngest health before/after.
 
 **Evidence:** SDK/OS/command, one installed package hash, screenshots/logs and actual network requests, v1/v2/v3 IDs/sequences/digests, offline/failure and rollback evidence, targeted native tests. Produce Q3-closeout.md: GREEN only F8-F9. A final P6 closeout is **not** automatically GREEN until matrix F10 and explicit version policy/remaining gates are assessed independently.
+
+## Post-Q3 deferred improvement
+
+After Q3 earns GREEN, start a separate, newly reviewed `c6-channel-video-placement` improvement proposal covering library-to-channel membership, optional multiple shelves, ordering, feature placement, visual layout preview and streamlined creator publication. No implementation stack is activated by this plan and Q2/Q3 must not absorb this UX work.
 
 ## Loop policy, scope and handoff
 
