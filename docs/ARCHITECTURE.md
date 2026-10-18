@@ -1,5 +1,11 @@
 # FireLaunch Architecture
 
+## Current deployed and planned media architecture (2026-10-18)
+
+Read [CURRENT-STATE](CURRENT-STATE.md), [ADR 0011](decisions/0011-aws-vod-foundation.md), [ADR 0013](decisions/0013-hybrid-video-access.md), and [p6-live-vod](tasks/p6-live-vod/README.md) before executing any old implementation recipe in this architecture document. Real hosted Add Video private ingestion and owned Postgres/S3 persistence are STAGING UX GREEN; the managed MediaConvert processing adapter is offline LOCAL GREEN, but a real HLS job, approved free CloudFront release and native Vega VirtualDevice playback are NOT QUALIFIED. AWS Foundation nested-role/prefix correction was deployed and simulated at a dated checkpoint with queue PAUSED, EventBridge DISABLED and CloudFront DISABLED; reverify actual state.
+
+The current encoding path is authenticated rights-owned S3 original -> durable verified control-plane MediaConvert intent -> privately staged complete HLS graph -> explicit creator rights/readiness approval -> immutable, free-only CloudFront delivery prefix and P5 PublishedManifest. Creator catalog/shelf placement intent persists even when unprocessed; incomplete media must not appear as playable content. S3 originals and staged output must never be public. Only `free` is in P6 scope; future purchase/rental/subscription needs protected viewer entitlements outside immutable manifest bytes. Historical FFmpeg worker plans and pre-existing phase-numbering references below are archival, not runnable instructions. Every AWS activation, cloud publication and staging change requires separate operator/creator approval.
+
 ## Objective
 
 Make the common creator workflow deterministic enough to validate while retaining an explicit code escape hatch.
