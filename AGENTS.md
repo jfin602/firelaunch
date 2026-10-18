@@ -3,14 +3,23 @@
 ## Read order
 
 Before implementation:
-1. BOOT.md
-2. docs/VISION.md
-3. docs/PRINCIPLES.md
-4. docs/PRODUCT-MODEL.md
-5. docs/ARCHITECTURE.md
-6. docs/workflow.md
-7. the active docs/tasks/<stack>/ README, prompt-assessment and implementation-plan
-8. the current prompt
+1. docs/CURRENT-STATE.md (dated current state, never substitute for fresh host inspection)
+2. BOOT.md
+3. docs/VISION.md
+4. docs/PRINCIPLES.md
+5. docs/PRODUCT-MODEL.md
+6. docs/ARCHITECTURE.md
+7. docs/workflow.md
+8. the active docs/tasks/<stack>/ README, prompt-assessment and implementation-plan
+9. the current prompt
+
+## Current operational priority (2026-10-18)
+
+- Read [current state](docs/CURRENT-STATE.md) before interpreting historical phase sections below. Root version is 0.6.7 at the recorded source baseline; c6-video-publishing-ux is STAGING UX GREEN, c6-aws-vod is LOCAL GREEN only, and the deployed AWS Foundation correction was last observed UPDATE_COMPLETE with encode queue PAUSED, EventBridge DISABLED and CloudFront DISABLED.
+- The **next active execution is manual p6-live-vod Q1**, then Q2 and Q3 after their independent GREEN gates. Read [p6-live-vod README](docs/tasks/p6-live-vod/README.md), matrix, and [ADR 0013](docs/decisions/0013-hybrid-video-access.md). These prompts are on main, not an unmerged docs branch. Do not run the Prompt Stack runner for them.
+- For new media, AWS MediaConvert (ADR 0011) supersedes FFmpeg. For publication, only creator-approved FREE video may eventually use a public CloudFront delivery path; future purchase/rental/subscription video requires a separately qualified protected viewer-entitlement path. Do not treat conceptual paid modes as shipped features.
+- `/docs-apply` or authored prompts are **not** operator authorization for queue activation, paid jobs, CloudFormation, IAM, enabling CloudFront, changing host/DNS, deployment, or creator publication. Stop for precise approval at each Q gate. Preserve current single staging service, schema 13, private originals, backups, previous release, owner/CSRF/rights and Ngest.
+- Sections marked active/current below are **dated historical decisions** unless explicitly reaffirmed by this current operational priority and their later ADR/closeout. Never rerun P6 FFmpeg or old p6 runner prompts or relabel historical NOT GREEN closeouts.
 
 ## Repository behavior
 
