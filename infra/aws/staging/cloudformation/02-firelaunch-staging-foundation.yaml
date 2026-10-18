@@ -4,7 +4,7 @@ Description: >-
   FireLaunch-Staging-Deployer role and the firelaunch-cfn-deployer execution role).
   Private S3 storage, paused MediaConvert queue and service role, MediaConvert
   job-event pipeline (EventBridge -> SQS + DLQ), CloudWatch observability,
-  CloudFront delivery with Origin Access Control and signed-request enforcement,
+  CloudFront delivery with Origin Access Control and explicit viewer-path enforcement,
   and the permission policies used by the application and publisher roles.
 
 Parameters:
@@ -37,7 +37,17 @@ Parameters:
     Type: String
     AllowedValues: ["true", "false"]
     Default: "false"
-    Description: Keep false until signed HLS playback is qualified on the installed Vega client.
+    Description: Enable only after an approved signed or exact free delivery policy is configured.
+  ApprovedFreeDeliveryPrefix:
+    Type: String
+    Default: ""
+    AllowedPattern: '^$|^media/[a-f0-9]{32}/[a-f0-9]{32}/[a-f0-9]{32}/delivery/[a-f0-9]{32}/[a-f0-9]{64}$'
+    Description: Exact immutable delivery prefix for one approved free HLS rendition; empty refuses free delivery.
+  ApprovedFreeDeliveryHost:
+    Type: String
+    Default: ""
+    AllowedPattern: '^$|^[a-z0-9-]+[.]cloudfront[.]net$'
+    Description: Exact distribution hostname accepted by the free viewer-path guard.
   BedrockModelArns:
     Type: CommaDelimitedList
     Default: ""
@@ -52,6 +62,14 @@ Conditions:
   EnableSignedDelivery: !And
     - !Condition HasSigningKey
     - !Equals [!Ref DeliveryDistributionEnabled, "true"]
+  HasFreeDelivery: !And
+    - !Condition NoSigningKey
+    - !Not [!Equals [!Ref ApprovedFreeDeliveryPrefix, ""]]
+    - !Not [!Equals [!Ref ApprovedFreeDeliveryHost, ""]]
+  EnableFreeDelivery: !And
+    - !Condition HasFreeDelivery
+    - !Equals [!Ref DeliveryDistributionEnabled, "true"]
+  EnableAnyDelivery: !Or [!Condition EnableSignedDelivery, !Condition EnableFreeDelivery]
   HasBedrock: !Not [!Equals [!Join ["", !Ref BedrockModelArns], ""]]
 
 Resources:
@@ -423,6 +441,31 @@ Resources:
           return event.request;
         }
 
+  FreeDeliveryPathFunction:
+    Type: AWS::CloudFront::Function
+    Condition: HasFreeDelivery
+    Properties:
+      Name: firelaunch-staging-approved-free-delivery
+      AutoPublish: true
+      FunctionConfig:
+        Comment: One approved immutable free rendition; reject all other viewer requests
+        Runtime: cloudfront-js-2.0
+      FunctionCode: !Sub |
+        function handler(event) {
+          var request = event.request;
+          var host = request.headers.host && request.headers.host.value;
+          var prefix = '/${ApprovedFreeDeliveryPrefix}/';
+          var name = request.uri.slice(prefix.length);
+          if ((request.method !== 'GET' && request.method !== 'HEAD') ||
+              host !== '${ApprovedFreeDeliveryHost}' ||
+              request.uri.slice(0, prefix.length) !== prefix ||
+              Object.keys(request.querystring || {}).length !== 0 ||
+              !/^(master|v480|v720)\.m3u8$|^v(480|720)-00[01]\.ts$/.test(name)) {
+            return { statusCode: 403, statusDescription: 'Forbidden' };
+          }
+          return request;
+        }
+
   DeliverySigningPublicKey:
     Type: AWS::CloudFront::PublicKey
     Condition: HasSigningKey
@@ -446,8 +489,8 @@ Resources:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
-        Enabled: !If [EnableSignedDelivery, true, false]
-        Comment: FireLaunch staging HLS delivery (signed requests only; disabled until a signing key group exists)
+        Enabled: !If [EnableAnyDelivery, true, false]
+        Comment: FireLaunch staging HLS delivery (signed or exact approved free rendition)
         PriceClass: PriceClass_100
         HttpVersion: http2and3
         IPV6Enabled: true
@@ -466,11 +509,20 @@ Resources:
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
           TrustedKeyGroups: !If [HasSigningKey, [!Ref DeliverySigningKeyGroup], !Ref AWS::NoValue]
           FunctionAssociations: !If
-            - NoSigningKey
+            - HasFreeDelivery
             - - EventType: viewer-request
-                FunctionARN: !GetAtt DeliveryLockFunction.FunctionMetadata.FunctionARN
-            - - EventType: viewer-request
-                FunctionARN: !GetAtt DeliveryPathFunction.FunctionMetadata.FunctionARN
+                FunctionARN: !GetAtt FreeDeliveryPathFunction.FunctionMetadata.FunctionARN
+            - !If
+              - NoSigningKey
+              - - EventType: viewer-request
+                  FunctionARN: !GetAtt DeliveryLockFunction.FunctionMetadata.FunctionARN
+              - - EventType: viewer-request
+                  FunctionARN: !GetAtt DeliveryPathFunction.FunctionMetadata.FunctionARN
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ErrorCachingMinTTL: 0
+          - ErrorCode: 404
+            ErrorCachingMinTTL: 0
         ViewerCertificate:
           CloudFrontDefaultCertificate: true
       Tags:

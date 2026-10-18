@@ -281,7 +281,7 @@ export class S3MediaStorage {
       const head = await this.request(() => this.staging.send(new HeadObjectCommand({
         Bucket: this.config.deliveryBucket, Key: key })));
       if (!head.ETag || !head.ContentLength || head.ContentLength > maxOutputBytes ||
-        head.ContentType !== contentType(name) || head.ServerSideEncryption !== 'AES256')
+        head.ContentType?.toLowerCase() !== contentType(name) || head.ServerSideEncryption !== 'AES256')
         reject('managed HLS object metadata invalid');
       const expectedLength = head.ContentLength!;
       const object = await this.request(() => this.staging.send(new GetObjectCommand({
@@ -350,7 +350,7 @@ export class S3MediaStorage {
           pairs.push({ duration: duration!, name: name! });
         } else if (!(/^#EXT-X-VERSION:[3-6]$/.test(line) || line === '#EXT-X-INDEPENDENT-SEGMENTS' ||
           line === '#EXT-X-PLAYLIST-TYPE:VOD' || /^#EXT-X-TARGETDURATION:[1-9]\d*$/.test(line) ||
-          /^#EXT-X-MEDIA-SEQUENCE:0$/.test(line))) reject('managed HLS variant directive unsupported');
+          /^#EXT-X-MEDIA-SEQUENCE:(?:0|[1-9]\d{0,9})$/.test(line))) reject('managed HLS variant directive unsupported');
       }
       if (!pairs.length || pairs.length > 250 || pairs.reduce((sum, pair) => sum + Number(pair.duration), 0) > 1800)
         reject('managed HLS segment limit exceeded');

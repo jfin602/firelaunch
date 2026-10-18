@@ -223,6 +223,12 @@ databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and r
       variants: [{ height: 480 as const, playlistKey: `${managedPrefix}v480.m3u8`,
         playlistSha256: 'b'.repeat(64), segmentsSha256: 'c'.repeat(64), segmentCount: 1 }],
       verifiedAt: new Date().toISOString() };
+    assert.equal(await managedRestarted.failVerification(managedScope, retryIntent.intentToken), true);
+    assert.equal((await resumed.processingStatus(owner, project.id, asset.id, managedUpload.id))?.failureCode,
+      'verification_failed');
+    await restarted.pool.query(`UPDATE managed_media_job_attempts SET reconcile_after=now()-interval '1 second'
+      WHERE intent_token=$1`, [retryIntent.intentToken]);
+    assert.equal((await managedRestarted.due()).some(row => row.intentToken === retryIntent.intentToken), true);
     assert.equal(await managedRestarted.ready({ ...managedScope, creatorAccountId: foreign.accountId },
       retryIntent.intentToken, managedSet), false);
     assert.equal(await managedRestarted.ready(managedScope, retryIntent.intentToken,
@@ -230,6 +236,9 @@ databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and r
     assert.equal(await managedRestarted.ready(managedScope, retryIntent.intentToken, managedSet), true);
     assert.equal(await managedRestarted.ready(managedScope, retryIntent.intentToken, managedSet), false);
     assert.equal((await resumed.processingStatus(owner, project.id, asset.id, managedUpload.id))?.state, 'ready');
+    assert.equal((await resumed.processingStatus(owner, project.id, asset.id, managedUpload.id))?.failureCode, null);
+    assert.equal((await restarted.pool.query('SELECT attempts FROM media_processing_jobs WHERE id=$1',
+      [managedJobId])).rows[0]?.attempts, 2);
     const lateUpload = await resumed.createUpload(owner, project.id, asset.id,
       { ...request, idempotencyKey: 'managed-late-upload-001', claimedDurationSeconds: 90 });
     await resumed.recordVerifiedOriginal(owner, project.id, asset.id, lateUpload.id,

@@ -81,7 +81,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
   const workspace = mode?.mode === 'local-legacy' ? new WorkspaceService(repository) : null;
   const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository) : null;
   const catalog = hostedRepository ? new CatalogRepository(hostedRepository) : null;
-  const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog) : null;
+  const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog, mediaPublisher) : null;
   const publication = hostedRepository ? new PublicationRepository(hostedRepository, mediaPublisher) : null;
   const publicResolver = mode?.mode === 'hosted' && hostedRepository ? new PublicReleaseResolver(hostedRepository) : null;
   return createServer(async (request, response) => {

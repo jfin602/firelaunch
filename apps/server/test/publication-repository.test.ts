@@ -12,6 +12,7 @@ import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
 import { HostedProjectRepository } from '../src/hosted-repository.js';
 import { CatalogRepository } from '../src/catalog-repository.js';
+import { CatalogProjectionService } from '../src/catalog-projection.js';
 import { PublicationRepository, canonicalBytes } from '../src/publication-repository.js';
 import { PublicReleaseResolver } from '../src/public-resolver.js';
 import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
@@ -479,12 +480,18 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
       assert.deepEqual(scope, { creatorAccountId: owner.accountId, projectId: project.id, mediaAssetId: playback.id });
       return hlsUrl;
     }, publishVerifiedHls: async () => { promoted++; return hlsUrl; } } as unknown as S3MediaStorage;
+    const projection = new CatalogProjectionService(restarted, new CatalogRepository(restarted), publisher);
+    const selection = { expectedProjectRevision: 3, expectedCatalogRevision: 7,
+      itemIds: [item.id], collectionIds: [] };
+    assert.equal((await projection.project(owner, project.id, selection)).bindings[0]?.baseline?.mediaUrl, hlsUrl);
+    await assert.rejects(projection.project(foreign, project.id, selection), { code: 'NOT_FOUND' });
     const hlsPublication = new PublicationRepository(restarted, publisher);
     const hlsRequest = { ...request, revisions: { channel: 3, catalog: 7 },
       expectedLiveReleaseId: rollback.manifest.releaseId };
     await assert.rejects(hlsPublication.approve(foreign, hlsRequest), { code: 'NOT_FOUND' });
     await assert.rejects(new PublicationRepository(restarted).approve(owner, hlsRequest), { code: 'CONFLICT' });
     await restarted.pool.query(`UPDATE media_processing_jobs SET state='revoked',rendition_set_id=NULL WHERE id=$1`, [jobId]);
+    assert.equal((await projection.project(owner, project.id, selection)).bindings[0]?.baseline, null);
     await assert.rejects(hlsPublication.approve(owner, hlsRequest), { code: 'CONFLICT' });
     await restarted.pool.query(`UPDATE media_processing_jobs SET state='ready',rendition_set_id=$2 WHERE id=$1`, [jobId, setId]);
     const hlsApproval = await hlsPublication.approve(owner, hlsRequest);

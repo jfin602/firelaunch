@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { CatalogItem, Collection, MediaAsset, ChannelProject } from '@firelaunch/contracts';
-import { ApiError, approveCatalogImport, deletePrivateObject, generateCatalogDraft, getProject, previewCatalogImport, readCatalog, readCatalogDraft, uploadPrivateMedia, writeCatalog, type CatalogSelection, type CatalogSnapshot, type DraftChanges, type ImportPreview } from './api.js';
+import { ApiError, approveCatalogImport, deletePrivateObject, generateCatalogDraft, getProject, previewCatalogImport, readCatalog, readCatalogDraft, readVideoAssetStatus, uploadPrivateEvidence, uploadPrivateMedia, writeCatalog, type CatalogSelection, type CatalogSnapshot, type DraftChanges, type ImportPreview, type VideoAssetStatus } from './api.js';
 import { NewVideoUpload, VideoLibraryStatus } from './VideoUpload.js';
 import { safeArtwork } from './artwork-url.js';
 
@@ -45,6 +45,11 @@ export function Catalog({ project, projectId: legacyProjectId, hosted, onGenerat
   const [display, setDisplay] = useState(false);
   const [playback, setPlayback] = useState(false);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [publicArtworkUrl, setPublicArtworkUrl] = useState('');
+  const [publicArtworkApproved, setPublicArtworkApproved] = useState(false);
+  const [sourceEvidence, setSourceEvidence] = useState<File | null>(null);
+  const [sourceApproved, setSourceApproved] = useState(false);
+  const [videoStates, setVideoStates] = useState<Record<string, VideoAssetStatus>>({});
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -52,12 +57,18 @@ export function Catalog({ project, projectId: legacyProjectId, hosted, onGenerat
   const [draftCollectionIds, setDraftCollectionIds] = useState<string[]>(initialSelection?.collectionIds ?? []);
   const [changes, setChanges] = useState<DraftChanges | null>(null);
   const selected = inventory?.items.find(item => item.id === selectedId);
+  const selectedSource = inventory?.sources.find(value => value.id === selected?.sourceRecord.sourceId);
   const source = inventory?.sources.find(item => item.id === sourceId);
   const activeCollection = inventory?.collections.find(item => item.id === collectionId);
   const assets = inventory?.mediaAssets.filter(asset => asset.catalogItemId === selectedId) ?? [];
+  const managedVideo = assets.find(asset => asset.kind === 'video' && asset.location.type === 'managed_hls');
   const chosenItems = inventory?.items.filter(item => draftItemIds.includes(item.id) || inventory.collections.some(collection => draftCollectionIds.includes(collection.id) && collection.itemIds.includes(item.id))) ?? [];
   const matchingItems = chosenItems.filter(item => creator === 'writing' ? ['book', 'audio', 'video'].includes(item.kind) : item.kind === creator);
-  const missingMedia = matchingItems.filter(item => item.kind !== 'book' && !inventory?.mediaAssets.some(asset => item.mediaAssetIds.includes(asset.id) && asset.kind === item.kind && asset.deliveryEligible && asset.tvPlaybackRights?.status === 'cleared' && asset.location.type === 'https' && !new URL(asset.location.url).search));
+  const missingMedia = matchingItems.filter(item => item.kind !== 'book' && !inventory?.mediaAssets.some(asset =>
+    item.mediaAssetIds.includes(asset.id) && asset.kind === item.kind && asset.deliveryEligible &&
+    asset.tvPlaybackRights?.status === 'cleared' && (asset.location.type === 'https' && !new URL(asset.location.url).search ||
+      asset.kind === 'video' && asset.location.type === 'managed_hls' && asset.tvDisplayRights?.status === 'cleared' &&
+      videoStates[asset.id]?.uploadState === 'verified' && videoStates[asset.id]?.processing?.state === 'ready')));
   const generate = () => void run(async () => {
     if (!project || !inventory) throw new Error('Open a saved hosted channel first.');
     const selection = { expectedCatalogRevision: inventory.revision, itemIds: draftItemIds, collectionIds: draftCollectionIds };
@@ -80,6 +91,18 @@ export function Catalog({ project, projectId: legacyProjectId, hosted, onGenerat
     void readCatalog(projectId).then(data => { if (alive) setInventory(data); }).catch(reason => { if (alive) setError(errorText(reason)); });
     return () => { alive = false; };
   }, [projectId, hosted]);
+  useEffect(() => {
+    if (!hosted || !inventory) return;
+    let alive = true;
+    const managed = inventory.mediaAssets.filter(asset => asset.location.type === 'managed_hls');
+    void Promise.allSettled(managed.map(asset => readVideoAssetStatus(projectId, asset.id)))
+      .then(results => {
+        if (!alive) return;
+        setVideoStates(Object.fromEntries(results.flatMap((result, index) =>
+          result.status === 'fulfilled' ? [[managed[index]!.id, result.value] as const] : [])));
+      });
+    return () => { alive = false; };
+  }, [projectId, hosted, inventory?.revision]);
   useEffect(() => {
     if (!project || initialSelection) return;
     let alive = true;
@@ -155,6 +178,48 @@ export function Catalog({ project, projectId: legacyProjectId, hosted, onGenerat
     await refresh(); setMediaFile(null); setDisplay(false); setPlayback(false);
     return 'Private media attached with separate TV rights claims. Delivery remains disabled pending later publishing review.';
   }); };
+  const attachPublicArtwork = (event: FormEvent) => { event.preventDefault(); void run(async () => {
+    if (!selected || !inventory || !publicArtworkApproved) throw new Error('Select an item and approve its TV display rights.');
+    const url = new URL(publicArtworkUrl.trim());
+    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash ||
+      !url.hostname.includes('.') || /(^|\.)s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com$/i.test(url.hostname) ||
+      (url.origin === window.location.origin && url.pathname.startsWith('/api/')))
+      throw new Error('Use a stable public HTTPS artwork URL without credentials, query or fragment.');
+    const assertedAt = new Date().toISOString();
+    await writeCatalog(projectId, 'media-assets', inventory.revision, { schemaVersion: 1,
+      catalogItemId: selected.id, kind: 'artwork', location: { type: 'https', url: url.href },
+      tvDisplayRights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_display', assertedAt },
+      tvPlaybackRights: emptyRights, deliveryEligible: true });
+    await refresh(); setPublicArtworkUrl(''); setPublicArtworkApproved(false);
+    return 'Public artwork attached with creator-asserted TV display rights. Review it before live publication.';
+  }); };
+  const approveManagedVideo = () => void run(async () => {
+    if (!inventory || !selected || !managedVideo || managedVideo.catalogItemId !== selected.id ||
+      managedVideo.location.type !== 'managed_hls' ||
+      managedVideo.tvDisplayRights?.status !== 'cleared' || managedVideo.tvPlaybackRights?.status !== 'cleared' ||
+      videoStates[managedVideo.id]?.uploadState !== 'verified' || videoStates[managedVideo.id]?.processing?.state !== 'ready')
+      throw new Error('Verified READY HLS and both cleared TV rights are required. Refresh the video state.');
+    const { id, creatorAccountId: _owner, projectId: _project, ...record } = managedVideo;
+    await writeCatalog(projectId, 'media-assets', inventory.revision, { ...record, deliveryEligible: true }, id);
+    await refresh();
+    return 'Managed video approved for delivery review. It remains private until a separate live publication.';
+  });
+  const verifyCreatorSource = () => void run(async () => {
+    if (!selectedSource || selectedSource.type !== 'creator_upload' || selectedSource.state !== 'discovered' ||
+      !sourceApproved || !sourceEvidence) throw new Error('Review the creator-upload source and attach provenance evidence.');
+    const uploaded = await uploadPrivateEvidence(projectId, sourceEvidence);
+    const { id, creatorAccountId: _owner, projectId: _project, ...record } = selectedSource;
+    try {
+      await writeCatalog(projectId, 'sources', inventory!.revision, { ...record, state: 'verified',
+        permission: { retrieval: 'creator_asserted', tvDisplay: 'creator_asserted',
+          verificationEvidenceId: uploaded.id } }, id);
+    } catch (reason) {
+      try { await deletePrivateObject(projectId, uploaded.id); } catch { /* Preserve the original write error. */ }
+      throw reason;
+    }
+    await refresh(); setSourceEvidence(null); setSourceApproved(false);
+    return 'Creator-upload source verified with private provenance evidence. Every item still needs its own rights, READY media and publication approval.';
+  });
   const setAssetRights = (asset: MediaAsset, use: 'television_display' | 'television_playback', cleared: boolean) => void run(async () => {
     const { id, creatorAccountId, projectId: _projectId, ...record } = asset;
     const claim = cleared ? { status: 'cleared' as const, basis: 'creator_asserted' as const, permittedUse: use, assertedAt: new Date().toISOString() } : { ...emptyRights, status: 'revoked' as const };
@@ -178,7 +243,10 @@ export function Catalog({ project, projectId: legacyProjectId, hosted, onGenerat
     {selected && <details className="catalog-management"><summary>Edit selected item metadata</summary><p><strong>Source:</strong> {selected.sourceRecord.metadata.title}<br/><strong>External ID:</strong> {selected.sourceRecord.externalId.value}<br/><strong>Kind:</strong> {selected.kind}</p><form onSubmit={saveOverride}><label className="field"><span>CREATOR TITLE OVERRIDE</span><input maxLength={160} value={override.title} onChange={event => setOverride({ ...override, title: event.target.value })} placeholder={selected.sourceRecord.metadata.title}/></label><label className="field"><span>CREATOR DESCRIPTION OVERRIDE</span><textarea maxLength={4000} value={override.description} onChange={event => setOverride({ ...override, description: event.target.value })}/></label><label className="field"><span>CREATOR ARTWORK URL OVERRIDE</span><input type="url" maxLength={2048} value={override.artworkUrl} onChange={event => setOverride({ ...override, artworkUrl: event.target.value })} placeholder="https://example.com/cover.jpg"/></label><button disabled={working || (!override.title.trim() && !override.description.trim() && !override.artworkUrl.trim())}>Save override</button></form></details>}
     <details className="catalog-management"><summary>Manage collections (optional)</summary><div className="section-label">04 / COLLECTIONS</div><form onSubmit={addCollection}><label className="field"><span>COLLECTION NAME</span><input required maxLength={160} value={collectionTitle} onChange={event => setCollectionTitle(event.target.value)}/></label><label className="field"><span>COLLECTION TYPE</span><select value={collectionKind} onChange={event => setCollectionKind(event.target.value as Collection['kind'])}>{(['series', 'bookshelf', 'featured', 'album', 'playlist', 'rail'] as const).map(kind => <option key={kind}>{kind}</option>)}</select></label><button disabled={working}>Add Collection</button></form><label className="field"><span>EDIT COLLECTION</span><select aria-label="Select Collection" value={collectionId} onChange={event => setCollectionId(event.target.value)}><option value="">Choose a Collection</option>{inventory.collections.map(value => <option key={value.id} value={value.id}>{value.title} · {value.itemIds.length} items</option>)}</select></label>{activeCollection && selected && <button disabled={working} onClick={toggleCollection}>{activeCollection.itemIds.includes(selected.id) ? 'Remove selected item' : 'Add selected item'}</button>}</details>
     {selected?.kind === 'video' && <div className="catalog-video-actions"><button type="button" onClick={() => setShowSelectedVideoUpload(value => !value)}>{showSelectedVideoUpload ? 'Hide video upload' : 'Replace video'}</button>{showSelectedVideoUpload && <NewVideoUpload key={selected.id} projectId={projectId} inventory={inventory} refresh={refresh} existingItem={selected} onCreated={() => {}} onClose={() => setShowSelectedVideoUpload(false)}/>}</div>}
+    {managedVideo && !managedVideo.deliveryEligible && <div className="catalog-management"><p>Verified managed HLS needs a separate creator delivery review before it can enter a channel draft. Approval here does not publish or expose the private files.</p><button type="button" disabled={working || managedVideo.tvDisplayRights?.status !== 'cleared' || managedVideo.tvPlaybackRights?.status !== 'cleared' || videoStates[managedVideo.id]?.uploadState !== 'verified' || videoStates[managedVideo.id]?.processing?.state !== 'ready'} onClick={approveManagedVideo}>Approve verified video for delivery review</button></div>}
+    {selectedSource?.type === 'creator_upload' && selectedSource.state === 'discovered' && <div className="catalog-management"><p>This creator-upload source is shared by draft items. Verify its provenance and your permission to retrieve and display your uploaded work on TV. This does not approve other items, playback, or publication.</p><label className="field"><span>PRIVATE SOURCE EVIDENCE · PDF, PNG OR JPEG · MAX 700 KB</span><input type="file" accept="application/pdf,image/png,image/jpeg" onChange={event => setSourceEvidence(event.target.files?.[0] ?? null)}/></label><label className="check"><input type="checkbox" checked={sourceApproved} onChange={event => setSourceApproved(event.target.checked)}/> I control this creator-upload source and assert retrieval and TV display permission for my uploaded work.</label><button type="button" disabled={working || !sourceApproved || !sourceEvidence} onClick={verifyCreatorSource}>Verify creator-upload source</button></div>}
     {selected && <details className="catalog-management"><summary>Manage other private media and rights</summary><div className="section-label">05 / PRIVATE MEDIA & TV RIGHTS</div><p>Upload artwork or audio under 1 MB. Video replacement is available from the video library. Rights and processing need separate review before TV delivery.</p><form onSubmit={attachMedia}><label className="field"><span>MEDIA USE</span><select aria-label="Media use" value={mediaUse} onChange={event => setMediaUse(event.target.value as typeof mediaUse)}><option value="artwork">Artwork</option><option value="audio">Audio</option></select></label><label className="field"><span>PRIVATE FILE</span><input type="file" required accept="image/png,image/jpeg,audio/mpeg" onChange={event => setMediaFile(event.target.files?.[0] ?? null)}/></label><label className="check"><input type="checkbox" checked={display} onChange={event => setDisplay(event.target.checked)}/> I have television display rights</label><label className="check"><input type="checkbox" checked={playback} onChange={event => setPlayback(event.target.checked)}/> I have television playback rights</label><button disabled={working || !mediaFile}>Upload private media</button></form><ul>{assets.map(asset => <li key={asset.id}>{asset.kind}: display {asset.tvDisplayRights?.status ?? 'unknown'}, playback {asset.tvPlaybackRights?.status ?? 'unknown'} · {asset.location.type === 'managed_hls' ? 'managed HLS; processing and publication review required' : asset.deliveryEligible ? 'eligible' : 'delivery disabled'}<div className="button-row"><button disabled={working || asset.location.type === 'managed_hls'} onClick={() => setAssetRights(asset, 'television_display', asset.tvDisplayRights?.status !== 'cleared')}>{asset.tvDisplayRights?.status === 'cleared' ? 'Revoke display' : 'Assert display'}</button><button disabled={working || asset.location.type === 'managed_hls'} onClick={() => setAssetRights(asset, 'television_playback', asset.tvPlaybackRights?.status !== 'cleared')}>{asset.tvPlaybackRights?.status === 'cleared' ? 'Revoke playback' : 'Assert playback'}</button></div></li>)}</ul></details>}
+    {selected && <details className="catalog-management"><summary>Attach approved public artwork</summary><p>Use artwork you own or may display on TV. This URL must be publicly reachable and stable; private uploads and signed links cannot be published.</p><form onSubmit={attachPublicArtwork}><label className="field"><span>PUBLIC HTTPS ARTWORK URL</span><input type="url" required maxLength={2048} value={publicArtworkUrl} onChange={event => setPublicArtworkUrl(event.target.value)} placeholder="https://example.com/poster.png"/></label><label className="check"><input type="checkbox" checked={publicArtworkApproved} onChange={event => setPublicArtworkApproved(event.target.checked)}/> I have television display rights for this artwork and approve public delivery.</label><button disabled={working || !publicArtworkApproved || !publicArtworkUrl.trim()}>Attach public artwork</button></form></details>}
     <div className="section-label">06 / GENERATE CHANNEL DRAFT</div><p>Select reviewed work and Collections for the {creator} channel. Books open details without Play. Audio and films need cleared playback rights and eligible delivery.</p>
     <div role="group" aria-label="Generate selection">{inventory.collections.map(collection => <label className="check" key={collection.id}><input type="checkbox" checked={draftCollectionIds.includes(collection.id)} onChange={event => setDraftCollectionIds(previous => event.target.checked ? [...previous, collection.id] : previous.filter(id => id !== collection.id))}/>{collection.title} · Collection ({collection.itemIds.length})</label>)}{inventory.items.map(item => <label className="check" key={item.id}><input type="checkbox" checked={draftItemIds.includes(item.id)} onChange={event => setDraftItemIds(previous => event.target.checked ? [...previous, item.id] : previous.filter(id => id !== item.id))}/>{item.creatorOverrides?.title ?? item.sourceRecord.metadata.title} · {item.kind}</label>)}</div>
     <p>Selected: {draftCollectionIds.length} Collection(s), {chosenItems.length} item(s); {matchingItems.length} match this creator type.</p>

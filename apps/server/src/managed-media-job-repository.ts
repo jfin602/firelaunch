@@ -194,7 +194,9 @@ export class ManagedMediaJobRepository {
         AND j.project_id=m.project_id AND j.asset_id=m.asset_id
       LEFT JOIN media_asset_lifecycle l ON l.asset_id=m.asset_id
       WHERE m.reconcile_after<=now() AND m.cancel_requested_at IS NULL
-        AND m.state IN ('intent','submitted','progressing','complete') AND j.state='pending'
+        AND m.state IN ('intent','submitted','progressing','complete')
+        AND (j.state='pending' OR (j.state='failed' AND j.failure_code='verification_failed'
+          AND m.state='complete'))
         AND j.attempts=m.attempt AND l.revoked_at IS NULL
       ORDER BY m.reconcile_after,m.intent_token LIMIT $1`, [bounded]);
     return rows.rows.map(row => intent(row));
@@ -213,7 +215,7 @@ export class ManagedMediaJobRepository {
     const scope = ids.parse(rawScope); z.uuid().parse(intentToken);
     const set = mediaRenditionSetSchema.parse(rawSet);
     return this.transaction(async client => {
-      const row = await this.lockCurrent(client, scope, intentToken);
+      const row = await this.lockCurrent(client, scope, intentToken, false, true);
       if (!row || row.state !== 'complete' || !row.aws_job_id || row.cancel_requested_at ||
         set.creatorAccountId !== scope.creatorAccountId || set.projectId !== scope.projectId ||
         set.catalogItemId !== row.item_id || set.mediaAssetId !== scope.mediaAssetId ||
@@ -240,9 +242,10 @@ export class ManagedMediaJobRepository {
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11)`,
       [set.id, scope.jobId, scope.creatorAccountId, scope.projectId, row.item_id, scope.mediaAssetId,
         set.profile, set.masterKey, set.masterSha256, JSON.stringify(set.variants), set.verifiedAt]);
-      const updated = await client.query(`UPDATE media_processing_jobs SET state='ready',rendition_set_id=$2,
-        version=version+1 WHERE id=$1 AND creator_account_id=$3 AND project_id=$4 AND asset_id=$5
-        AND state='pending' AND attempts=$6`, [scope.jobId, set.id, scope.creatorAccountId,
+      const updated = await client.query(`UPDATE media_processing_jobs SET state='ready',failure_code=NULL,
+        rendition_set_id=$2,version=version+1 WHERE id=$1 AND creator_account_id=$3 AND project_id=$4 AND asset_id=$5
+        AND (state='pending' OR (state='failed' AND failure_code='verification_failed')) AND attempts=$6`,
+      [scope.jobId, set.id, scope.creatorAccountId,
         scope.projectId, scope.mediaAssetId, row.attempt]);
       if (!updated.rowCount) return stale();
       return true;
@@ -252,12 +255,17 @@ export class ManagedMediaJobRepository {
   async failVerification(rawScope: unknown, intentToken: string): Promise<boolean> {
     const scope = ids.parse(rawScope); z.uuid().parse(intentToken);
     return this.transaction(async client => {
-      const row = await this.lockCurrent(client, scope, intentToken);
+      const row = await this.lockCurrent(client, scope, intentToken, false, true);
       if (!row || row.state !== 'complete' || row.cancel_requested_at) return false;
       const updated = await client.query(`UPDATE media_processing_jobs SET state='failed',
         failure_code='verification_failed',version=version+1 WHERE id=$1 AND creator_account_id=$2
-        AND project_id=$3 AND asset_id=$4 AND attempts=$5 AND state='pending'`,
+        AND project_id=$3 AND asset_id=$4 AND attempts=$5
+        AND (state='pending' OR (state='failed' AND failure_code='verification_failed'))`,
       [scope.jobId, scope.creatorAccountId, scope.projectId, scope.mediaAssetId, row.attempt]);
+      if (updated.rowCount) await client.query(`UPDATE managed_media_job_attempts SET
+        reconcile_after=now()+interval '1 hour',version=version+1 WHERE intent_token=$1
+        AND processing_job_id=$2 AND attempt=$3 AND cancel_requested_at IS NULL`,
+      [intentToken, scope.jobId, row.attempt]);
       return !!updated.rowCount;
     });
   }
@@ -284,9 +292,11 @@ export class ManagedMediaJobRepository {
   }
 
   private async lockCurrent(client: PoolClient, scope: ManagedJobScope, token: string,
-    allowRevoked = false): Promise<AttemptRow | null> {
+    allowRevoked = false, allowVerificationFailure = false): Promise<AttemptRow | null> {
+    const state = allowRevoked ? "state IN ('pending','revoked')" : allowVerificationFailure
+      ? "(state='pending' OR (state='failed' AND failure_code='verification_failed'))" : "state='pending'";
     const job = await client.query(`SELECT 1 FROM media_processing_jobs WHERE id=$1 AND creator_account_id=$2
-      AND project_id=$3 AND asset_id=$4 AND state ${allowRevoked ? "IN ('pending','revoked')" : "= 'pending'"} FOR UPDATE`,
+      AND project_id=$3 AND asset_id=$4 AND ${state} FOR UPDATE`,
     [scope.jobId, scope.creatorAccountId, scope.projectId, scope.mediaAssetId]);
     if (!job.rowCount) return null;
     const row = await client.query<AttemptRow>(`SELECT m.* FROM managed_media_job_attempts m

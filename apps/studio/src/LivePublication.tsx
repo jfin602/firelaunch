@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { ChannelProject, CatalogItem, MediaAsset, PublicationBindings } from '@firelaunch/contracts';
-import { ApiError, approveLive, checkLiveReadiness, publishLive, readCatalog, readDeployment, readLiveStatus, readReleaseHistory, readVideoAssetStatus, type CatalogSnapshot, type LiveStatus, type PublicationReview, type ReleaseHistory, type VideoAssetStatus } from './api.js';
+import { ApiError, approveLive, checkLiveReadiness, createDeployment, publishLive, readCatalog, readDeployment, readLiveStatus, readReleaseHistory, readVideoAssetStatus, type CatalogSnapshot, type LiveStatus, type PublicationReview, type ReleaseHistory, type VideoAssetStatus } from './api.js';
 
 type Choice = { catalogItemId: string; artworkAssetId: string; playbackAssetId: string };
 
@@ -16,6 +16,9 @@ export function LivePublication({ project, hosted }: { project: ChannelProject; 
   const [approval, setApproval] = useState<{ id: string; review: PublicationReview } | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(hosted);
+  const [missingDeployment, setMissingDeployment] = useState(false);
+  const [newDeployment, setNewDeployment] = useState({ appName: '', packageId: '', manifestEndpoint: '' });
+  const [identityApproved, setIdentityApproved] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -24,17 +27,29 @@ export function LivePublication({ project, hosted }: { project: ChannelProject; 
     setError('');
     setLoading(true);
     try {
-      const bound = await readDeployment(project.id);
+      const bound = await readDeployment(project.id).catch(reason => {
+        if (reason instanceof ApiError && reason.status === 404) {
+          setMissingDeployment(true);
+          return null;
+        }
+        throw reason;
+      });
+      if (!bound) {
+        setDeployment(null); setStatus(null); setHistory(null); setCatalog(null); setVideoStates({});
+        return;
+      }
       const [current, releases, inventory] = await Promise.all([
         readLiveStatus(project.id, bound.id), readReleaseHistory(project.id, bound.id), readCatalog(project.id)
       ]);
       const managed = inventory.mediaAssets.filter(asset => asset.location.type === 'managed_hls');
-      const states = await Promise.all(managed.map(async asset => [asset.id, await readVideoAssetStatus(project.id, asset.id)] as const));
-      setVideoStates(Object.fromEntries(states));
+      const states = await Promise.allSettled(managed.map(asset => readVideoAssetStatus(project.id, asset.id)));
+      setVideoStates(Object.fromEntries(states.flatMap((result, index) =>
+        result.status === 'fulfilled' ? [[managed[index]!.id, result.value] as const] : [])));
       setDeployment(bound); setStatus(current); setHistory(releases); setCatalog(inventory);
+      setMissingDeployment(false);
     } catch (reason) {
       setDeployment(null); setStatus(null); setHistory(null); setCatalog(null); setVideoStates({});
-      setError(reason instanceof ApiError && reason.status === 404 ? 'No owned live deployment is configured for this channel.' : String(reason));
+      setError(String(reason));
     } finally { setLoading(false); }
   }
   useEffect(() => {
@@ -103,6 +118,14 @@ export function LivePublication({ project, hosted }: { project: ChannelProject; 
     await refresh();
     setNotice(`Live release #${result.sequence} published. Native build and Appstore submission remain separate.`);
   });
+  const setupDeployment = () => void act(async () => {
+    if (!identityApproved) throw new Error('Approve this channel’s immutable app identity first.');
+    await createDeployment(project.id, { appName: newDeployment.appName.trim(),
+      packageId: newDeployment.packageId.trim(), manifestEndpoint: newDeployment.manifestEndpoint.trim(),
+      nativeReleaseApproval: 'creator_approved' });
+    await refresh();
+    setNotice('Creator-owned deployment recorded. Review rights and draft content before approval.');
+  });
 
   if (!hosted) return <p>Live publication requires an authenticated creator deployment. Local Build and store handoff remain separate.</p>;
   return <section aria-label="Live channel publication" className="delivery">
@@ -111,6 +134,14 @@ export function LivePublication({ project, hosted }: { project: ChannelProject; 
     {loading && <p role="status">Loading owned release state…</p>}
     {error && <p role="alert" className="delivery-error">{error}</p>}
     {notice && <p role="status">{notice}</p>}
+    {missingDeployment && !loading && <div className="delivery-setup"><h3>Set up this channel’s live identity</h3>
+      <p>Use a creator-owned package ID and a separate public-only HTTPS manifest origin. This identity is immutable; creating it does not publish content or submit an app.</p>
+      <label className="field"><span>APP NAME</span><input maxLength={120} value={newDeployment.appName} onChange={event => setNewDeployment({ ...newDeployment, appName: event.target.value })}/></label>
+      <label className="field"><span>PACKAGE ID</span><input placeholder="com.creator.channel" value={newDeployment.packageId} onChange={event => setNewDeployment({ ...newDeployment, packageId: event.target.value })}/></label>
+      <label className="field"><span>PUBLIC-ONLY MANIFEST ORIGIN</span><input type="url" placeholder="https://tv.example.com/" value={newDeployment.manifestEndpoint} onChange={event => setNewDeployment({ ...newDeployment, manifestEndpoint: event.target.value })}/></label>
+      <label className="check"><input type="checkbox" checked={identityApproved} onChange={event => setIdentityApproved(event.target.checked)}/> I approve this app identity and resolver origin for my channel.</label>
+      <button disabled={busy || !identityApproved || !newDeployment.appName.trim() || !newDeployment.packageId.trim() || !newDeployment.manifestEndpoint.trim()} onClick={setupDeployment}>Create owned deployment</button>
+    </div>}
     {deployment && status && catalog && history && <>
       <p>Draft revision {project.revision} · catalog revision {catalog.revision}. Live: {history.liveReleaseId ? `release #${status.liveSequence} (${history.liveReleaseId})` : 'none'}.</p>
       {project.revision !== status.revisions.channel || catalog.revision !== status.revisions.catalog ? <p role="alert">Draft changed elsewhere. Refresh before approval.</p> : null}

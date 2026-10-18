@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { contentSchema, mediaUseEligible, type CatalogItem, type ContentItem, type MediaAsset } from '@firelaunch/contracts';
+import { contentSchema, mediaRenditionSetSchema, mediaUseEligible, type CatalogItem, type ContentItem, type MediaAsset } from '@firelaunch/contracts';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { CatalogRepository } from './catalog-repository.js';
 import { RepositoryError } from './repository.js';
 import { publicMediaUrl } from './hosted-media-policy.js';
+import type { S3MediaStorage } from './media-storage.js';
 
 const selectionSchema = z.strictObject({
   expectedProjectRevision: z.number().int().positive(),
@@ -64,8 +65,44 @@ export type CatalogProjection = Readonly<{
  */
 export class CatalogProjectionService {
   private readonly catalog: CatalogRepository;
-  constructor(private readonly projects: HostedProjectRepository, catalog?: CatalogRepository) {
+  constructor(private readonly projects: HostedProjectRepository, catalog?: CatalogRepository,
+    private readonly mediaStorage?: S3MediaStorage) {
     this.catalog = catalog ?? new CatalogRepository(projects);
+  }
+
+  private async managedVideoUrl(owner: string, projectId: string, item: CatalogItem,
+    assets: Map<string, MediaAsset>): Promise<string | undefined> {
+    if (!this.mediaStorage) return undefined;
+    for (const id of item.mediaAssetIds) {
+      const asset = assets.get(id);
+      if (!asset || asset.kind !== 'video' || asset.location.type !== 'managed_hls' ||
+        asset.catalogItemId !== item.id || !asset.deliveryEligible ||
+        !mediaUseEligible(asset, 'television_display') || !mediaUseEligible(asset, 'television_playback')) continue;
+      const result = await this.projects.pool.query<{ id: string; job_id: string; creator_account_id: string;
+        project_id: string; item_id: string; asset_id: string; profile: 'hls-avc-aac-v1';
+        master_key: string; master_sha256: string; variants: unknown; verified_at: Date;
+        revoked_at: Date | null; state: string; rendition_set_id: string | null }>(`
+        SELECT r.*, j.state, j.rendition_set_id FROM media_processing_jobs j
+        JOIN media_upload_sessions u ON u.id = j.upload_session_id AND u.creator_account_id = j.creator_account_id
+          AND u.project_id = j.project_id AND u.asset_id = j.asset_id AND u.state = 'verified'
+        LEFT JOIN media_rendition_sets r ON r.id = j.rendition_set_id AND r.creator_account_id = j.creator_account_id
+          AND r.project_id = j.project_id AND r.asset_id = j.asset_id AND r.item_id = j.item_id
+        LEFT JOIN media_asset_lifecycle l ON l.asset_id = j.asset_id AND l.creator_account_id = j.creator_account_id
+          AND l.project_id = j.project_id
+        WHERE j.creator_account_id = $1 AND j.project_id = $2 AND j.item_id = $3 AND j.asset_id = $4
+          AND l.revoked_at IS NULL
+        ORDER BY j.created_at DESC, j.id DESC LIMIT 1`, [owner, projectId, item.id, id]);
+      const row = result.rows[0];
+      if (!row || row.state !== 'ready' || !row.id || row.revoked_at || row.rendition_set_id !== row.id) continue;
+      try {
+        const set = mediaRenditionSetSchema.parse({ id: row.id, jobId: row.job_id,
+          creatorAccountId: row.creator_account_id, projectId: row.project_id, catalogItemId: row.item_id,
+          mediaAssetId: row.asset_id, profile: row.profile, masterKey: row.master_key,
+          masterSha256: row.master_sha256, variants: row.variants, verifiedAt: row.verified_at.toISOString() });
+        return this.mediaStorage.publishedMasterUrl({ creatorAccountId: owner, projectId, mediaAssetId: id }, set);
+      } catch { return undefined; }
+    }
+    return undefined;
   }
 
   async project(principal: AuthenticatedPrincipal, projectId: string, rawSelection: unknown): Promise<CatalogProjection> {
@@ -104,7 +141,9 @@ export class CatalogProjectionService {
       const presentation = item.kind === 'book' ? 'information' : item.kind;
       const artwork = eligibleAsset(item, assets, 'artwork', 'television_display') ?? 'assets/catalog-placeholder.png';
       const mediaUrl = item.kind === 'video' || item.kind === 'audio'
-        ? eligibleAsset(item, assets, item.kind, 'television_playback') : undefined;
+        ? eligibleAsset(item, assets, item.kind, 'television_playback') ??
+          (item.kind === 'video' ? await this.managedVideoUrl(principal.accountId, projectId, item, assets) : undefined)
+        : undefined;
       if (!blockedReason && item.kind !== 'book' && !mediaUrl) blockedReason = 'playback_rights_or_delivery_missing';
       const title = (item.creatorOverrides?.title ?? item.sourceRecord.metadata.title).trim().slice(0, 120).trim();
       const description = (item.creatorOverrides?.description ?? item.sourceRecord.metadata.description ?? '').slice(0, 2000);

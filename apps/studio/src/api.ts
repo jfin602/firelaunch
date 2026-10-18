@@ -111,6 +111,16 @@ export async function uploadPrivateMedia(id: string, file: File): Promise<{ id: 
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return await request(`/${id}/private-objects`, json({ kind: 'media', contentType: file.type, contentBase64: btoa(binary) })) as { id: string; contentType: string };
 }
+
+export async function uploadPrivateEvidence(id: string, file: File): Promise<{ id: string; contentType: string }> {
+  if (file.size > 700_000 || !['application/pdf', 'image/png', 'image/jpeg'].includes(file.type))
+    throw new ApiError('Choose a PDF, PNG or JPEG evidence file under 700 KB.', 400);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return await request(`/${id}/private-objects`, json({ kind: 'evidence', contentType: file.type,
+    contentBase64: btoa(binary) })) as { id: string; contentType: string };
+}
 export async function deletePrivateObject(id: string, objectId: string): Promise<void> {
   await request(`/${id}/private-objects/${objectId}`, { method: 'DELETE' });
 }
@@ -134,6 +144,10 @@ export const readVideoAssetStatus = (projectId: string, mediaAssetId: string) =>
 
 export async function readDeployment(id: string) {
   return channelDeploymentSchema.parse(await request(`/${id}/deployment`));
+}
+export async function createDeployment(id: string, input: { appName: string; packageId: string; manifestEndpoint: string;
+  nativeReleaseApproval: 'creator_approved' }) {
+  return channelDeploymentSchema.parse(await request(`/${id}/deployment`, json(input)));
 }
 export type LiveStatus = { revisions: { channel: number; catalog: number }; liveReleaseId: string | null; liveSequence: number; approvalRequired: true; nativeSubmission: 'separate' };
 export type ReleaseHistory = { liveReleaseId: string | null; releases: { id: string; sequence: number; sha256: string; publishedAt: string; previousReleaseId: string | null; rollbackSourceReleaseId: string | null }[] };

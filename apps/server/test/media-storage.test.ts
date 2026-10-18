@@ -291,13 +291,13 @@ test('managed private HLS graph is bounded, hashed and normalized before approve
   const { storage, delivery } = setup();
   const raw = `media/${'a'.repeat(32)}/${'b'.repeat(32)}/${'c'.repeat(32)}/staged/${'1'.repeat(32)}/`;
   const putRaw = (name: string, body: Buffer) => delivery.objects.set(`${raw}${name}`, {
-    body, type: name.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/mp2t',
+    body, type: name.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/MP2T',
     encryption: 'AES256', checksumType: 'FULL_OBJECT', etag: `"${sha(body)}"` });
   const segment = Buffer.alloc(188); segment[0] = 0x47;
   putRaw('source_480p000.ts', segment);
   putRaw('source_720p000.ts', segment);
   for (const height of [480, 720]) putRaw(`source_${height}p.m3u8`, Buffer.from(
-    `#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:6\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:6,\nsource_${height}p000.ts\n#EXT-X-ENDLIST\n`));
+    `#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:6\n#EXT-X-MEDIA-SEQUENCE:1\n#EXTINF:6,\nsource_${height}p000.ts\n#EXT-X-ENDLIST\n`));
   putRaw('source.m3u8', Buffer.from('#EXTM3U\n#EXT-X-VERSION:3\n' +
     [480, 720].map(height => `#EXT-X-STREAM-INF:BANDWIDTH=1200000,RESOLUTION=${height === 480 ? 854 : 1280}x${height},CODECS="avc1.4d401f,mp4a.40.2"\nsource_${height}p.m3u8\n`).join('')));
   const managed = await storage.verifyManagedHls(scope, raw, set, `job_${'9'.repeat(32)}`, `ci_${'8'.repeat(32)}`);
