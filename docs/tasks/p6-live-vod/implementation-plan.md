@@ -47,7 +47,7 @@ Each checkpoint stops on missing approval or essential evidence and produces its
 Each manual prompt allows at most three focused repair/retest cycles for directly observed defects. Use cheap focused tests first, one aggregate npm run check only at final convergence; never rerun all historical implementation stacks. A critical blocker (missing AWS privilege/permission, missing approved cost/creator publication, unsuitable media rights, CloudFront exposure, device tooling) stops that checkpoint and yields NOT GREEN or BLOCKED with an exact next operator action, preserving everything previously proven.
 
 All prompts must:
-- Check current worktree, refs and **docs branch** before any changes; the approved docs may be on `docs/p6-live-vod-hybrid-20261017` and may not be present in the runtime local checkout. Fetch read-only and integrate docs non-destructively if missing.
+- Check actual local HEAD, branch, worktree and [current status](../../CURRENT-STATE.md) before any changes. Approved Q1-Q3 docs are on **main** as of 2026-10-18; reconcile an outdated local checkout without destructive reset, forced pull or clobbering dirty implementation. The older documentation branch is historical.
 - Preserve canonical `firelaunch-staging.service` and schema 13, encrypted database and S3 backup/retention, exact release artifact hashes, Ngest and unrelated workloads; never create a second install.
 - Use Node 24/npm 12 and current operator runbooks; do not use old FFmpeg worker, old CloudFormation proposal or old `/tv/v1` sample URL.
 - Avoid auto-commits/pushes/merges, unrelated refactors and version changes. A source repair remains uncommitted for owner review until authorized release process.
