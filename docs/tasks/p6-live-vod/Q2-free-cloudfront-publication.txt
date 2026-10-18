@@ -22,10 +22,11 @@ READ FIRST
 - scripts/staging/README.md and current CloudFormation runbook.
 - BOOT.md, AGENTS.md, docs/workflow.md.
 
-Approved docs may still be on remote
-docs/p6-live-vod-hybrid-20261017. Inspect and reconcile them
-non-destructively. Do not reset, clean, force checkout or trust
-historical instructions over current live policies.
+The approved Q1-Q3 docs are now on GitHub main. Read
+ docs/CURRENT-STATE.md and inspect actual local git HEAD/status.
+If the local checkout is outdated, reconcile main without
+reset, clean, forced checkout or losing uncommitted changes.
+Historical instructions never override current live policies.
 
 PRECONDITION
 
