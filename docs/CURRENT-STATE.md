@@ -35,6 +35,10 @@ Purpose: The current, evidence-linked operational and planning entry point. A da
 - [ADR 0011](decisions/0011-aws-vod-foundation.md) selects MediaConvert for managed HLS. The legacy dedicated FFmpeg worker is retired. [ADR 0013](decisions/0013-hybrid-video-access.md) permits **approved free-to-view only** CloudFront delivery after creator approval and separate operator/rights/security qualification. The future `purchase`, `rental`, `subscription` modes are conceptual and **not implemented**; do not use the free/public delivery path for restricted paid media.
 - Existing/public delivery objects must not become accessible before an explicit qualified, controlled Q2 activation. S3 originals/staging remain private; OAC authenticates CloudFront-to-S3, not viewers.
 
+## 2026-10-18 owner-reported encode and placement sequencing
+
+The owner reports that a video encoded successfully on AWS; this statement **does not independently confirm** complete private HLS graph verification, durable READY, provider/event reconciliation, an updated Q1-closeout or any live Q2/Q3 gate. Verify source-bound Q1 evidence before declaring Q1 GREEN or running publication. The owner approved deferring new creator video-placement UX until **after Q3 GREEN**. Q2 may use the existing `Videos` shelf and repair only the minimum trusted READY managed-HLS to validated ChannelSpec/publication URL binding required for a single approved free video. No multi-shelf/reordering/featured/layout tools should be built before real Vega playback qualification. A future `c6-channel-video-placement` remains a proposed correction, not an active stack.
+
 ## Active work: p6-live-vod
 
 **NEXT: Manual Q1** -> **Q2 only after Q1 GREEN** -> **Q3 only after Q2 GREEN**. See [plan](tasks/p6-live-vod/README.md), [assessment](tasks/p6-live-vod/prompt-assessment.md), [implementation plan](tasks/p6-live-vod/implementation-plan.md) and [matrix](tasks/p6-live-vod/qualification-matrix.md). The three ASCII-only Sol High prompt files live on `main` under `docs/tasks/p6-live-vod/`. They are **not** an automated runner stack; do not invoke `npm run codex:stack -- p6-live-vod`.
