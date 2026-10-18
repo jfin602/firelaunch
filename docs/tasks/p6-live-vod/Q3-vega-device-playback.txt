@@ -21,10 +21,11 @@ READ FIRST
   p6/deferred-qualification.md}.
 - Current generator, native template and tested Vega SDK documentation.
 
-If approved docs are only on remote branch
-docs/p6-live-vod-hybrid-20261017, inspect/fetch non-destructively
-and reconcile. Do not reset, clean, force checkout or overwrite
-uncommitted work. Never resurrect old FFmpeg worker paths.
+The approved Q1-Q3 documents are on GitHub main as of 2026-10-18.
+Read docs/CURRENT-STATE.md and inspect actual local git status.
+If the local checkout is behind, reconcile main non-destructively.
+Do not reset, clean, force checkout or overwrite uncommitted work.
+Never resurrect retired FFmpeg worker paths.
 
 PRECONDITION
 
