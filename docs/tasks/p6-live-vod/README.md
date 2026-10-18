@@ -1,6 +1,6 @@
 # p6-live-vod - Real managed HLS publication and Vega qualification
 
-Status: OWNER APPROVED DOCUMENTATION / Q1-Q3 NOT EXECUTED
+Status: OWNER APPROVED MANUAL PLAN; 2026-10-18 owner reports a successful encode, but Q1 completion and Q2/Q3 live qualification are NOT independently confirmed by this document. See actual task closeouts.
 Date: 2026-10-17 UTC
 Type: Three MANUAL GPT-6 Sol High qualification checkpoints, not a runner stack.
 Version: Existing running `0.6.7` stays unchanged for preparation and correction; historical P6 P8 proposed `0.6.8` must not be advanced without a separately reviewed version/closeout decision.
@@ -22,13 +22,21 @@ Inspect current repo, hosted service, AWS access and budget, account/region, exi
 
 ### Q2 - Explicit free-video publication
 
+**Minimum playback bridge only (owner decision 2026-10-18):** Reuse the already-persisted default `Videos` shelf/category and existing `CatalogItem`, `Collection`, `ChannelSpec`, `MediaAsset`, and P5 publication contracts to place **one** verified, owned, rights-cleared video in the first creator-approved live channel. The current catalog projection accepts public HTTPS media and may withhold `managed_hls` media from playable drafts; Q2 may correct only the necessary safe READY managed-HLS -> trusted reviewed HTTPS delivery URL binding. Resolve URLs server-side from the exact verified rendition; do not inject private staged/original URLs, placeholder signed URLs, or fake readiness into exportable ChannelSpec. Require publication validation and creator approval. Do not build new channel-placement, multi-shelf, ordering, drag-and-drop, featured-placement, or publish-workflow UI in Q2.
+
 Resolve public-only device-reachable HTTPS manifest origin and creator-bound ChannelDeployment without exposing Studio/API; recheck rights-cleared TV artwork, title, shelf and verified private rendition. Apply ADR 0013: approved free HLS may use stable unsigned CloudFront URLs **only after** reviewed operator CDN policy enablement, verified viewer path guard, OAC private-S3 policy and tests for unapproved/foreign/staged/original paths. Maintain separation of control and publisher permissions. One actual creator approval promotes immutable verified rendition to canonical `delivery/` and publishes a versioned P5 manifest; verify full public HLS graph and resolver digest/ETag and fail-closed revocation limits. No paid/rental/subscriber content publication or fake IAP.
 
 ### Q3 - Installed Vega VirtualDevice
 
+Run Q3 against the minimal Q2 published video and existing `Videos` shelf. No new channel placement or merchandising UX is required for the native-device test; limit source repairs to adaptive HLS playback, released-manifest behavior, and evidenced device faults.
+
 Confirm installed Vega toolchain and actual VirtualDevice. Repair the generated adaptive HLS player as needed for the installed SDK's supported playback mode; the present template uses direct `VideoPlayer.src`, so inspect and qualify MSE/adaptive support rather than assuming HLS works in URL mode. Build and hash a fresh creator/deployment-bound VPKG from actual owned project/source; install once. Observe HLS start, pause, seek, Back, network recovery, focus/detail, and real device requests. Then perform same-installed-package approved manifest v1->v2, offline/invalid-release last-known-good, and a new approved v3 rollback, with no rebuild/reinstall. Preserve P5/c5 historical NOT GREEN and their independent gate statuses.
 
 Each stage gets a separate factual GREEN/NOT GREEN report and stops at hard external gates. A Q1 GREEN does not imply Q2/Q3 are GREEN. P6 end-to-end GREEN requires all three plus full carried-forward release gates. Aggregate test policy: targeted tests during corrections, one final Node 24/npm 12 `npm run check` at final convergence plus `git diff --check` and browser/AWS/device observations. Do not repeat full suites unnecessarily.
+
+## Explicitly deferred: post-playback placement tools
+
+After Q3 is independently GREEN, review a separate proposed correction `c6-channel-video-placement` for creator-facing add/remove, multiple shelf assignments, explicit video and shelf ordering, featured placement, visual TV preview, and streamlined Publish Changes controls. This is a **future proposed scope**, not an active stack or an instruction to create/edit placement tools now. The existing `Videos` shelf and minimal Q2 binding are sufficient for the first playback qualification. Do not weaken owner/CSRF/rights or P5 immutable release safeguards to meet this sequencing decision.
 
 ## Safety and authorization
 
