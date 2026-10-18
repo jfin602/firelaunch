@@ -1,9 +1,11 @@
 # c6-video-publishing-ux - Minimal creator video workflow
 
-Status: OWNER-APPROVED DOCUMENTATION CONTRACT / IMPLEMENTATION NOT YET QUALIFIED
+Status: STAGING UX GREEN (bounded final owner-authorized qualification on 2026-10-17); LIVE MEDIACONVERT/CLOUDFRONT/VEGA STILL NOT QUALIFIED. See [final closeout](closeout.md).
 Date: 2026-10-16 (US Central); staging handoff 2026-10-17 UTC
 Scope: Bounded manual one-off correction to FireLaunch 0.6.7 creator video workflow.
 Execution: Manual GPT-6 Sol High; NOT a runner stack. No automatic version bump, commit, cloud provisioning or staging deployment.
+
+**Execution of the manual correction is historical.** The specification below records the accepted design and original handoff, not a new pending implementation assignment. Current subsequent work: [p6-live-vod Q1-Q3](../p6-live-vod/README.md). Do not rerun this one-off or turn a passing S3 upload into a playable publication claim.
 
 ## Why
 
