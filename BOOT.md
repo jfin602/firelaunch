@@ -2,6 +2,8 @@
 
 Read this file before substantial repository-aware work.
 
+**Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) first for dated source/staging/AWS facts, current gates and next execution.** This boot file includes historical P0-P6 decisions; older activation instructions are preserved as history and MUST NOT override that current ledger, ADR 0011/0013, or p6-live-vod Q1-Q3. Last current-state reconciliation: 2026-10-18 UTC.
+
 ## Mission
 
 FireLaunch is a code-optional agentic studio for creating branded TV channels and shipping them as real Amazon Fire TV applications.
@@ -19,7 +21,10 @@ Creator intent
 
 FireLaunch is not merely an AI code generator and not a generic website builder. The durable product abstraction is the channel.
 
-## Current gate
+## Historical 2026-10-11 activation gate (superseded)
+
+**Historical snapshot only.** The 0.6.0 activation and active P5/c5/P6 instructions immediately below are not the current command path. The last verified source/staging baseline is 0.6.7, Add Video staging GREEN; next manual work is [p6-live-vod Q1](docs/tasks/p6-live-vod/Q1-managed-private-hls.txt). No paid AWS or CDN activation is approved by this documentation update.
+
 
 Current root activation version: `0.6.0` (owner-approved Phase 6 AWS Media Foundation version baseline, 2026-10-11). Phase 5 P1–P7 implementation checkpoints and its independent P8 NOT GREEN closeout are now integrated on GitHub main (P5 P8 tested `81ccef1` at root `0.5.8`). Published-release/resolver/native-loader source exists and automated tests passed, but real creator-bound Vega VPKG failed AsyncStorage SDK compatibility and Zod/Metro bundling, and the same-installed-package HTTPS/LKG/rollback sequence was NOT exercised. The owner approved the `0.6.0` Phase 6 version baseline, not retroactive P5 GREEN. Active `c5-vega` is the bounded fixed-version repair and independent on-device qualification; P6 can follow only with its native prerequisite honestly reported. `c4-fix` closed LOCAL GREEN at `0.4.8` (commit `00e3df5`, full root check passed); historical Phase 4 P8 remains NOT GREEN because no live non-mock catalog-grounded saved mutation and Preview were observed. Hosted release remains NOT QUALIFIED. Phase 5 implemented code for creator-approved immutable public manifests, HTTPS resolver and installed Vega client refresh/cache/rollback, targeting the same installed VPKG on Vega VirtualDevice. Physical Fire TV is deferred to launch Phase 9; VirtualDevice is acceptable for Phase 5 GREEN, but cannot prove physical compatibility. AWS verification and production VPS are not Phase 5 entry requirements. P1 contracts/feasibility closed GREEN / QUALIFIED at `0.1.5`. Phase 2 implementation reached `0.2.7`, but its P7 closeout remains NOT GREEN; `c2-hosted-qualification` stopped BLOCKED / NOT GREEN after 2/5 cycles. Their remaining security/staging proof is explicitly carried into Phase 3 and must not be described as passed. P0 finished at `0.0.7` with historical P7 NOT GREEN. The `c0-real-tv-qualification` repair also ended BLOCKED / NOT GREEN on 2026-10-09, with partial virtual-TV successes only.
 
