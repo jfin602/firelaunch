@@ -8,6 +8,9 @@ MODEL: GPT-6 Sol High
 GOAL: Privately verified READY HLS -> creator-approved FREE publication ->
       exact protected-origin CloudFront delivery + public TV manifest.
 HARD BOUNDARY: Do NOT claim Vega VirtualDevice playback or paid access.
+SCOPE DECISION 2026-10-18: Video-placement UI is DEFERRED until
+AFTER Q3 GREEN. Q2 owns only the smallest safe binding needed
+for ONE verified video in the existing Videos shelf.
 
 READ FIRST
 
@@ -49,8 +52,10 @@ Inspect actual creator project and ChannelDeployment. The prior
 upload qualification project had no live deployment; do not
 assume a current one exists. Identify validated ChannelSpec,
 CatalogItem, MediaAsset, rights-cleared artwork, private READY
-HLS and persisted Videos/custom shelf selection. Upload intent
+HLS and persisted default Videos shelf selection. Upload intent
 does not automatically imply playable ChannelSpec content.
+Use existing shelf membership for the first published video;
+do not create a placement-management UI as a precondition.
 
 Relevant source:
 apps/server/src/{publication-repository.ts,public-resolver.ts,
@@ -111,7 +116,24 @@ reviewable changes, then STOP and request approval.
 Confirm source provenance and both TV rights, cleared artwork,
 ready managed video status, validated ChannelSpec draft/selection,
 stable catalog binding, project revision and permission scope.
+Inspect apps/server/src/catalog-projection.ts: the existing
+projection admits public HTTPS media and may exclude managed_hls
+from playable ChannelSpec drafts. Inspect publication-repository.ts
+which resolves owned verified READY managed HLS to reviewed CDN
+URLs. If this mismatch blocks the ONE test video, repair only
+the trusted binding seam needed for its existing Videos shelf:
+- Server-derived exact owned verified rendition and stable
+  approved free CloudFront master URL, never private S3,
+  unverified input, a fake public placeholder or a signed secret.
+- Respect all source permissions, display/playback rights,
+  catalog approvals, revision CAS and existing creator edits.
+- The upload and collection membership alone never publish.
+- Only explicit P5 creator readiness, approval and publish
+  may promote verified bytes to approved public delivery.
 Do not rewrite creator-owned media or overwrite manual edits.
+Do not add multi-shelf management, reorder, drag/drop, featured
+video UI, alternate channel editors or publishing shortcuts.
+Defer c6-channel-video-placement until AFTER Q3 GREEN.
 
 4. EXPLICIT OPERATOR AND CREATOR APPROVAL - STOP HERE
 
@@ -152,8 +174,10 @@ wrong host/canonical path, malformed URL and unrelated content.
 In authenticated Studio:
 - Refresh actual catalog, current rights, revisions and state.
 - Ensure artwork really can be served publicly and is licensed.
-- Bind verified READY video and artwork into a validated
-  ChannelSpec draft without altering prior published releases.
+- Bind ONE verified READY video and rights-cleared artwork into
+  a validated ChannelSpec draft on its existing Videos shelf,
+  using only the narrow safe managed-HLS publication bridge
+  described above, without altering prior published releases.
 - Create/verify owned ChannelDeployment with correct package
   identity and dedicated HTTPS public manifest origin.
 - Obtain explicit creator approval and perform existing P5
@@ -209,5 +233,7 @@ full CloudFront/resolver security proof, not AWS templates alone.
 If missing approval, public host, producer READY, permission or
 content rights, leave Q2 NOT GREEN without unsafe workaround.
 
-Do not create a paid entitlement system, commit/push/merge,
-advance version to 0.6.8, claim Vega device playback, or run Q3.
+Do not build channel video placement tools, multi-shelf or
+merchandising UI before Q3 GREEN. Do not create a paid
+entitlement system, commit/push/merge, advance version to
+0.6.8, claim Vega device playback, or run Q3.
