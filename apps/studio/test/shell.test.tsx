@@ -17,11 +17,11 @@ const first: ChannelProject = { id: firstSpec.id, spec: firstSpec, revision: 3, 
 const second: ChannelProject = { ...first, id: `ch_${'b'.repeat(32)}`, spec: { ...firstSpec, id: `ch_${'b'.repeat(32)}`, title: 'Second channel' }, revision: 5 };
 const session = { accountId: `cr_${'a'.repeat(32)}`, email: 'owner@example.com', csrfToken: 'csrf', expiresAt: '2099-01-01T00:00:00.000Z' };
 
-function mockApi(projects: ChannelProject[]) {
+function mockApi(projects: ChannelProject[], local = false) {
   const previous = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const url = String(input);
-    const data = url === '/api/auth/session' ? session : url === '/api/projects' ? projects
+    const data = url === '/api/auth/session' ? (local ? null : session) : url === '/api/projects' ? projects
       : url === `/api/projects/${second.id}` ? second : null;
     return new Response(JSON.stringify(data), { status: data === null ? 404 : 200, headers: { 'content-type': 'application/json' } });
   }) as typeof fetch;
@@ -85,4 +85,16 @@ test('responsive shell declares edge-to-edge canvas and inline tablet inspector'
   assert.match(css, /@media \(max-width: 600px\)\s*\{\s*\.sidebar\s*\{\s*position:\s*relative/s);
   assert.match(css, /\.sidebar-nav\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/s);
   assert.match(css, /\.remote button\s*\{\s*min-width:\s*44px;\s*min-height:\s*44px/s);
+});
+
+test('local project switch keeps the creator in Studio', async () => {
+  const restore = mockApi([first, second], true);
+  try {
+    render(createElement(App));
+    await screen.findByRole('heading', { name: first.spec.title, level: 1 });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Switch project' }), { target: { value: second.id } });
+    await screen.findByRole('heading', { name: 'Second channel', level: 1 });
+    assert.equal(screen.queryByRole('heading', { name: 'Sign in to FireLaunch' }), null);
+    assert.equal(dom.window.location.search, `?project=${second.id}`);
+  } finally { restore(); }
 });

@@ -45,7 +45,7 @@ export function Home({ project, projects, accountId, hosted, onSelectProject, on
   return <div className="home" aria-label="Channel Home">
     <div className="home-hero"><span className="eyebrow">YOUR CHANNEL WORKSPACE</span><h2>{project.spec.title}</h2>
       <p>{hosted ? 'Private draft. Review catalog content and rights before putting anything on TV.' : 'Local channel draft. Open an editor or TV Preview to keep building.'}</p>
-      <div className="button-row"><button className="primary" onClick={() => onSurface('Catalog')}>Open Catalog / Add Video</button><button onClick={() => onSurface('Design')}>Edit channel</button><button onClick={onPreview}>TV Preview</button><button onClick={onNewChannel}>＋ New channel</button></div>
+      <div className="button-row" aria-label="Quick actions"><h3>Quick actions</h3><button className="primary" onClick={() => onSurface('Catalog')}>Open Catalog / Add Video</button><button onClick={() => onSurface('Design')}>Edit channel</button><button onClick={onPreview}>TV Preview</button><button onClick={onNewChannel}>＋ New channel</button></div>
     </div>
     <section className="home-section" aria-label="Your channels"><div className="home-section-head"><h3>Your channels</h3><span>{projects.length} {projects.length === 1 ? 'project' : 'projects'}</span></div>
       <div className="home-projects">{projects.map(item => <button key={item.id} className="home-project" aria-current={item.id === project.id ? 'true' : undefined} onClick={() => onSelectProject(item.id)}><strong>{item.spec.title}</strong><small>{item.id === project.id ? 'Current channel · ' : ''}{hosted ? 'Private draft' : 'Local draft'} · revision {item.revision}</small></button>)}</div>

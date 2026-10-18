@@ -146,9 +146,9 @@ export default function App() {
     try {
       const active = await getSession();
       if (generation !== switchGeneration.current || identity !== identityGeneration.current) return;
-      if (active?.accountId !== accountRef.current) { window.dispatchEvent(new window.Event('firelaunch-session-expired')); return; }
+      if ((active?.accountId ?? null) !== accountRef.current) { window.dispatchEvent(new window.Event('firelaunch-session-expired')); return; }
       const next = await getProject(id);
-      if (generation !== switchGeneration.current || identity !== identityGeneration.current || active?.accountId !== accountRef.current || next.id !== id) return;
+      if (generation !== switchGeneration.current || identity !== identityGeneration.current || (active?.accountId ?? null) !== accountRef.current || next.id !== id) return;
       select(next);
       setNewChannel(false);
     } catch (reason) { if (generation === switchGeneration.current && identity === identityGeneration.current) setError(reason instanceof Error ? reason.message : String(reason)); }

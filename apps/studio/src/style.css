@@ -39,7 +39,7 @@
   --fl-space-6: 24px;
   --fl-space-8: 32px;
   --fl-shadow: 0 12px 32px #08050666;
-  --fl-canyon-image: url('/studio-canyon.svg');
+  --fl-canyon-image: url('/desert-canyon.webp');
   color: var(--fl-text);
   background: var(--fl-bg);
 }
@@ -391,6 +391,164 @@ body { min-width: 0; }
 .tv-detail-copy :is(h2, p), .tv-player-footer strong { overflow-wrap: anywhere; }
 .tv-player-footer { gap: 8px; }
 .tv-screen .focused { border-color: var(--tv-accent) !important; }
+
+/* Neutral charcoal creator chrome keeps the canyon warmth in the content area. */
+.sidebar {
+  background: linear-gradient(150deg, #191a1c 0%, #111214 56%, #17181a 100%);
+  border-color: #36383b;
+}
+.wordmark { color: #f5f5f4; }
+.wordmark small, .project-switch small, .sidebar-account,
+.sidebar-nav small, .sidebar-footer small { color: #a4a6a9; }
+.sidebar-footer { color: #c4c5c7; border-color: #36383b; }
+.mark {
+  color: #ff8129;
+  text-shadow: 0 0 15px #e9472870, 0 0 30px #ff7a1a30;
+}
+.sidebar-label, .sidebar-sections-label { color: #b5b7ba; }
+.sidebar-nav { gap: 7px; }
+.sidebar-nav button {
+  min-height: 51px;
+  color: #e1e2e3;
+  font-size: 14px;
+  border: 1px solid transparent;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.sidebar-nav button.active {
+  background: linear-gradient(100deg, #a8311d, #e84816 90%);
+  border-color: #ff6d20;
+  color: #fff;
+  box-shadow: 0 4px 20px #f04a2860, inset 0 1px #ffb46a70;
+}
+.sidebar-nav button:hover:not(.active) {
+  background: #292b2e;
+  border-color: #4b4e52;
+}
+.sidebar-project .project-switch, .sidebar-project .project-select {
+  background: #242629;
+  border-color: #494c50;
+  color: #f3f3f2;
+}
+.project-avatar {
+  background: #343638;
+  color: #ffb15c;
+}
+.topbar {
+  background: linear-gradient(100deg, #1b1c1e, #151618);
+  border-color: #36383b;
+}
+.topbar .status { color: #b7b9bc; }
+.topbar button { background: #292b2e; border-color: #4b4e52; color: #f3f3f2; }
+.topbar button:hover { background: #36383c; border-color: #797c80; }
+.topbar .status i { background: #ff9b3d; box-shadow: 0 0 9px #ff7a1a80; }
+
+/* The canyon is a separate, compressed asset beneath static darkening layers. */
+.workspace-main, .fl-canyon-backdrop {
+  background-image: linear-gradient(100deg, #0e0b0dd4 0%, #0e0b0d82 58%, #0e0b0d9e 100%),
+    linear-gradient(0deg, #0e0b0d 0%, transparent 64%), var(--fl-canyon-image);
+}
+.home {
+  min-height: calc(100dvh - 82px);
+  background-color: var(--fl-bg);
+  background-image: linear-gradient(180deg, #0e0b0d26 0%, #0e0b0d66 40%, #0e0b0d 86%),
+    linear-gradient(90deg, #0e0b0da6 0%, transparent 58%, #0e0b0d38 100%), var(--fl-canyon-image);
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.home-hero {
+  max-width: none;
+  min-height: 320px;
+  padding: clamp(18px, 3.2vw, 48px) clamp(18px, 3vw, 42px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(245px, 310px);
+  align-content: center;
+  align-items: start;
+  column-gap: clamp(24px, 4vw, 64px);
+  border: 0;
+  background: none;
+}
+.home-hero > :not(.button-row) { grid-column: 1; }
+.home-hero .eyebrow { color: #ffad58; }
+.home-hero h2 {
+  max-width: 14ch;
+  margin: 18px 0 12px;
+  font-size: clamp(36px, 4vw, 58px);
+  line-height: 1.06;
+  text-shadow: 0 3px 18px #000b;
+}
+.home-hero p {
+  max-width: 51ch;
+  margin: 0;
+  color: #f0dad1;
+  font-size: 15px;
+  line-height: 1.6;
+  text-shadow: 0 2px 8px #000;
+}
+.home-hero .button-row {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 20px;
+  border: 1px solid #765149;
+  border-radius: 15px;
+  background: #1a1215ed;
+  box-shadow: 0 22px 48px #0008, inset 0 1px #ffdbb41c;
+}
+.home-hero .button-row h3 { margin: 0 0 6px; color: #fff5f0; font-size: 17px; }
+.home-hero .button-row button,
+.home-section-head button {
+  min-height: 46px;
+  padding: 11px 16px;
+  border: 1px solid #63433f;
+  border-radius: 9px;
+  background: #302326;
+  color: #fff5f0;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  box-shadow: 0 4px 12px #0003;
+}
+.home-hero .button-row button.primary {
+  border-color: #ff8235;
+  background: linear-gradient(105deg, #ff8027, #e9431f);
+  color: #200d0a;
+  box-shadow: 0 5px 18px #e9472855;
+}
+.home-hero .button-row button:hover,
+.home-section-head button:hover { border-color: #ff9b5e; background: #493033; }
+.home-hero .button-row button.primary:hover { background: linear-gradient(105deg, #ff9b43, #f2522c); }
+.home-section { padding: 4px clamp(18px, 3vw, 42px) 20px; }
+.home-section-head h3 { color: #fff5f0; text-shadow: 0 2px 8px #0009; }
+.home-section-head span, .home-section p { color: #e4c5bd; }
+.home-project, .home-media-card {
+  background: #21171bdc;
+  border-color: #725049;
+  box-shadow: 0 14px 32px #0007;
+}
+.home-project:hover, .home-media-card:hover { background: #302024; border-color: #ef6c3b; }
+.home-project[aria-current="true"] { border-color: #ff873b; box-shadow: 0 0 0 1px #ff873b77, 0 12px 28px #0008; }
+.home-media-card img { filter: none; }
+
+@media (max-width: 1050px) {
+  .home-hero { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .home-hero .button-row { grid-column: 1; grid-row: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-hero .button-row h3 { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .sidebar-nav { gap: 4px; }
+  .sidebar-nav button { min-height: 44px; font-size: 12px; }
+  .home { background-position: 61% top; }
+  .home-hero { min-height: 0; padding: 32px 18px; }
+  .home-hero h2 { font-size: clamp(31px, 9vw, 40px); }
+  .home-hero .button-row { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .home-section { padding: 0 12px 14px; }
+}
+@media (prefers-reduced-data: reduce) {
+  .home, .workspace-main, .fl-canyon-backdrop { background-image: none; }
+}
 
 @media (max-width: 600px) {
   .sidebar { position: relative; }
