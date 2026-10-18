@@ -21,11 +21,12 @@ READ FIRST
 - docs/integrations/aws-vod-foundation.md.
 - infra/aws-media/README.md and scripts/staging/README.md.
 
-These approved docs may currently exist only on remote branch
-docs/p6-live-vod-hybrid-20261017. Inspect it read-only if needed.
-Integrate documents non-destructively. Do not force-pull, reset,
-clean, discard dirty work, merge unrelated edits, or trust an old
-GitHub commit over the working code.
+The approved documents are on GitHub main as of 2026-10-18.
+Inspect docs/CURRENT-STATE.md and actual local git HEAD/status.
+If the local checkout predates the merge, reconcile main
+non-destructively before execution, preserving dirty work.
+Do not force-pull, reset, clean, discard edits, merge unrelated
+changes, or treat an older source commit as a deployed release.
 
 LAST OBSERVED BASELINE (MUST REVERIFY)
 
