@@ -2,6 +2,12 @@
 
 **Drafted:** 2026-10-09; Phase 3 alignment approved 2026-10-10. This is the no-code catalog-first journey specification. The Phase 3 import and curation UI now exists for the qualified local hosted workflow; Phase 4 generation remains the next implementation stack, not an existing qualified creator experience. It begins with creator-controlled material and works without Amazon API approval. Prompt-first blank creation remains an optional entry. Every channel belongs to one creator and ultimately becomes a separate branded Vega app under that creator's Amazon Developer account; entering an Amazon identity does not create a connection or listing.
 
+## Current self-owned video fast path (staging GREEN, 2026-10-17)
+
+The general catalog-first import and collection wizard above remains for feeds, external sources and advanced curation; it is **not mandatory** for a creator who already has a video they own. In an authenticated ChannelProject, **Add Video** requires a selected MP4, an editable filename-prefilled title, and one initially unchecked display-and-playback rights attestation (two distinct auditable backend rights scopes). Description, category (default Videos), and thumbnail are optional, and duration is derived rather than typed. The project-owned catalog/media record and selected Videos/custom shelf survive reload/restart, even though the original remains private/unplayable until processing and verified release. Collections and generic artwork/audio upload are separate optional workflows.
+
+This was actually qualified for one staging fixture in [c6-video-publishing-ux closeout](tasks/c6-video-publishing-ux/closeout.md), not merely approved as UI design. The next distinct steps are Q1 managed encoding, Q2 explicit rights-cleared FREE publication, Q3 actual Vega playback; see [CURRENT-STATE](CURRENT-STATE.md). Do not describe an uploaded private original as Published or imply Amazon content reuse rights from a title/link.
+
 ## Wizard journey and acceptance states
 
 | Step | Creator-facing action and clear outcome | Guardrail and future owner |
