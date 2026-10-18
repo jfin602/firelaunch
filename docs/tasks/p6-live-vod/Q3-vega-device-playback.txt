@@ -8,6 +8,9 @@ RESULT FILE: docs/tasks/p6-live-vod/Q3-closeout.md
 GOAL: One real creator-owned VPKG installed ONCE on Vega VirtualDevice,
       HLS start/pause/seek/Back + same-binary v1/v2/LKG/v3 rollback.
 HARD BOUNDARY: No physical Fire TV, Appstore or paid playback claim.
+SCOPE DECISION 2026-10-18: use Q2's existing Videos shelf and
+ONE published video. Video placement UX is deferred until AFTER
+this installed-device qualification is GREEN.
 
 READ FIRST
 
@@ -31,7 +34,8 @@ PRECONDITION
 
 Read and independently verify Q1 GREEN for real private verified
 HLS and Q2 GREEN for exactly this creator/deployment's approved
-free CloudFront HLS + real public-only manifest. Check actual
+free CloudFront HLS + real public-only manifest. Do not require
+or implement new channel placement tools as part of this gate. Check actual
 source, rights, current revisions, HTTPS and exact public
 release before native testing. A Mock Preview, browser player
 or prior fixture VPKG does not satisfy this precondition.
@@ -205,6 +209,9 @@ playback AND same-installed-package v1/v2/offline/fault/v3
 qualification. If any required external gate is missing, report
 NOT GREEN even if the source builds or browser media plays.
 
-Do not commit, push, merge, change version, deploy a different
-staging installation, start paid AWS jobs, add entitlement/paywall
+Do not build a placement editor, reorder/multi-shelf UI or
+featured-video workflow in Q3. Those belong to a separate
+post-Q3 c6-channel-video-placement review. Do not commit,
+push, merge, change version, deploy a different staging
+installation, start paid AWS jobs, add entitlement/paywall
 logic, publish unapproved creator media or claim real Fire TV.
