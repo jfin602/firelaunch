@@ -40,7 +40,11 @@ P0 demonstrated a prompt-first Wild Earth product concept built around **Prompt 
 See [MVP roadmap](roadmap/mvp-roadmap.md).
 
 
-## AWS creator-media delivery direction (approved for future P6)
+## Current creator video delivery direction (ADR 0011 and ADR 0013, 2026-10-18)
+
+The active hosted path starts with real authenticated private S3 uploads (staging UX GREEN), followed by an AWS Video on Demand on AWS Foundation / MediaConvert encoding service (offline LOCAL GREEN, real provider NOT QUALIFIED) and separately approved, verified private HLS. Only a creator-approved free-to-view video may be promoted to exact CloudFront delivery paths and an immutable channel release, subject to a separate CDN operator gate. Shared private encoding supports future protected `purchase`, `rental`, and `subscription` modes, but viewer entitlements/billing/signing are not implemented. See [current state](CURRENT-STATE.md) and [live VOD plan](tasks/p6-live-vod/README.md).
+
+## Historical 2026-10-11 AWS creator-media delivery direction (superseded for encoding)
 
 FireLaunch should let creators provide independently owned/licensed video files and manage conversion to television-ready media without requiring a separate video-hosting vendor. Initial path: secure S3 upload of originals, independently operated FFmpeg, validated HLS renditions and Amazon CloudFront delivery; muffinos remains the Studio/API control plane. Approved media is associated with catalog entries, separately verified TV rights, and explicitly released to independently creator-owned channel applications. No creator must license Amazon Prime Video or grant FireLaunch control of their Amazon Developer account to use this capability. A storefront URL is only a discovery clue, never permission to copy or restream its videos.
 
