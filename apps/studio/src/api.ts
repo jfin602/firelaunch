@@ -141,6 +141,8 @@ export const readVideoUpload = (projectId: string, uploadId: string, mediaAssetI
 export type VideoAssetStatus = { uploadId: string; uploadState: VideoUploadStatus['state']; processingAvailable?: boolean; processing: VideoUploadStatus['processing'] } | null;
 export const readVideoAssetStatus = (projectId: string, mediaAssetId: string) =>
   request(`/${projectId}/media-uploads`, { headers: { 'x-media-asset-id': mediaAssetId } }) as Promise<VideoAssetStatus>;
+export const revokeVideoAsset = (projectId: string, mediaAssetId: string) =>
+  request(`/${projectId}/media-uploads/revoke`, json({ mediaAssetId })) as Promise<{ revoked: true }>;
 
 export async function readDeployment(id: string) {
   return channelDeploymentSchema.parse(await request(`/${id}/deployment`));
