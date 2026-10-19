@@ -1,0 +1,50 @@
+# Q2 F7 final recovery — R1 foreign private API
+
+Date: 2026-10-19 13:27 UTC. Result: **BLOCKED**. This is the first and only recovery cycle in this invocation. F5 remains PASS, F6 remains PASS, F7 remains PARTIAL, and Q2 remains NOT GREEN. R2, R3, and final convergence were not run.
+
+## Candidate and safety baseline
+
+- Local `main` HEAD before changes: `26fa48834c76cbfd3a0ef8a3e5efb4c2763aa16a`; clean working tree; root version `0.6.7`. This HEAD contains the previously reported Q2 five-cycle evidence and Studio preview test correction. No source, deployment, schema, AWS resource, creator data, media, or release was changed in R1.
+- The existing approved release #1 is `rel_99483e7fc9f0438c858b90c5db77d06c` for owner project `ch_21ae035aa31743b1a8a98f145ee34f6a` and deployment `dep_00e792ad15a14aa1be420d6721956192`. A fresh anonymous HTTPS current-pointer GET returned 200 JSON, `Cache-Control: public, max-age=0, must-revalidate`, pointer-body SHA-256/ETag `d1c398ec9a8028fcb3cefbc5d7fedaf47d6b39a7f9adbd3e1fea68d27469a059`, the same release ID, and manifest SHA-256 `b7336f0807a49232be2b5575cbaf94808db45afe57b37b663f1b6473f5d09426`. This establishes only the public pointer at that instant, not full database or object nonmutation.
+- Previously qualified F5/F6 results were reused from `Q2-closeout.md` and `qualification/q2-five-cycle/`; no AWS, encode, publication, or aggregate check was repeated.
+
+## Route and enforcement reconnaissance
+
+`apps/server/src/api.ts` derives the hosted principal from the verified session before `/api/projects` routing. No session returns `401 UNAUTHENTICATED`; a mutating method without allowed origin and the session CSRF token returns `403 CSRF` before the route body is handled. Source-level owner checks return nonenumerating `NOT_FOUND` for foreign project/deployment data. These are source contracts, **not live cross-account results**.
+
+| Class | Actual HTTPS method/path | Source boundary |
+| --- | --- | --- |
+| Project detail | `GET /api/projects/ch_21ae035aa31743b1a8a98f145ee34f6a` | `HostedProjectRepository.read` joins ownership to the session principal |
+| Catalog and collections | `GET /api/projects/<project>/catalog`, `GET /api/projects/<project>/catalog/collections` | `CatalogRepository.read` checks owned project and account-scoped catalog rows |
+| Private video status | `GET /api/projects/<project>/media-uploads` with `x-media-asset-id` | `MediaUploadService.assetStatus` uses owner-scoped pipeline records |
+| Private publication | `GET /api/projects/<project>/publication/<deployment>/status`, `GET .../history` | `PublicationRepository.status/history` checks owner/deployment identity |
+| Upload capability | `POST /api/projects/<project>/media-uploads` | Session origin/CSRF, then owned asset/upload validation; not sent |
+| Private-object capability | `POST /api/projects/<project>/private-objects/<object>/capability` | Session origin/CSRF, then owned object check; not sent |
+| Owner mutations | Catalog `POST/PUT/DELETE`; publication `POST readiness/approve/rollback/publish` | CSRF plus owner, revision, rights and approval checks; not sent |
+
+Source SHA-256 at recon: `api.ts` `80bbcc11969b0ed922390a5d5be88f60bbbc3317236cfbcd9c3e65ad661e661f`; `auth/sessions.ts` `e32e30c0dea5f4c915c2d05f52a764ecccc2f9227e371fd38417466bef8c258a`; `hosted-repository.ts` `6e15b082ce830d23b11474d6fefc74630df0cf2438d540973b783ec5f4750f4d`; `catalog-repository.ts` `45a0595d923fdcf806a3f6014ac582e2481503f208d441472238b7d545b4cf39`; `publication-repository.ts` `01d2060b9c58f44abf09c857b62407d58e28231d77831782ecfd27ebe4b17fc8`; `media-upload-service.ts` `b91e0afa54fc48662fc3da6532fefec0690866d935fd7a589dd32b3662eb39b3`; `private-objects.ts` `fd1a307945ad904dcc28d603b11565f8658076c04c8fd4b713d4b44fda3b072f`.
+
+## Direct observations and missing proof
+
+- The Codex in-app browser began without a Studio session. Its normal Google chooser offered the two previously used identities. Selecting the existing owner identity A (email redacted) returned to the owned project, showing A's account, project revision 8, and its private channel library. This is an authenticated **UI** observation; an owner-positive private API HTTP response was not obtained.
+- A separate Chrome browser was not present in the current browser inventory. The owner's `@Chrome` response did not connect a Chrome session; attempting to open it reported unavailable. Thus identity B (separate Google account, email redacted; observed in the earlier five-cycle report) was **not independently authenticated during this cycle**. No A cookie, token, request, or storage was transferred to B.
+- Direct browser navigation to A's private project API was stopped by the browser client with `ERR_BLOCKED_BY_CLIENT` before HTTP. The browser's read-only page evaluation did not expose a `fetch` function. Neither result is an application authorization decision. No DevTools or other supported same-origin request channel was available.
+- Separate **anonymous** HTTPS GETs to the private project and catalog paths returned `401`, JSON, error code `UNAUTHENTICATED`. These distinguish the unauthenticated boundary from the required foreign-authenticated `403` or nonenumerating `404`; they do **not** qualify R1.
+- No foreign project, catalog, media, publication, upload-capability, private-object-capability or owner-mutation HTTP response was observed. No database revision/readback was available. The unchanged public release pointer is narrower than complete state nonmutation evidence.
+
+## Validation and disposition
+
+Automated tests in this cycle: **0 passed, 0 failed, 0 skipped**. No source repair was justified or attempted. The prior final aggregate of 271 passed / 15 skipped / 0 failed remains the existing source-bound report and was not rerun. No credentials, cookies, CSRF values, signed URLs, private media bytes, or authorization headers were logged.
+
+**R1 BLOCKED:** connect an independently signed-in Chrome/Edge session for identity B and provide a supported same-origin browser request/HTTP-response inspection path for both accounts. Then obtain A's owner-positive private API response, B's valid session and foreign private API/capability denials, and before/after owner revision plus live-pointer readback. Any denied mutation must first be shown harmless if unexpectedly accepted. Do not advance to R2 or R3 from the existing UI redirect, anonymous 401s, or source tests.
+
+## R1 retry — 2026-10-19 13:30 UTC
+
+The owner explicitly connected `@Chrome` and requested this retry. This is a **new invocation of R1 only**; R2, R3 and final convergence were not started. Before the retry, local HEAD was still `26fa48834c76cbfd3a0ef8a3e5efb4c2763aa16a`, version `0.6.7`; the only working-tree item was this untracked evidence directory. The seven source SHA-256 values listed above were recomputed and were identical. No source repair was made.
+
+- Chrome was now present as a separate extension browser. Its ordinary Studio session was initially signed out. The normal Google account chooser selected the previously identified **foreign identity B** (email redacted), and Studio showed B's signed-in account with no projects. At the same time, the Codex in-app browser still showed **owner identity A** (email redacted), A's `snabble tv` project, revision 8, and private channel library. The two browser surfaces were independent; no cookie, token, authenticated request, or session storage was copied between them.
+- Opening A's exact project URL in B's Chrome Studio tab returned B to the empty new-channel screen. This is a fresh foreign-project **UI denial** consistent with the prior five-cycle observation. It is not an HTTP authorization result, and no private project/catalog payload was exposed in the UI.
+- A separate Chrome tab navigated directly to `GET /api/projects/ch_21ae035aa31743b1a8a98f145ee34f6a`. Chrome rendered its own `ERR_BLOCKED_BY_CLIENT` page. This occurred before an application HTTP status was available, so it is neither a `401` nor a `403/404` server denial. The browser's exposed developer log interface contained no corresponding status; the developer-tools shortcut did not expose a controllable response inspector. No unsupported cookie extraction, request replay, browser-security bypass, or synthetic principal was used.
+- A fresh anonymous HTTPS current-pointer GET after the B UI check returned 200 JSON with the identical release #1 ID, pointer-body SHA-256 `d1c398ec9a8028fcb3cefbc5d7fedaf47d6b39a7f9adbd3e1fea68d27469a059` and manifest SHA-256 `b7336f0807a49232be2b5575cbaf94808db45afe57b37b663f1b6473f5d09426`. This verifies the public pointer stayed unchanged at the observation time. No database revision or private publication-history readback was possible.
+
+**Retry result: BLOCKED.** Two independent authenticated Google sessions are now directly established, which closes that prerequisite. The missing evidence is still A's owner-positive private API status and B's foreign private project/catalog/media/publication/capability HTTP statuses, plus corresponding before/after private state readback. No owner-only mutation was sent, because the available browser interface cannot expose the response and an unexpectedly accepted write could not be ruled out. No automated tests ran; 0 passed, 0 failed, 0 skipped. The previous 271-pass aggregate was not rerun. F5 PASS, F6 PASS, F7 PARTIAL, Q2 NOT GREEN. A supported same-origin response inspector in each authenticated browser is the exact remaining R1 dependency. Until it is available, do not count the UI redirect, Chrome client block or anonymous 401 as R1 PASS.
