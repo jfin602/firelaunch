@@ -26,17 +26,21 @@ Restore 1..7200 seconds end-to-end: client/server validation, safe large-file ch
 | [P3](P3-two-hour-hls-integrity.txt) | Paged verified HLS graph/publication and scoped cleanup | GPT-6 Sol High | no |
 | [P4](P4-progressive-review-publish.txt) | Progressive data and existing explicit channel publish | GPT-6 Sol High | no |
 | [P5](P5-creator-polish-tests.txt) | Lifecycle/status/a11y/client usability convergence | GPT-6 Sol Medium | no |
-| [P6](P6-independent-usability-closeout.txt) | Independent real browser + final aggregate, manual | GPT-6 Sol High | yes |
+| [P6](P6-independent-usability-closeout.txt) | Fast UX smoke plus guarded live Studio deployment, manual | GPT-6 Sol High | yes |
 
-P1-P5 use the runner; the runner owns commits. Exactly one final manual P6 closeout. No /activate; <=8 minute target / 15 minute ceiling per implementation checkpoint. Focused tests during implementation and one final npm run check at P6. Actual current checkout/version and dirty changes must be inspected before starting.
+P1-P5 use the runner; the runner owns commits. Exactly one final manual P6 closeout. No /activate; <=8 minute target / 15 minute ceiling per implementation checkpoint. Focused tests during implementation and reused at P6; only minimal focused verification and builds at closeout, not another full aggregate. Actual current checkout/version and dirty changes must be inspected before starting.
 
 ## Safety and execution
 
-No AWS queue/rule enablement, paid MediaConvert jobs, IAM/CloudFormation/CloudFront changes, creator publication, staging deployment, schema overwrite, or customer-data mutation is authorized by these documents. Preserve source rights, owner/CSRF, private S3 originals/staging, approved release #1, native device and Q2/Q3 historical evidence. Q2 F7 remains PARTIAL/NOT GREEN, Q3 UNSTARTED. Advanced multi-shelf ordering, featured and drag-and-drop remain deferred until Q3 GREEN.
+Only the tested schema-compatible c6-usability application deployment to the existing live Studio is conditionally authorized after fast smoke, protected backup and rollback. No AWS queue/rule enablement, paid MediaConvert jobs, IAM/CloudFormation/CloudFront/DNS changes, creator content publication, schema migration or customer-data mutation is authorized. Preserve source rights, owner/CSRF, private S3 originals/staging, approved release #1, native device and Q2/Q3 historical evidence. Q2 F7 remains PARTIAL/NOT GREEN, Q3 UNSTARTED. Advanced multi-shelf ordering, featured and drag-and-drop remain deferred until Q3 GREEN.
 
 After safely synchronizing GitHub main into the intended local checkout:
 
     npm run codex:stack:validate -- c6-usability
     npm run codex:stack -- c6-usability
 
-The runner stops before P6; run the independent closeout manually. Documents and prompts alone do not make the product ready.
+The runner stops before P6; run its fast manual UX smoke and protected live Studio deployment after P1-P5 pass. If operator permissions/backup/rollback are unavailable, report DEPLOYMENT BLOCKED rather than bypassing controls. This authoring does not deploy the product.
+
+## Owner-approved P6 acceleration (2026-10-19)
+
+P6 performs a short real-browser usability smoke when accessible, targeted tests/build, and a conditional deployment to the existing canonical firelaunch.jfin.dev staging Studio. Do not rerun the full suite or large HLS fixture merely for closeout when P1-P5 recorded valid passing evidence. Do not trigger any paid encoding or new public media release. The owner's authorization is limited to deploying the tested c6-usability application; use only the existing exact-command, root-owned release/backup/rollback procedure. Live AWS, Q2 and Vega remain separate.
