@@ -21,6 +21,7 @@ export function VideoWorkspace({ selection, project, onIdentity, onClose, onProj
   const closeButton = useRef<HTMLButtonElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const selectionRef = useRef(selection);
+  const mounted = useRef(false);
   selectionRef.current = selection;
 
   const owned = (data: CatalogSnapshot) => data.projectId === selectionRef.current.projectId &&
@@ -31,15 +32,18 @@ export function VideoWorkspace({ selection, project, onIdentity, onClose, onProj
     data.mediaAssets.every(asset => asset.projectId === data.projectId && asset.creatorAccountId === data.creatorAccountId);
   const refresh = async () => {
     const data = await readCatalog(selection.projectId);
+    if (!mounted.current || selectionRef.current.projectId !== selection.projectId || selectionRef.current.accountId !== selection.accountId)
+      throw new Error('Video workspace changed. Reopen the video to continue.');
     if (!owned(data)) throw new Error('This video library is unavailable for the current account.');
     setInventory(data);
     return data;
   };
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
     let live = true;
     void readCatalog(selection.projectId).then(data => {
       if (!live) return;
-      if (!owned(data)) throw new Error('This video library is unavailable for the current account.');
+      if (!owned(data)) { setError('This video library is unavailable for the current account.'); return; }
       setInventory(data); setError('');
     }).catch(reason => { if (live) setError(reason instanceof Error ? reason.message : String(reason)); });
     return () => { live = false; };

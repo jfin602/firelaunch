@@ -581,6 +581,7 @@ body { min-width: 0; }
 .video-workspace-summary strong { font-size: 17px; overflow-wrap: anywhere; }
 .video-workspace-summary p, .video-workspace-summary small { display: block; margin: 5px 0 0; color: var(--fl-muted); line-height: 1.4; }
 .video-workspace-lock { padding: 12px; border-left: 3px solid var(--fl-orange); background: #38211e; color: var(--fl-text); }
+.video-card-action { color: var(--fl-orange) !important; font-weight: 700; }
 .video-review { margin-top: 18px; padding: clamp(16px, 2.5vw, 26px); border: 1px solid var(--fl-border-soft); border-radius: var(--fl-radius-lg); background: var(--fl-surface); }
 .video-review-steps { padding-left: 24px; }
 .video-review-steps > li { padding: 12px 0; border-top: 1px solid var(--fl-border-soft); }

@@ -73,7 +73,8 @@ test('many projects and creator artwork are scoped; broken artwork falls back', 
     await screen.findByRole('button', { name: 'Open Director Cut video' });
     assert.equal((document.querySelector('.home-art img') as HTMLImageElement).src, 'https://art.example/violet.jpg');
     assert.ok(screen.getByText('Playback rights unknown'));
-    assert.ok(screen.getByText('No playable upload · private draft'));
+    assert.ok(screen.getByText('No upload yet · open to add an MP4'));
+    assert.ok(screen.getByText('Open video →'));
     fireEvent.error(document.querySelector('.home-art img')!);
     assert.ok(screen.getByLabelText('Artwork unavailable'));
     assert.equal(document.querySelector('.home-art img'), null);
@@ -162,6 +163,9 @@ test('closing the video popup keeps an active upload, reopening shows Stop', asy
     const transfer = startVideoTransfer({ accountId: owner, projectId: firstId, itemId, assetId,
       file, durationSeconds: 12, sha256: 'a'.repeat(64) });
     await waitFor(() => assert.equal(sent, true));
+    const exitDuringUpload = new dom.window.Event('beforeunload', { cancelable: true });
+    dom.window.dispatchEvent(exitDuringUpload);
+    assert.equal(exitDuringUpload.defaultPrevented, true, 'browser exit warns while the file is still in this tab');
     fireEvent.click(card);
     await screen.findByRole('dialog', { name: 'Director Cut' });
     fireEvent.click(screen.getByRole('button', { name: 'Close video workspace' }));
@@ -173,6 +177,9 @@ test('closing the video popup keeps an active upload, reopening shows Stop', asy
     fireEvent.click(screen.getAllByRole('button', { name: 'Stop upload' })[0]!);
     await assert.rejects(transfer, /Upload canceled/);
     assert.equal(videoTransfer(owner, firstId, itemId)?.state, 'stopped');
+    const exitAfterStop = new dom.window.Event('beforeunload', { cancelable: true });
+    dom.window.dispatchEvent(exitAfterStop);
+    assert.equal(exitAfterStop.defaultPrevented, false);
   } finally { clearVideoTransfers(owner); globalThis.fetch = previousFetch; globalThis.XMLHttpRequest = previousXHR; mock.restore(); }
 });
 

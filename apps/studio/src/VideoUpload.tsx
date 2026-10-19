@@ -96,22 +96,38 @@ export function videoProcessingMessage(session: VideoUploadStatus): string {
 }
 
 export function VideoLibraryStatus({ projectId, assetId }: { projectId: string; assetId: string | undefined }) {
-  const [status, setStatus] = useState('Draft · no upload');
+  const [status, setStatus] = useState('Checking private video status…');
   useEffect(() => {
-    if (!assetId) return;
+    if (!assetId) { setStatus('No upload yet · open to add an MP4'); return; }
     let alive = true;
-    void readVideoAssetStatus(projectId, assetId).then(value => {
-      if (!alive) return;
-      if (!value) { setStatus('Draft · awaiting upload'); return; }
-      const state = value.processing?.state;
-      setStatus(value.uploadState !== 'verified' ? value.processingAvailable === false && value.uploadState === 'completed'
-        ? 'Uploaded · processing unavailable' : `Upload ${value.uploadState} · private` :
-        state === 'ready' ? 'Ready for publication review · private' :
-        state === 'failed' ? 'Needs attention · processing failed' :
-        state === 'revoked' ? 'Needs attention · revoked' :
-        value.processingAvailable === false ? 'Uploaded · processing unavailable' : 'Processing · private');
-    }).catch(() => { if (alive) setStatus('Status unavailable'); });
-    return () => { alive = false; };
+    let pending = false;
+    const check = () => {
+      if (!alive || pending || document.visibilityState === 'hidden') return;
+      pending = true;
+      void readVideoAssetStatus(projectId, assetId).then(value => {
+        if (!alive) return;
+        if (!value) { setStatus('No upload yet · open to add an MP4'); return; }
+        if (value.uploadState !== 'verified') {
+          setStatus(value.uploadState === 'completed' && value.processingAvailable === false ?
+            'Uploaded · processing unavailable; open for details' : value.uploadState === 'completed' ?
+            'Uploaded · waiting for private verification' :
+            'Upload incomplete · open to retry with your file'); return;
+        }
+        switch (value.processing?.state) {
+          case 'ready': setStatus('Processed privately · open to review rights and channel readiness'); break;
+          case 'failed': setStatus('Processing failed · open to retry or replace'); break;
+          case 'revoked': setStatus('Revoked · publication blocked; open to review'); break;
+          case 'leased': setStatus('Processing needs operator attention · open for details'); break;
+          default: setStatus(value.processingAvailable === false ? 'Processing unavailable · open for details' :
+            'Processing privately · check back later');
+        }
+      }).catch(() => { if (alive) setStatus('Status unavailable · open to retry'); })
+        .finally(() => { pending = false; });
+    };
+    check();
+    const timer = window.setInterval(check, 15_000);
+    document.addEventListener('visibilitychange', check);
+    return () => { alive = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', check); };
   }, [projectId, assetId]);
   return <span>{status}</span>;
 }
@@ -137,6 +153,8 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
   const busyRef = useRef(false);
+  const activeRef = useRef(true);
+  useEffect(() => { activeRef.current = true; return () => { activeRef.current = false; }; }, []);
   useEffect(() => {
     if (!busy) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
@@ -158,12 +176,20 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
     return () => { active = false; };
   }, [projectId, itemId, inventory.revision, busy, session, transfer?.state]);
   useEffect(() => {
-    if (!session || !['completed', 'verified'].includes(session.state) || ['ready', 'failed', 'revoked'].includes(session.processing?.state ?? '') || session.processingAvailable === false) return;
+    if (!session || !['completed', 'verified'].includes(session.state)) return;
     let active = true;
-    const timer = window.setInterval(() => void readVideoUpload(projectId, session.id, assetId).then(next => {
-      if (active) setSession(next);
-    }).catch(() => undefined), 5000);
-    return () => { active = false; window.clearInterval(timer); };
+    let pending = false;
+    const check = () => {
+      if (!active || pending || document.visibilityState === 'hidden') return;
+      pending = true;
+      void readVideoUpload(projectId, session.id, assetId).then(next => {
+        if (active) setSession(next);
+      }).catch(() => { if (active) setError('Processing status is unavailable. Reopen this video to try again.'); })
+        .finally(() => { pending = false; });
+    };
+    const timer = window.setInterval(check, 15_000);
+    document.addEventListener('visibilitychange', check);
+    return () => { active = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', check); };
   }, [projectId, assetId, session?.id, session?.state, session?.processing?.state, session?.processingAvailable]);
   const chooseFile = (next: File | null) => {
     if (!next) return;
@@ -185,8 +211,11 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
       if (thumbnail && (!['image/jpeg', 'image/png'].includes(thumbnail.type) || thumbnail.size < 1 || thumbnail.size > 1_000_000))
         throw new Error('Choose a PNG or JPEG thumbnail under 1 MB.');
       const inspectedDurationSeconds = await readVideoDuration(file);
+      if (!activeRef.current) return;
       const externalId = await hashVideoFile(file);
+      if (!activeRef.current) return;
       const chosenThumbnail = thumbnail ?? await extractVideoThumbnail(file);
+      if (!activeRef.current) return;
       setThumbnailNotice(chosenThumbnail ? thumbnail ? 'Custom thumbnail saved as private draft artwork.' : 'Video still saved as private draft artwork.'
         : 'No thumbnail could be extracted. A draft placeholder remains until you add artwork.');
       let current = await refresh();
@@ -239,8 +268,8 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
       if (chosenThumbnail) await saveThumbnail(projectId, ownedItemId, chosenThumbnail, refresh);
       void startVideoTransfer({ accountId, projectId, itemId: ownedItemId, assetId: ownedAssetId, file,
         durationSeconds: inspectedDurationSeconds, sha256: externalId })
-        .then(result => { setSession(result); return refresh(); })
-        .catch(() => refresh().catch(() => undefined));
+        .then(result => { if (activeRef.current) { setSession(result); return refresh(); } })
+        .catch(() => { if (activeRef.current) return refresh().catch(() => undefined); });
     } catch (reason) {
       setError(reason instanceof ApiError && reason.status === 409 ? 'Catalog changed in another tab. Review the saved draft and retry.' : reason instanceof Error ? reason.message : String(reason));
       await refresh().catch(() => undefined);

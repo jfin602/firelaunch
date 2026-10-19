@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
-import { createElement } from 'react';
+import { createElement, Fragment } from 'react';
 import { createHash } from 'node:crypto';
 import { getSession } from '../src/api.js';
 import { extractVideoThumbnail, hashVideoFile, titleFromFilename, validateVideoFile, readVideoDuration, uploadVideo, VIDEO_HASH_CHUNK_BYTES } from '../src/video-upload.js';
-import { NewVideoUpload, videoProcessingMessage } from '../src/VideoUpload.js';
+import { NewVideoUpload, VideoLibraryStatus, videoProcessingMessage } from '../src/VideoUpload.js';
 import { clearVideoTransfers, startVideoTransfer, stopVideoTransfer, subscribeVideoTransfers, videoTransfer, videoTransfers } from '../src/video-transfer.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://studio.example/' });
@@ -272,6 +272,47 @@ test('processing-disabled upload remains private and cannot be labeled ready or 
   assert.match(videoProcessingMessage({ ...base, processingAvailable: false, processing: null }), /cannot be played or published/);
   assert.match(videoProcessingMessage({ ...base, processing: { state: 'failed', failureCode: 'encode_failed' } }), /Needs attention/);
   assert.match(videoProcessingMessage({ ...base, processing: { state: 'ready', failureCode: null } }), /separate creator approval/);
+});
+
+test('saved video status refreshes while visible and gives truthful next actions for long processing, failure and revocation', async () => {
+  const previous = globalThis.fetch;
+  let state: 'pending' | 'failed' | 'revoked' = 'pending';
+  let reads = 0;
+  globalThis.fetch = (async input => {
+    assert.ok(String(input).endsWith(`/${projectId}/media-uploads`));
+    reads++;
+    return json({ uploadId, uploadState: 'verified', processing: { state } });
+  }) as typeof fetch;
+  try {
+    render(createElement(VideoLibraryStatus, { projectId, assetId }));
+    await screen.findByText('Processing privately · check back later');
+    state = 'failed';
+    fireEvent(document, new dom.window.Event('visibilitychange'));
+    await screen.findByText('Processing failed · open to retry or replace');
+    state = 'revoked';
+    fireEvent(document, new dom.window.Event('visibilitychange'));
+    await screen.findByText('Revoked · publication blocked; open to review');
+    assert.equal(reads, 3);
+  } finally { cleanup(); globalThis.fetch = previous; }
+});
+
+test('concurrent saved videos keep independent status and project-scoped reads', async () => {
+  const previous = globalThis.fetch;
+  const otherAsset = id('ma', 'f');
+  const seen: string[] = [];
+  globalThis.fetch = (async (_input, init) => {
+    const asset = new Headers(init?.headers).get('x-media-asset-id');
+    seen.push(asset ?? '');
+    return json({ uploadId, uploadState: 'verified', processing: { state: asset === assetId ? 'pending' : 'failed' } });
+  }) as typeof fetch;
+  try {
+    render(createElement(Fragment, null,
+      createElement(VideoLibraryStatus, { projectId, assetId }),
+      createElement(VideoLibraryStatus, { projectId, assetId: otherAsset })));
+    await screen.findByText('Processing privately · check back later');
+    await screen.findByText('Processing failed · open to retry or replace');
+    assert.deepEqual(seen.sort(), [assetId, otherAsset].sort());
+  } finally { cleanup(); globalThis.fetch = previous; }
 });
 
 test('reopened unfinished draft explains file loss and requires selection before retry', async () => {

@@ -67,7 +67,7 @@ export function Home({ project, projects, accountId, hosted, libraryRevision = 0
           return <button key={item.id} className="home-media-card" onClick={() => item.kind === 'video' && onOpenVideo ? onOpenVideo(item.id) : onSurface('Catalog')} aria-label={item.kind === 'video' ? `Open ${title} video` : `Open ${title} in Catalog`}>
             <Artwork item={item}/><span className="home-media-copy"><strong>{title}</strong><small>{item.kind === 'book' || item.kind === 'listing' ? 'Informational · no playback' : item.kind === 'video' ? 'Video · private draft' : 'Audio · private draft'}</small>
               <small>{item.kind === 'video' || item.kind === 'audio' ? rights : 'Review display rights in Catalog'}</small>
-              {item.kind === 'video' && <small>{asset ? <VideoLibraryStatus key={`${project.id}:${item.id}:${asset.id}`} projectId={project.id} assetId={asset.id}/> : 'No playable upload · private draft'}</small>}</span>
+              {item.kind === 'video' && <><small>{asset ? <VideoLibraryStatus key={`${project.id}:${item.id}:${asset.id}`} projectId={project.id} assetId={asset.id}/> : 'No upload yet · open to add an MP4'}</small><small className="video-card-action">Open video →</small></>}</span>
           </button>;
         })}</div>}
     </section>
