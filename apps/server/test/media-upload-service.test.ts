@@ -11,7 +11,7 @@ import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
 import type { MediaPipelineRepository } from '../src/media-pipeline-repository.js';
 import type { S3MediaStorage } from '../src/media-storage.js';
 import type { ManagedMediaCoordinator } from '../src/managed-media-coordinator.js';
-import { MediaUploadService } from '../src/media-upload-service.js';
+import { MediaUploadService, UPLOAD_SESSION_TTL_MS, startVideoUploadSchema } from '../src/media-upload-service.js';
 import { createApi } from '../src/api.js';
 import { ProjectRepository, RepositoryError } from '../src/repository.js';
 
@@ -32,14 +32,16 @@ function fixture() {
     expectedBytes: input.expectedBytes, expectedSha256, expiresAt: new Date(Date.now() + 60_000).toISOString(),
     claimedDurationSeconds: 90, partSize: 8 * 1024 * 1024, partCount: 2 };
   const calls: string[] = [];
+  let expiryRequested = '';
   const requireOwner = (principal: AuthenticatedPrincipal, project: string, asset: string, upload?: string) => {
     if (principal.accountId !== owner.accountId || principal.subject !== owner.subject || project !== projectId ||
       asset !== assetId || upload && upload !== uploadId) throw new RepositoryError('NOT_FOUND', 'Media asset not found');
   };
   const records = {
-    async createUpload(principal: AuthenticatedPrincipal, project: string, asset: string, request: { expectedBytes: number }) {
+    async createUpload(principal: AuthenticatedPrincipal, project: string, asset: string, request: { expectedBytes: number; expiresAt: string }) {
       requireOwner(principal, project, asset);
       if (request.expectedBytes !== row.expectedBytes) throw new RepositoryError('CONFLICT', 'metadata changed');
+      expiryRequested = request.expiresAt;
       calls.push('create'); return { id: uploadId, originalKey: row.originalKey, state: row.state };
     },
     async upload(principal: AuthenticatedPrincipal, project: string, asset: string, upload: string) {
@@ -84,19 +86,23 @@ function fixture() {
     async abortOriginal() { calls.push('abort'); },
     async deleteOrphanOriginal() { calls.push('delete-orphan'); }
   };
-  return { row, calls, records, storage, service: new MediaUploadService(records as unknown as MediaPipelineRepository,
+  return { row, calls, records, storage, get expiryRequested() { return expiryRequested; }, service: new MediaUploadService(records as unknown as MediaPipelineRepository,
     storage as unknown as S3MediaStorage) };
 }
 
 test('direct upload control plane is owner scoped, bounded, retry safe and never reads video bytes', async () => {
-  const { service, row, calls, storage } = fixture();
-  for (const bad of [{ ...input, expectedBytes: 5_000_000_001 }, { ...input, fileName: '../bad.mp4' },
-    { ...input, contentType: 'text/html' }, { ...input, claimedDurationSeconds: 14401 },
+  const scope = fixture();
+  const { service, row, calls, storage } = scope;
+  for (const bad of [{ ...input, expectedBytes: 2_000_000_001 }, { ...input, fileName: '../bad.mp4' },
+    { ...input, contentType: 'text/html' }, { ...input, claimedDurationSeconds: 7201 },
     { ...input, bucket: 'foreign' }, { ...input, expectedSha256: 'bad' }])
     await assert.rejects(service.start(owner, projectId, bad));
   await assert.rejects(service.start(foreign, projectId, input), { code: 'NOT_FOUND' });
   assert.equal(calls.length, 0);
+  assert.equal(startVideoUploadSchema.parse({ ...input, claimedDurationSeconds: 7200, expectedBytes: 2_000_000_000 }).claimedDurationSeconds, 7200);
+  const beforeStart = Date.now();
   const started = await service.start(owner, projectId, input);
+  assert.ok(Date.parse(scope.expiryRequested) >= beforeStart + UPLOAD_SESSION_TTL_MS);
   assert.equal(started.verification, 'unverified');
   assert.equal(started.partCount, 2);
   assert.equal(JSON.stringify(started).includes('opaque-s3'), false);

@@ -9,6 +9,7 @@ import { Delivery } from './Delivery.js';
 import { Catalog } from './Catalog.js';
 import { Home } from './Home.js';
 import { VideoWorkspace } from './VideoWorkspace.js';
+import { clearVideoTransfers, stopVideoTransfer, subscribeVideoTransfers, videoTransfers, type VideoTransfer } from './video-transfer.js';
 import { SAMPLE_ART, newFilmMediaUrl, sampleMutations } from './sample.js';
 
 function newId(kind: 'page' | 'mod' | 'item'): string {
@@ -18,6 +19,28 @@ function newId(kind: 'page' | 'mod' | 'item'): string {
 type Surface = 'Home' | 'Catalog' | 'Create' | 'Design' | 'Content' | 'Code' | 'Build' | 'Publish';
 const surfaces: Surface[] = ['Home', 'Catalog', 'Create', 'Design', 'Content', 'Code', 'Build', 'Publish'];
 const icons: Record<Surface, string> = { Home: '⌂', Catalog: '▤', Create: '✳', Design: '◈', Content: '▦', Code: '⌘', Build: '⬡', Publish: '↗' };
+
+function VideoTransferNotice({ accountId, projectId, onOpen }: { accountId: string; projectId: string; onOpen: (itemId: string) => void }) {
+  const [tasks, setTasks] = useState<VideoTransfer[]>([]);
+  useEffect(() => {
+    const update = () => setTasks(videoTransfers(accountId, projectId).map(task => ({ ...task })));
+    update(); return subscribeVideoTransfers(update);
+  }, [accountId, projectId]);
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!videoTransfers(accountId).some(task => task.state === 'uploading')) return;
+      event.preventDefault(); event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [accountId, projectId]);
+  return <>{tasks.filter(task => task.state === 'uploading' || task.state === 'failed' || task.state === 'stopped').map(task =>
+    <div className="video-transfer-banner" role="status" key={task.itemId}>
+      <span>{task.state === 'uploading' ? task.progress === 100 ? 'Private video upload sent · finishing verification · Keep this tab open' : `Private video upload · ${task.progress}% · Keep this tab open` : task.error}</span>
+      <button type="button" onClick={() => onOpen(task.itemId)}>Open video</button>
+      {task.state === 'uploading' && <button type="button" onClick={() => stopVideoTransfer(accountId, projectId, task.itemId)}>Stop upload</button>}
+    </div>)}</>;
+}
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="field"><span>{label}</span>{children}</label>;
@@ -123,7 +146,7 @@ export default function App() {
   const select = (next: ChannelProject) => { projectRef.current = next; setProject(next); window.history.replaceState(null, '', `?project=${next.id}`); };
   const acceptProject = (next: ChannelProject) => { select(next); setProjects(previous => previous.map(item => item.id === next.id ? next : item)); };
   useEffect(() => {
-    const expired = () => { identityGeneration.current++; switchGeneration.current++; accountRef.current = null; setVideoSelection(null); setSignedOut(true); setSession(null); setProjects([]); setProject(null); setAgentEvents({}); setCatalogSelections({}); projectRef.current = null; window.history.replaceState(null, '', window.location.pathname); };
+    const expired = () => { if (accountRef.current) clearVideoTransfers(accountRef.current); identityGeneration.current++; switchGeneration.current++; accountRef.current = null; setVideoSelection(null); setSignedOut(true); setSession(null); setProjects([]); setProject(null); setAgentEvents({}); setCatalogSelections({}); projectRef.current = null; window.history.replaceState(null, '', window.location.pathname); };
     const checkSession = () => { if (!accountRef.current) return; void getSession().then(active => {
       if (!active || active.accountId !== accountRef.current) { expired(); return; }
       setSession(active);
@@ -199,6 +222,7 @@ export default function App() {
   return <div className="app-shell"><aside className="sidebar" aria-label="Studio navigation"><div className="sidebar-head"><div className="wordmark"><span className="mark">✳</span><span>firelaunch<small>CREATOR STUDIO</small></span></div>{session && <div className="sidebar-account"><span title={session.email}>{session.email}</span><button onClick={() => void logout().then(() => window.dispatchEvent(new window.Event('firelaunch-session-expired'))).catch(reason => setError(String(reason)))}>Sign out</button></div>}</div><div className="sidebar-project"><div className="sidebar-label">WORKSPACE</div><button className="project-switch" onClick={() => setNewChannel(true)} aria-label="New channel workspace"><span className="project-avatar">{project?.spec.title[0] ?? '+'}</span><span>{project?.spec.title ?? 'New channel'}<small>{project ? `REV ${project.revision} · ${session ? 'PRIVATE' : 'LOCAL'}` : 'GET STARTED'}</small></span><span aria-hidden="true">＋</span></button>{projects.length > 1 && <select className="project-select" aria-label="Switch project" value={project?.id ?? ''} onChange={event => { if (projects.some(item => item.id === event.target.value)) void switchProject(event.target.value); }}>{projects.map(item => <option key={item.id} value={item.id}>{item.spec.title}</option>)}</select>}</div>
     <div className="sidebar-label sidebar-sections-label">CHANNEL WORKSPACE</div><nav className="sidebar-nav" aria-label="Studio surfaces">{surfaces.map(target => <button key={target} disabled={!project} aria-current={surface === target && project && !newChannel ? 'page' : undefined} className={surface === target && project && !newChannel ? 'active' : ''} onClick={() => { setSurface(target); setNewChannel(false); }}><span aria-hidden="true">{icons[target]}</span>{target}</button>)}</nav><div className="sidebar-footer">✧ &nbsp; Vega-first creation<br/><small>{session ? 'Hosted studio' : 'Local studio'}</small></div></aside>
     <main className="studio-main"><header className="topbar"><div className="topbar-title"><span className="eyebrow">STUDIO / {newChannel || !project ? 'NEW CHANNEL' : surface.toUpperCase()}</span><h1>{newChannel ? 'Your next channel' : project?.spec.title ?? 'Your next channel'}</h1></div><div className="topbar-right"><span className="status" role="status"><i aria-hidden="true"/> {busy ? 'SAVING' : project ? session ? 'SAVED PRIVATELY' : 'SAVED LOCALLY' : 'READY'}</span><button onClick={() => setNewChannel(previous => !previous)}>{newChannel && project ? '← Current channel' : '＋ New channel'}</button></div></header>
+      {session && project && <VideoTransferNotice accountId={session.accountId} projectId={project.id} onOpen={openVideo}/>}
       {error && <div className="error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></div>}
       {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : surface === 'Home' ? <Home key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} projects={projects} accountId={session?.accountId ?? null} hosted={!!session} libraryRevision={libraryRevision} onSelectProject={id => void switchProject(id)} onNewChannel={() => setNewChannel(true)} onSurface={setSurface} onOpenVideo={openVideo} onPreview={() => { setSurface('Design'); window.setTimeout(() => document.getElementById('tv-preview')?.scrollIntoView?.(), 0); }}/> : <div className="workspace"><div className="workspace-jump"><a href="#tv-preview">TV Preview</a><a href="#studio-controls">{surface} controls</a></div><div className="workspace-main" id="tv-preview"><Preview key={project.id} spec={project.spec}/><div className="under-preview"><div><span className="eyebrow">TV-FIRST INTERACTION</span><h2>From idea to living room.</h2><p>Navigate every tile with the remote. Changes you save on the right appear here immediately. Device playback still needs separate qualification.</p></div><span className="signal">◉ &nbsp; SHARED TV SEMANTICS</span></div></div><aside className="inspector" id="studio-controls" aria-label={`${surface} controls`} key={`${project.id}:${surface}`}>
         {surface === 'Catalog' ? <Catalog project={project} hosted={!!session} {...(session ? { accountId: session.accountId } : {})} libraryRevision={libraryRevision} onOpenVideo={openVideo} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => setSurface('Create')}/> : surface === 'Design' ? <Design project={project} commit={commit}/> : surface === 'Content' ? <Content project={project} commit={commit} hosted={!!session}/> : surface === 'Create' ? <AgentPanel key={project.id} project={project} {...(draftSelection ? { catalogSelection: draftSelection.selection } : {})} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery project={project} surface={surface} hosted={!!session} />}

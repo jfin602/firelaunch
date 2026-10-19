@@ -1,20 +1,24 @@
 import { abortVideoUpload, finalizeVideoUpload, startVideoUpload, videoUploadPart, type VideoUploadStatus } from './api.js';
+import { sha256 } from '@noble/hashes/sha256';
 
-// Browser hashing buffers the selected file. Keep this UI limit below the server's larger upload ceiling.
-export const STUDIO_VIDEO_MAX_BYTES = 250_000_000;
+export const STUDIO_VIDEO_MAX_BYTES = 2_000_000_000;
+export const VIDEO_HASH_CHUNK_BYTES = 4 * 1024 * 1024;
 export function titleFromFilename(filename: string): string {
   return filename.replace(/\.mp4$/i, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
 }
 export async function hashVideoFile(file: File): Promise<string> {
-  if (!crypto?.subtle) throw new Error('Secure browser hashing is unavailable.');
-  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer())))
+  validateVideoFile(file);
+  const hash = sha256.create();
+  for (let offset = 0; offset < file.size; offset += VIDEO_HASH_CHUNK_BYTES)
+    hash.update(new Uint8Array(await file.slice(offset, offset + VIDEO_HASH_CHUNK_BYTES).arrayBuffer()));
+  return Array.from(hash.digest())
     .map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 export function validateVideoFile(file: File): void {
   if (file.type !== 'video/mp4' || !/^[a-zA-Z0-9][a-zA-Z0-9._ -]{0,120}\.mp4$/i.test(file.name))
     throw new Error('Choose an MP4 file with a simple .mp4 filename.');
   if (!file.size || file.size > STUDIO_VIDEO_MAX_BYTES)
-    throw new Error('Choose a nonempty MP4 under 250 MB.');
+    throw new Error('Choose a nonempty MP4 up to 2 GB.');
 }
 
 function putPart(url: string, body: Blob, signal: AbortSignal, onProgress: (bytes: number) => void): Promise<string> {
@@ -53,8 +57,8 @@ export function readVideoDuration(file: File): Promise<number> {
       video.removeAttribute('src'); video.load(); URL.revokeObjectURL(url);
       if (error) reject(error);
       else {
-        if (!Number.isInteger(seconds) || seconds < 1 || seconds > 1800)
-          reject(new Error('Choose a video between 1 second and 30 minutes.'));
+        if (!Number.isInteger(seconds) || seconds < 1 || seconds > 7200)
+          reject(new Error('Choose a video between 1 second and 2 hours.'));
         else resolve(seconds);
       }
     };
@@ -107,8 +111,8 @@ export async function uploadVideo(projectId: string, mediaAssetId: string, file:
   inspectedDurationSeconds?: number, inspectedSha256?: string): Promise<VideoUploadStatus> {
   validateVideoFile(file);
   const durationSeconds = inspectedDurationSeconds ?? await readVideoDuration(file);
-  if (!Number.isInteger(durationSeconds) || durationSeconds < 1 || durationSeconds > 1800)
-    throw new Error('Choose a video between 1 second and 30 minutes.');
+  if (!Number.isInteger(durationSeconds) || durationSeconds < 1 || durationSeconds > 7200)
+    throw new Error('Choose a video between 1 second and 2 hours.');
   const digest = inspectedSha256 ?? await hashVideoFile(file);
   if (!/^[a-f0-9]{64}$/.test(digest)) throw new Error('Video checksum is invalid.');
   if (signal.aborted) throw new Error('Upload canceled.');

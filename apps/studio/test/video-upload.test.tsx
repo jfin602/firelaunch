@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
+import { createHash } from 'node:crypto';
 import { getSession } from '../src/api.js';
-import { extractVideoThumbnail, titleFromFilename, validateVideoFile, readVideoDuration } from '../src/video-upload.js';
+import { extractVideoThumbnail, hashVideoFile, titleFromFilename, validateVideoFile, readVideoDuration, uploadVideo, VIDEO_HASH_CHUNK_BYTES } from '../src/video-upload.js';
 import { NewVideoUpload, videoProcessingMessage } from '../src/VideoUpload.js';
+import { clearVideoTransfers, startVideoTransfer, stopVideoTransfer, subscribeVideoTransfers, videoTransfer, videoTransfers } from '../src/video-transfer.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://studio.example/' });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement });
@@ -33,15 +35,80 @@ function mockDuration(seconds = 12) {
 const validFile = () => { const file = new File(['x'], 'my-film.mp4', { type: 'video/mp4' });
   Object.defineProperty(file, 'arrayBuffer', { value: async () => new Uint8Array([120]).buffer }); return file; };
 
-test('file constraints and automatic duration keep the existing upload limits', async () => {
+test('file constraints and metadata accept two hours inclusively', async () => {
   assert.throws(() => validateVideoFile(new File(['x'], 'a.mov', { type: 'video/quicktime' })), /MP4/);
   assert.throws(() => validateVideoFile(new File(['x'], '../bad.mp4', { type: 'video/mp4' })), /MP4/);
-  const huge = validFile(); Object.defineProperty(huge, 'size', { value: 250_000_001 });
-  assert.throws(() => validateVideoFile(huge), /250 MB/);
-  const restore = mockDuration(1801);
-  try { await assert.rejects(readVideoDuration(validFile()), /30 minutes/); }
+  const max = validFile(); Object.defineProperty(max, 'size', { value: 2_000_000_000 });
+  validateVideoFile(max);
+  const huge = validFile(); Object.defineProperty(huge, 'size', { value: 2_000_000_001 });
+  assert.throws(() => validateVideoFile(huge), /2 GB/);
+  const restore = mockDuration(7200);
+  try { assert.equal(await readVideoDuration(validFile()), 7200); }
   finally { restore(); }
+  const reject = mockDuration(7201);
+  try { await assert.rejects(readVideoDuration(validFile()), /2 hours/); }
+  finally { reject(); }
+  await assert.rejects(uploadVideo(projectId, assetId, validFile(), new AbortController().signal,
+    () => {}, () => {}, 7201, 'a'.repeat(64)), /2 hours/);
   assert.equal(titleFromFilename('My_film-final.mp4'), 'My film final');
+});
+
+test('incremental SHA-256 reads bounded slices and matches whole-file secure digest', async () => {
+  const bytes = new Uint8Array(VIDEO_HASH_CHUNK_BYTES * 2 + 17);
+  for (let index = 0; index < bytes.length; index++) bytes[index] = index % 251;
+  const file = new File([bytes], 'hash.mp4', { type: 'video/mp4' });
+  Object.defineProperty(file, 'arrayBuffer', { value: () => { throw new Error('whole-file read forbidden'); } });
+  const originalSlice = file.slice.bind(file);
+  let chunks = 0, largest = 0;
+  Object.defineProperty(file, 'slice', { value: (start: number, end: number) => {
+    chunks++; largest = Math.max(largest, end - start); return originalSlice(start, end);
+  } });
+  assert.equal(await hashVideoFile(file), createHash('sha256').update(bytes).digest('hex'));
+  assert.equal(chunks, 3); assert.equal(largest, VIDEO_HASH_CHUNK_BYTES);
+});
+
+test('in-tab transfer survives popup listener removal, remains owner scoped, and Stop aborts it', async () => {
+  const priorFetch = globalThis.fetch, priorXHR = globalThis.XMLHttpRequest;
+  const requests: string[] = [];
+  let directPut: { abort: () => void } | null = null;
+  class WaitingXHR {
+    status = 200; upload = { onprogress: (_event: ProgressEvent) => {} };
+    onload = () => {}; onerror = () => {}; onabort = () => {};
+    open() {} set withCredentials(value: boolean) { assert.equal(value, false); }
+    send() { directPut = this; }
+    abort() { this.onabort(); }
+    getResponseHeader() { return 'a'.repeat(32); }
+  }
+  globalThis.XMLHttpRequest = WaitingXHR as unknown as typeof XMLHttpRequest;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input); requests.push(url);
+    if (url === '/api/auth/session') return json({ accountId: owner, email: 'owner@example.test', csrfToken: 'csrf-proof', expiresAt: new Date().toISOString() });
+    if (url.endsWith('/media-uploads') && init?.method === 'POST') {
+      assert.equal(JSON.parse(String(init.body)).claimedDurationSeconds, 7200);
+      assert.equal(new Headers(init.headers).get('x-csrf-token'), 'csrf-proof');
+      return json({ id: uploadId, state: 'initiated', partSize: 8_388_608, partCount: 1, expiresAt: new Date(Date.now() + 100000).toISOString() }, 201);
+    }
+    if (url.endsWith('/part')) return json({ url: 'https://s3.example/part', contentLength: 1, expiresInSeconds: 300 });
+    if (url.endsWith('/abort')) return json({ id: uploadId, state: 'aborted' });
+    throw new Error(url);
+  }) as typeof fetch;
+  try {
+    await getSession();
+    let updates = 0;
+    const unsubscribe = subscribeVideoTransfers(() => updates++);
+    const task = startVideoTransfer({ accountId: owner, projectId, itemId, assetId, file: validFile(),
+      durationSeconds: 7200, sha256: createHash('sha256').update('x').digest('hex') });
+    await waitFor(() => assert.ok(directPut));
+    unsubscribe(); // the popup is gone; its listener and controls no longer own the task
+    assert.equal(videoTransfer(owner, projectId, itemId)?.state, 'uploading');
+    assert.equal(videoTransfers(id('cr', 'f'), projectId).length, 0);
+    assert.equal(videoTransfers(owner, id('ch', 'f')).length, 0);
+    assert.ok(updates > 0);
+    stopVideoTransfer(owner, projectId, itemId);
+    await assert.rejects(task, /Upload canceled/);
+    assert.equal(videoTransfer(owner, projectId, itemId)?.state, 'stopped');
+    assert.ok(requests.some(value => value.endsWith('/abort')));
+  } finally { clearVideoTransfers(owner); globalThis.fetch = priorFetch; globalThis.XMLHttpRequest = priorXHR; }
 });
 
 test('supported browser frame extraction yields a bounded private JPEG draft thumbnail', async () => {
@@ -76,7 +143,7 @@ test('supported browser frame extraction yields a bounded private JPEG draft thu
 });
 
 test('Add Video has one unchecked rights confirmation, filename title, optional fields and default Videos category', () => {
-  render(createElement(NewVideoUpload, { projectId, inventory: { revision: 0, sources: [], items: [], mediaAssets: [], collections: [] } as any,
+  render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory: { revision: 0, sources: [], items: [], mediaAssets: [], collections: [] } as any,
     refresh: async () => { throw new Error('No request expected'); }, onCreated: () => {}, onClose: () => {} }));
   try {
     assert.equal(screen.getAllByRole('checkbox').length, 1);
@@ -95,7 +162,7 @@ test('missing file, empty title and rights prevent catalog creation', async () =
   let requests = 0;
   const priorFetch = globalThis.fetch;
   globalThis.fetch = (async () => { requests++; throw new Error('Unexpected request'); }) as typeof fetch;
-  render(createElement(NewVideoUpload, { projectId, inventory: { revision: 0, sources: [], items: [], mediaAssets: [], collections: [] } as any,
+  render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory: { revision: 0, sources: [], items: [], mediaAssets: [], collections: [] } as any,
     refresh: async () => { throw new Error('Unexpected refresh'); }, onCreated: () => {}, onClose: () => {} }));
   try {
     fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
@@ -160,7 +227,7 @@ test('private video draft links one item and asset; failed part retries without 
   try {
     await getSession();
     const created: string[] = [];
-    render(createElement(NewVideoUpload, { projectId, inventory, refresh: async () => inventory, onCreated: id => created.push(id), onClose: () => {} }));
+    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, refresh: async () => inventory, onCreated: id => created.push(id), onClose: () => {} }));
     fireEvent.change(screen.getByLabelText('Video file'), { target: { files: [validFile()] } });
     fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'A short description.' } });
     fireEvent.click(screen.getByRole('checkbox'));
@@ -175,7 +242,7 @@ test('private video draft links one item and asset; failed part retries without 
     assert.deepEqual(counts, { source: 1, item: 1, asset: 1, upload: 2, collection: 1 });
     assert.deepEqual(inventory.collections[0].itemIds, []);
     cleanup();
-    render(createElement(NewVideoUpload, { projectId, inventory, refresh: async () => inventory, onCreated: id => created.push(id), onClose: () => {} }));
+    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, refresh: async () => inventory, onCreated: id => created.push(id), onClose: () => {} }));
     fireEvent.change(screen.getByLabelText('Video file'), { target: { files: [validFile()] } });
     fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'A short description.' } });
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: collectionId } });
@@ -187,7 +254,7 @@ test('private video draft links one item and asset; failed part retries without 
     assert.deepEqual(inventory.collections[1].itemIds, [], 'a chosen category replaces the default placement');
     assert.deepEqual(created, [itemId]);
     cleanup();
-    render(createElement(NewVideoUpload, { projectId, inventory, refresh: async () => inventory, onCreated: id => created.push(id), onClose: () => {} }));
+    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, refresh: async () => inventory, onCreated: id => created.push(id), onClose: () => {} }));
     fireEvent.change(screen.getByLabelText('Video file'), { target: { files: [validFile()] } });
     fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'A short description.' } });
     fireEvent.click(screen.getByRole('checkbox'));
@@ -205,6 +272,33 @@ test('processing-disabled upload remains private and cannot be labeled ready or 
   assert.match(videoProcessingMessage({ ...base, processingAvailable: false, processing: null }), /cannot be played or published/);
   assert.match(videoProcessingMessage({ ...base, processing: { state: 'failed', failureCode: 'encode_failed' } }), /Needs attention/);
   assert.match(videoProcessingMessage({ ...base, processing: { state: 'ready', failureCode: null } }), /separate creator approval/);
+});
+
+test('reopened unfinished draft explains file loss and requires selection before retry', async () => {
+  const previous = globalThis.fetch;
+  const inventory = { revision: 1, sources: [], collections: [], items: [], mediaAssets: [
+    { id: assetId, catalogItemId: itemId, kind: 'video', location: { type: 'managed_hls' } }
+  ] } as any;
+  const item = { id: itemId, kind: 'video', sourceRecord: { metadata: { title: 'Saved film' } } } as any;
+  let writes = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === '/api/auth/session') return json({ accountId: owner, email: 'owner@example.test', csrfToken: 'csrf-proof', expiresAt: new Date().toISOString() });
+    if (init?.method) writes++;
+    if (url.endsWith('/media-uploads')) return json({ uploadId, uploadState: 'initiated', processing: null });
+    if (url.endsWith(`/${uploadId}`)) return json({ id: uploadId, state: 'initiated', verification: 'unverified',
+      expectedBytes: 1, expiresAt: new Date(Date.now() - 1000).toISOString(), partSize: 8_388_608, partCount: 1 });
+    throw new Error(url);
+  }) as typeof fetch;
+  try {
+    await getSession();
+    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, existingItem: item,
+      refresh: async () => inventory, onCreated: () => {}, onClose: () => {} }));
+    await screen.findByText(/Uploads do not resume after refresh/);
+    fireEvent.click(screen.getByRole('button', { name: 'Replace video upload' }));
+    await screen.findByText('Choose an MP4 video.');
+    assert.equal(writes, 0);
+  } finally { cleanup(); globalThis.fetch = previous; }
 });
 
 test('later thumbnail replacement stays private, owner-scoped and keeps its artwork asset ID', async () => {
@@ -235,7 +329,7 @@ test('later thumbnail replacement stays private, owner-scoped and keeps its artw
   }) as typeof fetch;
   try {
     await getSession();
-    render(createElement(NewVideoUpload, { projectId, inventory, refresh: async () => inventory,
+    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, refresh: async () => inventory,
       existingItem: item, onCreated: () => {}, onClose: () => {} }));
     const thumbnail = new File(['png'], 'cover.png', { type: 'image/png' });
     Object.defineProperty(thumbnail, 'arrayBuffer', { value: async () => new Uint8Array([137, 80, 78, 71]).buffer });

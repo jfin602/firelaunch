@@ -10,10 +10,11 @@
     "test": "node --import tsx --test test/*.test.tsx"
   },
   "dependencies": {
-    "@firelaunch/channel-engine": "0.0.1",
     "@firelaunch/agent": "0.0.4",
+    "@firelaunch/channel-engine": "0.0.1",
     "@firelaunch/contracts": "0.0.1",
     "@firelaunch/tv": "0.0.2",
+    "@noble/hashes": "^1.8.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

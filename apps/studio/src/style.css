@@ -583,3 +583,5 @@ body { min-width: 0; }
 .video-workspace-lock { padding: 12px; border-left: 3px solid var(--fl-orange); background: #38211e; color: var(--fl-text); }
 .video-workspace :is(button, input, select, textarea):focus-visible { outline: 3px solid var(--fl-focus); outline-offset: 3px; }
 @media (max-width: 600px) { .video-workspace-backdrop { padding: 0; } .video-workspace { width: 100%; height: 100vh; height: 100dvh; max-height: none; border-radius: 0; } .video-workspace-header { padding: 16px; } .video-workspace-body { padding: 12px; } .video-workspace-summary { align-items: flex-start; } }
+
+.video-transfer-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 24px;background:#3b241c;border-bottom:1px solid #bd6842;color:#fff0e7;font-size:13px}.video-transfer-banner span{flex:1;min-width:200px}.video-transfer-banner button{background:#a33e20;color:white;border:1px solid #dd7651;border-radius:6px;padding:7px 11px}

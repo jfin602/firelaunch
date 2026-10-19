@@ -10,12 +10,13 @@ const sessionId = z.string().regex(/^up_[a-f0-9]{32}$/);
 const etag = z.string().regex(/^"?[a-f0-9]{32}(?:-\d+)?"?$/);
 const PART_BYTES = 8 * 1024 * 1024;
 const MAX_BYTES = 2_000_000_000;
+export const UPLOAD_SESSION_TTL_MS = 4 * 60 * 60_000;
 export const startVideoUploadSchema = z.strictObject({
   mediaAssetId: assetId, idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{16,128}$/),
   fileName: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._ -]{0,120}\.mp4$/i),
   contentType: z.literal('video/mp4'), expectedBytes: z.number().int().min(1).max(MAX_BYTES),
   expectedSha256: z.string().regex(/^[a-f0-9]{64}$/),
-  claimedDurationSeconds: z.number().int().min(1).max(1800)
+  claimedDurationSeconds: z.number().int().min(1).max(7200)
 });
 export const finishVideoUploadSchema = z.strictObject({
   mediaAssetId: assetId, parts: z.array(z.strictObject({
@@ -40,7 +41,7 @@ export class MediaUploadService {
     const created = await this.records.createUpload(principal, projectId, input.mediaAssetId, {
       idempotencyKey: input.idempotencyKey, expectedBytes: input.expectedBytes,
       expectedSha256: input.expectedSha256, claimedDurationSeconds: input.claimedDurationSeconds,
-      partSize: PART_BYTES, partCount, expiresAt: new Date(Date.now() + 3_600_000).toISOString()
+      partSize: PART_BYTES, partCount, expiresAt: new Date(Date.now() + UPLOAD_SESSION_TTL_MS).toISOString()
     });
     let current = await this.records.upload(principal, projectId, input.mediaAssetId, created.id);
     if (current.state === 'initiated' && !current.s3UploadId && Date.parse(current.expiresAt) > Date.now()) {

@@ -5,6 +5,7 @@ import { createElement } from 'react';
 import { starterChannel } from '@firelaunch/channel-engine';
 import type { ChannelProject } from '@firelaunch/contracts';
 import App from '../src/App.js';
+import { clearVideoTransfers, startVideoTransfer, videoTransfer } from '../src/video-transfer.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://studio.example/' });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement });
@@ -130,6 +131,49 @@ test('video workspace blocks Escape and close while a video action is pending', 
     fireEvent.keyDown(dialog, { key: 'Escape' });
     await waitFor(() => assert.equal(screen.queryByRole('dialog'), null));
   } finally { mock.restore(); }
+});
+
+test('closing the video popup keeps an active upload, reopening shows Stop', async () => {
+  const mock = setup([first], () => json({ ...empty(firstId), sources: [source], items: [film(firstId)] }));
+  const previousFetch = globalThis.fetch, previousXHR = globalThis.XMLHttpRequest;
+  const assetId = `ma_${'f'.repeat(32)}`, uploadId = `up_${'a'.repeat(32)}`;
+  let sent = false;
+  class WaitingXHR {
+    status = 200; upload = { onprogress: (_event: ProgressEvent) => {} };
+    onload = () => {}; onerror = () => {}; onabort = () => {};
+    open() {} set withCredentials(_value: boolean) {}
+    send() { sent = true; }
+    abort() { this.onabort(); }
+    getResponseHeader() { return 'a'.repeat(32); }
+  }
+  globalThis.XMLHttpRequest = WaitingXHR as unknown as typeof XMLHttpRequest;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith('/media-uploads') && init?.method === 'POST')
+      return json({ id: uploadId, state: 'initiated', partSize: 8_388_608, partCount: 1, expiresAt: new Date(Date.now() + 100000).toISOString() }, 201);
+    if (url.endsWith('/part')) return json({ url: 'https://s3.example/part', contentLength: 1, expiresInSeconds: 300 });
+    if (url.endsWith('/abort')) return json({ id: uploadId, state: 'aborted' });
+    return previousFetch(input, init);
+  }) as typeof fetch;
+  try {
+    render(createElement(App));
+    const card = await screen.findByRole('button', { name: 'Open Director Cut video' });
+    const file = new File(['x'], 'one.mp4', { type: 'video/mp4' });
+    const transfer = startVideoTransfer({ accountId: owner, projectId: firstId, itemId, assetId,
+      file, durationSeconds: 12, sha256: 'a'.repeat(64) });
+    await waitFor(() => assert.equal(sent, true));
+    fireEvent.click(card);
+    await screen.findByRole('dialog', { name: 'Director Cut' });
+    fireEvent.click(screen.getByRole('button', { name: 'Close video workspace' }));
+    await waitFor(() => assert.equal(screen.queryByRole('dialog'), null));
+    assert.equal(videoTransfer(owner, firstId, itemId)?.state, 'uploading');
+    assert.ok(screen.getByText(/Keep this tab open/));
+    fireEvent.click(screen.getByRole('button', { name: 'Open video' }));
+    await screen.findByRole('dialog', { name: 'Director Cut' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Stop upload' })[0]!);
+    await assert.rejects(transfer, /Upload canceled/);
+    assert.equal(videoTransfer(owner, firstId, itemId)?.state, 'stopped');
+  } finally { clearVideoTransfers(owner); globalThis.fetch = previousFetch; globalThis.XMLHttpRequest = previousXHR; mock.restore(); }
 });
 
 test('session loss clears the selected video and its private workspace', async () => {

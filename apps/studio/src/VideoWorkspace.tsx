@@ -76,8 +76,8 @@ export function VideoWorkspace({ selection, onIdentity, onClose }: {
       {!inventory && !error && <p role="status">Loading video library…</p>}
       {inventory && selection.itemId && !item && createdId.current !== selection.itemId && <p role="alert">This video draft is unavailable in the current channel.</p>}
       {item && <div className="video-workspace-summary"><span className="video-workspace-art">{art ? <img src={art} alt="" referrerPolicy="no-referrer" /> : <span aria-label="Artwork unavailable">▣</span>}</span><div><strong>{title}</strong><p>{asset ? <VideoLibraryStatus projectId={selection.projectId} assetId={asset.id}/> : 'Draft · no playable upload'}</p><small>Artwork and TV rights remain subject to review before publication.</small></div></div>}
-      {inventory && (!selection.itemId || item || createdId.current === selection.itemId) && <NewVideoUpload projectId={selection.projectId} inventory={inventory} refresh={refresh} {...(item ? { existingItem: item } : {})} onCreated={id => { createdId.current = id; onIdentity(id); }} onClose={requestClose} onBusyChange={value => { uploadingRef.current = value; setUploading(value); }}/ >}
-      {uploading && <p role="status" className="video-workspace-lock">Keep this workspace open until the current action finishes. An active upload can be stopped with the control above.</p>}
+      {inventory && (!selection.itemId || item || createdId.current === selection.itemId) && <NewVideoUpload accountId={selection.accountId} projectId={selection.projectId} inventory={inventory} refresh={refresh} {...(item ? { existingItem: item } : {})} onCreated={id => { createdId.current = id; onIdentity(id); }} onClose={requestClose} onBusyChange={value => { uploadingRef.current = value; setUploading(value); }}/ >}
+      {uploading && <p role="status" className="video-workspace-lock">Keep this workspace open while the private draft is being prepared. You can close it once transfer begins.</p>}
     </div>
   </div></div>, document.body);
 }
