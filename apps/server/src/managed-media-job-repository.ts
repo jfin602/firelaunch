@@ -108,7 +108,7 @@ export class ManagedMediaJobRepository {
       const duration = await client.query<{ claimed_duration_seconds: number | null }>(
         'SELECT claimed_duration_seconds FROM media_upload_sessions WHERE id=$1', [job.upload_session_id]);
       const claimed = duration.rows[0]?.claimed_duration_seconds;
-      if (!claimed || claimed > 1800 || Number(quota.rows[0]?.active) >= 2 ||
+      if (!claimed || claimed > 7200 || Number(quota.rows[0]?.active) >= 2 ||
         Number(quota.rows[0]?.seconds) + claimed > 7200) return stale();
       const token = randomUUID();
       const prefix = `media/${scope.creatorAccountId.slice(3)}/${scope.projectId.slice(3)}/${scope.mediaAssetId.slice(3)}/staged/${token.replaceAll('-', '')}/`;

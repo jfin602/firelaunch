@@ -23,6 +23,12 @@ const bucketName = /^(?!\d+\.\d+\.\d+\.\d+$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
 const regionName = /^[a-z]{2}(?:-gov)?-[a-z]+-\d$/;
 const fileName = /^[a-z0-9][a-z0-9_-]{0,80}\.(?:m3u8|ts|m4s|mp4)$/;
 const maxOutputBytes = 64 * 1024 * 1024;
+const maxPlaylistBytes = 1_000_000;
+const maxHlsSeconds = 7200;
+const maxSegmentsPerVariant = 1250;
+const maxHlsObjects = 2 * maxSegmentsPerVariant + 3;
+const maxHlsBytes = 8_000_000_000;
+const listPageSize = 1000;
 const maxOriginalBytes = 50_000_000_000;
 const reject = (reason: string): never => { throw new Error(`Media storage: ${reason}`); };
 const digest = (body: Buffer) => createHash('sha256').update(body).digest('hex');
@@ -97,13 +103,42 @@ export function publisherCredentialsFromEnv(env: NodeJS.ProcessEnv,
 export class S3MediaStorage {
   private readonly config: MediaStorageConfig;
   constructor(config: MediaStorageConfig, private readonly originals: S3Client, private readonly staging: S3Client,
-    private readonly publisher?: S3Client, private readonly operator?: S3Client) {
+    private readonly publisher?: S3Client, private readonly operator?: S3Client,
+    private readonly assertRevoked?: (scope: MediaScope) => Promise<void>) {
     this.config = validateMediaStorageConfig(config);
   }
 
   private async request<T>(operation: () => Promise<T>): Promise<T> {
     try { return await operation(); }
     catch { return reject('S3 request failed'); }
+  }
+
+  private async listScoped(client: S3Client, prefix: string, limit: number): Promise<string[]> {
+    const keys: string[] = [];
+    const seenKeys = new Set<string>();
+    const seenCursors = new Set<string>();
+    let cursor: string | undefined;
+    do {
+      const page = await this.request(() => client.send(new ListObjectsV2Command({
+        Bucket: this.config.deliveryBucket, Prefix: prefix, MaxKeys: listPageSize,
+        ...(cursor ? { ContinuationToken: cursor } : {}) })));
+      const entries = page.Contents ?? [];
+      if (entries.length > listPageSize || (page.KeyCount !== undefined && page.KeyCount !== entries.length) ||
+        (page.IsTruncated && (!entries.length || !page.NextContinuationToken)) ||
+        (!page.IsTruncated && page.NextContinuationToken)) reject('scoped object listing incomplete');
+      for (const entry of entries) {
+        const key = entry.Key;
+        if (!key || !key.startsWith(prefix) || seenKeys.has(key)) reject('scoped object listing unsafe or duplicated');
+        seenKeys.add(key!); keys.push(key!);
+        if (keys.length > limit) reject('scoped object listing exceeds profile limit');
+      }
+      if (!page.IsTruncated) break;
+      const nextCursor = page.NextContinuationToken!;
+      if (seenCursors.has(nextCursor)) reject('scoped object listing repeated cursor');
+      seenCursors.add(nextCursor);
+      cursor = nextCursor;
+    } while (true);
+    return keys;
   }
 
   private deliveryOrigin(): string {
@@ -267,23 +302,22 @@ export class S3MediaStorage {
     const ownedPrefix = `${scopePath(scope)}/staged/`;
     if (!new RegExp(`^${ownedPrefix}[a-f0-9]{32}/$`).test(rawPrefix) ||
       rawPrefix === `${ownedPrefix}${renditionId(setId)}/`) reject('managed output prefix differs from reserved scope');
-    const listed = await this.request(() => this.staging.send(new ListObjectsV2Command({
-      Bucket: this.config.deliveryBucket, Prefix: rawPrefix, MaxKeys: 1000 })));
-    if (listed.IsTruncated || !listed.Contents?.length || listed.Contents.length > 600) reject('managed HLS graph missing or too large');
-    const keys = listed.Contents!.map(value => value.Key);
-    if (keys.some(value => !value || !value.startsWith(rawPrefix) ||
-      !fileName.test(value.slice(rawPrefix.length)))) reject('managed HLS path invalid');
-    const names = new Set(keys.map(value => value!.slice(rawPrefix.length)));
-    if (names.size !== keys.length) reject('managed HLS duplicate output');
+    const keys = await this.listScoped(this.staging, rawPrefix, maxHlsObjects);
+    if (!keys.length || keys.some(value => !fileName.test(value.slice(rawPrefix.length)))) reject('managed HLS path invalid');
+    const names = new Set(keys.map(value => value.slice(rawPrefix.length)));
+    let verifiedBytes = 0;
     const read = async (name: string): Promise<Buffer> => {
       if (!names.has(name)) reject('managed HLS object missing');
       const key = `${rawPrefix}${outputName(name)}`;
       const head = await this.request(() => this.staging.send(new HeadObjectCommand({
         Bucket: this.config.deliveryBucket, Key: key })));
-      if (!head.ETag || !head.ContentLength || head.ContentLength > maxOutputBytes ||
+      if (!head.ETag || !head.ContentLength ||
+        head.ContentLength > (name.endsWith('.m3u8') ? maxPlaylistBytes : maxOutputBytes) ||
         head.ContentType?.toLowerCase() !== contentType(name) || head.ServerSideEncryption !== 'AES256')
         reject('managed HLS object metadata invalid');
       const expectedLength = head.ContentLength!;
+      verifiedBytes += expectedLength;
+      if (verifiedBytes > maxHlsBytes) reject('managed HLS byte limit exceeded');
       const object = await this.request(() => this.staging.send(new GetObjectCommand({
         Bucket: this.config.deliveryBucket, Key: key, IfMatch: head.ETag })));
       if (!object.Body || object.ContentLength !== expectedLength) reject('managed HLS object changed');
@@ -291,7 +325,8 @@ export class S3MediaStorage {
       for await (const chunk of object.Body as Readable) {
         const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
         bytes += data.length;
-        if (bytes > expectedLength || bytes > maxOutputBytes) reject('managed HLS object too large');
+        if (bytes > expectedLength || bytes > (name.endsWith('.m3u8') ? maxPlaylistBytes : maxOutputBytes))
+          reject('managed HLS object too large');
         chunks.push(data);
       }
       if (bytes !== expectedLength) reject('managed HLS object length changed');
@@ -302,7 +337,8 @@ export class S3MediaStorage {
     };
     const playlists = [...names].filter(name => name.endsWith('.m3u8'));
     if (playlists.length !== 3) reject('managed HLS playlist count differs');
-    const bodies = await Promise.all(playlists.map(async name => [name, (await read(name)).toString('utf8')] as const));
+    const bodies: Array<readonly [string, string]> = [];
+    for (const name of playlists) bodies.push([name, (await read(name)).toString('utf8')]);
     const masters = bodies.filter(([, body]) => body.includes('#EXT-X-STREAM-INF:'));
     if (masters.length !== 1) reject('managed HLS master missing');
     const masterLines = masters[0]![1].replaceAll('\r\n', '\n').trim().split('\n');
@@ -352,7 +388,9 @@ export class S3MediaStorage {
           line === '#EXT-X-PLAYLIST-TYPE:VOD' || /^#EXT-X-TARGETDURATION:[1-9]\d*$/.test(line) ||
           /^#EXT-X-MEDIA-SEQUENCE:(?:0|[1-9]\d{0,9})$/.test(line))) reject('managed HLS variant directive unsupported');
       }
-      if (!pairs.length || pairs.length > 250 || pairs.reduce((sum, pair) => sum + Number(pair.duration), 0) > 1800)
+      if (!pairs.length || pairs.length > maxSegmentsPerVariant ||
+        pairs.some(pair => !Number.isFinite(Number(pair.duration)) || Number(pair.duration) <= 0 || Number(pair.duration) > 10) ||
+        pairs.reduce((sum, pair) => sum + Number(pair.duration), 0) > maxHlsSeconds)
         reject('managed HLS segment limit exceeded');
       const hashes: string[] = [];
       const targetDuration = Math.ceil(Math.max(...pairs.map(pair => Number(pair.duration))));
@@ -423,14 +461,22 @@ export class S3MediaStorage {
       set.masterKey !== this.stagedKey(scope, set.id, 'master.m3u8') ||
       set.variants.some(v => v.playlistKey !== this.stagedKey(scope, set.id, `v${v.height}.m3u8`)))
       reject('rendition identity or staging scope mismatch');
+    if (set.variants.length !== 2 || set.variants[0]?.height !== 480 || set.variants[1]?.height !== 720 ||
+      set.variants.some(v => v.segmentCount > maxSegmentsPerVariant)) reject('rendition fixed profile differs');
+    const stagedPrefix = `${scopePath(scope)}/staged/${renditionId(set.id)}/`;
+    const listed = new Set(await this.listScoped(this.staging, stagedPrefix, maxHlsObjects));
+    let verifiedBytes = 0;
     const read = async (name: string): Promise<StoredObject & { body: Buffer }> => {
       const key = this.stagedKey(scope, set.id, name);
+      if (!listed.has(key)) reject('staged HLS object missing');
       const head = await this.request(() => this.staging.send(new HeadObjectCommand({
         Bucket: this.config.deliveryBucket, Key: key, ChecksumMode: 'ENABLED' })));
       const length = head.ContentLength;
-      if (!length || length > maxOutputBytes || !head.ETag ||
+      if (!length || length > (name.endsWith('.m3u8') ? maxPlaylistBytes : maxOutputBytes) || !head.ETag ||
         head.ContentType !== contentType(name) || head.ServerSideEncryption !== 'AES256' ||
         head.ChecksumType !== 'FULL_OBJECT' || !head.ChecksumSHA256) return reject('staged HLS metadata incomplete');
+      verifiedBytes += length;
+      if (verifiedBytes > maxHlsBytes) reject('staged HLS byte limit exceeded');
       const expectedBytes: number = length;
       const object = await this.request(() => this.staging.send(new GetObjectCommand({
         Bucket: this.config.deliveryBucket, Key: key, IfMatch: head.ETag })));
@@ -439,12 +485,17 @@ export class S3MediaStorage {
       for await (const chunk of object.Body as Readable) {
         const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
         bytes += data.length;
-        if (bytes > maxOutputBytes || bytes > expectedBytes) reject('staged HLS object too large');
+        if (bytes > (name.endsWith('.m3u8') ? maxPlaylistBytes : maxOutputBytes) || bytes > expectedBytes)
+          reject('staged HLS object too large');
         chunks.push(data);
       }
       const body = Buffer.concat(chunks); const sha256 = digest(body);
       if (bytes !== expectedBytes || checksum(sha256) !== head.ChecksumSHA256)
         reject('staged HLS checksum mismatch');
+      const after = await this.request(() => this.staging.send(new HeadObjectCommand({
+        Bucket: this.config.deliveryBucket, Key: key, ChecksumMode: 'ENABLED' })));
+      if (after.ETag !== head.ETag || after.ContentLength !== length || after.ChecksumSHA256 !== head.ChecksumSHA256)
+        reject('staged HLS object mutated');
       return { key, bytes, sha256, body };
     };
     const files = new Map<string, StoredObject>();
@@ -455,7 +506,7 @@ export class S3MediaStorage {
       masterLines.length !== 2 + 2 * set.variants.length ||
       set.variants.some((v, i) => !new RegExp(`^#EXT-X-STREAM-INF:BANDWIDTH=[1-9]\\d*,RESOLUTION=[1-9]\\d*x${v.height}$`).test(masterLines[2 + 2 * i] ?? '') ||
         masterLines[3 + 2 * i] !== `v${v.height}.m3u8`)) reject('master playlist graph differs');
-    files.set('master.m3u8', master);
+    files.set('master.m3u8', { key: master.key, bytes: master.bytes, sha256: master.sha256 });
     for (const variant of set.variants) {
       const name = `v${variant.height}.m3u8`;
       const playlist = await read(name);
@@ -471,31 +522,49 @@ export class S3MediaStorage {
         /^#EXT-X-TARGETDURATION:[1-9]\d*$/.test(line) || /^#EXT-X-MEDIA-SEQUENCE:\d+$/.test(line) ||
         /^#EXTINF:(?:[0-9]+(?:\.[0-9]+)?),?$/.test(line)))) reject('unsupported variant playlist directive');
       const references = body.split('\n').filter(line => line && !line.startsWith('#'));
-      if (references.length !== variant.segmentCount || variant.segmentCount > 250 ||
+      const durations = [...body.matchAll(/^#EXTINF:([0-9]+(?:\.[0-9]+)?),?$/gm)].map(match => Number(match[1]));
+      const lines = body.trimEnd().split('\n');
+      const expectedHeader = ['#EXTM3U', '#EXT-X-VERSION:3', '#EXT-X-INDEPENDENT-SEGMENTS',
+        '#EXT-X-PLAYLIST-TYPE:VOD', `#EXT-X-TARGETDURATION:${Math.ceil(Math.max(...durations))}`,
+        '#EXT-X-MEDIA-SEQUENCE:0'];
+      if (lines.length !== expectedHeader.length + 2 * variant.segmentCount + 1 ||
+        expectedHeader.some((line, index) => lines[index] !== line) || lines.at(-1) !== '#EXT-X-ENDLIST' ||
+        references.some((reference, index) => lines[expectedHeader.length + 2 * index + 1] !== reference ||
+          !/^#EXTINF:[0-9]+(?:\.[0-9]+)?,?$/.test(lines[expectedHeader.length + 2 * index] ?? '')))
+        reject('variant playlist structure differs');
+      if (durations.length !== variant.segmentCount ||
+        durations.some(value => !Number.isFinite(value) || value <= 0 || value > 10) ||
+        durations.reduce((sum, value) => sum + value, 0) > maxHlsSeconds ||
+        references.length !== variant.segmentCount || variant.segmentCount > maxSegmentsPerVariant ||
         references.some((line, index) => line !== `v${variant.height}-${String(index).padStart(3, '0')}.ts`))
         reject('variant segment graph differs');
-      files.set(name, playlist);
+      files.set(name, { key: playlist.key, bytes: playlist.bytes, sha256: playlist.sha256 });
       const hashes: string[] = [];
       for (const segment of references) {
         const object = await read(segment);
-        files.set(segment, object);
+        if (object.body.length < 188 || object.body.length % 188 !== 0 || object.body[0] !== 0x47)
+          reject('staged HLS MPEG-TS segment invalid');
+        files.set(segment, { key: object.key, bytes: object.bytes, sha256: object.sha256 });
         hashes.push(object.sha256);
       }
       if (digest(Buffer.from(hashes.join(''))) !== variant.segmentsSha256) reject('segment graph changed');
     }
-    for (const [name, object] of files) await this.publishStaged(scope, set.id, set.masterSha256, name, object);
+    if (files.size !== listed.size || [...listed].some(key => !files.has(key.slice(stagedPrefix.length))))
+      reject('staged HLS contains unexpected objects');
+    // Copy the master last; publication returns only after every exact object verifies at delivery.
+    for (const [name, object] of files) if (name !== 'master.m3u8')
+      await this.publishStaged(scope, set.id, set.masterSha256, name, object);
+    await this.publishStaged(scope, set.id, set.masterSha256, 'master.m3u8', files.get('master.m3u8')!);
     return this.publishedMasterUrl(scope, set);
   }
 
   /** Operator-only cleanup after a recorded revocation; never accepts a caller-supplied prefix. */
   async removePublishedAsset(scope: MediaScope): Promise<number> {
-    if (!this.operator) reject('operator credentials required for delivery cleanup');
+    if (!this.operator || !this.assertRevoked) reject('operator credentials and revocation check required for delivery cleanup');
+    await this.assertRevoked!(scope);
     const prefix = `${scopePath(scope)}/delivery/`;
-    const listed = await this.request(() => this.operator!.send(new ListObjectsV2Command({
-      Bucket: this.config.deliveryBucket, Prefix: prefix, MaxKeys: 1000 })));
-    if (listed.IsTruncated || (listed.Contents?.length ?? 0) > 1000) reject('delivery cleanup exceeds 1000-object operator limit');
-    const keys = listed.Contents?.map(object => object.Key) ?? [];
-    if (keys.some(key => !key || !key.startsWith(prefix) || !/^media\/[a-f0-9]{32}\/[a-f0-9]{32}\/[a-f0-9]{32}\/delivery\/[a-f0-9]{32}\/[a-f0-9]{64}\/[a-z0-9_-]+\.(?:m3u8|ts|m4s|mp4)$/.test(key)))
+    const keys = await this.listScoped(this.operator!, prefix, maxHlsObjects * 10);
+    if (keys.some(key => !/^media\/[a-f0-9]{32}\/[a-f0-9]{32}\/[a-f0-9]{32}\/delivery\/[a-f0-9]{32}\/[a-f0-9]{64}\/[a-z0-9_-]+\.(?:m3u8|ts|m4s|mp4)$/.test(key)))
       reject('delivery cleanup found an unsafe key');
     for (const key of keys) await this.request(() => this.operator!.send(new DeleteObjectCommand({
       Bucket: this.config.deliveryBucket, Key: key! })));
@@ -512,17 +581,19 @@ export function mediaStorageFromEnv(env: NodeJS.ProcessEnv,
   clients?: { originals: S3Client; staging: S3Client; publisher?: S3Client; operator?: S3Client }): S3MediaStorage {
   const config = mediaStorageConfigFromEnv(env);
   if (env.FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN) publisherRoleConfigFromEnv(env);
-  const originals = clients?.originals ?? new S3Client({ region: config.region });
-  const staging = clients?.staging ?? new S3Client({ region: config.region });
+  const originals = clients?.originals ?? new S3Client({ region: config.region, maxAttempts: 3 });
+  const staging = clients?.staging ?? new S3Client({ region: config.region, maxAttempts: 3 });
   const publisher = env.FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN
-    ? clients?.publisher ?? new S3Client({ region: config.region, credentials: publisherCredentialsFromEnv(env) })
+    ? clients?.publisher ?? new S3Client({ region: config.region, maxAttempts: 3, credentials: publisherCredentialsFromEnv(env) })
     : undefined;
   return new S3MediaStorage(config, originals, staging, publisher, clients?.operator);
 }
 
 /** The standalone revocation command uses its separately selected operator profile. */
-export function mediaStorageForOperatorFromEnv(env: NodeJS.ProcessEnv, operator: S3Client): S3MediaStorage {
+export function mediaStorageForOperatorFromEnv(env: NodeJS.ProcessEnv, operator: S3Client,
+  assertRevoked: (scope: MediaScope) => Promise<void>): S3MediaStorage {
   const config = mediaStorageConfigFromEnv(env);
-  return new S3MediaStorage(config, new S3Client({ region: config.region }), new S3Client({ region: config.region }),
-    undefined, operator);
+  return new S3MediaStorage(config, new S3Client({ region: config.region, maxAttempts: 3 }),
+    new S3Client({ region: config.region, maxAttempts: 3 }),
+    undefined, operator, assertRevoked);
 }

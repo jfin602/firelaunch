@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { HostedProjectRepository } from './hosted-repository.js';
-import { reserveRevokedMediaInvalidation, finishMediaInvalidation } from './media-invalidation.js';
+import { reserveRevokedMediaInvalidation, finishMediaInvalidation, assertRevokedMediaCleanup } from './media-invalidation.js';
 import { mediaStorageForOperatorFromEnv, mediaStorageConfigFromEnv } from './media-storage.js';
 import { S3Client } from '@aws-sdk/client-s3';
 
@@ -35,7 +35,8 @@ const repository = await HostedProjectRepository.connect(process.env.DATABASE_UR
 try {
   const reserved = await reserveRevokedMediaInvalidation(repository.pool, projectId!, assetId!);
   try {
-    const storage = mediaStorageForOperatorFromEnv(process.env, new S3Client({ region: config.region }));
+    const storage = mediaStorageForOperatorFromEnv(process.env, new S3Client({ region: config.region, maxAttempts: 3 }),
+      scope => assertRevokedMediaCleanup(repository.pool, scope));
     const removed = await storage.removePublishedAsset(reserved.scope);
     const path = `/media/${reserved.scope.creatorAccountId.slice(3)}/${projectId!.slice(3)}/${assetId!.slice(3)}/delivery/*`;
     const result = await aws(['cloudfront', 'create-invalidation', '--distribution-id', distribution,

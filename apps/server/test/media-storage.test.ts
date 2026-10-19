@@ -28,6 +28,10 @@ class FakeS3 {
   readonly calls: { name: string; input: Record<string, unknown> }[] = [];
   readonly parts = new Map<number, Buffer>();
   failNext = '';
+  brokenCursor = false;
+  duplicatePage = false;
+  activeReads = 0;
+  maxActiveReads = 0;
   async send(command: { constructor: { name: string }; input: Record<string, unknown> }): Promise<Record<string, unknown>> {
     const name = command.constructor.name;
     const input = command.input;
@@ -48,8 +52,13 @@ class FakeS3 {
     }
     if (name === 'AbortMultipartUploadCommand') { this.parts.clear(); return {}; }
     if (name === 'ListObjectsV2Command') {
-      const keys = [...this.objects.keys()].filter(value => value.startsWith(String(input.Prefix)));
-      return { Contents: keys.slice(0, Number(input.MaxKeys)).map(Key => ({ Key })), IsTruncated: keys.length > Number(input.MaxKeys) };
+      const keys = [...this.objects.keys()].filter(value => value.startsWith(String(input.Prefix))).sort();
+      const offset = input.ContinuationToken ? Number(input.ContinuationToken) : 0;
+      const start = this.duplicatePage && offset ? 0 : offset;
+      const page = keys.slice(start, start + Number(input.MaxKeys));
+      const truncated = start + page.length < keys.length;
+      return { Contents: page.map(Key => ({ Key })), KeyCount: page.length, IsTruncated: truncated,
+        ...(truncated ? { NextContinuationToken: this.brokenCursor ? '1000' : String(start + page.length) } : {}) };
     }
     if (name === 'DeleteObjectCommand') { this.objects.delete(key); return {}; }
     if (name === 'PutObjectCommand') {
@@ -66,16 +75,21 @@ class FakeS3 {
       ChecksumCRC64NVME: object.crc, ChecksumSHA256: object.sha, ETag: object.etag };
     if (name === 'GetObjectCommand') {
       if (input.IfMatch && input.IfMatch !== object.etag) throw new Error('object changed');
-      return { Body: Readable.from([object.body]), ContentLength: object.body.length };
+      const self = this;
+      return { Body: Readable.from((async function* () {
+        self.activeReads++;
+        self.maxActiveReads = Math.max(self.maxActiveReads, self.activeReads);
+        try { yield object.body; } finally { self.activeReads--; }
+      })()), ContentLength: object.body.length };
     }
     throw new Error(`unexpected ${name}`);
   }
 }
 const setup = () => { const originals = new FakeS3(); const delivery = new FakeS3();
   const publisher = new FakeS3(delivery.objects); const operator = new FakeS3(delivery.objects);
-  return { originals, delivery, publisher, operator, storage: mediaStorageFromEnv(roleEnv, {
-    originals: originals as unknown as S3Client, staging: delivery as unknown as S3Client,
-    publisher: publisher as unknown as S3Client, operator: operator as unknown as S3Client }) }; };
+  return { originals, delivery, publisher, operator, storage: new S3MediaStorage(config,
+    originals as unknown as S3Client, delivery as unknown as S3Client,
+    publisher as unknown as S3Client, operator as unknown as S3Client, async () => {}) }; };
 
 test('media AWS configuration and CloudFront origin fail closed without echoing secrets', () => {
   assert.throws(() => mediaStorageConfigFromEnv({}), /invalid/);
@@ -313,38 +327,86 @@ test('managed private HLS graph is bounded, hashed and normalized before approve
     `job_${'9'.repeat(32)}`, `ci_${'8'.repeat(32)}`), /scope/);
 });
 
+test('two-hour 2403-object HLS pages, verifies, then publishes the full graph with bounded reads', async () => {
+  const { storage, delivery, publisher } = setup();
+  const raw = `media/${'a'.repeat(32)}/${'b'.repeat(32)}/${'c'.repeat(32)}/staged/${'1'.repeat(32)}/`;
+  const segment = Buffer.alloc(188); segment[0] = 0x47;
+  const putRaw = (name: string, body: Buffer) => delivery.objects.set(`${raw}${name}`, {
+    body, type: name.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/MP2T',
+    encryption: 'AES256', checksumType: 'FULL_OBJECT', etag: `"${sha(body)}"` });
+  for (const height of [480, 720]) {
+    const lines = ['#EXTM3U', '#EXT-X-VERSION:3', '#EXT-X-TARGETDURATION:6', '#EXT-X-MEDIA-SEQUENCE:0'];
+    for (let index = 0; index < 1200; index++) {
+      const name = `source_${height}p${String(index).padStart(4, '0')}.ts`;
+      putRaw(name, segment);
+      lines.push('#EXTINF:6,', name);
+    }
+    putRaw(`source_${height}p.m3u8`, Buffer.from(`${[...lines, '#EXT-X-ENDLIST'].join('\n')}\n`));
+  }
+  putRaw('source.m3u8', Buffer.from('#EXTM3U\n#EXT-X-VERSION:3\n' +
+    [480, 720].map(height => `#EXT-X-STREAM-INF:BANDWIDTH=1200000,RESOLUTION=${height === 480 ? 854 : 1280}x${height},CODECS="avc1.4d401f,mp4a.40.2"\nsource_${height}p.m3u8\n`).join('')));
+  const rendition = await storage.verifyManagedHls(scope, raw, set, `job_${'9'.repeat(32)}`, `ci_${'8'.repeat(32)}`);
+  assert.deepEqual(rendition.variants.map(value => value.segmentCount), [1200, 1200]);
+  assert.equal(delivery.calls.filter(call => call.name === 'ListObjectsV2Command').length, 3);
+  assert.equal(await storage.publishVerifiedHls(scope, rendition), storage.publishedMasterUrl(scope, rendition));
+  assert.equal([...delivery.objects.keys()].filter(key => key.includes('/delivery/')).length, 2403);
+  assert.equal(publisher.calls.filter(call => call.name === 'PutObjectCommand').at(-1)?.input.Key,
+    storage.deliveryKey(scope, set, rendition.masterSha256, 'master.m3u8'));
+  assert.equal(delivery.calls.filter(call => call.name === 'GetObjectCommand').length > 4800, true);
+  assert.equal(delivery.maxActiveReads, 1);
+  const tooLong = delivery.objects.get(`${raw}source_480p.m3u8`)!;
+  tooLong.body = Buffer.from(tooLong.body.toString().replace('#EXTINF:6,', '#EXTINF:7,'));
+  await assert.rejects(storage.verifyManagedHls(scope, raw, `rs_${'e'.repeat(32)}`,
+    `job_${'9'.repeat(32)}`, `ci_${'8'.repeat(32)}`), /segment limit/);
+  delivery.duplicatePage = true;
+  await assert.rejects(storage.verifyManagedHls(scope, raw, `rs_${'e'.repeat(32)}`,
+    `job_${'9'.repeat(32)}`, `ci_${'8'.repeat(32)}`), /duplicated/);
+  delivery.duplicatePage = false;
+  delivery.brokenCursor = true;
+  await assert.rejects(storage.verifyManagedHls(scope, raw, `rs_${'e'.repeat(32)}`,
+    `job_${'9'.repeat(32)}`, `ci_${'8'.repeat(32)}`), /repeated cursor/);
+  delivery.brokenCursor = false;
+  putRaw('foreign/segment.ts', segment);
+  await assert.rejects(storage.verifyManagedHls(scope, raw, `rs_${'e'.repeat(32)}`,
+    `job_${'9'.repeat(32)}`, `ci_${'8'.repeat(32)}`), /path invalid/);
+});
+
 test('complete READY graph promotes a stable master only after all staged segments verify', async () => {
   const { storage, delivery, publisher, operator } = setup();
-  const master = Buffer.from('#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-STREAM-INF:BANDWIDTH=1500000,RESOLUTION=854x480\nv480.m3u8\n');
-  const playlist = Buffer.from('#EXTM3U\n#EXT-X-INDEPENDENT-SEGMENTS\n#EXTINF:6.0,\nv480-000.ts\n#EXT-X-ENDLIST\n');
-  const segment = Buffer.from('synthetic segment');
+  const master = Buffer.from('#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-STREAM-INF:BANDWIDTH=1500000,RESOLUTION=854x480\nv480.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=2500000,RESOLUTION=1280x720\nv720.m3u8\n');
+  const playlist = (height: number) => Buffer.from(`#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-INDEPENDENT-SEGMENTS\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-TARGETDURATION:6\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:6.0,\nv${height}-000.ts\n#EXT-X-ENDLIST\n`);
+  const segment = Buffer.alloc(188); segment[0] = 0x47;
   const rendition = { id: set, creatorAccountId: scope.creatorAccountId, projectId: scope.projectId,
     catalogItemId: `ci_${'1'.repeat(32)}`, mediaAssetId: scope.mediaAssetId,
     jobId: `job_${'2'.repeat(32)}`, profile: 'hls-avc-aac-v1' as const,
     masterKey: storage.stagedKey(scope, set, 'master.m3u8'), masterSha256: sha(master),
-    variants: [{ height: 480 as const, playlistKey: storage.stagedKey(scope, set, 'v480.m3u8'),
-      playlistSha256: sha(playlist), segmentsSha256: sha(Buffer.from(sha(segment))), segmentCount: 1 }],
+    variants: ([480, 720] as const).map(height => ({ height, playlistKey: storage.stagedKey(scope, set, `v${height}.m3u8`),
+      playlistSha256: sha(playlist(height)), segmentsSha256: sha(Buffer.from(sha(segment))), segmentCount: 1 })),
     verifiedAt: '2026-10-12T00:00:00.000Z' };
   await storage.putStaged(scope, set, 'master.m3u8', master, sha(master));
-  await storage.putStaged(scope, set, 'v480.m3u8', playlist, sha(playlist));
+  for (const height of [480, 720]) await storage.putStaged(scope, set, `v${height}.m3u8`, playlist(height), sha(playlist(height)));
   const expected = storage.publishedMasterUrl(scope, rendition);
   assert.equal(new URL(expected).pathname.slice(1), storage.deliveryKey(scope, set, sha(master), 'master.m3u8'));
   assert.equal(expected.includes('/delivery/'), true);
   assert.equal(expected.includes('/staged/'), false);
-  await assert.rejects(storage.publishVerifiedHls(scope, rendition), /S3 request failed/);
+  await assert.rejects(storage.publishVerifiedHls(scope, rendition), /object missing/);
   assert.equal([...delivery.objects.keys()].some(key => key.includes('/delivery/')), false);
   await storage.putStaged(scope, set, 'v480-000.ts', segment, sha(segment));
+  await storage.putStaged(scope, set, 'v720-000.ts', segment, sha(segment));
+  publisher.failNext = 'PutObjectCommand';
+  await assert.rejects(storage.publishVerifiedHls(scope, rendition), /S3 request failed/);
+  assert.equal(delivery.objects.has(storage.deliveryKey(scope, set, sha(master), 'master.m3u8')), false);
   assert.equal(await storage.publishVerifiedHls(scope, rendition), expected);
   assert.equal(await storage.publishVerifiedHls(scope, rendition), expected);
   assert.equal(delivery.objects.get(storage.deliveryKey(scope, set, sha(master), 'v480-000.ts'))?.body.toString(),
     segment.toString());
   await assert.rejects(storage.publishVerifiedHls(other, rendition), /scope mismatch/);
   await assert.rejects(storage.publishVerifiedHls(scope, { ...rendition, revokedAt: '2026-10-12T01:00:00.000Z' }), /scope mismatch/);
-  await assert.rejects(storage.publishVerifiedHls(scope, { ...rendition, variants: [{ ...rendition.variants[0]!, segmentCount: 2 }] }),
-    /graph differs/);
+  await assert.rejects(storage.publishVerifiedHls(scope, { ...rendition, variants: [{ ...rendition.variants[0]!, segmentCount: 2 }, rendition.variants[1]!] }),
+    /playlist structure differs/);
   delivery.objects.get(storage.stagedKey(scope, set, 'v480-000.ts'))!.body = Buffer.from('changed');
   await assert.rejects(storage.publishVerifiedHls(scope, rendition), /checksum mismatch/);
-  assert.equal(await storage.removePublishedAsset(scope), 3);
+  assert.equal(await storage.removePublishedAsset(scope), 5);
   assert.equal(operator.calls.some(call => call.name === 'DeleteObjectCommand'), true);
   assert.equal(publisher.calls.some(call => call.name === 'DeleteObjectCommand' || call.name === 'ListObjectsV2Command'), false);
   assert.equal(delivery.objects.has(storage.deliveryKey(scope, set, sha(master), 'master.m3u8')), false);
@@ -418,12 +480,25 @@ test('delivery write errors remain private and never create an approved object',
   assert.equal(delivery.objects.size, 0);
 });
 
-test('operator cleanup refuses oversized delivery prefixes before deleting anything', async () => {
-  const { storage, delivery } = setup();
+test('operator cleanup pages and removes more than 1000 exact delivery keys', async () => {
+  const { storage, delivery, operator } = setup();
   const prefix = storage.deliveryKey(scope, set, 'a'.repeat(64), 'v480-000.ts').replace('v480-000.ts', '');
   for (let index = 0; index < 1001; index++) delivery.objects.set(`${prefix}segment_${index}.ts`, {
     body: Buffer.from('x'), type: 'video/mp2t', encryption: 'AES256', checksumType: 'FULL_OBJECT',
     etag: '"x"' });
-  await assert.rejects(storage.removePublishedAsset(scope), /1000-object/);
-  assert.equal(delivery.calls.some(call => call.name === 'DeleteObjectCommand'), false);
+  operator.failNext = 'DeleteObjectCommand';
+  await assert.rejects(storage.removePublishedAsset(scope), /S3 request failed/);
+  assert.equal(await storage.removePublishedAsset(scope), 1001);
+  assert.equal([...delivery.objects.keys()].some(key => key.startsWith(prefix)), false);
+});
+
+test('operator cleanup requires a fresh revocation authorization before listing or deleting', async () => {
+  const { delivery, operator } = setup();
+  const absent = new S3MediaStorage(config, operator as unknown as S3Client, delivery as unknown as S3Client,
+    undefined, operator as unknown as S3Client);
+  await assert.rejects(absent.removePublishedAsset(scope), /revocation check required/);
+  const denied = new S3MediaStorage(config, operator as unknown as S3Client, delivery as unknown as S3Client,
+    undefined, operator as unknown as S3Client, async () => { throw new Error('not revoked'); });
+  await assert.rejects(denied.removePublishedAsset(scope), /not revoked/);
+  assert.equal(operator.calls.some(call => call.name === 'ListObjectsV2Command' || call.name === 'DeleteObjectCommand'), false);
 });
