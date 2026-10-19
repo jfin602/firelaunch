@@ -3,6 +3,12 @@
 Last documentation reconciliation: 2026-10-19 UTC (staging installation only; other gates retain their own dated evidence).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
 
+
+
+## Owner-approved next correction (2026-10-19; planning, not runtime evidence)
+
+[c6-usability](tasks/c6-usability/README.md) is the newly authorized documentation and prompt-stack work for a persistent, closeable/reopenable creator video popup with progressive information collection, direct Home/Catalog access, guided *existing* channel publication, and 2-hour (7200-second) end-to-end upload/HLS support. It is not implemented, deployed or qualified by authoring docs and prompts. Source inspection found 30-minute client/server admission and HLS verification limits (1800 sec), 250-segment / 600-object graph caps, a 1000-key deletion limit, and a 250 MB browser cap versus 2 GB server cap. A two-hour file at 6-second segments needs roughly 2403 HLS objects. The correction must fix the complete verified/publication/cleanup path rather than raise only the form limit. Existing Q2 F7 PARTIAL / Q2 NOT GREEN and Q3 UNSTARTED remain unchanged. This section does not update the observed AWS queue/rule/CDN state or grant operator approvals.
+
 ## 2026-10-19 staging reconciliation
 
 Fresh [host and HTTPS inspection](staging-consolidation-2026-10-19.md) found one active `firelaunch-staging.service` on port 4184, PostgreSQL `firelaunch_alpha_067` at schema 13, and the retired 4185 service disabled. A fresh active-database dump was verified locally and off host. The bounded F7 revocation-route deployment activated `/srv/firelaunch/releases/20261019T181516Z-ce44686dbab8`; the later F7 Studio-control deployment activated `/srv/firelaunch/releases/20261019T202804Z-41f10bd0e1a3` from archive SHA-256 `41f10bd0e1a35b4954a25af97bacc2fdc4e7d396887d8deb38a26da8387c4fa2` after a verified encrypted backup. The prior release remains `/srv/firelaunch/previous`. See the [Q2 closeout](tasks/p6-live-vod/Q2-closeout.md) for exact checks. The Add Video UI remains in the current bundle; its 2026-10-17 authenticated upload qualification is in [its closeout](tasks/c6-video-publishing-ux/closeout.md). The approved Q2 public pointer and CloudFront master returned 200 on 2026-10-19, so the older CloudFront DISABLED observation below is historical. **Q2 remains NOT GREEN** until the authenticated Studio video lifecycle revocation and guarded origin cleanup pass; Q3 is unstarted.

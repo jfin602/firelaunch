@@ -14,6 +14,12 @@ The `c6-video-publishing-ux` staging closeout is **STAGING UX GREEN** for source
 
 `c6-aws-vod` is LOCAL GREEN only; it does not qualify deployed processing. The client's existing `firelaunch-staging-foundation` stack has a previously qualified `UPDATE_COMPLETE` policy correction, while the last observed queue was PAUSED, EventBridge DISABLED and CloudFront DISABLED. Reinspect the actual live values; old operator documents misstate infrastructure as wholly undeployed. Keep client AWS account `363242105231`, Region `us-east-2` and separate developer-owned/client-owned stack authority clear. Do not touch unrelated account `309403336615` or launch duplicate stacks.
 
+
+
+## Related creator usability correction (owner decision 2026-10-19)
+
+[c6-usability](../c6-usability/README.md) separately owns the progressive reopenable per-video Studio popup, guided reuse of the *existing* publication UI and fully checked two-hour (7200-second) media limits. This revises the former deferral only for the basic client-facing video workflow needed before the October 23 noon deadline. It does not authorize adding advanced shelf ordering, multiple placements, featured merchandising or drag/drop before independent Q3 GREEN. Q2 remains responsible for the real approved free CDN/manifest and video lifecycle F7 proofs; Q3 remains responsible for real installed Vega playback. A popup saying Published cannot replace those direct observations. Neither Q1/Q2/Q3 nor any operator, paid AWS, CDN, deployment or creator approval is waived. See [current state](../../CURRENT-STATE.md) for dated evidence.
+
 ## Work sequence and stop gates
 
 ### Q1 - Real private processing
