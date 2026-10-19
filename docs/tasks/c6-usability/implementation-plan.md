@@ -25,11 +25,11 @@ Sources: VideoUpload/Catalog/Home/LivePublication/Delivery/api and Studio tests.
 
 Tests and polish around active polling, failure/retry, processing unavailable, in-tab transfer progress, close/reopen/reload, multi-video Home/Catalog deep links, preserved metadata and status, stale cross-account/project fetch cancellation, modal keyboard/mobile accessibility and reduced motion. No fake percentages/data, no silent publication. Prefer action within 3 clicks to find an added video. Verify affected Studio/server build/typecheck and focused tests; reserve aggregate evidence in prior checkpoints rather than repeating the full npm run check for the fast closeout. Do not broaden to unrelated redesign.
 
-## P6: fast UX smoke and protected deployment
+## P6: autonomous repair, fast UX smoke, AWS ingest activation and protected deployment
 
-Inspect completed P1-P5 evidence, exact candidate SHA/version 0.6.7 and clean or reviewed source. Run only focused Studio/server tests plus typechecks/build, stack grammar and diff check. Reuse prior passing two-hour deterministic tests instead of repeating the full aggregate or thousands-object HLS fixture. Perform a short authorized browser walkthrough when possible (open, close, reopen, metadata, statuses, publish blocker, keyboard/mobile). No new hosted upload finalization or paid MediaConvert, no live content publication; mark unavailable browser evidence honestly.
+Inspect P1-P5 evidence, exact candidate SHA/version 0.6.7 and worktree. Autonomously diagnose and repair remaining blockers using at most two focused source/config repair cycles. Run targeted Studio/server tests plus typechecks/build, stack grammar and diff checks; reuse unimpacted two-hour HLS evidence. Smoke browser UX (popup reopen, upload progress/metadata, truthful statuses, blocked publication) when available. No new hosted test upload finalization, paid test encode or public content release; mark missing browser evidence honestly.
 
-If smoke passes, the owner authorizes deployment of the tested schema-compatible app to the existing live Studio through the protected build/archive SHA, exact-command operator release, verified encrypted backup and rollback workflow. Confirm sole 4184 service, schema 13 and preserved public release #1 before/after; perform quick HTTPS/login/modal smoke post-deploy. Stop if the required operator grant, backup or safe rollback is unavailable; never escalate to broad privileges. Keep cloud queue/rule, CDN/IAM/CloudFormation/DNS, customers' files, Ngest and DB schema untouched. Record UX and DEPLOYED/BLOCKED/ROLLED BACK separately. P6 is manual; no self-commit or version bump.
+After focused checks, deploy the tested schema-compatible application through the existing archive SHA/exact-command protected release, verified encrypted backup and rollback; preserve sole 4184 service, schema 13, and public release #1. Independently validate AWS identity 363242105231/us-east-2, existing foundation, private S3/CORS, scoped publisher/control roles, MediaConvert queue, job backlog, completion EventBridge/SQS/DLQ, app integration and budget. Owner pre-authorizes safe reversible changes needed for client media ingest, including enabling existing queue/rule, minimal scoped IAM/S3/CORS/runtime repair and AWS monitoring without repeatedly seeking approval. Do not unpause if unexpected queued jobs could incur processing costs; do not submit ANY paid test MediaConvert job or change CloudFront public access, publish media, perform a migration or touch Ngest. Record actual UX, DEPLOYED/BLOCKED/ROLLED BACK and AWS INGEST READY/NOT READY separately. Manual P6 can autonomously repair, but no self-commit or version bump.
 
 ## Dependency/checkpoint table
 
@@ -40,13 +40,13 @@ If smoke passes, the owner authorizes deployment of the tested schema-compatible
 | P3 | 2hr HLS verified graph/cleanup | page/byte caps and deterministic proof |
 | P4 | Progressive review/publish | reused server-approved public-release seam |
 | P5 | Usability and focused regressions | real-browser scenario and known gaps |
-| P6 | Fast UX closeout and guarded live Studio deployment | focused evidence + actual release/rollback disposition |
+| P6 | Autonomous repair, quick UX, protected deployment + AWS ingest readiness | focused evidence, release rollback, queue/rule/config state |
 
 ## Non-negotiable guardrails
 
 - Root and lockfiles version 0.6.7 throughout; reconcile local dirty checkout without reset/forced pull. Runner owns P1-P5 commits; exactly one final P6 manual closeout. No /activate step.
 - Keep individual implementation checkpoints <=8 minutes target, 15-minute hard maximum. Stop with narrow blocker instead of doing unbounded work. Local/mock results never prove live cloud/device.
-- The owner has authorized only deployment of the tested schema-compatible c6-usability application to the canonical live Studio after passing fast smoke, exact-command privileges and verified backup/rollback. No AWS queue/rule activation, new paid jobs, CloudFormation/IAM/CloudFront/DNS alterations, live creator content publication, schema migration or Ngest changes.
+- Owner has authorized bounded reversible AWS staging ingest configuration in the verified client account and protected schema-compatible c6-usability deployment. This includes needed existing queue/EventBridge activation and narrow role/S3/CORS/app wiring repairs after checking job backlog and budgets. No new paid test processing, unapproved queued jobs, public CDN/path changes, unrelated stacks, destructive changes, live creator release, schema migration or Ngest changes.
 - Preserve owner/CSRF, source and TV display/playback rights, private originals, publisher role separation, release #1, immutable releases, current staging schema and backup/rollback. Q2 F7 remains partial, Q3 unstarted pending direct evidence.
 
 ## P6 superseding instruction — fast qualification and deploy (2026-10-19)
