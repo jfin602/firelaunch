@@ -121,6 +121,9 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             if (segments.length === 4 && request.method === 'POST') {
               respond(response, 201, await mediaUploads.start(principal, projectId, await body(request))); return;
             }
+            if (segments.length === 5 && segments[4] === 'revoke' && request.method === 'POST') {
+              respond(response, 200, await mediaUploads.revoke(principal, projectId, await body(request))); return;
+            }
             const uploadId = segments[4]!;
             if (segments.length === 5 && request.method === 'GET') {
               // The asset ID is carried in a header so status never accepts query keys or raw S3 locations.

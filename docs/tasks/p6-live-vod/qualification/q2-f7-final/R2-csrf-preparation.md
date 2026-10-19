@@ -1,0 +1,31 @@
+# Q2 F7 R2 — authenticated CSRF qualification preparation
+
+Date: 2026-10-19 15:37 UTC. **PREPARED ONLY; no R2 HTTP mutation has been sent.** R1 is PARTIAL pending full request-target parity and a safe foreign mutation denial. F5 PASS, F6 PASS, F7 PARTIAL, Q2 NOT GREEN, Q3 UNSTARTED.
+
+## Source-bound mechanism
+
+At HEAD `489e28289a6838f147e52937d9322bfd48c24297`, hosted `GET /api/auth/session` returns the current account identity and `csrfToken` only to an authenticated same-origin session. `apps/server/src/api.ts` rejects every mutating `/api/projects` request before route dispatch unless `SessionManager.authorizedMutation` accepts both the exact Studio `Origin` and `x-csrf-token` matching that session. The browser sets `Origin` for same-origin writes; do not attempt to forge or manually override it. `PUT /api/projects/<project>` first checks the authenticated owner's project, then parses `{ expectedRevision, spec }`, validates the full ChannelSpec, and increments the owner project's revision transactionally. Source SHA-256: `api.ts` `80bbcc11969b0ed922390a5d5be88f60bbbc3317236cfbcd9c3e65ad661e661f`; `auth/sessions.ts` `e32e30c0dea5f4c915c2d05f52a764ecccc2f9227e371fd38417466bef8c258a`; `hosted-repository.ts` `6e15b082ce830d23b11474d6fefc74630df0cf2438d540973b783ec5f4750f4d`.
+
+## Fixture and boundary
+
+Use a newly identified or explicitly approved **disposable A-owned draft project with no deployment, publication, catalog media or real creator content**. Do not assume that the project used in the reported R1 reads is disposable, and do not use release #1's project. If none exists, obtain approval for a single new empty draft via the ordinary authenticated Studio/API creation flow. Record its owner, complete project ID privately, initial revision/spec hash, absence of deployment/media, and approved final retention or cleanup. Do not create the fixture merely by reading this plan.
+
+Use the same-origin browser developer-console `fetch()` mechanism that produced the reported R1 HTTP read matrix, with `credentials: 'same-origin'`. Keep each session's cookies and CSRF token within its own browser; do not print, save, copy between profiles, or place the token in this report. Log only request method/path class, status, content type, safe error code and project revision/spec hash. Use `Content-Type: application/json` and let the browser supply `Origin`. Confirm A and B each have `GET /api/auth/session` 200 before tests; verify distinct account identities without recording emails.
+
+## Live request matrix, after fixture approval
+
+1. Read A's disposable project with `GET /api/projects/<draft>`; capture revision `r`, safe spec hash and the public release #1 pointer baseline. Prepare one valid ChannelSpec with only a reversible draft title change and `expectedRevision: r`.
+2. From A, `PUT /api/projects/<draft>` with A's current CSRF and the valid body. Expect 200 and revision `r+1`; read back the title and hash. This is the required **valid-CSRF positive mutation**. No deployment, publication or media operation occurs.
+3. From A, repeat a second valid, harmless title change candidate using current revision `r+1` but omit `x-csrf-token`. Expect 403 `CSRF`; read back unchanged revision/title/hash. If accepted, stop immediately and mark R2 FAIL.
+4. From A, send the same current-revision candidate with a syntactically invalid random CSRF value. Expect 403 `CSRF`; read back unchanged state. If accepted, stop and mark FAIL.
+5. Test a mismatched/stale token only if an ordinary same-account session refresh can supply it without logging or transferring any token between browsers. The old A token against the new A session should return 403 `CSRF` with no state change. If this cannot be done safely, record D as unsupported/unmeasured; do not manufacture a mismatch from a fixture token or omit the gap silently.
+6. From B's distinct valid session, use B's own valid CSRF on `POST /api/projects/<disposable-A-draft>/catalog/imports/preview` with JSON `{}`. Source calls owner `read` before parsing this intentionally invalid body. Expected result: nonenumerating 404 `NOT_FOUND`; if ownership were bypassed, parsing should fail without issuing a preview receipt or changing catalog state. A 400 or 2xx is not a denial pass; stop for investigation. This can also close R1's safe foreign mutation requirement once the full project target is matched.
+7. Read A's disposable project/catalog revision and the public release #1 pointer again. B/C/D/E must leave the draft and catalog unchanged after the one authorized positive title edit. Release #1 ID, sequence and digest must match baseline. Record all HTTP statuses and classifications, not merely Studio UI behavior.
+
+Run focused tests only for a demonstrated narrow source repair. Do not run the full aggregate in this preparation or during routine R2 requests. Do not log response bodies that include private spec data, cookies, CSRF values or headers. No AWS, CloudFront, encode, publication, revocation or Q3 operation is part of R2.
+
+**Go/no-go:** R2 execution waits for an approved disposable fixture and the R1 project-target reconciliation. This file contains a request plan, not PASS evidence. The execution report belongs in `R2-csrf.md` after actual live requests.
+
+## Fixture update — 2026-10-19 15:42 UTC
+
+The owner expressly authorized creating the test environment. Owner A's ordinary Studio flow created the separate private draft `F7 Security Qualification Draft 2026-10-19`, project `ch_afc823551f2a4a52bb065507874e44c4`, revision 1. The UI showed zero catalog items, no media in Preview, and a Publish screen offering initial deployment setup, so this draft has no observed deployment or release. It is retained for R2; no cleanup was authorized or attempted. Release #1's public pointer was freshly checked unchanged after setup. The draft's complete spec and hash still require an authenticated API read before any R2 PUT. The historical `ch_f9502ef...` A/B read target still lacks full request-path parity; the fixture does not prove that parity. Connected browser controls do not currently provide an authenticated same-origin request/response channel, so no R1 foreign mutation or R2 CSRF request was sent. R2 remains **PREPARED ONLY**.

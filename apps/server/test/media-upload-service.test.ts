@@ -51,6 +51,9 @@ function fixture() {
     async latestAssetStatus(principal: AuthenticatedPrincipal, project: string, asset: string) {
       requireOwner(principal, project, asset); return { uploadId, uploadState: row.state, processing: null };
     },
+    async revoke(principal: AuthenticatedPrincipal, project: string, asset: string) {
+      requireOwner(principal, project, asset); calls.push('revoke');
+    },
     async attachS3Upload(principal: AuthenticatedPrincipal, project: string, asset: string, upload: string, s3: string) {
       requireOwner(principal, project, asset, upload); row.s3UploadId = s3; calls.push('attach'); return true;
     },
@@ -196,7 +199,7 @@ test('replayed finalize cannot spend a failed managed retry attempt', async () =
 
 test('hosted upload routes require a session and CSRF before invoking storage', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'firelaunch-upload-routes-'));
-  const { service } = fixture();
+  const { service, calls } = fixture();
   const principal = (cookie: string | undefined) => cookie === 'session=owner' ? owner : cookie === 'session=foreign' ? foreign : null;
   const auth = { publicOrigin: 'http://127.0.0.1', session(request: { headers: Record<string, string> }) {
     const p = principal(request.headers.cookie); return p ? { principal: p, csrf: 'csrf', expiresAt: Date.now() + 1000 } : null;
@@ -230,5 +233,16 @@ test('hosted upload routes require a session and CSRF before invoking storage', 
     assert.equal((await retry('session=owner', 'bad')).status, 403);
     assert.equal((await retry('session=foreign', 'csrf')).status, 404);
     assert.equal((await retry('session=owner', 'csrf')).status, 409);
+    const revoke = (cookie: string, csrf: string, payload: unknown = { mediaAssetId: assetId }) =>
+      fetch(`${route}/revoke`, { method: 'POST', headers: { cookie, origin,
+        'content-type': 'application/json', 'x-csrf-token': csrf }, body: JSON.stringify(payload) });
+    assert.equal((await revoke('session=owner', 'bad')).status, 403);
+    assert.equal((await fetch(`${route}/revoke`, { method: 'POST', headers: { cookie: 'session=owner', origin,
+      'content-type': 'application/json' }, body: JSON.stringify({ mediaAssetId: assetId }) })).status, 403);
+    assert.equal((await revoke('session=foreign', 'csrf')).status, 404);
+    assert.equal((await revoke('session=owner', 'csrf', { mediaAssetId: assetId, creatorAccountId: foreign.accountId })).status, 400);
+    assert.equal(calls.includes('revoke'), false);
+    assert.equal((await revoke('session=owner', 'csrf')).status, 200);
+    assert.equal(calls.filter(call => call === 'revoke').length, 1);
   } finally { await new Promise<void>(resolve => api.close(() => resolve())); await rm(root, { recursive: true, force: true }); }
 });

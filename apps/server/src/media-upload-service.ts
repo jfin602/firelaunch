@@ -82,6 +82,13 @@ export class MediaUploadService {
     return status && { ...status, processingAvailable: !!this.managed };
   }
 
+  async revoke(principal: AuthenticatedPrincipal, projectId: string, raw: unknown) {
+    const { mediaAssetId } = uploadAssetSchema.parse(raw);
+    await this.records.revoke(principal, projectId, mediaAssetId);
+    // Public delivery cleanup and CDN invalidation require a separate operator action.
+    return { revoked: true };
+  }
+
   async retryProcessing(principal: AuthenticatedPrincipal, projectId: string, uploadId: string, raw: unknown) {
     const { mediaAssetId } = uploadAssetSchema.parse(raw);
     sessionId.parse(uploadId);
