@@ -1,0 +1,29 @@
+TASK: Correction 6 / P6 — Independent usability closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Independently judge the final local c6-usability candidate against a real creator workflow and tested two-hour pipeline; never substitute unit tests for live AWS/device observations.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/CURRENT-STATE.md, c6-usability README/assessment/plan, all P1-P5 checkpoint outcomes and current git/version/test artifacts. Confirm exact candidate SHA, Node24/npm12 and unchanged package/lock versions 0.6.7. Do not write application code in final closeout. If critical defect requires repair, report NOT GREEN with precise minimal correction.
+
+REAL AUTHORIZED BROWSER
+In an authorized browser/account, walk through sign-in/channel, Add Video popup, required initial file/title/rights, saved library card open, in-tab upload close/reopen and progress, deliberate Stop, reload/browser-exit interruption messaging and fresh retry, processing waiting/failed/READY as actually observable, metadata/thumbnail/category edit, basic Videos shelf, missing source/artwork/rights readiness errors, explicit full-channel approval/publish path, draft vs current published release, account/project switching, keyboard focus/Escape and mobile layout. Use only rights-owned permitted disposable test video; no real paid MediaConvert job/publication/CloudFront change unless separately approved. If signed-in browser unavailable, label browser NOT VERIFIED rather than inventing observations.
+
+INDEPENDENT TWO-HOUR EVIDENCE
+Inspect deterministic tests for 1..7200 seconds client/server (7201 denied), 2 GB source ceiling, incremental bounded-memory hashing/session expiry, complete simulated ~2403-object two-hour two-rendition HLS graph, >1000 paged list/publication/revocation exact cleanup and negative foreign/duplicate/truncated/tampered/extra cases. This is local evidence only; actual 2-hour MediaConvert charge/CDN/Vega must remain NOT QUALIFIED unless independently observed under explicit approval.
+
+VALIDATION / CLOSEOUT
+Run one final npm run check with Node24/npm12, npm run codex:stack:validate -- c6-usability and git diff --check; build separately only if not already included. Record exact pass/fail/skip, P1-P5 commits, SHA/version, browser evidence and absent evidence, deployment unchanged, active old Q2 F7/Q3 gates and only supported LOCAL CREATOR UX GREEN or NOT GREEN. Write docs/tasks/c6-usability/closeout.md with reproducible results. Keep existing release #1, schema/data/private originals/rights/CSRF and Ngest untouched.
+
+GIT / AUTHORITY
+Manual independent closeout: do not commit, amend, reset, move HEAD or bump version. No staging deployment, paid job, queue/rule change, CloudFormation/IAM/CloudFront mutation, live creator publication or unrelated cleanup is authorized.
+
+FINAL RESPONSE
+Exact local Green/Not Green disposition with SHA/version, tests, real browser evidence, two-hour path conclusion, external gaps and minimum next action for the October 23 noon deadline.

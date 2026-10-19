@@ -1,0 +1,23 @@
+TASK: Correction 6 / P3 — Verified two-hour HLS and bounded revocation cleanup
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Safely support the ~2403 verified private HLS objects of a two-hour source at fixed six-second segments/two renditions, and maintain exact publication/revocation authorization.
+
+PREFLIGHT
+Read c6-usability plan and P2 handoff, docs/CURRENT-STATE.md, media-storage.ts, managed-media-coordinator/provider, relevant publication/revocation call sites and tests. Review release #1/Q2 F7 history and current git/version. No AWS operations.
+
+IMPLEMENT
+Inspect all HLS duration/object limits: 1800 seconds, 250 segments/variant, 600 total output objects, single-page S3 ListObjectsV2 MaxKeys 1000 and published-graph second 250 limit. Replace with conservative finite profile-aware caps covering 7200 seconds and ~1200 segments per variant (allow modest real segment variation). List all exact scoped keys via bounded pagination, reject repeated cursors, duplicates, truncated/unexpected/foreign paths and missing variants/segments. Preserve all fixed HLS profile/TS validations, checksum, MIME, private original/staging and stable asset IDs. Avoid unbounded parallel S3 reads and huge aggregate buffers; bound verified bytes, concurrency, memory and retries. Existing publishVerifiedHls must validate full graph and never claim success on partial copy or expose output before existing explicit rights/release approval. Operator-only removePublishedAsset must page and delete >1000 exact revoked-asset delivery keys in bounded batches with safe retry and no wildcard, other-tenant or active release deletion; require actual recorded revocation before cleanup. No fabricated "ready" or publish state.
+
+VALIDATION
+Deterministic fake-S3 7200-sec two-variant ~2403-object HLS verification and full staged publication path (small fake object bodies), 7201 reject, multi-page lists, foreign/duplicate/missing/tampered object, broken cursor, bounded memory and >1000 revocation cleanup. Affected server typecheck/build and git diff --check. No cloud job, no actual CDN publication, no global aggregate.
+
+GIT / HANDOFF
+Runner commits; report exact new caps, tests and remaining real MediaConvert/CloudFront performance qualification. If safe 2-hour graph needs more than one bounded prompt, stop with a precise blocker instead of merely raising constants.

@@ -1,0 +1,23 @@
+TASK: Correction 6 / P5 — Creator usability and regression convergence
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Make this genuinely usable by a first-time creator, with accurate long-job states and accessibility, without unrelated redesign or repeat full-suite qualification.
+
+PREFLIGHT
+Read c6-usability plan and P1-P4 handoffs. Review Home/Catalog/video popup, active transfer coordinator, status polling, version and current source/tests. Preserve previous checkpoint work.
+
+IMPLEMENT
+Give each saved video card an obvious reopen action and useful truthful state/next action; keep processing status fresh using bounded polling while visible and cleanup on logout/account/project changes. Do not invent encoding percentages, READY, CDN/publication or automatic browser-exit upload resume. Surface upload progress even when the popup closes, permit explicit cancel, show failed/paused/unavailable and retry in plain language. Use accessible dialog focus trap/return, Escape, desktop/mobile full-screen sheet, scrolling and reduced motion. Preserve edit/replacement/thumbnail/category data across close/reopen and reload, and guard stale async responses/foreign tenant data. Keep advanced Catalog tools available but subordinate. Check a new video is discoverable and re-openable from Home/Catalog without technical navigation; do not build a second app/shelf editor.
+
+VALIDATION
+Focused Studio tests for open/close/reopen, concurrent videos, long processing/failed/revoked states, rights/publish blocks, in-tab background transfer, browser-exit warning, project switching and keyboard/mobile semantics. Confirm existing P2/P3 two-hour/long-graph tests still pass. Affected typechecks/build and git diff --check. Reserve exactly one global npm run check for P6.
+
+GIT / HANDOFF
+Runner commits; root version unchanged. Report test counts, files, manual real-browser walkthrough and genuinely unqualified AWS/device/publishing gates. No deployment or paid operations.

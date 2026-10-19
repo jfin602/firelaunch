@@ -1,0 +1,25 @@
+TASK: Correction 6 / P4 — Progressive video preparation and explicit channel publishing
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Keep the creator in the video popup through readiness and publication while reusing current Catalog/ChannelSpec/LivePublication permission and release contracts.
+
+PREFLIGHT
+Read P1-P3 handoffs, c6-usability plan, ADR 0009/0011/0013, VideoUpload.tsx, Catalog.tsx, Home.tsx, LivePublication.tsx, Delivery.tsx and source/binding/release APIs; verify version/git status.
+
+IMPLEMENT
+Display progressive, truthful server-derived steps: choose video/title and explicit unchecked rights; upload and background processing; optional description, category and thumbnail; actionable missing source provenance, TV-safe artwork/rights, READY verified HLS, basic Videos shelf and channel draft linkage; review/approve/publish. Save edits to current owned CatalogItem and assets with revision consistency. Support a simple inline category creation if supported by existing Collection writes but keep multi-shelf reorder/featured/drag-drop deferred. Do not require advanced technical inputs before they matter, yet fail closed on actually required review.
+
+Reuse the existing LivePublication checkLiveReadiness, approveLive, publishLive and immutable manifest path, possibly extracting a focused shared component/hook if needed; never create a second publishing API. Make channel-wide impact explicit, including current catalog/channel revisions and other affected content. The creator must approve *and* separately confirm live publication; encoding READY never automatically publishes. If a scoped handoff to existing Publish inspector is safer than a full embedded control, preserve selection/reopening and keep the flow comprehensible. Published status comes from an actual owned release, and later edits are private drafts. Free-only; paid/rental/subscription and native VPKG export are separate.
+
+VALIDATION
+Focused Studio/catalog/publication tests: retained metadata, source/artwork blockers, failed/revoked/unverified media denied, revision conflict, explicit approval, channel-wide scope and published/draft distinction; affected typecheck/build and git diff --check. No actual paid job or creator publication.
+
+GIT / HANDOFF
+Runner commits with version 0.6.7 unchanged. Report exact shared publication seam, tests, remaining Q2/Q3 gates and P5 polish checklist.

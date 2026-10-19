@@ -1,0 +1,23 @@
+TASK: Correction 6 / P1 — Video popup and direct library access
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Introduce a single large, closeable/reopenable video workspace, reachable from Add Video and each saved video on Home/Catalog, without creating a new catalog or media lifecycle engine.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md and c6-usability README/assessment/plan. Inspect git status, current HEAD, version 0.6.7, App, Home, Catalog, VideoUpload, style and focused Studio tests. Do not reset or discard dirty owner work.
+
+IMPLEMENT
+Render one accessible modal/drawer/full-mobile-sheet keyed by the current creator-owned project and existing video CatalogItem ID (new video has no ID until persisted). Open Add Video and selected card directly, not via generic Catalog navigation. Reuse existing NewVideoUpload controls and catalog APIs; preserve advanced source/rights/collection tools outside modal. Show saved draft and truthful upload/processing states, current title/artwork and reopen existing item for editing/replacement. Keep keyboard Escape, focus trap and restoration, scroll behavior, readable Desert Heat style and mobile view. Project/account switch clears selection and stale reads; never show another owner's video. Do not replace ChannelSpec/Preview. Active upload abort-on-unmount is deliberately fixed in P2; until then do not allow close to silently cancel an in-flight transfer (block close while uploading or preserve mounted transfer), and record the interim behavior.
+
+VALIDATION
+Run focused Studio Home/Catalog/dialog/auth navigation tests, Studio typecheck/build and git diff --check. No full aggregate, AWS or real creator data mutations.
+
+GIT / HANDOFF
+Runner owns checkpoint commit; agent must not commit, amend, bump version or deploy. Report files, test counts, dialog identity/focus and exact remaining upload-lifetime seam for P2.

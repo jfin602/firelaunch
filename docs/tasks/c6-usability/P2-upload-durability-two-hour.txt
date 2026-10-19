@@ -1,0 +1,23 @@
+TASK: Correction 6 / P2 — Background transfer and two-hour admission
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Make the browser and server accept 1..7200-second MP4s within validated size limits, with bounded-memory integrity checking and an active in-tab upload that survives closing only the video popup.
+
+PREFLIGHT
+Read c6-usability plan and P1 handoff, current video-upload.ts, VideoUpload.tsx, media-upload-service.ts, migration 012, upload tests, current git/version. Keep existing stored videos and server job IDs intact.
+
+IMPLEMENT
+Change the actual browser metadata, uploadVideo and server start schema duration to inclusive 7200 (7201 must be rejected), with truthful two-hour copy. The server already caps files at 2,000,000,000 bytes but Studio caps at 250,000,000; align Studio with existing server limit only after replacing the whole-file file.arrayBuffer() SHA-256 digest by tested incremental/chunked hashing, bounded memory and current secure digest equivalence. Keep 8 MiB S3 multipart, per-part ETags, checksum, filename/MIME, source rights/CSRF, idempotency, quota and existing protected storage. Review the currently ~one-hour upload session expiry against 2 GB transfers; implement a finite, safe session recovery/TTL policy with expiring cleanups, not perpetual sessions. Move the in-progress upload controller/state to a stable owner-scoped in-tab coordinator outside modal lifetime. Popup close hides the UI but upload and progress remain visible elsewhere and reopening shows it. Explicit Stop cancels. Browser refresh/exit loses the File handle: warn, keep saved item, allow validated retry without duplicate item/asset and never imply true resume if not implemented. Isolate progress by project/owner.
+
+VALIDATION
+Focused browser helper/server tests for 7200 accepted, 7201 denied, file bytes over limit, incremental checksum, modal close vs Stop, retry/duplicate avoidance, expiry/reload warning and rights/owner checks; affected Studio/server typecheck/build, git diff --check. No AWS paid jobs/full aggregate.
+
+GIT / HANDOFF
+Runner commits; leave root 0.6.7. Report limits, TTL decision, measured/ensured bounded-memory behavior, test totals and remaining HLS 30-minute assumptions for P3.
