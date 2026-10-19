@@ -434,3 +434,148 @@ expectation. The earlier focused Q2 media/storage suite had **16 passed /
 0 failed / 2 skipped**, and three isolated PostgreSQL integration tests
 passed. `git diff --check` passed. Root version stayed 0.6.7; no commit,
 HEAD rewrite or Q3 run occurred.
+
+## Final qualification recovery — 2026-10-19 01:25–01:28 UTC
+
+**A. Disposition: Q2 NOT GREEN.** F6 remains PASS for the already published
+synthetic FREE release. F5 and F7 remain PARTIAL; no observed access failure
+was found in this pass, but their required live proof is incomplete. This
+section preserves every earlier dated Q2 result above. Q3 execution remains
+gated; this pass did not start it.
+
+**B. Exact source.** The inspected local `main` was clean at
+`d703ccd21690953b95e191435c753fe7cd222152`, root version `0.6.7`.
+It includes the Q2 implementation and the four Q1 repair files. The four
+current Q1 file SHA-256 values exactly matched their separate, still-dirty
+Q1 worktree counterparts; the primary Q1 report and its historical verdict
+were not changed. The public deployment is the previously approved
+`/srv/firelaunch/releases/20261018T201026Z-4e4fde123451`, archive SHA-256
+`4e4fde123451e75a8f5f211fe3a0805455a545adc9936d273d03209629b18d09`
+as recorded above; the host archive was **not freshly rehashed** here. This
+recovery edit changes documentation only. Its qualification-section
+fingerprint is recorded after the section below.
+
+**C–D. Existing creator approval and Q1 media.** The earlier authenticated
+Studio consent approved the synthetic FREE item
+`ci_726c83b05cba4325a04acd9a0d6c1d4e`, READY asset
+`ma_00931342d7ac4dd6b6273d4458c61845`, rendition
+`rs_1827d55a2f9a9390e96b3f3f8c1e6d85`, public poster
+`ma_a6de62f10ab5488e9925ecb52d88e636`, and existing Videos shelf.
+The primary Q1 report binds MediaConvert job `1792298238156-lo2djx` to its
+privately verified READY HLS. The seven named files and exact Q1 hashes are
+in the previous section and primary Q1 report. This pass fetched only the
+master, not the seven files again. No upload, encode, promotion, publication,
+revocation, or deployment was performed.
+
+**E. AWS identity and configuration.** The existing local profiles include
+`firelaunch-deployer`; the other read-only portal profile could not be
+identified by role from profile names/configuration alone. STS for
+`firelaunch-deployer`, `firelaunch-client-jfin`,
+`firelaunch-developer-jfin`, and `FireLaunch-Staging-Deployer` each returned
+`ExpiredToken`, including a repeat deployer check. No credential value was
+shown, copied, replaced, or refreshed. Therefore this pass has **no fresh
+assumed-role identity**, stack, distribution/OAC/origin, bucket policy,
+queue/rule, seven-key S3 inventory, IAM, budget, or billing observation.
+The last verified AWS state in the earlier Q2 section was Foundation
+`UPDATE_COMPLETE`, distribution `E3E4ESF38V413L` enabled/Deployed with OAC
+`E3FC82P2MZSJ0K`, queue PAUSED, and EventBridge DISABLED. Treat those as
+dated observations until scoped sessions are refreshed and checked.
+
+**F. CDN, OAC, and S3.** This pass independently fetched the approved master
+over anonymous CloudFront HTTPS: 200, `application/vnd.apple.mpegurl`, 156
+bytes, SHA-256
+`7874303d9ceabcf880f5086d9a995b5ff010dd8c05fdc4424a5ab08842829494`,
+matching Q1. Fresh CDN staged-path and unapproved-filename probes returned
+403. The previous source-bound Q2 checks already established all seven
+CloudFront object hashes/MIME, direct anonymous original/staged/delivery S3
+403, and canonical/foreign/malformed CDN-path 403. Those seven downloads
+and S3 denials were **reused**, not repeated. OAC-only S3 policy and exact
+origin path have only the earlier deployment readback; postpublication AWS
+configuration and a real app-principal delivery-write denial remain missing.
+No mutating S3 permission probe was attempted without an approved disposable
+target. Publisher use is evidenced by the existing successful seven-object
+promotion and source-bound role separation, but no fresh role policy/trust
+readback was possible.
+
+**G. Manifest and publication.** Fresh anonymous GET of the canonical
+`/public/v1/deployments/dep_00e792ad15a14aa1be420d6721956192/current`
+returned release `rel_99483e7fc9f0438c858b90c5db77d06c`, sequence 1 and
+SHA-256 `b7336f0807a49232be2b5575cbaf94808db45afe57b37b663f1b6473f5d09426`.
+The canonical immutable `/releases/rel_99483e7fc9f0438c858b90c5db77d06c`
+returned 200, 3,453 bytes, with an identical raw-body SHA-256 and ETag.
+Pointer ETag matched its own raw-body SHA-256
+`d1c398ec9a8028fcb3cefbc5d7fedaf47d6b39a7f9adbd3e1fea68d27469a059`.
+Pointer cache control is `max-age=0, must-revalidate`; immutable release
+cache control is `max-age=60, immutable`. The body binds the owned catalog
+item to the READY video and public poster, package `com.jfin.snabbletv`,
+project `ch_21ae035aa31743b1a8a98f145ee34f6a`, and deployment above.
+The public JSON contains no S3 URL, signed capability, access-key marker,
+evidence URI, or AWS account number. The current pointer remains #1; this
+pass created no additional release. An authenticated full-history listing
+was not performed.
+
+**H. Isolation and revocation.** Fresh public-only TV-host probes returned
+404 for `/api/health` and an unknown deployment; anonymous Studio
+`/api/projects` returned 401. The previous Q2 evidence includes a second
+real Google account's Studio denial, local two-principal/CSRF/revoked media
+tests, and invalidation/cache behavior. Those are partial F7 evidence, not
+direct authenticated foreign-account API or wrong-CSRF live responses.
+There was no available authenticated two-account session or separately
+approved disposable fixture for a live draft/unready/revoked publication
+and bounded CDN invalidation/cache test. The active release and unrelated
+creator media were left intact. Revoked content may persist in CDN cache or
+offline clients within documented limits; no instantaneous erasure is
+claimed. Ngest was untouched; its current health was not freshly tested.
+
+**I. Cost and exposure.** The same seven approved FREE HLS objects and one
+public manifest remain reachable. CloudFront, S3 storage/requests, the
+viewer function, and possible invalidation remain usage-billed. Q1's
+reported $20/month budget is an alert, not a charge cap; posted charges and
+current budget were not readable with expired sessions. This pass made only
+bounded read-only HTTPS/STS calls and incurred no new MediaConvert job or
+publication.
+
+**J. Final gate ledger.**
+
+| Gate | Result | Remaining acceptance proof |
+| --- | --- | --- |
+| F5 FREE viewer policy | **PARTIAL** | Fresh intended-account/deployer and independent read-only STS; deployed stack/distribution/OAC/origin/bucket/IAM/queue/rule readback; real app-role delivery mutation denial on an approved disposable target. Existing CDN/S3 positive and negative HTTP evidence remains valid for the tested objects and paths. |
+| F6 owned immutable release | **PASS** | Existing creator approval, exact READY rendition and seven Q1-matching public files, public-only resolver, release #1/pointer integrity, rights-cleared poster and one Videos binding are source-bound and freshly spot-checked. No native-device claim. |
+| F7 revocation and isolation | **PARTIAL** | Direct authenticated foreign-owner/project and wrong-CSRF API responses, plus isolated live unready/revoked publication/resolution and bounded CDN revocation/cache behavior, require authenticated sessions and an approved disposable fixture. |
+
+**K. Validation.** This recovery pass ran **0 automated tests: 0 passed,
+0 failed, 0 skipped**; no source changed, and it did not repeat `npm run check`.
+It made 3 positive anonymous HTTPS GETs (pointer, release, master), 5
+negative HTTPS GETs (2 CDN 403, 2 TV-host 404, 1 Studio 401), and 5
+expired-token STS attempts (four profiles plus deployer repeat). Existing
+Q2 results were reused: seven CloudFront hash matches; focused media/storage
+**16 passed / 0 failed / 2 skipped**, isolated PostgreSQL integration **3
+passed / 0 failed**, kernel **127 passed / 0 failed / 15 skipped**, Studio
+**39 passed / 1 failed** on the pre-existing canyon CSS expectation. That
+aggregate was **not a full PASS**. Current `git diff --check` is recorded
+after this section below.
+
+**L. Smallest resolution.** Refresh existing temporary scoped portal
+sessions, identify the read-only profile by verified STS role, and perform
+bounded postpublication AWS readback. Use an expressly approved disposable
+S3 target for a real negative write test. Provide authenticated owner and
+second-account sessions plus a separate disposable video/deployment to
+exercise live foreign/CSRF/unready/revoked/cache paths. Do not touch or
+republish release #1 to obtain proof. If those checks pass, append their
+source-bound results and reassess F5/F7; no new job or release is otherwise
+needed.
+
+**M. Exact Q3 handoff status.** The existing deployment, public origin,
+release #1, digest, existing Videos shelf, poster and CloudFront master above
+can support Q3 planning, but **Q3 may not officially execute until Q2 is
+GREEN**. Q3 separately owns the real creator-bound Vega VPKG, adaptive HLS
+play/pause/seek/Back, same-installed-package refresh, offline LKG, and
+rights-checked new-sequence rollback. No Q3 test was run here.
+
+**Working-tree fingerprint:** before this documentation edit, `main` was
+clean. After it, the only changed path is this `Q2-closeout.md`. The SHA-256
+of the recovery section starting at its heading and ending immediately above
+this fingerprint paragraph is
+`5c910b31e9615b7e02ed8d6a2eb351bdcd2ba7626c432f5742ba676a5f1d05fd`.
+`git diff --check` passed (exit 0). The source files and root version are
+unchanged; no commit was made.
