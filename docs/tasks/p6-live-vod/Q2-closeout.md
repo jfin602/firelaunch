@@ -1,11 +1,12 @@
 # Q2 closeout — FREE release live; overall NOT GREEN
 
-**Latest disposition (2026-10-18 20:21 UTC): F6 GREEN; F5 and F7 NOT GREEN.**
-The approved synthetic FREE release is live and the complete seven-file HLS
-graph has been rehashed over anonymous CloudFront HTTPS. Final AWS role and
-object inventory readback is pending refreshed CLI credentials. Direct live
-authenticated foreign-owner and wrong-CSRF API denials and a disposable live
-revocation/invalidation test have not been obtained. Q3 must remain unstarted.
+**Latest disposition (2026-10-19 02:34 UTC): F5 GREEN, F6 PASS, F7 PARTIAL; Q2 NOT GREEN.**
+The approved synthetic FREE release remains live. Five-cycle evidence below
+adds refreshed AWS inventory and an actual staging app-role delivery-write
+denial. Real simultaneous A/B browser sessions showed B excluded from A's
+project UI, but private API/CSRF HTTP results and an isolated revocation/CDN
+cache fixture are still missing. Q3 must remain unstarted. Earlier dated
+dispositions below are retained as history.
 
 **Historical first preflight (2026-10-18 19:27 UTC): BLOCKED / NOT GREEN.** The first
 preflight below stopped because its checkout lacked Q1 evidence. A subsequent
@@ -579,3 +580,19 @@ this fingerprint paragraph is
 `5c910b31e9615b7e02ed8d6a2eb351bdcd2ba7626c432f5742ba676a5f1d05fd`.
 `git diff --check` passed (exit 0). The source files and root version are
 unchanged; no commit was made.
+
+## Q2 five-cycle qualification update — 2026-10-19 02:34 UTC
+
+The five-cycle record is in [qualification/q2-five-cycle](qualification/q2-five-cycle). Cycle 1 **PASS**: refreshed scoped STS verified the human deployer and a distinct read-only role in account `363242105231`; read-only inspection confirmed the enabled/deployed distribution, exact seven-file viewer allowlist, OAC/private buckets, role policies, paused encode queue, disabled processing rule and $20 alert budget. Stack drift remains `NOT_CHECKED`; no drift scan or resource change was made. Cycle 2 **PASS**: one real staging app-role attempt to write a synthetic canonical delivery key returned explicit identity-policy `AccessDenied`, and the object remained absent. This closes the bounded F5 access gap without changing release #1.
+
+Cycle 3 **PARTIAL**: A and B were simultaneously signed in with separate real Google identities in the in-app browser and Chrome. B's attempt to open A's exact Studio project URL returned B to its empty new-channel screen; A remained on the owned project and the release #1 metadata was unchanged in the UI. Direct private API navigation in both browser surfaces was blocked by the browser client before an HTTP response, so no foreign authenticated API status, denied write, private capability or wrong-CSRF result is claimed. Anonymous TV resolver 200/private Studio API 401 and TV-host 404 observations remain only the public boundary proof. Cycle 4 **BLOCKED**: the owner confirmed no eligible disposable, creator-owned rights-approved second video fixture exists. The live revocation, stale-publication and CloudFront invalidation/cache test therefore did not run. The single-prefix viewer allowlist would also need a reviewed change to serve a second fixture; release #1 was not used as a revocation subject.
+
+Cycle 5 **PARTIAL**: the prior Studio failure was a stale test expectation after committed CSS switched to the shipped `desert-canyon.webp` asset. Only the Studio test was corrected to assert that URL and a valid RIFF/WEBP file header; CSS and the image were unchanged. The focused test passed **5/5**. Exactly one final `npm run check` under Node `v24.21.0` and npm `12.2.0` passed all seven workspace typechecks/builds and **271 tests passed / 0 failed / 15 environment-gated skips** (kernel 127/15 skip, Studio 40, runner 104). `git diff --check` passed. Local HEAD remains `3eba83ffbe71646cd0e5b46a95d9b0f06707f264`, root version `0.6.7`; the sole test-source edit has Git blob `298a5b937ebe6a88f65b109841bc7977e30a6817`. It was not deployed. Prior live observations remain bound to the deployed staging archive recorded above, not to the local test edit.
+
+| Gate | Final result | Remaining dependency |
+| --- | --- | --- |
+| F5 bounded FREE viewer policy | **PASS / GREEN** | None for the already approved release #1 scope. |
+| F6 owned immutable release | **PASS** | Existing creator approval, release #1 digest, seven CloudFront HLS hashes, Videos binding and public-only resolver evidence retained; no republish or HLS redownload. |
+| F7 revocation and isolation | **PARTIAL / NOT GREEN** | Real authenticated foreign/private API and wrong-CSRF response classes with unchanged-state readback; separate eligible rights-approved fixture and bounded live revocation/CDN invalidation/cache observations. |
+
+**Q2 remains NOT GREEN.** The active FREE release #1, its manifest pointer and seven objects, creator data, backups, service and AWS resources were preserved. No additional encode, public publication, VPKG build or Q3 work occurred. The next Q2 action is to obtain a supported private-API test path for the two existing sessions and an independently approved disposable media fixture; do not treat the aggregate pass as F7 live proof.

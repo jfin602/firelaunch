@@ -104,10 +104,12 @@ test('Studio theme seam leaves creator TV colors and directional focus independe
   const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
   const theme = css.split('/* Desert Heat Studio chrome.')[1];
   assert.ok(theme);
-  assert.match(theme, /--fl-canyon-image: url\('\/studio-canyon\.svg'\)/);
+  assert.match(theme, /--fl-canyon-image: url\('\/desert-canyon\.webp'\)/);
   assert.match(theme, /prefers-reduced-data: reduce/);
   assert.doesNotMatch(theme, /\.tv-screen\s*\{|--tv-(?:accent|bg|text)\s*:/);
-  assert.match(readFileSync(new URL('../public/studio-canyon.svg', import.meta.url), 'utf8'), /<svg\b/);
+  const canyon = readFileSync(new URL('../public/desert-canyon.webp', import.meta.url));
+  assert.equal(canyon.toString('ascii', 0, 4), 'RIFF');
+  assert.equal(canyon.toString('ascii', 8, 12), 'WEBP');
 
   const spec = fixtureChannel();
   spec.brand = { ...spec.brand, primaryColor: '#398ae8', backgroundColor: '#102746', textColor: '#f1e8d1' };
