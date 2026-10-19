@@ -566,3 +566,20 @@ body { min-width: 0; }
   .tv-player-footer { flex-wrap: wrap; }
   .delivery fieldset { padding: 10px; }
 }
+
+.video-workspace-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: clamp(10px, 3vw, 36px); background: #090607db; color: var(--fl-text); }
+.video-workspace { display: flex; flex-direction: column; width: min(1040px, 100%); max-height: min(92vh, 92dvh); overflow: hidden; border: 1px solid var(--fl-border); border-radius: var(--fl-radius-lg); background: #181113; box-shadow: 0 28px 80px #000c; }
+.video-workspace-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: clamp(18px, 3vw, 30px); border-bottom: 1px solid var(--fl-border-soft); background: #241719; }
+.video-workspace-header h2 { margin: 6px 0; font: 600 clamp(24px, 3vw, 34px) 'Space Grotesk', sans-serif; overflow-wrap: anywhere; }
+.video-workspace-header p { margin: 0; color: var(--fl-muted); font-size: 13px; line-height: 1.5; }
+.video-workspace-header button { flex: none; padding: 10px 14px; border: 1px solid var(--fl-border); border-radius: var(--fl-radius-sm); background: var(--fl-surface-raised); color: var(--fl-text); }
+.video-workspace-body { overflow: auto; overscroll-behavior: contain; padding: clamp(14px, 3vw, 30px); }
+.video-workspace-body .video-upload-panel { margin: 16px 0 0; }
+.video-workspace-summary { display: flex; gap: 18px; align-items: center; padding: 14px; border: 1px solid var(--fl-border-soft); border-radius: var(--fl-radius); background: var(--fl-surface); }
+.video-workspace-art { display: grid; place-items: center; flex: none; width: min(25%, 190px); aspect-ratio: 16 / 9; overflow: hidden; background: #35272a; color: var(--fl-muted); font-size: 30px; }
+.video-workspace-art img { width: 100%; height: 100%; object-fit: cover; }
+.video-workspace-summary strong { font-size: 17px; overflow-wrap: anywhere; }
+.video-workspace-summary p, .video-workspace-summary small { display: block; margin: 5px 0 0; color: var(--fl-muted); line-height: 1.4; }
+.video-workspace-lock { padding: 12px; border-left: 3px solid var(--fl-orange); background: #38211e; color: var(--fl-text); }
+.video-workspace :is(button, input, select, textarea):focus-visible { outline: 3px solid var(--fl-focus); outline-offset: 3px; }
+@media (max-width: 600px) { .video-workspace-backdrop { padding: 0; } .video-workspace { width: 100%; height: 100vh; height: 100dvh; max-height: none; border-radius: 0; } .video-workspace-header { padding: 16px; } .video-workspace-body { padding: 12px; } .video-workspace-summary { align-items: flex-start; } }

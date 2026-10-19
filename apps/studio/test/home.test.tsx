@@ -56,8 +56,9 @@ test('empty account keeps clear onboarding; one project opens real Home and navi
     fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
     assert.ok(screen.getByRole('region', { name: 'Interactive TV Preview' }));
     fireEvent.click(screen.getByRole('navigation', { name: 'Studio surfaces' }).querySelector('button')!);
-    fireEvent.click(screen.getByRole('button', { name: 'Open Catalog / Add Video' }));
-    await screen.findByRole('heading', { name: 'Build your channel library.' });
+    fireEvent.click(screen.getByRole('button', { name: 'Add Video' }));
+    await screen.findByRole('dialog', { name: 'Add Video' });
+    fireEvent.click(screen.getByRole('button', { name: 'Close video workspace' }));
     fireEvent.click(screen.getByRole('navigation', { name: 'Studio surfaces' }).querySelector('button')!);
     fireEvent.click(document.querySelector('.home-hero .button-row button:last-child')!);
     assert.ok(screen.getByPlaceholderText('e.g. Wild Earth'));
@@ -68,7 +69,7 @@ test('many projects and creator artwork are scoped; broken artwork falls back', 
   const mock = setup([first, second], id => json(id === firstId ? { ...empty(firstId), sources: [source], items: [film(firstId)] } : empty(secondId)));
   try {
     render(createElement(App));
-    await screen.findByRole('button', { name: 'Open Director Cut in Catalog' });
+    await screen.findByRole('button', { name: 'Open Director Cut video' });
     assert.equal((document.querySelector('.home-art img') as HTMLImageElement).src, 'https://art.example/violet.jpg');
     assert.ok(screen.getByText('Playback rights unknown'));
     assert.ok(screen.getByText('No playable upload · private draft'));
@@ -76,9 +77,71 @@ test('many projects and creator artwork are scoped; broken artwork falls back', 
     assert.ok(screen.getByLabelText('Artwork unavailable'));
     assert.equal(document.querySelector('.home-art img'), null);
     assert.equal(screen.getAllByRole('button', { name: /films.*draft/ }).length, 2);
-    fireEvent.click(screen.getByRole('button', { name: 'Open Director Cut in Catalog' }));
-    await screen.findByRole('heading', { name: 'Build your channel library.' });
+    fireEvent.click(screen.getByRole('button', { name: 'Open Director Cut video' }));
+    await screen.findByRole('dialog', { name: 'Director Cut' });
     assert.ok(mock.requests.every(url => !url.includes('/private-objects')));
+  } finally { mock.restore(); }
+});
+
+test('video workspace opens directly from Home and Catalog, traps focus, and restores its opener', async () => {
+  const mock = setup([first], () => json({ ...empty(firstId), sources: [source], items: [film(firstId)] }));
+  try {
+    render(createElement(App));
+    const card = await screen.findByRole('button', { name: 'Open Director Cut video' });
+    card.focus();
+    fireEvent.click(card);
+    const dialog = await screen.findByRole('dialog', { name: 'Director Cut' });
+    const close = screen.getByRole('button', { name: 'Close video workspace' });
+    assert.equal(document.activeElement, close);
+    assert.ok(dialog.contains(screen.getByRole('button', { name: 'Save draft details' })));
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+    assert.ok(dialog.contains(document.activeElement));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => assert.equal(screen.queryByRole('dialog'), null));
+    assert.equal(document.activeElement, card);
+    fireEvent.click(screen.getByRole('button', { name: 'Catalog' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Select Director Cut · video' }));
+    await screen.findByRole('dialog', { name: 'Director Cut' });
+    fireEvent.click(screen.getByRole('button', { name: 'Close video workspace' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Video' }));
+    await screen.findByRole('dialog', { name: 'Add Video' });
+  } finally { mock.restore(); }
+});
+
+test('video workspace blocks Escape and close while a video action is pending', async () => {
+  const item = film(firstId);
+  const inventory = { ...empty(firstId), sources: [source], items: [item], collections: [{ schemaVersion: 1, id: `col_${'f'.repeat(32)}`, creatorAccountId: owner, projectId: firstId, kind: 'series', title: 'Videos', itemIds: [itemId] }] };
+  const mock = setup([first], () => json(inventory));
+  const baselineFetch = globalThis.fetch;
+  let release!: (response: Response) => void;
+  const pending = new Promise<Response>(resolve => { release = resolve; });
+  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => String(input).endsWith(`/catalog/items/${itemId}`) && init?.method === 'PUT'
+    ? pending : baselineFetch(input, init)) as typeof fetch;
+  try {
+    render(createElement(App));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open Director Cut video' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Director Cut' });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft details' }));
+    await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Close video workspace' }) as HTMLButtonElement).disabled, true));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    assert.ok(screen.getByRole('dialog', { name: 'Director Cut' }));
+    release(json({ revision: 2, record: item }));
+    await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Close video workspace' }) as HTMLButtonElement).disabled, false));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => assert.equal(screen.queryByRole('dialog'), null));
+  } finally { mock.restore(); }
+});
+
+test('session loss clears the selected video and its private workspace', async () => {
+  const mock = setup([first], () => json({ ...empty(firstId), sources: [source], items: [film(firstId)] }));
+  try {
+    render(createElement(App));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open Director Cut video' }));
+    await screen.findByRole('dialog', { name: 'Director Cut' });
+    fireEvent(dom.window as unknown as Window, new dom.window.Event('firelaunch-session-expired'));
+    await screen.findByRole('link', { name: 'Sign in with Google' });
+    assert.equal(screen.queryByRole('dialog'), null);
+    assert.equal(screen.queryByText('Director Cut'), null);
   } finally { mock.restore(); }
 });
 
@@ -87,7 +150,7 @@ test('private object and signed artwork URLs stay out of Home image elements', a
   const mock = setup([first], () => json({ ...empty(firstId), sources: [source], items: [signed] }));
   try {
     render(createElement(App));
-    await screen.findByRole('button', { name: 'Open Director Cut in Catalog' });
+    await screen.findByRole('button', { name: 'Open Director Cut video' });
     assert.equal(document.querySelector('.home-art img'), null);
     assert.ok(screen.getByLabelText('Artwork unavailable'));
     assert.ok(mock.requests.every(url => !url.includes('secret')));

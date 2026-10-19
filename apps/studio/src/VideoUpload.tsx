@@ -115,9 +115,9 @@ export function VideoLibraryStatus({ projectId, assetId }: { projectId: string; 
   return <span>{status}</span>;
 }
 
-export function NewVideoUpload({ projectId, inventory, refresh, onCreated, onClose, existingItem }: {
+export function NewVideoUpload({ projectId, inventory, refresh, onCreated, onClose, onBusyChange, existingItem }: {
   projectId: string; inventory: CatalogSnapshot; refresh: () => Promise<CatalogSnapshot>;
-  onCreated: (itemId: string) => void; onClose: () => void; existingItem?: CatalogItem;
+  onCreated: (itemId: string) => void; onClose: () => void; onBusyChange?: (busy: boolean) => void; existingItem?: CatalogItem;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState(existingItem?.creatorOverrides?.title ?? existingItem?.sourceRecord.metadata.title ?? '');
@@ -132,6 +132,7 @@ export function NewVideoUpload({ projectId, inventory, refresh, onCreated, onClo
   const [session, setSession] = useState<VideoUploadStatus | null>(null);
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
   const controller = useRef<AbortController | null>(null);
@@ -160,8 +161,11 @@ export function NewVideoUpload({ projectId, inventory, refresh, onCreated, onClo
     try { validateVideoFile(next); setFile(next); if (!titleEdited && !itemId) setTitle(titleFromFilename(next.name)); setError(''); }
     catch (reason) { setFile(null); setError(reason instanceof Error ? reason.message : String(reason)); }
   };
+  const setWorking = (value: boolean) => { busyRef.current = value; setBusy(value); onBusyChange?.(value); };
   const submit = async () => {
     if (busyRef.current) return;
+    setWorking(true);
+    setUploading(true);
     setError('');
     try {
       if (!file) throw new Error('Choose an MP4 video.');
@@ -176,7 +180,7 @@ export function NewVideoUpload({ projectId, inventory, refresh, onCreated, onClo
       const chosenThumbnail = thumbnail ?? await extractVideoThumbnail(file);
       setThumbnailNotice(chosenThumbnail ? thumbnail ? 'Custom thumbnail saved as private draft artwork.' : 'Video still saved as private draft artwork.'
         : 'No thumbnail could be extracted. A draft placeholder remains until you add artwork.');
-      busyRef.current = true; setBusy(true); setProgress(0);
+      setProgress(0);
       let current = await refresh();
       let ownedItemId = itemId || current.items.find(value => value.kind === 'video' && value.sourceRecord.externalId.provider === 'creator' && value.sourceRecord.externalId.value === externalId)?.id || '';
       if (!ownedItemId) {
@@ -231,21 +235,37 @@ export function NewVideoUpload({ projectId, inventory, refresh, onCreated, onClo
     } catch (reason) {
       setError(reason instanceof ApiError && reason.status === 409 ? 'Catalog changed in another tab. Review the saved draft and retry.' : reason instanceof Error ? reason.message : String(reason));
       await refresh().catch(() => undefined);
-    } finally { controller.current = null; busyRef.current = false; setBusy(false); }
+    } finally { controller.current = null; setUploading(false); setWorking(false); }
+  };
+  const saveDetails = async () => {
+    if (!existingItem || busyRef.current) return;
+    setError(''); setWorking(true);
+    try {
+      if (!title.trim() || title.trim().length > 160) throw new Error('Enter a video title under 160 characters.');
+      const current = await refresh();
+      const owned = current.items.find(value => value.id === existingItem.id && value.kind === 'video');
+      if (!owned) throw new Error('Video draft is unavailable for this project. Refresh the library.');
+      const { id, creatorAccountId: _owner, projectId: _project, ...record } = owned;
+      await writeCatalog(projectId, 'items', current.revision, { ...record, creatorOverrides: {
+        ...owned.creatorOverrides, title: title.trim(), description: description.trim(), editedAt: new Date().toISOString()
+      } }, id);
+      await saveVideoPlacement(projectId, id, collectionId, refresh);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
+    finally { setWorking(false); }
   };
   const retry = async () => {
     if (!session || !assetId) return;
-    setError(''); setBusy(true);
+    setError(''); setWorking(true);
     try { setSession(await retryVideoProcessing(projectId, session.id, assetId)); }
     catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
-    finally { setBusy(false); }
+    finally { setWorking(false); }
   };
   const updateThumbnail = async () => {
     if (!existingItem || !thumbnail || !rightsConfirmed) return;
-    setError(''); setBusy(true);
+    setError(''); setWorking(true);
     try { await saveThumbnail(projectId, existingItem.id, thumbnail, refresh); setThumbnail(null); }
     catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
-    finally { setBusy(false); }
+    finally { setWorking(false); }
   };
   return <section className="video-upload-panel" aria-label={existingItem ? 'Replace video' : 'Add Video'}>
     <div className="video-upload-heading"><div><span className="eyebrow">PRIVATE VIDEO DRAFT</span><h3>{existingItem ? 'Replace video' : 'Add Video'}</h3></div><button type="button" disabled={busy} onClick={onClose}>Close</button></div>
@@ -263,11 +283,12 @@ export function NewVideoUpload({ projectId, inventory, refresh, onCreated, onClo
     <p className="video-file">Without a custom thumbnail, a draft placeholder appears until reviewed TV artwork is available.</p>
     {thumbnailNotice && <p role="status" className="video-upload-notice">{thumbnailNotice}</p>}
     <label className="check video-rights"><input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)}/> I own or license TV display rights for this video and its artwork, and TV playback and streaming rights.</label>
-    <div className="button-row"><button className="primary" disabled={busy} onClick={() => void submit()}>{busy ? 'Uploading…' : 'Upload Video'}</button>
+    <div className="button-row"><button className="primary" disabled={busy} onClick={() => void submit()}>{busy ? uploading ? 'Uploading…' : 'Working…' : existingItem ? 'Replace video upload' : 'Upload Video'}</button>
+      {existingItem && <button type="button" disabled={busy} onClick={() => void saveDetails()}>Save draft details</button>}
       {existingItem && thumbnail && <button type="button" disabled={busy || !rightsConfirmed} onClick={() => void updateThumbnail()}>Save thumbnail only</button>}
       {session?.processing?.state === 'failed' && <button type="button" disabled={busy} onClick={() => void retry()}>Retry processing</button>}
       {busy && controller.current && <button type="button" onClick={() => controller.current?.abort()}>Stop upload</button>}</div>
-    {busy && <><progress aria-label="Video upload progress" value={progress} max="100"/><p role="status" className="video-upload-notice">{progress < 100 ? `Uploading ${progress}%` : 'Upload sent; finishing private verification…'}</p></>}
+    {uploading && <><progress aria-label="Video upload progress" value={progress} max="100"/><p role="status" className="video-upload-notice">{progress === 0 ? 'Preparing private upload…' : progress < 100 ? `Uploading ${progress}%` : 'Upload sent; finishing private verification…'}</p></>}
     {session && <p role="status" className={`video-upload-notice${session.processing?.state === 'failed' ? ' video-upload-failed' : ''}`}>{videoProcessingMessage(session)}</p>}
     {itemId && error && <p>Draft saved in your library. Select it to continue after reload.</p>}
     {error && <p role="alert" className="catalog-error">{error}</p>}
