@@ -429,6 +429,11 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     await assert.rejects(first.pool.query(`UPDATE publication_live_pointers SET release_id = $2, sequence = 1
       WHERE deployment_id = $1`, [deploymentId, liveId]), /must advance/);
     assert.equal((await publication.history(owner, project.id, deploymentId)).releases.length, 3);
+    assert.deepEqual(await publication.currentSummary(owner, project.id, deploymentId), {
+      releaseId: rollback.manifest.releaseId, sequence: 3,
+      revisions: rollback.manifest.approvedContentRevision, catalogItemIds: [item.id]
+    });
+    await assert.rejects(publication.currentSummary(foreign, project.id, deploymentId), { code: 'NOT_FOUND' });
     await assert.rejects(other.history(foreign, project.id, deploymentId), { code: 'NOT_FOUND' });
     await first.pool.end(); first = undefined;
     const restarted = await HostedProjectRepository.connect(url.toString()); first = restarted;

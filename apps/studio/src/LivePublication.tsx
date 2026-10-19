@@ -4,7 +4,7 @@ import { ApiError, approveLive, checkLiveReadiness, createDeployment, publishLiv
 
 type Choice = { catalogItemId: string; artworkAssetId: string; playbackAssetId: string };
 
-export function LivePublication({ project, hosted }: { project: ChannelProject; hosted: boolean }) {
+export function LivePublication({ project, hosted, onPublished }: { project: ChannelProject; hosted: boolean; onPublished?: () => void }) {
   const [deployment, setDeployment] = useState<Awaited<ReturnType<typeof readDeployment>> | null>(null);
   const [status, setStatus] = useState<LiveStatus | null>(null);
   const [history, setHistory] = useState<ReleaseHistory | null>(null);
@@ -113,9 +113,10 @@ export function LivePublication({ project, hosted }: { project: ChannelProject; 
     if (status.revisions.channel !== approval.review.revisions.channel || status.revisions.catalog !== approval.review.revisions.catalog || status.liveReleaseId !== approval.review.expectedLiveReleaseId) {
       throw new Error('Approval is stale. Refresh and approve again.');
     }
-    if (!window.confirm(`Publish ${approval.review.rollbackSourceReleaseId ? 'a new rollback release' : 'this approved draft'} to live TV content? This does not build or submit a native app.`)) return;
+    if (!window.confirm(`Publish ${approval.review.rollbackSourceReleaseId ? 'a new rollback release' : 'this approved FREE channel draft'} to live TV? This replaces the whole live channel with ${project.spec.content.length} reviewed content item(s) at channel revision ${approval.review.revisions.channel} and catalog revision ${approval.review.revisions.catalog}. Native build and Appstore submission are separate.`)) return;
     const result = await publishLive(project.id, deployment.id, approval.id);
     await refresh();
+    onPublished?.();
     setNotice(`Live release #${result.sequence} published. Native build and Appstore submission remain separate.`);
   });
   const setupDeployment = () => void act(async () => {
@@ -144,6 +145,7 @@ export function LivePublication({ project, hosted }: { project: ChannelProject; 
     </div>}
     {deployment && status && catalog && history && <>
       <p>Draft revision {project.revision} · catalog revision {catalog.revision}. Live: {history.liveReleaseId ? `release #${status.liveSequence} (${history.liveReleaseId})` : 'none'}.</p>
+      <p>This review replaces the whole live channel: {project.spec.content.length} content item(s){project.spec.content.length ? ` — ${project.spec.content.map(content => content.title).join(', ')}` : ''}. Changes to any item, rights or channel layout require a fresh approval. Free delivery only.</p>
       {project.revision !== status.revisions.channel || catalog.revision !== status.revisions.catalog ? <p role="alert">Draft changed elsewhere. Refresh before approval.</p> : null}
       <p>Deployment: {deployment.appName} · {deployment.packageId}. Changes to the native package require a separate qualified build.</p>
       <h3>Review TV content bindings</h3><p>Choose owned catalog items and rights-cleared artwork and playback. Managed video appears only after verified upload and ready HLS processing. Uploading, failed, revoked, or unverified media blocks approval. Server readiness also checks that the draft URL matches the verified CloudFront master. Writing may be informational without playback.</p>

@@ -144,6 +144,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             const deploymentId = segments[4]!;
             const action = segments[5];
             if (action === 'status' && request.method === 'GET') { respond(response, 200, await publication.status(principal, projectId, deploymentId)); return; }
+            if (action === 'current-summary' && request.method === 'GET') { respond(response, 200, await publication.currentSummary(principal, projectId, deploymentId)); return; }
             if (action === 'history' && request.method === 'GET') { respond(response, 200, await publication.history(principal, projectId, deploymentId)); return; }
             if (action === 'readiness' && request.method === 'POST') {
               const input = publicationSnapshotSchema.parse(await body(request));

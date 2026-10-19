@@ -156,6 +156,8 @@ export type ReleaseHistory = { liveReleaseId: string | null; releases: { id: str
 export type PublicationReview = { revisions: LiveStatus['revisions']; expectedLiveReleaseId: string | null; bindings: PublicationBindings; rollbackSourceReleaseId?: string };
 const publicationPath = (projectId: string, deploymentId: string) => `/${projectId}/publication/${deploymentId}`;
 export const readLiveStatus = (projectId: string, deploymentId: string) => request(`${publicationPath(projectId, deploymentId)}/status`) as Promise<LiveStatus>;
+export type LiveSummary = { releaseId: string; sequence: number; revisions: { channel: number; catalog: number }; catalogItemIds: string[] } | null;
+export const readLiveSummary = (projectId: string, deploymentId: string) => request(`${publicationPath(projectId, deploymentId)}/current-summary`) as Promise<LiveSummary>;
 export const readReleaseHistory = (projectId: string, deploymentId: string) => request(`${publicationPath(projectId, deploymentId)}/history`) as Promise<ReleaseHistory>;
 export const checkLiveReadiness = (projectId: string, deploymentId: string, review: PublicationReview) => request(`${publicationPath(projectId, deploymentId)}/readiness`, json(review));
 export const approveLive = (projectId: string, deploymentId: string, review: PublicationReview) => request(`${publicationPath(projectId, deploymentId)}/${review.rollbackSourceReleaseId ? 'rollback' : 'approve'}`, json(review)) as Promise<{ approvalId: string }>;

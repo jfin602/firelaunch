@@ -220,6 +220,32 @@ export class PublicationRepository {
     finally { client.release(); }
   }
 
+  async currentSummary(principal: AuthenticatedPrincipal, projectId: string, deploymentId: string) {
+    ids.project.parse(projectId); ids.deployment.parse(deploymentId);
+    const client = await this.projects.pool.connect();
+    try {
+      await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+      const identity = await client.query('SELECT 1 FROM provider_identities WHERE creator_account_id = $1 AND issuer = $2 AND subject = $3',
+        [principal.accountId, principal.issuer, principal.subject]);
+      const deployment = await client.query('SELECT 1 FROM channel_deployments WHERE id = $1 AND project_id = $2 AND creator_account_id = $3',
+        [deploymentId, projectId, principal.accountId]);
+      if (!identity.rowCount || !deployment.rowCount) throw new RepositoryError('NOT_FOUND', 'Deployment not found');
+      const result = await client.query<{ manifest_bytes: string; sha256: string }>(`SELECT r.manifest_bytes, r.sha256 FROM publication_live_pointers p
+        JOIN publication_releases r ON r.id = p.release_id AND r.deployment_id = p.deployment_id
+          AND r.project_id = p.project_id AND r.creator_account_id = p.creator_account_id
+        WHERE p.deployment_id = $1 AND p.project_id = $2 AND p.creator_account_id = $3`,
+      [deploymentId, projectId, principal.accountId]);
+      if (result.rows[0] && digest(result.rows[0].manifest_bytes) !== result.rows[0].sha256)
+        throw new RepositoryError('STORAGE_ERROR', 'Release integrity failed');
+      const manifest = result.rows[0] ? publishedManifestSchema.parse(JSON.parse(result.rows[0].manifest_bytes)) : null;
+      await client.query('COMMIT');
+      return manifest ? { releaseId: manifest.releaseId, sequence: manifest.releaseSequence,
+        revisions: manifest.approvedContentRevision,
+        catalogItemIds: manifest.bindings.content.map(binding => binding.catalogItemId) } : null;
+    } catch (error) { await client.query('ROLLBACK').catch(() => undefined); return failure(error); }
+    finally { client.release(); }
+  }
+
   async approve(principal: AuthenticatedPrincipal, raw: unknown): Promise<{ approvalId: string; approvedAt: string }> {
     const input = approvalRequest.parse(raw);
     const client = await this.projects.pool.connect();

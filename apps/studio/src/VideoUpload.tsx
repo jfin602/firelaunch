@@ -125,6 +125,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
   const [titleEdited, setTitleEdited] = useState(false);
   const [description, setDescription] = useState(existingItem?.creatorOverrides?.description ?? existingItem?.sourceRecord.metadata.description ?? '');
   const [collectionId, setCollectionId] = useState(() => inventory.collections.find(value => existingItem && value.itemIds.includes(existingItem.id) && !(value.kind === 'series' && value.title === 'Videos'))?.id ?? '');
+  const [newCategory, setNewCategory] = useState('');
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [thumbnailNotice, setThumbnailNotice] = useState('');
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
@@ -250,7 +251,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
     setError(''); setWorking(true);
     try {
       if (!title.trim() || title.trim().length > 160) throw new Error('Enter a video title under 160 characters.');
-      const current = await refresh();
+      const current = inventory;
       const owned = current.items.find(value => value.id === existingItem.id && value.kind === 'video');
       if (!owned) throw new Error('Video draft is unavailable for this project. Refresh the library.');
       const { id, creatorAccountId: _owner, projectId: _project, ...record } = owned;
@@ -258,7 +259,19 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
         ...owned.creatorOverrides, title: title.trim(), description: description.trim(), editedAt: new Date().toISOString()
       } }, id);
       await saveVideoPlacement(projectId, id, collectionId, refresh);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
+    } catch (reason) { setError(reason instanceof ApiError && reason.status === 409 ? 'Catalog changed in another tab. Review the saved draft and retry.' : reason instanceof Error ? reason.message : String(reason)); await refresh().catch(() => undefined); }
+    finally { setWorking(false); }
+  };
+  const createCategory = async () => {
+    if (!newCategory.trim() || !itemId || busyRef.current) return;
+    setError(''); setWorking(true);
+    try {
+      const title = newCategory.trim();
+      if (title.length > 120) throw new Error('Keep the category under 120 characters.');
+      const added = await writeCatalog(projectId, 'collections', inventory.revision,
+        { schemaVersion: 1, kind: 'series', title, itemIds: [itemId] });
+      setCollectionId(added.record.id); setNewCategory(''); await refresh();
+    } catch (reason) { setError(reason instanceof ApiError && reason.status === 409 ? 'Catalog changed in another tab. Review the saved draft and retry.' : reason instanceof Error ? reason.message : String(reason)); await refresh().catch(() => undefined); }
     finally { setWorking(false); }
   };
   const retry = async () => {
@@ -286,6 +299,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
     {file && <p className="video-file" role="status">Selected: {file.name} · {(file.size / 1_000_000).toFixed(1)} MB</p>}
     <div className="video-form-grid"><label className="field"><span>Title *</span><input required maxLength={160} value={title} onChange={event => { setTitleEdited(true); setTitle(event.target.value); }}/></label>
       <label className="field"><span>Category</span><select value={collectionId} onChange={event => setCollectionId(event.target.value)}><option value="">Videos</option>{inventory.collections.filter(value => !(value.kind === 'series' && value.title === 'Videos')).map(value => <option key={value.id} value={value.id}>{value.title}</option>)}</select></label></div>
+    {itemId && <div className="button-row"><label className="field"><span>New category (optional)</span><input maxLength={120} value={newCategory} onChange={event => setNewCategory(event.target.value)}/></label><button type="button" disabled={busy || !newCategory.trim()} onClick={() => void createCategory()}>Create category</button></div>}
     <label className="field"><span>Description (optional)</span><textarea maxLength={4000} value={description} onChange={event => setDescription(event.target.value)}/></label>
     <label className="field"><span>Custom thumbnail (optional)</span><input type="file" accept="image/png,image/jpeg" onChange={event => setThumbnail(event.target.files?.[0] ?? null)}/></label>
     <p className="video-file">Without a custom thumbnail, a draft placeholder appears until reviewed TV artwork is available.</p>

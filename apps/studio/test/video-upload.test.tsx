@@ -343,3 +343,62 @@ test('later thumbnail replacement stays private, owner-scoped and keeps its artw
     assert.equal(requests.some(value => value.includes('media-uploads')), false);
   } finally { cleanup(); globalThis.fetch = previous; }
 });
+
+test('reopened video retains optional metadata and reports revision conflict on save', async () => {
+  const prior = globalThis.fetch;
+  const item = { id: itemId, kind: 'video', schemaVersion: 1, sourceRecord: { metadata: { title: 'Original', description: 'Source description' } },
+    creatorOverrides: { title: 'Saved title', description: 'Saved description', artworkUrl: 'https://example.com/art.png' }, mediaAssetIds: [] } as any;
+  const inventory = { revision: 8, items: [item], sources: [], mediaAssets: [], collections: [
+    { id: id('col', '3'), kind: 'series', title: 'Videos', itemIds: [itemId] }
+  ] } as any;
+  let writes = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const route = String(input);
+    if (route.endsWith(`/catalog/items/${itemId}`) && init?.method === 'PUT') {
+      writes++;
+      const body = JSON.parse(String(init.body));
+      assert.equal(body.expectedRevision, 8);
+      assert.equal(body.record.creatorOverrides.artworkUrl, 'https://example.com/art.png');
+      assert.equal(body.record.creatorOverrides.description, 'New description');
+      return json({ error: { message: 'Catalog revision changed' } }, 409);
+    }
+    throw new Error(route);
+  }) as typeof fetch;
+  try {
+    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, existingItem: item,
+      refresh: async () => inventory, onCreated: () => {}, onClose: () => {} }));
+    assert.equal((screen.getByLabelText('Title *') as HTMLInputElement).value, 'Saved title');
+    assert.equal((screen.getByLabelText('Description (optional)') as HTMLTextAreaElement).value, 'Saved description');
+    fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'New description' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft details' }));
+    await screen.findByText(/Catalog changed in another tab/);
+    assert.equal(writes, 1);
+  } finally { cleanup(); globalThis.fetch = prior; }
+});
+
+test('existing video can create one simple owned category with catalog revision', async () => {
+  const prior = globalThis.fetch;
+  const item = { id: itemId, kind: 'video', sourceRecord: { metadata: { title: 'Film' } } } as any;
+  const inventory = { revision: 11, items: [item], sources: [], mediaAssets: [], collections: [] } as any;
+  let writes = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const route = String(input);
+    if (route.endsWith('/catalog/collections') && init?.method === 'POST') {
+      writes++;
+      const body = JSON.parse(String(init.body));
+      assert.equal(body.expectedRevision, 11);
+      assert.deepEqual(body.record, { schemaVersion: 1, kind: 'series', title: 'Documentaries', itemIds: [itemId] });
+      inventory.collections.push({ id: id('col', '4'), ...body.record }); inventory.revision++;
+      return json({ revision: inventory.revision, record: inventory.collections[0] }, 201);
+    }
+    throw new Error(route);
+  }) as typeof fetch;
+  try {
+    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, existingItem: item,
+      refresh: async () => inventory, onCreated: () => {}, onClose: () => {} }));
+    fireEvent.change(screen.getByLabelText('New category (optional)'), { target: { value: 'Documentaries' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create category' }));
+    await waitFor(() => assert.equal(writes, 1));
+    assert.deepEqual(inventory.collections[0].itemIds, [itemId]);
+  } finally { cleanup(); globalThis.fetch = prior; }
+});

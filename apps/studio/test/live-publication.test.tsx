@@ -27,7 +27,8 @@ test('writing release requires explicit approval and confirmation; history reloa
   const releases: { id: string; sequence: number; sha256: string; publishedAt: string; previousReleaseId: string | null; rollbackSourceReleaseId: string | null }[] = [];
   let approval = 0;
   let liveReleaseId: string | null = null;
-  window.confirm = () => false;
+  let confirmation = '';
+  window.confirm = message => { confirmation = String(message); return false; };
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const route = String(input);
     if (route.endsWith('/deployment')) return response(deployment);
@@ -65,6 +66,8 @@ test('writing release requires explicit approval and confirmation; history reloa
     fireEvent.click(screen.getByRole('button', { name: 'Confirm publish approved draft' }));
     await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Confirm publish approved draft' }) as HTMLButtonElement).disabled, false));
     assert.equal(releases.length, 0);
+    assert.match(confirmation, /whole live channel with 1 reviewed content item/);
+    assert.match(confirmation, /channel revision 2 and catalog revision 4/);
     window.confirm = () => true;
     fireEvent.click(screen.getByRole('button', { name: 'Confirm publish approved draft' }));
     await screen.findByText(/Live release #1 published/);

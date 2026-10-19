@@ -1,13 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import type { ChannelProject } from '@firelaunch/contracts';
 import { readCatalog, type CatalogSnapshot } from './api.js';
 import { safeArtwork } from './artwork-url.js';
 import { NewVideoUpload, VideoLibraryStatus } from './VideoUpload.js';
+import { VideoReview } from './VideoReview.js';
 
 type VideoSelection = { projectId: string; accountId: string; itemId?: string };
 
-export function VideoWorkspace({ selection, onIdentity, onClose }: {
-  selection: VideoSelection; onIdentity: (itemId: string) => void; onClose: () => void;
+export function VideoWorkspace({ selection, project, onIdentity, onClose, onProjectUpdate }: {
+  selection: VideoSelection; project: ChannelProject; onIdentity: (itemId: string) => void; onClose: () => void;
+  onProjectUpdate: (project: ChannelProject) => void;
 }) {
   const [inventory, setInventory] = useState<CatalogSnapshot | null>(null);
   const [error, setError] = useState('');
@@ -77,6 +80,7 @@ export function VideoWorkspace({ selection, onIdentity, onClose }: {
       {inventory && selection.itemId && !item && createdId.current !== selection.itemId && <p role="alert">This video draft is unavailable in the current channel.</p>}
       {item && <div className="video-workspace-summary"><span className="video-workspace-art">{art ? <img src={art} alt="" referrerPolicy="no-referrer" /> : <span aria-label="Artwork unavailable">▣</span>}</span><div><strong>{title}</strong><p>{asset ? <VideoLibraryStatus projectId={selection.projectId} assetId={asset.id}/> : 'Draft · no playable upload'}</p><small>Artwork and TV rights remain subject to review before publication.</small></div></div>}
       {inventory && (!selection.itemId || item || createdId.current === selection.itemId) && <NewVideoUpload accountId={selection.accountId} projectId={selection.projectId} inventory={inventory} refresh={refresh} {...(item ? { existingItem: item } : {})} onCreated={id => { createdId.current = id; onIdentity(id); }} onClose={requestClose} onBusyChange={value => { uploadingRef.current = value; setUploading(value); }}/ >}
+      {inventory && item && <VideoReview project={project} item={item} inventory={inventory} refresh={refresh} onProjectUpdate={onProjectUpdate}/>}
       {uploading && <p role="status" className="video-workspace-lock">Keep this workspace open while the private draft is being prepared. You can close it once transfer begins.</p>}
     </div>
   </div></div>, document.body);
