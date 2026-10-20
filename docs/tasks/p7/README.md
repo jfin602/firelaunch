@@ -1,6 +1,6 @@
 # P7 — Vega Export & Device Qualification
 
-**Status (October 20, 2026): P1–P4 PROMPTS AUTHORED; P7 ENTRY BASELINE `0.7.0` APPROVED AND BEING ESTABLISHED; implementation NOT STARTED / native delivery NOT QUALIFIED.** Planned implementation versions 0.7.1–0.7.4. Deadline: October 23, 2026 noon America/Chicago (internal target 11:30 AM; freeze target October 22 5 PM).
+**Status (October 20, 2026): P1–P4 PROMPTS AUTHORED; P7 ENTRY BASELINE `0.7.0` COMMITTED (`954db7f`); implementation NOT STARTED / native delivery NOT QUALIFIED.** Planned implementation versions 0.7.1–0.7.4. Deadline: October 23, 2026 noon America/Chicago (internal target 11:30 AM; freeze target October 22 5 PM).
 
 ## Goal
 From signed-in Studio, a creator downloads a ZIP with a fresh real creator/deployment-bound x86_64 Vega release VPKG, extracts it independently, installs it on Vega VirtualDevice, sees their approved branding/shelves/artwork and plays their approved published free HLS video with sound, remote controls and success after app restart. A Studio browser Preview, fixture VPKG or ZIP of source files is not sufficient.
