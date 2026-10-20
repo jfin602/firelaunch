@@ -22,6 +22,17 @@ Hackathon deadline: 2026-10-23 12:00 PM PDT.
 
 **Explicit exclusions:** no new paid MediaConvert qualification run, broad CloudFront/IAM change, automatic creator publication, optional subtitle UI/Vega caption support, multiple-shelf merchandising, generic SaaS polishing, or paid/entitlement access in the core release. Paid video remains a stretch **only after** video/export/device acceptance. Reconcile `c6-supporting-media` with newest source before rerunning its original sequential prompts; approved ADR 0014's CloudFront artwork proposal differs from current Studio-origin `/api/public-artwork/` code and is not proof of any cloud rollout. Do not retrofit historical P5/c5/Q2 closeouts or infer physical Fire TV/Appstore approval from VirtualDevice success.
 
+## Active recovery after P7 P4 NOT GREEN (October 20)
+
+**Next:** [c7-export-recovery](../tasks/c7-export-recovery/README.md), fixed root 0.7.3, before Phase 8. The [P7 P4 closeout](../tasks/p7/closeout.md) recorded an exact 0.7.3 staging release that loaded static assets but left React #root empty. Protected rollback returned staging to 0.6.7/schema 14 and preserved approved FREE release #1 byte hashes. Source repairs in the closeout were subsequently committed to main at 88257d4; recheck the local branch and deployed host, do not duplicate or clobber those fixes.
+
+- **R1 / P1:** find the actual browser startup failure and repair only that cause; require a visible signed-out+signed-in page smoke before another rollout. Check VirtualDevice startup early.
+- **R2 / P2:** complete a separately isolated native worker and verify actual build security/receipt from real creator-bound source. Shared staging service must not execute untrusted creator code.
+- **R3 / P3:** connect owner/CSRF-protected persistent export jobs, verified ZIP storage/download and Studio states to the qualified worker; no fake downloadable fixtures.
+- **R4 / P4 manual:** one explicitly authorized protected deployment with immediate browser-render smoke/rollback, renewed creator login, real ZIP download, independent x86_64 VVD install and approved HLS picture/audio/remote/restart proof.
+
+R1-R3 target <=8 minutes and must stop after <=15 minutes with narrow blockers; runner owns their commits. R4 is the only manual closeout. No root bump to 0.7.4, AWS/CDN change, extra encoding, new media approval or production-grade device claim from this docs update. Historical Q2 F7 and broader P6 Q3 remain separately unqualified. P7 has direct local 326 pass/15 skip evidence, but no live creator ZIP or installed VVD playback.
+
 ## Current Phase 7–9 delivery allocation (owner decision October 20)
 
 [Phase 7 Vega Export](../tasks/p7/README.md) -> [Phase 8 Creative Pipeline Confirmation](../tasks/p8/README.md) -> [Phase 9 Final MVP Launch Qualification](../tasks/p9/README.md). This overrides old future P7 synchronization, P8 billing/publishing and prior P9 launch-scope allocations, not historical P0/P5/P6 checkpoint labels. Planned phases are not new deployed versions. Parallel Phase 6 creative/video correction continues in its own worktree. Do not rerun already evidenced paid encoding or broad historic Q1/Q2 matrices.

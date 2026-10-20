@@ -1,11 +1,11 @@
 # P7 — Vega Export & Device Qualification
 
-**Status (October 20, 2026): P1–P4 PROMPTS AUTHORED; P7 ENTRY BASELINE `0.7.0` COMMITTED (`954db7f`); implementation NOT STARTED / native delivery NOT QUALIFIED.** Planned implementation versions 0.7.1–0.7.4. Deadline: October 23, 2026 noon America/Chicago (internal target 11:30 AM; freeze target October 22 5 PM).
+**Status (October 20, 2026): P1-P3 IMPLEMENTED through `0cec1c7` at root `0.7.3`; P4 manually closed NOT GREEN after blank-page staging rollback; creator ZIP/device playback NOT QUALIFIED.** Planned implementation versions 0.7.1–0.7.4. Deadline: October 23, 2026 noon America/Chicago (internal target 11:30 AM; freeze target October 22 5 PM).
 
 ## Goal
 From signed-in Studio, a creator downloads a ZIP with a fresh real creator/deployment-bound x86_64 Vega release VPKG, extracts it independently, installs it on Vega VirtualDevice, sees their approved branding/shelves/artwork and plays their approved published free HLS video with sound, remote controls and success after app restart. A Studio browser Preview, fixture VPKG or ZIP of source files is not sufficient.
 
-## Executable Prompt Stack (authored; not executed)
+## Historical P7 Prompt Stack (P1-P3 complete; P4 closed NOT GREEN)
 1. **[P1 creator-bound native build](P1-creator-bound-native-build.txt):** inspect actual git worktree and approved publication binding; reuse existing native generator/SDK; produce nonempty real owned VPKG, source/toolchain/release metadata and SHA-256. Verify public HTTPS manifest endpoint.
 2. **[P2 isolated ZIP export](P2-isolated-zip-export.txt):** separate constrained native build worker with owner/project/CSRF authorization, ephemeral workspace, resource/time/network bounds, safe artifact collection and owner-only download. Hosted Studio shows progress/failures and downloads ZIP. Do not bypass the existing disabled-hosted-build guard by running creator code as the shared VPS service.
 3. **[P3 native content/playback](P3-native-hls-integration.txt):** approved published immutable manifest, correct thumbnails, native SDK-compatible adaptive HLS player; focused device navigation/detail/Back/pause/seek/audio/restart repairs. No secrets, private signed URLs or unpublished content.
@@ -20,7 +20,11 @@ The separate Phase 6 creative/video correction can proceed concurrently and P7 c
 
 Implementation checkpoints P1–P3 will use focused checks with runner-owned commits once prompts are authored, usually within 8 minutes per prompt (15-minute hard cap). P4 runs manually. GREEN only when the exact independently downloaded archive and contained real VPKG run actual published HLS on VirtualDevice. Physical Fire TV, Appstore approval, paid entitlements and billing are outside scope.
 
-## Prompt planning and execution notes (authored October 20)
+## Active recovery handoff (October 20)
+
+The [P7 P4 closeout](closeout.md) documents the 0.7.3 browser blank root, a successful protected rollback to staging 0.6.7, existing published free release #1 preservation, absence of isolated worker/owner ZIP, and missing graphical VVD. Its Hls.js scanner/source-reader repairs are in GitHub main commit `88257d4`; do not repeat P7 P1-P3 or rewrite closeout evidence. The separate [c7-export-recovery](../c7-export-recovery/README.md) at fixed root 0.7.3 now owns R1 browser rendering, R2 worker isolation, R3 owner ZIP jobs, R4 manual hosted/device qualification. Actual local worktree/host readbacks may be newer than docs.
+
+## Historical prompt planning and execution notes (authored October 20; not the next run)
 
 Read [prompt assessment](prompt-assessment.md) and [implementation plan](implementation-plan.md). P1–P3 use `GPT-6 Sol High` and have **Browser required: no**; P4 uses `GPT-6 Sol High`, **Browser required: yes**, and is the **one final manual closeout**. Target versions: P1 `0.7.1`, P2 `0.7.2`, P3 `0.7.3`, P4 `0.7.4`. No `/activate` command.
 

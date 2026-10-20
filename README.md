@@ -6,6 +6,10 @@ FireLaunch is a creator-owned Fire TV channel studio with authenticated hosted c
 
 Historical P0 qualification was NOT GREEN at 0.0.7. Preserve [P0 closeout](docs/tasks/p0/closeout.md) and historical phase results without presenting them as the current application status.
 
+## October 20 recovery status
+
+[P7 P4 closeout](docs/tasks/p7/closeout.md) is **NOT GREEN** after an authorized version 0.7.3 staging rollout left React root empty; rollback restored the prior healthy 0.6.7 Studio. Local aggregate: 326 passed, 15 skipped, no device ZIP/VPKG playback. The next approved docs/prompt workflow is [c7-export-recovery](docs/tasks/c7-export-recovery/README.md) at **unchanged 0.7.3**: diagnose Studio rendering, finish isolated worker, complete real Studio ZIP download, and independently requalify x86_64 Vega playback. No physical Fire TV/Appstore claims or automatic source synchronization.
+
 ## Current October 20 approved Phase 7–9 plan (docs only)
 
 [Phase 7](docs/tasks/p7/README.md) targets actual creator-bound x86_64 Vega ZIP export, independent installation and free HLS playback. [Phase 8](docs/tasks/p8/README.md) confirms the full creative/video publication pipeline. [Phase 9](docs/tasks/p9/README.md) confirms an integrated Studio-to-independent-VirtualDevice walkthrough by Friday October 23 noon Central. Planned version bands: 0.7.x, 0.8.x, 0.9.x, not shipped software.

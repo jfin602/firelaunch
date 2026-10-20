@@ -4,6 +4,12 @@ Read this file before substantial repository-aware work.
 
 **Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) first for dated source/staging/AWS facts, current gates and next execution.** This boot file includes historical P0-P6 decisions; older activation instructions are preserved as history and MUST NOT override that current ledger, ADR 0011/0013, or p6-live-vod Q1-Q3. Last current-state reconciliation: 2026-10-20 UTC.
 
+## Current engineering handoff: c7-export-recovery (October 20 P7 closeout)
+
+[Original P7 independent closeout](docs/tasks/p7/closeout.md) is **NOT GREEN**. P1/P2/P3 reached commits 661ba6e/779d17f/0cec1c7 and target source 0.7.3. The owner-approved staging rollout showed blank React #root despite healthy HTTP static paths; protected rollback restored 0.6.7 and public free release #1 remained unchanged. Local P7 aggregate passed 326 and skipped 15. The Hls.js scanner repair and failure closeout were subsequently committed to GitHub main at 88257d4; local worktree and current host must be independently reconciled.
+
+**Run [c7-export-recovery](docs/tasks/c7-export-recovery/README.md) next** (P1 Studio diagnosis/VVD preflight, P2 isolated worker, P3 ZIP download integration, P4 independent manual replay). All correction implementation prompts maintain root and top-level lock version 0.7.3. Only the final manual P4 may qualify live Studio/worker/ZIP/VVD with proper owner/operator consent. Running a privileged shared-host build is forbidden. No docs-only approval for deployment or AWS action. Existing P7/P5/c5/Q2 historical dispositions remain unchanged.
+
 ## Current roadmap decision (October 20, supersedes dated future allocations below)
 
 P7 Vega Export & Device Qualification -> P8 Creative Pipeline Confirmation -> P9 Final MVP Launch Qualification. See docs/tasks/p7/README.md, docs/tasks/p8/README.md and docs/tasks/p9/README.md. Versions 0.7.x/0.8.x/0.9.x are phase targets only. By October 23 noon Central a signed-in creator must download a ZIP with an actual creator-bound Vega x86_64 VPKG and independently install/navigate/play approved HLS in VirtualDevice including restart. Hosted native builds require real isolation; existing disabled state may not be bypassed. Phase 8 consumes the separate creative/video correction and Phase 9 closes the integrated demonstration.

@@ -1,0 +1,27 @@
+TASK: Correction 7 / P4 — Independent hosted ZIP and Vega playback closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- Required unchanged project version: `0.7.3`.
+
+TYPE
+One independent MANUAL browser/operator/Vega VirtualDevice closeout, not a runner implementation prompt. Write only docs/tasks/c7-export-recovery/closeout.md after direct evidence.
+
+MISSION
+Qualify an actual rights-approved creator Studio -> separately isolated worker -> authenticated downloaded ZIP -> independent Vega x86_64 VPKG install -> moving HLS picture and audible audio/remote controls/restart. Otherwise explicitly close NOT GREEN; no fixture substitutions.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/CURRENT-STATE.md, docs/tasks/c7-export-recovery/{README.md,prompt-assessment.md,implementation-plan.md}, completed R1-R3 evidence, original docs/tasks/p7/closeout.md, P2 worker blocker, P3 SDK evidence, docs/tasks/p5/P8-device-runbook.md, scripts/staging/README.md, Q2 approved free release #1 and rights state. Verify local HEAD/diff, ROOT and both lock versions 0.7.3, Node24/npm12, source commits, staged files and exact latest active host, schema 14 and protected backup/rollback. Inspect worker isolation/permitted host and current graphical VVD OS/serial. Request independent explicit operator permission for a NEW protected application/worker rollout and any cloud/network change; old consent does not automatically carry forward. Preserve private media and approved public release #1. No new paid encode or public creator release without distinct approval.
+
+MANUAL ACCEPTANCE
+1. Verify R1 candidate has passed a representative nonlive production-built visible-root smoke with clear console/error readback and R2 actually qualified worker; if worker unavailable, do not deploy solely to demonstrate another disabled button. Recheck existing single 4184 staging service, retired 4185, schema compatibility, backups and unchanged public pointer/HLS master hashes. If separately authorized, run existing root-protected exact-hash archive deploy, never sudo bypass. Immediately inspect real HTTPS Studio from the browser, nonempty React root, sign-in UI signed out, browser JS console and assets; then renew Google creator sign-in and confirm project/Build/Export status. On blank root, uncaught fatal error or regression, protected rollback and record restoration, not GREEN.
+2. From real signed-in owner Studio use Export App on existing authorized creator deployment and FREE release. Capture owner/job ID, source/release and worker receipt provenance, actual real native VPKG SHA, ZIP content-type/content-disposition and ZIP SHA. Download in browser, extract into NEW unrelated directory (not source checkout or worker path), verify SHA256SUMS, README/export-info.json, exact package identity and lack of secrets/private/staged URLs. Verify foreign owner/CSRF denial with a legitimate second account if accessible; otherwise mark that live negative evidence unverified.
+3. Start real graphical Vega VirtualDevice in a held session; confirm it remains running, reports serial, OS/architecture and CLI/SDK identity (not just a 'ready' line). Install the downloaded ZIP's exact x86_64 VPKG once using the actual `vega device install-app` and `launch-app` syntax. Capture screenshot/log/HTTPS evidence of correct title, shelves, creator-approved poster, public resolver/release identity and real CloudFront HLS master, variant and segment fetches. Observe moving picture and **audible** audio (not merely unmuted player), D-pad, focus/detail, pause/resume/seek, Back and re-entry; cold restart installed package and repeat usable playback. If laptop speakers cannot establish sound, record audio UNVERIFIED and use suitable independent capture rather than claiming PASS.
+4. Preserve approved release #1 hashes and all private originals, staging objects, tenant boundaries, schema 14 and Ngest. Make no new unpaid/payed encoding, CloudFront broadening, publication or v1/v2/fault/rollback releases for this narrower correction. No physical Fire TV or Appstore claims. If a required external element cannot be observed, mark NOT GREEN with the one smallest concrete recovery.
+5. Run one final appropriate Node24/npm12 `npm run check`, `npm run codex:stack:validate -- c7-export-recovery`, focused repairs only for observed regressions and `git diff --check`. Preserve exact pass/fail/skip counts. Do not automatically self-commit, rewrite HEAD or change version.
+
+CLOSEOUT
+Write docs/tasks/c7-export-recovery/closeout.md with actual source/worker/deployed release hashes, protected backup/rollback, browser screenshots/root/console, signed-in creator scope, ZIP/VPKG sizes and SHA, worker isolation logs/limits, device OS/SDK/serial/install/HTTP/HLS/audio/control/restart evidence, test numbers, approvals, unchanged release #1, remaining issues and evidence-based GREEN or NOT GREEN. The original docs/tasks/p7/closeout.md stays intact, as do historical P5/c5/Q2 F7 and broader Q3 gate statuses. Missing isolation/ZIP/browser/VVD/media/audio cannot be waived. No separate 0.7.4 bump belongs to this fixed correction.

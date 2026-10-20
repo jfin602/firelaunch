@@ -22,6 +22,10 @@ Before implementation:
 - Automatic external catalog synchronization, scheduled feed polling/diff/reconciliation, and auto-catalog-publication are REMOVED from current product. Manual initial/repeat import and creator-approved immutable remote manifest refresh remain. MediaConvert handling of creator-initiated videos remains. No standalone creator billing/Appstore operations phase.
 - Preserve historical P5/c5/Q2 F7 NOT GREEN and Q3 unqualified states and all prior prompt checkpoint identities. No docs approval permits creator publication, infrastructure changes, paid AWS processing, staging deploy or rights relaxation.
 
+## Active c7-export-recovery handoff (October 20, supersedes P7 runner instructions below)
+
+The next work is the fixed-version [c7-export-recovery](docs/tasks/c7-export-recovery/README.md), **not** a repeat of P7/P1-P3. P7 manual P4 closed NOT GREEN and is preserved unchanged. Source main at 88257d4 includes P7 closeout's scoped Hls.js scanner repair; local version 0.7.3, while the last recorded active staging service is restored 0.6.7 after a 0.7.3 blank React root and protected rollback. Never assume GitHub head equals live deployment. Run R1 visible Studio startup/console diagnosis, R2 separately isolated worker, R3 owner ZIP integration; R4 manual browser/VVD acceptance only after these. No /activate, no unsafe shared-service compilation, no additional AWS/creator publication, no automatic owner sudo/deploy permission. The unchanged 0.7.3 correction validates in normal runner, commits implementation P1-P3 and stops before manual P4. Keep historical Q2 F7 and native Q3 not green.
+
 ## Repository behavior
 
 - Inspect current source before editing.

@@ -1,7 +1,15 @@
 # FireLaunch Current State
 
-Last documentation reconciliation: 2026-10-20 (GitHub Phase 6 source reconciliation and reported staging playback closeout; no new live host/AWS inspection).
+Last documentation reconciliation: 2026-10-20 (GitHub P7 P4 NOT GREEN closeout and rollback; no fresh live host/AWS inspection in this update).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
+
+## October 20 P7 failure and approved c7-export-recovery (current execution)
+
+The historical [P7 P4 closeout](tasks/p7/closeout.md) is **NOT GREEN**. Tested local 0.7.3 source reached P1-P3 runner commits (661ba6e, 779d17f, 0cec1c7), then a protected 0.7.3 staging rollout rendered an empty React root despite successful HTTPS/JS/CSS responses. Protected rollback restored the last healthy 0.6.7 Studio and schema 14; authorized release #1 public pointer and HLS master hashes remained unchanged. The 0.7.3 archive and rollback are source/deployment evidence, NOT a creator ZIP. The closeout initially called its Hls.js compatibility repairs uncommitted; those repairs and the closeout are now present on GitHub main at 88257d4. Always reconcile actual local worktree/host readbacks before subsequent actions.
+
+[**c7-export-recovery**](tasks/c7-export-recovery/README.md) is the next approved docs/prompt stack, **NOT EXECUTED**. Its fixed root version is **0.7.3**. Checkpoint sequence: P1 diagnose/repair blank Studio and preflight VVD, P2 qualify a separately isolated native build worker, P3 integrate authenticated owner ZIP job/download, P4 manual protected rollout and independent ZIP-to-VVD video playback. Browser console/root-cause evidence and a persistent graphical VVD are missing; an HTTP 200/static build is not proof of rendering. The worker host/job transport are also missing; existing export endpoints intentionally fail closed. Preserve staging 0.6.7 until a tested, separately authorized release meets visible UI smoke and worker prerequisites.
+
+P7 exported creator-bound VPKG, live ZIP delivery and Vega HLS/audio remain UNQUALIFIED, independent of 326 local passes / 15 skips. No docs authorization to deploy, provision worker/cloud/network, alter public media, run paid MediaConvert, or publish a creator release is implied. Future Phase 8/9 priorities remain downstream; original P7 P4 NOT GREEN and historical Q2 F7/P5/c5/Q3 statuses are not relabeled.
 
 ## Phase 7 entry handoff — latest playback repair (2026-10-20)
 

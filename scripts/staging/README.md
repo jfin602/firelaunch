@@ -1,5 +1,13 @@
 # muffinos staging release workflow
 
+## October 20 P7 rollback — current source of truth for next rollout (dated evidence)
+
+[2026-10-20 P7 P4 closeout](../../docs/tasks/p7/closeout.md): a protected, version 0.7.3 staging archive (SHA-256 `2cb3ffa536d0fd7f49149b7677e74e569c25708130a049ec70c3aadebec3041a`) activated with schema 14->14 after encrypted backup. The deployed API and Studio asset hashes matched the tested archive; HTTPS HTML/JS/CSS all returned 200, but in the real hosted in-app browser the page's React root remained empty after load, including fresh tabs. **HTTP 200, matching static SHA, healthy Node service, and a local unauthenticated bundle test are insufficient release acceptance.** No captured JS console stack trace establishes the root cause. The protected rollback restored `/srv/firelaunch/releases/20261020T142148Z-37c79817cd97` at 0.6.7/schema 14. The failed 0.7.3 release was retained as previous for inspection; release #1 pointer and HLS master returned original hashes. This is a dated closeout, not a new live host check.
+
+Next [c7-export-recovery](../../docs/tasks/c7-export-recovery/README.md) R1 must reproduce/capture browser console or exception evidence, inspect production JS execution, browser CSP/MIME/cache, runtime startup/auth/session and host-specific conditions, then test a production-built bundle through a representative read-only/canary path **without overwriting live staging**. R1 is no blanket authorization for a diagnostic live rollout. R2/R3 qualify an external isolated worker and protected Studio ZIP job first. R4 may request a new tightly scoped operator-approved protected deploy after worker readiness; immediately after deploy verify nonempty visible React UI **signed out AND with renewed creator login**, exact app build identity, owner project and media baseline. On blank root/uncaught runtime error, use only approved protected rollback and recheck the restored 0.6.7 sign-in page, schema and release #1. Session expiration after service restart requires reauthentication but does not itself explain blank React root.
+
+Do not alter the one 4184 staging service, retired 4185 service, schema 14, private originals/S3 media, Ngest, AWS distribution, historical approved release bytes, or public path policy just to pass visual smoke. Current operator/creator authorizations must be checked for every new live action. The older October 19 schema-13 layout below is historical.
+
 ## Last verified live layout (2026-10-19 16:08 UTC; recheck host before operation)
 
 - `https://firelaunch.jfin.dev` serves the Studio build from `/srv/firelaunch/current/apps/studio/dist`. Nginx proxies `/api/` to `127.0.0.1:4184`.
