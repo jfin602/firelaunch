@@ -1,9 +1,19 @@
 # c6-supporting-media — Immediate thumbnails, approved artwork and optional subtitles
 
-Status: DOCS AND PROMPTS AUTHORED / NOT IMPLEMENTED OR QUALIFIED.
+Status (2026-10-20): **PARTIAL IMPLEMENTATION EXISTS IN NEWER SOURCE; THIS CORRECTION IS NOT INDEPENDENTLY CLOSED OR LIVE QUALIFIED.** Original prompt stack is a historical plan, not a safe blind rerun.
 Owner approval: 2026-10-19 (US Central); October 23 noon deadline.
 Version: root, lockfiles and package versions stay at 0.6.7 for this correction.
 Authority: [ADR 0014](../../decisions/0014-video-supporting-media.md), [product model](../../PRODUCT-MODEL.md), [architecture](../../ARCHITECTURE.md), [AWS runbook](../../integrations/aws-vod-foundation.md), [assessment](prompt-assessment.md), [plan](implementation-plan.md).
+
+## October 20 reconciliation and next work
+
+The latest reviewed GitHub source (`b0d2897`, newer than the `c6-usability` tested/deployed candidate) includes owner-private thumbnail fetch/blob rendering, thumbnail save/extraction, a private video preview path, immutable release-scoped managed artwork, publication resolver integration and focused tests. **This is source implementation evidence only.** No `c6-supporting-media` independent P6 closeout, protected staging release of this exact candidate, end-to-end browser/device artwork acceptance or optional WebVTT capability is evidenced.
+
+**Architectural delta:** the original P2/P3 design below proposes a delivery-scoped S3 copy with exact CloudFront JPEG/PNG authorization. Current `apps/server/src/managed-artwork.ts` and `public-resolver.ts` instead use a release-bound **Studio HTTPS origin** `/api/public-artwork/<deployment>/<release>/<asset>/<sha>.(jpg|png)` and guarded private-object copy, with live release validation. This may simplify delivery, but is not evidence of external Vega reachability, authorization/revocation behavior, Nginx public-path routing, cost or live deployment. [ADR 0014](../../decisions/0014-video-supporting-media.md) records this as a **provisional source deviation**, not an automatically approved CloudFront policy rollout or proof of complete replacement.
+
+**Immediate priority:** inspect exact local HEAD/diff and deployed candidate; reuse implemented P1/P2-like work rather than replaying the original sequential prompts. Verify (1) custom/generated/existing-thumbnail precedence, persistence across popup/reload/Studio Home/Catalog/private TV Preview; (2) playback source and owner/private vs released/free split; (3) approved immutable poster in real public manifest reachable on an independent device without exposing private objects; (4) deny unknown, revoked and foreign assets; (5) desktop/Firefox browser regressions. Repair only observed gaps and deploy by protected process if separately authorized. Native Vega export/playback is the primary remaining deadline gate.
+
+**Defer:** optional private WebVTT implementation/P4 unless entirely nonblocking; SRT, native captions, CDN public-artwork expansion, advanced video placement and paid access. Original P1-P6 prompt list below remains provenance, not a directive to rerun all six or spend multiple cycles on redundant qualification. No new AWS/public distribution approval, upload processing consent, creator publication or schema migration is implied here.
 
 ## Creator behavior
 
