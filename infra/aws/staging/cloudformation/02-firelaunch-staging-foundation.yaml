@@ -48,6 +48,11 @@ Parameters:
     Default: ""
     AllowedPattern: '^$|^[a-z0-9-]+[.]cloudfront[.]net$'
     Description: Exact distribution hostname accepted by the free viewer-path guard.
+  ApprovedFreeArtworkKey:
+    Type: String
+    Default: ""
+    AllowedPattern: '^$|^media/[a-f0-9]{32}/[a-f0-9]{32}/[a-f0-9]{32}/delivery/artwork/rel_[a-f0-9]{32}/[a-f0-9]{64}/poster[.](jpg|jpeg|png)$'
+    Description: One exact rights-approved immutable release artwork key; empty denies all artwork.
   BedrockModelArns:
     Type: CommaDelimitedList
     Default: ""
@@ -448,7 +453,7 @@ Resources:
       Name: firelaunch-staging-approved-free-delivery
       AutoPublish: true
       FunctionConfig:
-        Comment: One approved immutable free rendition; reject all other viewer requests
+        Comment: One approved free HLS rendition and optional exact release artwork key
         Runtime: cloudfront-js-2.0
       FunctionCode: !Sub |
         function handler(event) {
@@ -456,11 +461,17 @@ Resources:
           var host = request.headers.host && request.headers.host.value;
           var prefix = '/${ApprovedFreeDeliveryPrefix}/';
           var name = request.uri.slice(prefix.length);
+          var artwork = '/${ApprovedFreeArtworkKey}';
+          var scope = prefix.split('/');
+          var artworkScope = '/media/' + scope[2] + '/' + scope[3] + '/';
+          var approvedHls = request.uri.slice(0, prefix.length) === prefix &&
+              /^(master|v480|v720)\.m3u8$|^v(480|720)-00[01]\.ts$/.test(name);
+          var approvedArtwork = artwork !== '/' && request.uri === artwork &&
+              artwork.slice(0, artworkScope.length) === artworkScope;
           if ((request.method !== 'GET' && request.method !== 'HEAD') ||
               host !== '${ApprovedFreeDeliveryHost}' ||
-              request.uri.slice(0, prefix.length) !== prefix ||
               Object.keys(request.querystring || {}).length !== 0 ||
-              !/^(master|v480|v720)\.m3u8$|^v(480|720)-00[01]\.ts$/.test(name)) {
+              !(approvedHls || approvedArtwork)) {
             return { statusCode: 403, statusDescription: 'Forbidden' };
           }
           return request;
