@@ -3,6 +3,25 @@
 Bootstrap date: 2026-10-08.
 Hackathon deadline: 2026-10-23 12:00 PM PDT.
 
+## October 20–23 delivery override (active plan; earlier phase history retained)
+
+**Owner delivery target:** **Friday, 2026-10-23 at 12:00 PM America/Chicago (CDT)**; internal handoff target **11:30 AM CDT**. The older 12:00 PM **PDT** hackathon line at the top of this roadmap is a distinct historical time-zone statement, not the same instant. Confirm external submission requirements separately; the owner delivery target controls this sprint.
+
+**New baseline (evidence, not speculation):** [c6-usability P6 closeout](../tasks/c6-usability/closeout.md) independently recorded a protected 2026-10-20 staging release, browser smoke, two-hour source tests, and **ACTIVE** client-account MediaConvert queue plus **ENABLED** completion event rule without a new paid job. Earlier Q1/Q2 evidenced a real encoded READY HLS and approved free release #1. This does **not** resolve historical Q2 F7 PARTIAL/NOT GREEN or install/qualify Q3 Vega. Later GitHub `b0d2897` contains media/creative integration work but is not confirmed staged or independently green; see [current state](../CURRENT-STATE.md).
+
+**Priority/order — parallelize Vega feasibility as soon as possible:**
+
+| Date (Central) | Highest-leverage work | Minimum exit evidence |
+| --- | --- | --- |
+| **Tue Oct 20** | Repair/verify creative + video overlap: saved/custom/generated thumbnail, owner-private preview HLS, READY/draft/live distinctions and publication artwork. **In parallel investigate hosted Vega build/export/download limitations immediately.** | Real integrated creator flow in candidate; exact creator-bound export blocker/build path identified. No new paid encode. |
+| **Wed Oct 21** | Produce/download an actual creator/deployment-bound x86_64 release VPKG with real public-only HTTPS resolver/catalog binding, artwork and playable approved free HLS. Install early, not only after Thursday. | Source/build provenance and exact VPKG SHA; first independent VirtualDevice launch attempt. |
+| **Thu Oct 22** | Fix device/packaging defects; validate install, D-pad/focus/detail/Back, release binding, artwork, real HLS playback; converge creator Studio upload/preview/publish/export UX. | Emulator-working candidate; user can initiate and retrieve package; release freeze target 5 PM CDT. |
+| **Fri Oct 23** | Fresh creator smoke, independently downloadable/installable package, minimal regression and handoff. | Delivery by 11:30 AM CDT, buffer to noon; limitations explicit. |
+
+**Three release checks only:** (G1) integrated creator media/artwork/private and approved public behavior; (G2) downloadable creator-bound VPKG installed and playing approved HLS on external Vega VirtualDevice; (G3) coherent no-developer-assisted Studio-to-export walkthrough. Focused tests during repairs, one final appropriate convergence check; do not rerun historic multi-cycle Q1/Q2 matrices merely to collect duplicate evidence. A genuine access-control/public-exposure defect remains a hard safety blocker. Preserve F7 historical disposition while allowing independently approved **read-only Q3 preparation/smoke against existing release #1**; full Q3/P6 GREEN still requires its own recorded evidence and outstanding applicable gates.
+
+**Explicit exclusions:** no new paid MediaConvert qualification run, broad CloudFront/IAM change, automatic creator publication, optional subtitle UI/Vega caption support, multiple-shelf merchandising, generic SaaS polishing, or paid/entitlement access in the core release. Paid video remains a stretch **only after** video/export/device acceptance. Reconcile `c6-supporting-media` with newest source before rerunning its original sequential prompts; approved ADR 0014's CloudFront artwork proposal differs from current Studio-origin `/api/public-artwork/` code and is not proof of any cloud rollout. Do not retrofit historical P5/c5/Q2 closeouts or infer physical Fire TV/Appstore approval from VirtualDevice success.
+
 ## Gate 0 — Bootstrap — 0.0.0
 
 Deliver:
