@@ -33,14 +33,14 @@ test('unverified, failed and revoked media cannot enter the guided publication c
     throw new Error(route);
   }) as typeof fetch;
   try {
-    const mounted = render(createElement(VideoReview, { project, item, inventory, refresh: async () => inventory, onProjectUpdate: () => {} }));
+    const mounted = render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item, inventory, refresh: async () => inventory, onProjectUpdate: () => {} }));
     await screen.findByText(/Processing failed/);
-    assert.equal((screen.getByRole('button', { name: 'Review whole channel for publication' }) as HTMLButtonElement).disabled, true);
-    assert.equal(screen.queryByRole('button', { name: 'Add to channel draft' }), null);
+    assert.equal(screen.queryByRole('button', { name: 'Review live channel' }), null);
+    assert.equal(screen.queryByRole('button', { name: 'Add to channel preview' }), null);
     mounted.unmount(); state = 'revoked';
-    render(createElement(VideoReview, { project, item, inventory, refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await screen.findByText(/Video revoked/);
-    assert.equal((screen.getByRole('button', { name: 'Review whole channel for publication' }) as HTMLButtonElement).disabled, true);
+    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item, inventory, refresh: async () => inventory, onProjectUpdate: () => {} }));
+    await screen.findByText(/Video rights were revoked/);
+    assert.equal(screen.queryByRole('button', { name: 'Review live channel' }), null);
   } finally { cleanup(); globalThis.fetch = prior; }
 });
 
@@ -54,13 +54,13 @@ test('owned release summary distinguishes published video from later private dra
     throw new Error(route);
   }) as typeof fetch;
   try {
-    render(createElement(VideoReview, { project, item, inventory, refresh: async () => inventory, onProjectUpdate: () => {} }));
+    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item, inventory, refresh: async () => inventory, onProjectUpdate: () => {} }));
     await screen.findByText(/Published in live release #2 · newer private draft changes await approval/);
-    await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Review whole channel for publication' }) as HTMLButtonElement).disabled, false));
+    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Review live channel' })));
   } finally { cleanup(); globalThis.fetch = prior; }
 });
 
-test('missing source provenance and public artwork block channel draft linking', async () => {
+test('missing source provenance and approved artwork block channel preview linking', async () => {
   const prior = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const route = String(input);
@@ -69,13 +69,13 @@ test('missing source provenance and public artwork block channel draft linking',
     throw new Error(route);
   }) as typeof fetch;
   try {
-    render(createElement(VideoReview, { project: { ...project, spec: { ...project.spec, content: [] } }, item,
+    render(createElement(VideoReview, { page: 'channel', onNavigate: () => {}, project: { ...project, spec: { ...project.spec, content: [] } }, item,
       inventory: { ...inventory, sources: [{ ...source, state: 'discovered', permission: { retrieval: 'unknown', tvDisplay: 'unknown' } }], mediaAssets: [video] },
       refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await screen.findByText(/Source provenance and retrieval/);
-    assert.ok(screen.getByText(/private thumbnail is a draft only/i));
-    assert.equal((screen.getByRole('button', { name: 'Add to channel draft' }) as HTMLButtonElement).disabled, true);
-    assert.equal((screen.getByRole('button', { name: 'Review whole channel for publication' }) as HTMLButtonElement).disabled, true);
+    await screen.findByText(/Confirm source permission on Publish/);
+    assert.ok(screen.getByText(/Approve your uploaded thumbnail on Publish/));
+    assert.equal(screen.queryByRole('button', { name: 'Add to channel preview' }), null);
+    assert.equal(screen.queryByRole('button', { name: 'Review live channel' }), null);
   } finally { cleanup(); globalThis.fetch = prior; }
 });
 
@@ -93,10 +93,10 @@ test('stale channel revision blocks generation without writing a new draft', asy
     throw new Error(route);
   }) as typeof fetch;
   try {
-    render(createElement(VideoReview, { project: { ...project, spec: { ...project.spec, content: [] } }, item, inventory,
+    render(createElement(VideoReview, { page: 'channel', onNavigate: () => {}, project: { ...project, spec: { ...project.spec, content: [] } }, item, inventory,
       refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Add to channel draft' }) as HTMLButtonElement).disabled, false));
-    fireEvent.click(screen.getByRole('button', { name: 'Add to channel draft' }));
+    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Add to channel preview' })));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to channel preview' }));
     await screen.findByText(/Catalog or channel changed elsewhere/);
     assert.equal(writes, 0);
   } finally { cleanup(); globalThis.fetch = prior; }

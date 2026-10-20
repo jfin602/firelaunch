@@ -9,6 +9,9 @@ import { ProjectRepository } from '../src/repository.js';
 import type { HostedProjectRepository } from '../src/hosted-repository.js';
 import type { HostedAuth } from '../src/auth/sessions.js';
 import { canonicalBytes } from '../src/publication-repository.js';
+import { ManagedArtworkDelivery } from '../src/managed-artwork.js';
+import type { PrivateObjectStore } from '../src/private-objects.js';
+import { catalogItemSchema, catalogSourceSchema, mediaAssetSchema, publishedManifestSchema } from '@firelaunch/contracts';
 
 const hex = (digit: string) => digit.repeat(32);
 const deploymentId = `dep_${hex('a')}`;
@@ -174,4 +177,82 @@ test('public resolver serves only valid approved immutable bytes and one-snapsho
   } finally {
     await new Promise<void>(resolve => local.close(() => resolve()));
   }
+});
+
+test('public thumbnail route requires an approved release, unchanged private source and current rights', async () => {
+  const original = fixtureChannel();
+  const owner = `cr_${hex('f')}`, itemId = `ci_${hex('3')}`, videoId = `ma_${hex('1')}`;
+  const artworkId = `ma_${hex('2')}`, objectId = `ma_${hex('6')}`;
+  const image = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 1, 2]);
+  const imageHash = createHash('sha256').update(image).digest('hex');
+  const path = `/api/public-artwork/${deploymentId}/${releaseId}/${artworkId}/${imageHash}.jpg`;
+  const imageUrl = `https://studio.example.com${path}`;
+  const channel = { ...original, content: original.content.map(content => ({ ...content, artwork: imageUrl })) };
+  const manifest = { schemaVersion: 1, releaseId, releaseSequence: 1, publishedAt: '2026-10-11T00:00:00.000Z',
+    deployment: { id: deploymentId, projectId: original.id, channelId: original.id, packageId: 'com.example.tv' },
+    approvedContentRevision: { channel: 2, catalog: 4 }, approvalId: `ap_${hex('e')}`,
+    clientCompatibility: { minSchemaVersion: 1, maxSchemaVersion: 1, channelSchemaVersion: 1 }, channel,
+    media: [{ id: videoId, kind: 'video', url: original.content[0]!.mediaUrl }, { id: artworkId, kind: 'artwork', url: imageUrl }],
+    bindings: { content: [{ contentId: channel.content[0]!.id, catalogItemId: itemId, playbackAssetId: videoId, artworkAssetId: artworkId }] } };
+  const bytes = canonicalBytes(manifest);
+  const release = { id: releaseId, sequence: 1, manifest_bytes: bytes, sha256: digest(bytes),
+    creator_account_id: owner, project_id: original.id };
+  const source = { schemaVersion: 1, id: `src_${hex('4')}`, creatorAccountId: owner, projectId: original.id,
+    type: 'creator_json', state: 'verified', permission: { retrieval: 'creator_asserted', tvDisplay: 'creator_asserted',
+      verificationEvidenceId: `ev_${hex('5')}` } };
+  const item = { schemaVersion: 1, id: itemId, creatorAccountId: owner, projectId: original.id, kind: 'video',
+    sourceRecord: { sourceId: source.id, externalId: { provider: 'creator', kind: 'feed_item_id', value: 'fixture' },
+      observedAt: '2026-10-11T00:00:00.000Z', metadata: { title: 'Oceans' } },
+    externalIdentifiers: [{ provider: 'creator', kind: 'feed_item_id', value: 'fixture' }], mediaAssetIds: [videoId, artworkId] };
+  const rights = (use: string) => ({ status: 'cleared', basis: 'creator_asserted', permittedUse: use,
+    assertedAt: '2026-10-11T00:00:00.000Z' });
+  const video = { schemaVersion: 1, id: videoId, creatorAccountId: owner, projectId: original.id,
+    catalogItemId: itemId, kind: 'video', location: { type: 'https', url: original.content[0]!.mediaUrl },
+    rights: rights('television_playback'), deliveryEligible: true };
+  const artwork = { schemaVersion: 1, id: artworkId, creatorAccountId: owner, projectId: original.id,
+    catalogItemId: itemId, kind: 'artwork', location: { type: 'private_object', objectId },
+    tvDisplayRights: rights('television_display'), tvPlaybackRights: { status: 'unknown', basis: 'none', permittedUse: 'none' }, deliveryEligible: true };
+  assert.equal(publishedManifestSchema.safeParse(manifest).success, true);
+  assert.equal(catalogItemSchema.safeParse(item).success, true);
+  assert.equal(catalogSourceSchema.safeParse(source).success, true);
+  assert.equal(mediaAssetSchema.safeParse(video).success, true);
+  assert.equal(mediaAssetSchema.safeParse(artwork).success, true);
+  let revoked = false;
+  let currentObjectHash = imageHash;
+  const copied = new Map<string, Buffer>();
+  const store = { put: async (key: string, body: Buffer) => { copied.set(key, body); },
+    get: async (key: string) => { const body = copied.get(key); if (!body) throw new Error('missing'); return body; },
+    delete: async () => {} } as PrivateObjectStore;
+  const pool = { query: async (sql: string, args: unknown[]) => {
+    if (sql.includes('FROM catalog_media_assets a')) return { rows: [
+      { id: videoId, record: video, item_record: item, source_record: source, revoked_at: null },
+      { id: artworkId, record: artwork, item_record: item, source_record: source, revoked_at: revoked ? new Date() : null }
+    ] };
+    if (sql.includes('FROM private_objects')) return { rows: args[1] === owner && args[2] === original.id ?
+      [{ id: objectId, sha256: currentObjectHash, content_type: 'image/jpeg' }] : [] };
+    return { rows: args[0] === deploymentId && args[1] === releaseId ? [release] : [] };
+  } } as unknown as HostedProjectRepository['pool'];
+  const delivery = new ManagedArtworkDelivery(pool, store, 'https://studio.example.com');
+  // The public route reads the immutable published copy; no private upload capability is issued.
+  const key = `private/${createHash('sha256').update(`published-artwork-v1\0${deploymentId}\0${releaseId}\0${artworkId}\0${imageHash}`).digest('hex')}`;
+  copied.set(key, image);
+  const repository = { pool } as HostedProjectRepository;
+  const api = createApi(new ProjectRepository('/tmp/firelaunch-managed-artwork-unused'), undefined,
+    { mode: 'hosted', auth: { session: () => null } as HostedAuth }, repository, undefined, undefined, undefined, delivery);
+  api.listen(0, '127.0.0.1'); await once(api, 'listening');
+  const address = api.address(); assert.ok(address && typeof address !== 'string');
+  const get = (suffix = '', options?: RequestInit) => fetch(`http://127.0.0.1:${address.port}${path}${suffix}`, options);
+  try {
+    const okay = await get();
+    assert.equal(okay.status, 200);
+    assert.equal(okay.headers.get('content-type'), 'image/jpeg');
+    assert.deepEqual(Buffer.from(await okay.arrayBuffer()), image);
+    assert.equal((await get('', { headers: { 'if-none-match': `"${imageHash}"` } })).status, 304);
+    assert.equal((await get('?token=1')).status, 404);
+    assert.equal((await get('', { method: 'HEAD' })).status, 404);
+    currentObjectHash = '0'.repeat(64);
+    assert.equal((await get()).status, 404, 'replacing the source invalidates the old live thumbnail');
+    currentObjectHash = imageHash; revoked = true;
+    assert.equal((await get()).status, 404, 'revoked artwork cannot resolve');
+  } finally { await new Promise<void>(resolve => api.close(() => resolve())); }
 });

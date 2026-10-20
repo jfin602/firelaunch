@@ -167,6 +167,35 @@ export class S3MediaStorage {
     return new URL(this.deliveryKey(scope, set.id, set.masterSha256, 'master.m3u8'), this.deliveryOrigin()).toString();
   }
 
+  /** Authenticated Studio preview only. The caller resolves current owner, rights and READY state. */
+  async readStagedPreviewObject(scope: MediaScope, setId: string, name: string,
+    expectedSha256?: string): Promise<Buffer> {
+    const key = this.stagedKey(scope, setId, name);
+    const limit = name.endsWith('.m3u8') ? maxPlaylistBytes : maxOutputBytes;
+    const head = await this.request(() => this.staging.send(new HeadObjectCommand({
+      Bucket: this.config.deliveryBucket, Key: key, ChecksumMode: 'ENABLED' })));
+    if (!head.ContentLength || head.ContentLength > limit || head.ContentType !== contentType(name) ||
+      head.ServerSideEncryption !== 'AES256' || head.ChecksumType !== 'FULL_OBJECT' ||
+      !head.ChecksumSHA256 || !head.ETag) reject('preview rendition metadata invalid');
+    const expectedLength = head.ContentLength!;
+    const object = await this.request(() => this.staging.send(new GetObjectCommand({
+      Bucket: this.config.deliveryBucket, Key: key, IfMatch: head.ETag })));
+    if (!object.Body || object.ContentLength !== expectedLength) reject('preview rendition changed');
+    const chunks: Buffer[] = [];
+    let length = 0;
+    for await (const chunk of object.Body as Readable) {
+      const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      length += data.length;
+      if (length > expectedLength || length > limit) reject('preview rendition exceeds limit');
+      chunks.push(data);
+    }
+    const body = Buffer.concat(chunks);
+    const sha256 = digest(body);
+    if (length !== expectedLength || checksum(sha256) !== head.ChecksumSHA256 ||
+      (expectedSha256 && sha256 !== expectedSha256)) reject('preview rendition checksum mismatch');
+    return body;
+  }
+
   async createOriginal(scope: MediaScope, sessionId: string): Promise<{ key: string; uploadId: string }> {
     const key = this.originalKey(scope, sessionId);
     const result = await this.request(() => this.originals.send(new CreateMultipartUploadCommand({

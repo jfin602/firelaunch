@@ -139,7 +139,15 @@ export class CatalogProjectionService {
       if (source.permission.retrieval === 'revoked' || source.permission.tvDisplay === 'revoked') blockedReason = 'source_revoked';
       else if (item.kind === 'listing') blockedReason = 'unsupported_kind';
       const presentation = item.kind === 'book' ? 'information' : item.kind;
-      const artwork = eligibleAsset(item, assets, 'artwork', 'television_display') ?? 'assets/catalog-placeholder.png';
+      const managedThumbnail = item.kind === 'video' && item.mediaAssetIds.some(assetId => {
+        const asset = assets.get(assetId);
+        return asset?.kind === 'artwork' && asset.location.type === 'private_object' &&
+          asset.catalogItemId === item.id && asset.deliveryEligible && mediaUseEligible(asset, 'television_display');
+      });
+      // The private thumbnail resolves only during explicit publication. A draft keeps
+      // the safe placeholder, even when an older external artwork URL also exists.
+      const artwork = managedThumbnail ? 'assets/catalog-placeholder.png' :
+        eligibleAsset(item, assets, 'artwork', 'television_display') ?? 'assets/catalog-placeholder.png';
       const mediaUrl = item.kind === 'video' || item.kind === 'audio'
         ? eligibleAsset(item, assets, item.kind, 'television_playback') ??
           (item.kind === 'video' ? await this.managedVideoUrl(principal.accountId, projectId, item, assets) : undefined)

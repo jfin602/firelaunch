@@ -91,6 +91,18 @@ const setup = () => { const originals = new FakeS3(); const delivery = new FakeS
     originals as unknown as S3Client, delivery as unknown as S3Client,
     publisher as unknown as S3Client, operator as unknown as S3Client, async () => {}) }; };
 
+test('authenticated preview storage reads only bounded staged bytes with matching checksum', async () => {
+  const { storage, delivery } = setup();
+  const body = Buffer.from('#EXTM3U\n#EXT-X-VERSION:3\n');
+  await storage.putStaged(scope, set, 'master.m3u8', body, sha(body));
+  assert.deepEqual(await storage.readStagedPreviewObject(scope, set, 'master.m3u8', sha(body)), body);
+  await assert.rejects(storage.readStagedPreviewObject(other, set, 'master.m3u8', sha(body)), /S3 request failed/);
+  await assert.rejects(storage.readStagedPreviewObject(scope, set, '../original.mp4'), /invalid output name/);
+  const object = delivery.objects.get(storage.stagedKey(scope, set, 'master.m3u8'))!;
+  object.body = Buffer.from('#EXTM3U\n#EXT-X-VERSION:4\n');
+  await assert.rejects(storage.readStagedPreviewObject(scope, set, 'master.m3u8', sha(body)), /checksum mismatch/);
+});
+
 test('media AWS configuration and CloudFront origin fail closed without echoing secrets', () => {
   assert.throws(() => mediaStorageConfigFromEnv({}), /invalid/);
   const env = { FIRELAUNCH_MEDIA_AWS_REGION: 'us-east-2', FIRELAUNCH_MEDIA_ORIGINALS_BUCKET: config.originalsBucket,

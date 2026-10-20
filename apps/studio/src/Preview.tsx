@@ -2,12 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { contentPresentation, isPlayableContent, type ChannelSpec } from '@firelaunch/contracts';
 import { activeItem, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
 import { keyboardCommand, navigate, reconcile } from './preview-state.js';
+import { VideoPlayer } from './VideoPlayer.js';
 
 function artwork(url: string): string {
   return url.startsWith('assets/') ? `/media/${url.slice(7)}` : url;
 }
 
-export function Preview({ spec }: { spec: ChannelSpec }) {
+export function Preview({ spec, hosted = false }: { spec: ChannelSpec; hosted?: boolean }) {
   const tv = televisionFromSpec(spec);
   const [state, setState] = useState<TvState | null>(null);
   const current = reconcile(tv, state);
@@ -23,7 +24,10 @@ export function Preview({ spec }: { spec: ChannelSpec }) {
     const handleKey = (event: KeyboardEvent) => {
       const target = event.target;
       if (!(target instanceof HTMLElement) || !frameRef.current?.contains(target)) return;
-      if (target.closest('input, textarea, select, audio, video, [contenteditable="true"]')) return;
+      if (target.closest('audio, video')) {
+        // Keep native media keys, but let Back leave playback even when the player has focus.
+        if (event.key !== 'Escape' && event.key !== 'Backspace') return;
+      } else if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
       const command = keyboardCommand(event);
       // Native Enter activates a focused TV button once; the frame itself uses the TV command.
       if (command === 'select' && target.closest('button')) return;
@@ -75,7 +79,8 @@ export function Preview({ spec }: { spec: ChannelSpec }) {
               <small>{isPlayableContent(item) ? 'Press Enter to play · Escape to go back' : 'Press Escape to go back'}</small></div>
           </> : <div className="tv-player">{contentPresentation(item) === 'audio'
             ? <><img src={artwork(item.artwork)} alt="" /><audio key={item.id} src={item.mediaUrl} controls autoPlay muted={tv.playback.startMuted} /></>
-            : <video key={item.id} src={item.mediaUrl} controls autoPlay muted={tv.playback.startMuted} playsInline />}
+            : <VideoPlayer key={item.id} source={item.mediaUrl!} startMuted={tv.playback.startMuted}
+                contentId={item.id} {...(hosted ? { projectId: spec.id } : {})} />}
             <div className="tv-player-footer"><strong>{item.title}</strong><button className="tv-play focused" onClick={() => dispatch('back')}>← Back to details</button></div></div>}
         </div>}
       </div>

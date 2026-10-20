@@ -47,6 +47,15 @@ export type PublicationBindings = z.infer<typeof publicationBindingsSchema>;
 const publicMediaSchema = z.strictObject({
   id: id('ma'), kind: z.enum(['video', 'audio', 'artwork']), url: publicUrlSchema
 });
+const managedArtworkPath = /^\/api\/public-artwork\/(dep_[a-f0-9]{32})\/(rel_[a-f0-9]{32})\/(ma_[a-f0-9]{32})\/([a-f0-9]{64})\.(png|jpg)$/;
+function sameManagedArtwork(previous: string, next: string): boolean {
+  try {
+    const oldUrl = new URL(previous), newUrl = new URL(next);
+    const oldPath = managedArtworkPath.exec(oldUrl.pathname), newPath = managedArtworkPath.exec(newUrl.pathname);
+    return !!oldPath && !!newPath && oldUrl.origin === newUrl.origin && !oldUrl.search && !oldUrl.hash &&
+      [1, 3, 4, 5].every(index => oldPath[index] === newPath[index]);
+  } catch { return false; }
+}
 const publicDeploymentSchema = z.strictObject({
   id: id('dep'), projectId: id('ch'), channelId: id('ch'), packageId: z.string().min(5).max(255)
     .regex(/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){2,}$/)
@@ -125,6 +134,7 @@ export function projectApprovedManifest(input: {
   approval: unknown; deployment: unknown; channel: unknown; inventory: unknown; bindings: unknown;
   releaseId: string; releaseSequence: number; previousReleaseId?: string; publishedAt: string;
   resolvedPlayback?: ReadonlyMap<string, string>;
+  resolvedArtwork?: ReadonlyMap<string, string>;
 }): PublishedManifest {
   const approval = publicationApprovalSchema.parse(input.approval);
   const deployment = channelDeploymentSchema.parse(input.deployment);
@@ -141,11 +151,12 @@ export function projectApprovedManifest(input: {
   const publicMedia = new Map<string, z.infer<typeof publicMediaSchema>>();
   const addAsset = (id: string, kind: 'video' | 'audio' | 'artwork', expectedUrl: string, itemId?: string) => {
     const asset: MediaAsset | undefined = assetById.get(id);
-    const resolved = input.resolvedPlayback?.get(id);
+    const resolved = kind === 'artwork' ? input.resolvedArtwork?.get(id) : input.resolvedPlayback?.get(id);
     if (!asset || !asset.deliveryEligible || !mediaUseEligible(asset, kind === 'artwork' ? 'television_display' : 'television_playback') ||
       asset.kind !== kind ||
       (itemId && asset.catalogItemId !== itemId) || (resolved
-        ? kind !== 'video' || asset.location.type !== 'managed_hls' || expectedUrl !== resolved
+        ? expectedUrl !== resolved || (kind === 'video' ? asset.location.type !== 'managed_hls' :
+          kind === 'artwork' ? asset.location.type !== 'private_object' : true)
         : asset.location.type !== 'https' || asset.location.url !== expectedUrl)) {
       throw new Error('Invalid, unlicensed or unpublished media reference');
     }
@@ -166,7 +177,10 @@ export function projectApprovedManifest(input: {
   const resolvedChannel = { ...channel, content: channel.content.map(content => {
     const binding = bindings.content.find(value => value.contentId === content.id);
     const url = binding?.playbackAssetId && input.resolvedPlayback?.get(binding.playbackAssetId);
-    return url ? { ...content, mediaUrl: url } : content;
+    const artwork = binding?.artworkAssetId && input.resolvedArtwork?.get(binding.artworkAssetId);
+    if (artwork && content.artwork !== 'assets/catalog-placeholder.png' && !sameManagedArtwork(content.artwork, artwork))
+      throw new Error('Managed artwork differs from the channel draft');
+    return { ...content, ...(url ? { mediaUrl: url } : {}), ...(artwork ? { artwork } : {}) };
   }) };
   for (const binding of bindings.content) {
     const content = resolvedChannel.content.find(value => value.id === binding.contentId);

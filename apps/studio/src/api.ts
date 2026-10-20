@@ -124,6 +124,18 @@ export async function uploadPrivateEvidence(id: string, file: File): Promise<{ i
 export async function deletePrivateObject(id: string, objectId: string): Promise<void> {
   await request(`/${id}/private-objects/${objectId}`, { method: 'DELETE' });
 }
+export async function readPrivateThumbnail(id: string, objectId: string): Promise<Blob> {
+  const capability = await request(`/${id}/private-objects/${objectId}/capability`, json({})) as { capability: string };
+  const response = await fetch(`/api/projects/${encodeURIComponent(id)}/private-objects/${encodeURIComponent(objectId)}/content`, {
+    credentials: 'same-origin', headers: { 'x-private-capability': capability.capability }, cache: 'no-store'
+  });
+  if (!response.ok) throw new ApiError('Thumbnail preview unavailable', response.status);
+  const contentType = response.headers.get('content-type');
+  const blob = await response.blob();
+  if (!['image/png', 'image/jpeg'].includes(contentType ?? '') || blob.size < 1 || blob.size > 1_000_000)
+    throw new ApiError('Thumbnail preview unavailable', 400);
+  return blob;
+}
 
 export type VideoUploadStatus = { id: string; state: 'initiated' | 'completed' | 'verified' | 'aborting' | 'expiring' | 'aborted' | 'expired'; expectedBytes: number; expiresAt: string; partSize: number; partCount: number; verification: 'unverified' | 'pending_sha256' | 'sha256_verified'; processingAvailable?: boolean; processing?: { state: 'pending' | 'leased' | 'ready' | 'failed' | 'revoked'; failureCode: string | null } | null };
 export const startVideoUpload = (projectId: string, input: { mediaAssetId: string; idempotencyKey: string; fileName: string; contentType: 'video/mp4'; expectedBytes: number; expectedSha256: string; claimedDurationSeconds: number }) =>

@@ -17,9 +17,11 @@ import { CatalogProjectionService } from './catalog-projection.js';
 import { agentCatalogGrounding } from './agent-grounding.js';
 import { composeCatalogDraft } from './catalog-composition.js';
 import { PublicationRepository } from './publication-repository.js';
-import { PublicReleaseResolver, publicReleaseRoute } from './public-resolver.js';
+import { PublicReleaseResolver, publicArtworkRoute, publicReleaseRoute } from './public-resolver.js';
+import type { ManagedArtworkDelivery } from './managed-artwork.js';
 import type { MediaUploadService } from './media-upload-service.js';
 import type { S3MediaStorage } from './media-storage.js';
+import { PrivateVideoPreview } from './private-video-preview.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -75,17 +77,23 @@ function respond(response: ServerResponse, status: number, value: unknown): void
   response.end(JSON.stringify(value));
 }
 
-export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository, privateObjects?: PrivateObjectService, mediaUploads?: MediaUploadService, mediaPublisher?: S3MediaStorage) {
+export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository, privateObjects?: PrivateObjectService, mediaUploads?: MediaUploadService, mediaPublisher?: S3MediaStorage, managedArtwork?: ManagedArtworkDelivery) {
   const status = selectedProvider ? selectedProvider.name === 'mock' ? providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'mock' }) : { provider: selectedProvider.name, configured: true, message: `${selectedProvider.name} injected for this server; this status does not verify provider availability or request success.` } : providerStatus(process.env);
   const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : status.provider === 'bedrock' ? new BedrockProvider(process.env.BEDROCK_MODEL_ID!) : new OpenAIProvider(process.env.OPENAI_MODEL!, process.env.OPENAI_API_KEY!))) : null;
   const workspace = mode?.mode === 'local-legacy' ? new WorkspaceService(repository) : null;
   const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository) : null;
   const catalog = hostedRepository ? new CatalogRepository(hostedRepository) : null;
   const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog, mediaPublisher) : null;
-  const publication = hostedRepository ? new PublicationRepository(hostedRepository, mediaPublisher) : null;
-  const publicResolver = mode?.mode === 'hosted' && hostedRepository ? new PublicReleaseResolver(hostedRepository) : null;
+  const publication = hostedRepository ? new PublicationRepository(hostedRepository, mediaPublisher, managedArtwork) : null;
+  const publicResolver = mode?.mode === 'hosted' && hostedRepository ? new PublicReleaseResolver(hostedRepository, managedArtwork) : null;
+  const privatePreview = hostedRepository && catalog && mediaPublisher
+    ? new PrivateVideoPreview(hostedRepository, catalog, mediaPublisher) : null;
   return createServer(async (request, response) => {
     try {
+      if (request.url?.startsWith('/api/public-artwork/') || request.url === '/api/public-artwork') {
+        if (!publicResolver) throw new RepositoryError('NOT_FOUND', 'Route not found');
+        await publicArtworkRoute(request, response, publicResolver); return;
+      }
       if (request.url?.startsWith('/public/') || request.url === '/public') {
         if (!publicResolver) throw new RepositoryError('NOT_FOUND', 'Route not found');
         await publicReleaseRoute(request, response, publicResolver);
@@ -110,6 +118,15 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
         if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? '') && !mode.auth.authorizedMutation(request, session)) { await audit(hostedRepository?.pool, 'auth_denied', 'denied', session.principal.accountId); respond(response, 403, { error: { code: 'CSRF', message: 'Invalid request origin or CSRF token' } }); return; }
         if (hostedRepository && hostedWorkspace) {
           const principal = session.principal;
+          if (segments[3] === 'preview-hls') {
+            if (!privatePreview || url.search || segments.length !== 6 ||
+              !['GET', 'HEAD'].includes(request.method ?? '')) throw new RepositoryError('NOT_FOUND', 'Route not found');
+            const { body: videoBody, contentType } = await privatePreview.read(principal, segments[2]!, segments[4]!, segments[5]!);
+            response.writeHead(200, { 'content-type': contentType, 'content-length': videoBody.length,
+              'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff',
+              'cross-origin-resource-policy': 'same-origin' });
+            response.end(request.method === 'HEAD' ? undefined : videoBody); return;
+          }
           if (segments[3] === 'media-uploads') {
             if (!mediaUploads) { respond(response, 503, { error: { code: 'STORAGE_ERROR', message: 'Managed media upload or processing unavailable' } }); return; }
             if (url.search) { respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return; }

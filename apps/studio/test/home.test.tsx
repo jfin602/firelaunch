@@ -95,7 +95,8 @@ test('video workspace opens directly from Home and Catalog, traps focus, and res
     const dialog = await screen.findByRole('dialog', { name: 'Director Cut' });
     const close = screen.getByRole('button', { name: 'Close video workspace' });
     assert.equal(document.activeElement, close);
-    assert.ok(dialog.contains(screen.getByRole('button', { name: 'Save draft details' })));
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+    assert.ok(dialog.contains(screen.getByRole('button', { name: 'Save details' })));
     fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
     assert.ok(dialog.contains(document.activeElement));
     fireEvent.keyDown(dialog, { key: 'Escape' });
@@ -123,7 +124,8 @@ test('video workspace blocks Escape and close while a video action is pending', 
     render(createElement(App));
     fireEvent.click(await screen.findByRole('button', { name: 'Open Director Cut video' }));
     const dialog = await screen.findByRole('dialog', { name: 'Director Cut' });
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft details' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save details' }));
     await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Close video workspace' }) as HTMLButtonElement).disabled, true));
     fireEvent.keyDown(dialog, { key: 'Escape' });
     assert.ok(screen.getByRole('dialog', { name: 'Director Cut' }));

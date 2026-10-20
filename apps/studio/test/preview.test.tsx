@@ -7,11 +7,24 @@ import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.j
 import { televisionFromSpec, initialState, itemFocusId, navFocusId } from '@firelaunch/tv';
 import { Preview } from '../src/Preview.js';
 import { keyboardCommand, navigate, reconcile } from '../src/preview-state.js';
+import { studioVideoSource } from '../src/VideoPlayer.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost' });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement });
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.window.navigator });
+Object.defineProperty(dom.window.HTMLMediaElement.prototype, 'pause', { value: () => {} });
+Object.defineProperty(dom.window.HTMLMediaElement.prototype, 'load', { value: () => {} });
 const { cleanup, fireEvent, render, screen } = await import('@testing-library/react');
+
+test('Studio replaces only canonical managed HLS with its owner-scoped same-origin route', () => {
+  const project = `ch_${'a'.repeat(32)}`, content = `item_${'b'.repeat(32)}`;
+  const managed = `https://media.example.org/media/${'c'.repeat(32)}/${'a'.repeat(32)}/${'d'.repeat(32)}/delivery/${'e'.repeat(32)}/${'f'.repeat(64)}/master.m3u8`;
+  assert.equal(studioVideoSource(managed, project, content), `/api/projects/${project}/preview-hls/${content}/master.m3u8`);
+  assert.equal(studioVideoSource(managed), managed, 'exported and native playback URLs remain unchanged');
+  for (const value of ['https://media.example.org/film.mp4', `${managed}?token=private`,
+    'https://media.example.org/media/staged/master.m3u8'])
+    assert.equal(studioVideoSource(value, project, content), value);
+});
 
 test('pure commands retain P2 focus/detail/playback/back and reconcile removed content', () => {
   const spec = fixtureChannel();
@@ -42,7 +55,13 @@ test('virtual remote and keyboard select the same P2 transitions in TV Preview',
   fireEvent.keyDown(frame, { key: 'Enter' });
   assert.ok(screen.getByRole('button', { name: /Play film/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Select' }));
-  assert.ok(view.container.querySelector('video'));
+  const video = view.container.querySelector('video')!;
+  assert.ok(video.controls);
+  assert.match(video.src, /ocean\.mp4$/);
+  fireEvent.keyDown(video, { key: 'Escape' });
+  assert.ok(screen.getByRole('button', { name: /Play film/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+  assert.ok(view.container.querySelector('video'), 'reopening creates a fresh player');
   fireEvent.keyDown(frame, { key: 'Escape' });
   assert.ok(screen.getByRole('button', { name: /Play film/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Back' }));

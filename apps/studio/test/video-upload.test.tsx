@@ -143,18 +143,21 @@ test('supported browser frame extraction yields a bounded private JPEG draft thu
 });
 
 test('Add Video has one unchecked rights confirmation, filename title, optional fields and default Videos category', () => {
-  render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory: { revision: 0, sources: [], items: [], mediaAssets: [], collections: [] } as any,
-    refresh: async () => { throw new Error('No request expected'); }, onCreated: () => {}, onClose: () => {} }));
+  const props = { accountId: owner, projectId, inventory: { revision: 0, sources: [], items: [], mediaAssets: [], collections: [] } as any,
+    refresh: async () => { throw new Error('No request expected'); }, onCreated: () => {}, onClose: () => {} };
+  const mounted = render(createElement(NewVideoUpload, props));
   try {
     assert.equal(screen.getAllByRole('checkbox').length, 1);
     assert.equal((screen.getByRole('checkbox') as HTMLInputElement).checked, false);
-    assert.equal((screen.getByLabelText('Category') as HTMLSelectElement).value, '');
-    assert.equal(screen.getByRole('option', { name: 'Videos' }).textContent, 'Videos');
+    assert.equal(screen.queryByLabelText('Category'), null);
     fireEvent.change(screen.getByLabelText('Video file'), { target: { files: [validFile()] } });
+    mounted.rerender(createElement(NewVideoUpload, { ...props, page: 'details' }));
     assert.equal((screen.getByLabelText('Title *') as HTMLInputElement).value, 'my film');
     assert.ok(screen.getByLabelText('Description (optional)'));
-    assert.ok(screen.getByLabelText('Custom thumbnail (optional)'));
+    assert.ok(screen.getByLabelText(/Thumbnail \(PNG or JPEG/));
     assert.equal(screen.queryByLabelText(/Approximate duration/i), null);
+    mounted.rerender(createElement(NewVideoUpload, { ...props, page: 'channel' }));
+    assert.equal(screen.queryByLabelText('Category'), null, 'placement begins after the upload creates a draft');
   } finally { cleanup(); }
 });
 
@@ -162,19 +165,20 @@ test('missing file, empty title and rights prevent catalog creation', async () =
   let requests = 0;
   const priorFetch = globalThis.fetch;
   globalThis.fetch = (async () => { requests++; throw new Error('Unexpected request'); }) as typeof fetch;
-  render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory: { revision: 0, sources: [], items: [], mediaAssets: [], collections: [] } as any,
-    refresh: async () => { throw new Error('Unexpected refresh'); }, onCreated: () => {}, onClose: () => {} }));
+  const props = { accountId: owner, projectId, inventory: { revision: 0, sources: [], items: [], mediaAssets: [], collections: [] } as any,
+    refresh: async () => { throw new Error('Unexpected refresh'); }, onCreated: () => {}, onClose: () => {} };
+  const mounted = render(createElement(NewVideoUpload, props));
   try {
-    fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
-    await screen.findByText('Choose an MP4 video.');
+    assert.equal((screen.getByRole('button', { name: 'Upload video' }) as HTMLButtonElement).disabled, true);
     fireEvent.change(screen.getByLabelText('Video file'), { target: { files: [validFile()] } });
+    mounted.rerender(createElement(NewVideoUpload, { ...props, page: 'details' }));
     fireEvent.change(screen.getByLabelText('Title *'), { target: { value: '' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
-    await screen.findByText('Enter a video title.');
+    mounted.rerender(createElement(NewVideoUpload, props));
+    assert.equal((screen.getByRole('button', { name: 'Upload video' }) as HTMLButtonElement).disabled, true);
+    mounted.rerender(createElement(NewVideoUpload, { ...props, page: 'details' }));
     fireEvent.change(screen.getByLabelText('Title *'), { target: { value: 'Film' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
-    await screen.findByText(/Confirm your television display/);
-    assert.match(screen.getByRole('alert').textContent ?? '', /Confirm your television display/);
+    mounted.rerender(createElement(NewVideoUpload, props));
+    assert.equal((screen.getByRole('button', { name: 'Upload video' }) as HTMLButtonElement).disabled, true);
     assert.equal(screen.getByRole('region', { name: 'Add Video' }).querySelectorAll('input[type="checkbox"]').length, 1);
     assert.equal(requests, 0);
   } finally { cleanup(); globalThis.fetch = priorFetch; }
@@ -227,38 +231,47 @@ test('private video draft links one item and asset; failed part retries without 
   try {
     await getSession();
     const created: string[] = [];
-    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, refresh: async () => inventory, onCreated: id => created.push(id), onClose: () => {} }));
+    const props = { accountId: owner, projectId, inventory, refresh: async () => inventory, onCreated: (id: string) => created.push(id), onClose: () => {} };
+    let mounted = render(createElement(NewVideoUpload, props));
     fireEvent.change(screen.getByLabelText('Video file'), { target: { files: [validFile()] } });
+    mounted.rerender(createElement(NewVideoUpload, { ...props, page: 'details' }));
     fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'A short description.' } });
+    mounted.rerender(createElement(NewVideoUpload, props));
     fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Upload video' }));
     await screen.findByText('Temporary upload error');
     assert.deepEqual(created, [itemId]);
     assert.deepEqual(counts, { source: 1, item: 1, asset: 1, upload: 1, collection: 1 });
     assert.deepEqual(inventory.collections[1].itemIds, [itemId], 'default channel placement survives upload failure');
     failPart = false;
-    fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Upload video' }));
     await screen.findByText(/processing is unavailable here/);
     assert.deepEqual(counts, { source: 1, item: 1, asset: 1, upload: 2, collection: 1 });
     assert.deepEqual(inventory.collections[0].itemIds, []);
     cleanup();
-    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, refresh: async () => inventory, onCreated: id => created.push(id), onClose: () => {} }));
+    const existingProps = { ...props, existingItem: inventory.items[0] };
+    mounted = render(createElement(NewVideoUpload, existingProps));
     fireEvent.change(screen.getByLabelText('Video file'), { target: { files: [validFile()] } });
+    mounted.rerender(createElement(NewVideoUpload, { ...existingProps, page: 'details' }));
     fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'A short description.' } });
+    mounted.rerender(createElement(NewVideoUpload, { ...existingProps, page: 'channel' }));
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: collectionId } });
+    mounted.rerender(createElement(NewVideoUpload, existingProps));
     fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Replace video' }));
     await screen.findByText(/processing is unavailable here/);
     assert.deepEqual(counts, { source: 1, item: 1, asset: 1, upload: 3, collection: 3 });
     assert.deepEqual(inventory.collections[0].itemIds, [itemId]);
     assert.deepEqual(inventory.collections[1].itemIds, [], 'a chosen category replaces the default placement');
     assert.deepEqual(created, [itemId]);
     cleanup();
-    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, refresh: async () => inventory, onCreated: id => created.push(id), onClose: () => {} }));
+    mounted = render(createElement(NewVideoUpload, existingProps));
     fireEvent.change(screen.getByLabelText('Video file'), { target: { files: [validFile()] } });
+    mounted.rerender(createElement(NewVideoUpload, { ...existingProps, page: 'details' }));
     fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'A short description.' } });
+    mounted.rerender(createElement(NewVideoUpload, existingProps));
     fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.click(screen.getByRole('button', { name: 'Upload Video' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Replace video' }));
     await screen.findByText(/processing is unavailable here/);
     assert.equal(counts.collection, 3, 'repeat upload preserves the existing custom placement');
     assert.deepEqual(inventory.collections[0].itemIds, [itemId]);
@@ -336,15 +349,14 @@ test('reopened unfinished draft explains file loss and requires selection before
     render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, existingItem: item,
       refresh: async () => inventory, onCreated: () => {}, onClose: () => {} }));
     await screen.findByText(/Uploads do not resume after refresh/);
-    fireEvent.click(screen.getByRole('button', { name: 'Replace video upload' }));
-    await screen.findByText('Choose an MP4 video.');
+    assert.equal((screen.getByRole('button', { name: 'Replace video' }) as HTMLButtonElement).disabled, true);
     assert.equal(writes, 0);
   } finally { cleanup(); globalThis.fetch = previous; }
 });
 
-test('later thumbnail replacement stays private, owner-scoped and keeps its artwork asset ID', async () => {
-  const oldObject = id('ma', '7'), newObject = id('ma', '8'), artworkId = id('ma', '9');
-  const item = { id: itemId, kind: 'video', sourceRecord: { metadata: { title: 'Film' } } } as any;
+test('later thumbnail replacement creates a private draft asset and preserves prior live artwork', async () => {
+  const oldObject = id('ma', '7'), newObject = id('ma', '8'), artworkId = id('ma', '9'), nextArtworkId = id('ma', 'a');
+  const item = { id: itemId, kind: 'video', sourceRecord: { metadata: { title: 'Film' } }, mediaAssetIds: [artworkId] } as any;
   const inventory = { revision: 4, sources: [], items: [item], collections: [], mediaAssets: [
     { id: artworkId, catalogItemId: itemId, kind: 'artwork', location: { type: 'private_object', objectId: oldObject },
       schemaVersion: 1, tvDisplayRights: { status: 'cleared' }, tvPlaybackRights: { status: 'unknown' }, deliveryEligible: false }
@@ -355,32 +367,35 @@ test('later thumbnail replacement stays private, owner-scoped and keeps its artw
     const url = String(input); requests.push(`${init?.method ?? 'GET'} ${url}`);
     if (url === '/api/auth/session') return json({ accountId: owner, email: 'creator@example.test', csrfToken: 'csrf-proof', expiresAt: new Date().toISOString() });
     if (url.endsWith('/private-objects') && init?.method === 'POST') return json({ id: newObject, contentType: 'image/png' }, 201);
-    if (url.endsWith(`/media-assets/${artworkId}`) && init?.method === 'PUT') {
+    if (url.endsWith('/catalog/media-assets') && init?.method === 'POST') {
       const body = JSON.parse(String(init.body));
       assert.equal(body.record.location.objectId, newObject);
       assert.equal(body.record.deliveryEligible, false);
       assert.equal(body.record.tvDisplayRights.permittedUse, 'television_display');
       assert.equal(body.record.tvPlaybackRights.status, 'unknown');
       assert.equal(new Headers(init.headers).get('x-csrf-token'), 'csrf-proof');
-      inventory.mediaAssets[0] = { id: artworkId, ...body.record }; inventory.revision++;
-      return json({ revision: inventory.revision, record: inventory.mediaAssets[0] });
+      inventory.mediaAssets.push({ id: nextArtworkId, ...body.record }); item.mediaAssetIds.push(nextArtworkId); inventory.revision++;
+      return json({ revision: inventory.revision, record: inventory.mediaAssets[1] }, 201);
     }
-    if (url.endsWith(`/private-objects/${oldObject}`) && init?.method === 'DELETE') return json({ deleted: true });
     throw new Error(url);
   }) as typeof fetch;
   try {
     await getSession();
-    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, refresh: async () => inventory,
-      existingItem: item, onCreated: () => {}, onClose: () => {} }));
+    const props = { accountId: owner, projectId, inventory, refresh: async () => inventory,
+      existingItem: item, onCreated: () => {}, onClose: () => {} };
+    const mounted = render(createElement(NewVideoUpload, props));
+    fireEvent.click(screen.getByRole('checkbox'));
+    mounted.rerender(createElement(NewVideoUpload, { ...props, page: 'details' }));
     const thumbnail = new File(['png'], 'cover.png', { type: 'image/png' });
     Object.defineProperty(thumbnail, 'arrayBuffer', { value: async () => new Uint8Array([137, 80, 78, 71]).buffer });
-    fireEvent.change(screen.getByLabelText('Custom thumbnail (optional)'), { target: { files: [thumbnail] } });
-    assert.equal((screen.getByRole('button', { name: 'Save thumbnail only' }) as HTMLButtonElement).disabled, true);
-    fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.click(screen.getByRole('button', { name: 'Save thumbnail only' }));
-    await waitFor(() => assert.ok(requests.some(value => value === `DELETE /api/projects/${projectId}/private-objects/${oldObject}`)));
+    fireEvent.change(screen.getByLabelText(/Thumbnail \(PNG or JPEG/), { target: { files: [thumbnail] } });
+    assert.equal((screen.getByRole('button', { name: 'Save thumbnail' }) as HTMLButtonElement).disabled, false);
+    fireEvent.click(screen.getByRole('button', { name: 'Save thumbnail' }));
+    await waitFor(() => assert.equal(inventory.mediaAssets.length, 2));
     assert.equal(inventory.mediaAssets[0].id, artworkId);
-    assert.ok(requests.some(value => value === `DELETE /api/projects/${projectId}/private-objects/${oldObject}`));
+    assert.equal(inventory.mediaAssets[0].location.objectId, oldObject);
+    assert.equal(inventory.mediaAssets[1].deliveryEligible, false);
+    assert.equal(requests.some(value => value === `DELETE /api/projects/${projectId}/private-objects/${oldObject}`), false);
     assert.equal(requests.some(value => value.includes('media-uploads')), false);
   } finally { cleanup(); globalThis.fetch = previous; }
 });
@@ -406,15 +421,80 @@ test('reopened video retains optional metadata and reports revision conflict on 
     throw new Error(route);
   }) as typeof fetch;
   try {
-    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, existingItem: item,
+    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, existingItem: item, page: 'details',
       refresh: async () => inventory, onCreated: () => {}, onClose: () => {} }));
     assert.equal((screen.getByLabelText('Title *') as HTMLInputElement).value, 'Saved title');
     assert.equal((screen.getByLabelText('Description (optional)') as HTMLTextAreaElement).value, 'Saved description');
     fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'New description' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft details' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save details' }));
     await screen.findByText(/Catalog changed in another tab/);
     assert.equal(writes, 1);
   } finally { cleanup(); globalThis.fetch = prior; }
+});
+
+test('details remain editable while the private video is processing', async () => {
+  const prior = globalThis.fetch;
+  const item = { id: itemId, kind: 'video', schemaVersion: 1, sourceRecord: { metadata: { title: 'Film' } },
+    mediaAssetIds: [assetId] } as any;
+  const inventory = { revision: 3, items: [item], sources: [], collections: [], mediaAssets: [
+    { id: assetId, catalogItemId: itemId, kind: 'video', location: { type: 'managed_hls' } }
+  ] } as any;
+  let writes = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const route = String(input);
+    if (route.endsWith('/media-uploads')) return json({ uploadId, uploadState: 'verified', processing: { state: 'pending' } });
+    if (route.endsWith(`/${uploadId}`)) return json({ id: uploadId, state: 'verified', processingAvailable: true,
+      processing: { state: 'pending' } });
+    if (route.endsWith(`/catalog/items/${itemId}`) && init?.method === 'PUT') {
+      writes++;
+      const request = JSON.parse(String(init.body));
+      assert.equal(request.record.creatorOverrides.description, 'Edited during processing');
+      inventory.items[0] = { id: itemId, ...request.record };
+      return json({ revision: ++inventory.revision, record: inventory.items[0] });
+    }
+    throw new Error(route);
+  }) as typeof fetch;
+  try {
+    const props = { accountId: owner, projectId, inventory, existingItem: item,
+      refresh: async () => inventory, onCreated: () => {}, onClose: () => {} };
+    const mounted = render(createElement(NewVideoUpload, props));
+    await screen.findByText(/Processing · private/);
+    mounted.rerender(createElement(NewVideoUpload, { ...props, page: 'details' }));
+    fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'Edited during processing' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save details' }));
+    await waitFor(() => assert.equal(writes, 1));
+    assert.equal(inventory.items[0].creatorOverrides.description, 'Edited during processing');
+  } finally { cleanup(); globalThis.fetch = prior; }
+});
+
+test('saved thumbnail preview uses an owner-scoped private capability and a local blob URL', async () => {
+  const prior = globalThis.fetch, priorCreate = URL.createObjectURL, priorRevoke = URL.revokeObjectURL;
+  const objectId = id('ma', '5'), artworkId = id('ma', '6');
+  const item = { id: itemId, kind: 'video', sourceRecord: { metadata: { title: 'Film' } }, mediaAssetIds: [artworkId] } as any;
+  const inventory = { revision: 1, items: [item], sources: [], collections: [], mediaAssets: [
+    { id: artworkId, catalogItemId: itemId, kind: 'artwork', location: { type: 'private_object', objectId } }
+  ] } as any;
+  const requested: string[] = [];
+  URL.createObjectURL = () => 'blob:https://studio.example/private-preview';
+  URL.revokeObjectURL = value => { requested.push(`revoke ${value}`); };
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const route = String(input); requested.push(`${init?.method ?? 'GET'} ${route}`);
+    if (route.endsWith(`/${objectId}/capability`)) return json({ capability: 'private-capability' });
+    if (route.endsWith(`/${objectId}/content`)) {
+      assert.equal(new Headers(init?.headers).get('x-private-capability'), 'private-capability');
+      return new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]), { headers: { 'content-type': 'image/jpeg' } });
+    }
+    throw new Error(route);
+  }) as typeof fetch;
+  try {
+    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, existingItem: item, page: 'details',
+      refresh: async () => inventory, onCreated: () => {}, onClose: () => {} }));
+    await screen.findByAltText('Uploaded thumbnail preview');
+    assert.equal((screen.getByAltText('Uploaded thumbnail preview') as HTMLImageElement).src, 'blob:https://studio.example/private-preview');
+    assert.ok(requested.some(value => value === `POST /api/projects/${projectId}/private-objects/${objectId}/capability`));
+    assert.ok(requested.some(value => value === `GET /api/projects/${projectId}/private-objects/${objectId}/content`));
+    assert.doesNotMatch(document.body.innerHTML, /private-capability/);
+  } finally { cleanup(); globalThis.fetch = prior; URL.createObjectURL = priorCreate; URL.revokeObjectURL = priorRevoke; }
 });
 
 test('existing video can create one simple owned category with catalog revision', async () => {
@@ -435,7 +515,7 @@ test('existing video can create one simple owned category with catalog revision'
     throw new Error(route);
   }) as typeof fetch;
   try {
-    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, existingItem: item,
+    render(createElement(NewVideoUpload, { accountId: owner, projectId, inventory, existingItem: item, page: 'channel',
       refresh: async () => inventory, onCreated: () => {}, onClose: () => {} }));
     fireEvent.change(screen.getByLabelText('New category (optional)'), { target: { value: 'Documentaries' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create category' }));

@@ -4,12 +4,12 @@ import { bytesToHex } from '@noble/hashes/utils';
 import type { ChannelProject, CatalogItem, MediaAsset } from '@firelaunch/contracts';
 import { ApiError, deletePrivateObject, generateCatalogDraft, getProject, readCatalogDraft, readDeployment, readLiveSummary, readVideoAssetStatus, uploadPrivateEvidence, writeCatalog, type CatalogSnapshot, type LiveSummary, type VideoAssetStatus } from './api.js';
 import { LivePublication } from './LivePublication.js';
+import type { VideoPage } from './video-pages.js';
 
-const unknown = { status: 'unknown' as const, basis: 'none' as const, permittedUse: 'none' as const };
-
-export function VideoReview({ project, item, inventory, refresh, onProjectUpdate }: {
+export function VideoReview({ project, item, inventory, refresh, onProjectUpdate, page, onNavigate }: {
   project: ChannelProject; item: CatalogItem; inventory: CatalogSnapshot; refresh: () => Promise<CatalogSnapshot>;
-  onProjectUpdate: (project: ChannelProject) => void;
+  onProjectUpdate: (project: ChannelProject) => void; page: Extract<VideoPage, 'channel' | 'publish'>;
+  onNavigate: (page: VideoPage) => void;
 }) {
   const [video, setVideo] = useState<VideoAssetStatus>(null);
   const [live, setLive] = useState<LiveSummary>(null);
@@ -17,7 +17,6 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
   const [liveError, setLiveError] = useState(false);
   const [sourceEvidence, setSourceEvidence] = useState<File | null>(null);
   const [sourceApproved, setSourceApproved] = useState(false);
-  const [artworkUrl, setArtworkUrl] = useState('');
   const [artworkApproved, setArtworkApproved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -26,7 +25,11 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
   const source = inventory.sources.find(value => value.id === item.sourceRecord.sourceId);
   const assets = inventory.mediaAssets.filter(value => value.catalogItemId === item.id);
   const managed = assets.find(value => value.kind === 'video' && value.location.type === 'managed_hls');
-  const publicArtwork = assets.find(value => value.kind === 'artwork' && value.location.type === 'https' && value.deliveryEligible && value.tvDisplayRights?.status === 'cleared');
+  const privateArtwork = [...item.mediaAssetIds].reverse().map(id => assets.find(value => value.id === id))
+    .find(value => value?.kind === 'artwork' && value.location.type === 'private_object');
+  const publicArtwork = privateArtwork
+    ? privateArtwork.deliveryEligible && privateArtwork.tvDisplayRights?.status === 'cleared' ? privateArtwork : undefined
+    : assets.find(value => value.kind === 'artwork' && value.location.type === 'https' && value.deliveryEligible && value.tvDisplayRights?.status === 'cleared');
   const sourceReady = source?.state === 'verified' && source.permission.retrieval === 'creator_asserted' && source.permission.tvDisplay === 'creator_asserted';
   const ready = !!managed && video?.uploadState === 'verified' && video.processing?.state === 'ready' &&
     managed.tvDisplayRights?.status === 'cleared' && managed.tvPlaybackRights?.status === 'cleared' && managed.deliveryEligible;
@@ -72,24 +75,18 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
       throw reason;
     }
     await refresh(); setSourceApproved(false); setSourceEvidence(null);
-    return 'Source provenance saved. This does not publish the video.';
+    return 'Source permission saved. The video remains private.';
   });
-  const attachArtwork = () => void act(async () => {
-    if (!artworkApproved) throw new Error('Confirm TV display rights for the public artwork.');
-    const url = new URL(artworkUrl.trim());
-    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || !url.hostname.includes('.') ||
-      /(^|\.)s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com$/i.test(url.hostname) ||
-      (url.origin === window.location.origin && url.pathname.startsWith('/api/')))
-      throw new Error('Use a stable public HTTPS artwork URL without credentials, query or fragment.');
-    await writeCatalog(project.id, 'media-assets', inventory.revision, { schemaVersion: 1, catalogItemId: item.id,
-      kind: 'artwork', location: { type: 'https', url: url.href },
-      tvDisplayRights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_display', assertedAt: new Date().toISOString() },
-      tvPlaybackRights: unknown, deliveryEligible: true });
-    await refresh(); setArtworkUrl(''); setArtworkApproved(false);
-    return 'Public TV artwork attached to this private draft. Review its URL before publication.';
+  const approveThumbnail = () => void act(async () => {
+    if (!artworkApproved || !privateArtwork || privateArtwork.tvDisplayRights?.status !== 'cleared')
+      throw new Error('Confirm TV display rights for your uploaded thumbnail.');
+    const { id, creatorAccountId: _owner, projectId: _project, ...record } = privateArtwork;
+    await writeCatalog(project.id, 'media-assets', inventory.revision, { ...record, deliveryEligible: true }, id);
+    await refresh(); setArtworkApproved(false);
+    return 'Uploaded thumbnail approved for TV review. It remains private until channel publication.';
   });
   const linkDraft = () => void act(async () => {
-    if (!sourceReady || !publicArtwork || !ready) throw new Error('Resolve source, public artwork, TV rights and verified READY HLS first.');
+    if (!sourceReady || !publicArtwork || !ready) throw new Error('Confirm source and thumbnail permissions and wait for video processing before adding it to the channel preview.');
     const prior = await readCatalogDraft(project.id);
     if (prior && prior.creatorType !== 'video') throw new Error('This channel uses another draft type. Review its layout in Catalog before changing it.');
     const latestCatalog = await refresh();
@@ -101,35 +98,42 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
       collectionIds: prior?.selection.collectionIds ?? [] };
     const result = await generateCatalogDraft(project, 'video', selection);
     onProjectUpdate(result.project);
-    return `Channel draft revision ${result.project.revision} saved. Review TV Preview and all content before publishing.`;
+    return 'Video added to the private channel preview. Review all channel content before publishing.';
   });
-  return <section className="video-review" aria-label="Video review and publication">
-    <h3>Prepare this video for your channel</h3>
-    {liveLoaded && <p role="status">{inLive ? `${ready ? 'Published' : 'Referenced but currently blocked'} in live release #${live!.sequence}${draftAfterLive ? ' · newer private draft changes await approval' : ''}` : 'Private draft · this video is not in the current live release.'}</p>}
-    {liveError && <p role="alert">Live release status is unavailable. Reopen this video or refresh channel publication before relying on its status.</p>}
+  return <section className="video-review" aria-label={page === 'channel' ? 'Channel placement' : 'Video publication'}>
     {error && <p role="alert" className="catalog-error">{error}</p>}{notice && <p role="status">{notice}</p>}
-    <ol className="video-review-steps">
-      <li><strong>1. Upload and process</strong><p>{!managed ? 'Choose an MP4 and confirm your rights above.' : video?.uploadState !== 'verified' ? 'Private upload has not been verified.' : video.processing?.state === 'ready' ? 'Verified HLS is READY and still private.' : video.processing?.state === 'failed' ? 'Processing failed. Retry above.' : video.processing?.state === 'revoked' ? 'Video revoked. Replace or resolve rights before review.' : 'Processing is pending. This remains private.'}</p></li>
-      <li><strong>2. Review source and TV artwork</strong>
-        {!sourceReady && <div><p>Source provenance and retrieval/TV display permission are required before channel generation.</p>
-          {source?.type === 'creator_upload' && source.state === 'discovered' && <><label className="field"><span>Private source evidence · PDF, PNG or JPEG</span><input type="file" accept="application/pdf,image/png,image/jpeg" onChange={event => setSourceEvidence(event.target.files?.[0] ?? null)}/></label>
-            <label className="check"><input type="checkbox" checked={sourceApproved} onChange={event => setSourceApproved(event.target.checked)}/> I control this upload source and have retrieval and TV display permission.</label>
-            <button disabled={busy || !sourceApproved || !sourceEvidence} onClick={verifySource}>Verify source</button></>}
-          {(source?.type !== 'creator_upload' || source.state !== 'discovered') && <p>Review this source’s provenance and permission in Catalog before continuing.</p>}</div>}
-        {!publicArtwork && <div><p>A private thumbnail is a draft only. Add stable public, rights-cleared TV artwork before publication.</p>
-          <label className="field"><span>Public HTTPS artwork URL</span><input type="url" maxLength={2048} value={artworkUrl} onChange={event => setArtworkUrl(event.target.value)}/></label>
-          <label className="check"><input type="checkbox" checked={artworkApproved} onChange={event => setArtworkApproved(event.target.checked)}/> I approve public TV display of this artwork.</label>
-          <button disabled={busy || !artworkApproved || !artworkUrl.trim()} onClick={attachArtwork}>Attach public artwork</button></div>}
-        {sourceReady && publicArtwork && <p>Source permission and public artwork are saved. Final server review checks the exact references.</p>}</li>
-      <li><strong>3. Link the channel draft</strong><p>{linked ? `This video appears in channel draft revision ${project.revision}. Review the TV Preview and other content.` : 'A Videos category keeps this item in the library. Adding it regenerates this channel draft with the saved video selection; review the resulting layout and other content before publication.'}</p>
-        {!linked && <button disabled={busy || !sourceReady || !publicArtwork || !ready} onClick={linkDraft}>Add to channel draft</button>}
-        {managed && !ready && <p>Blocked until verified READY HLS, both TV rights and delivery review are current. {managed.tvDisplayRights?.status === 'revoked' || managed.tvPlaybackRights?.status === 'revoked' ? 'This asset has revoked rights; start a new video draft or resolve the revocation with the operator.' : 'Check the upload status above and rights in Catalog.'}</p>}</li>
-      <li><strong>4. Approve and publish the whole channel</strong><p>Current channel revision {project.revision} · catalog revision {inventory.revision}. Publication reviews every channel item, including other videos, audio or writing. Approval and live confirmation are separate. Free TV delivery only; native package export and Appstore submission are separate.</p>
-        <button disabled={!linked || !ready || !sourceReady || !publicArtwork} onClick={() => setShowPublication(value => !value)}>{showPublication ? 'Hide channel publication' : 'Review whole channel for publication'}</button>
-        {showPublication && <LivePublication key={`${project.revision}:${inventory.revision}`} project={project} hosted onPublished={() => { setLiveError(false); void readDeployment(project.id)
+    {page === 'channel' && <>
+      <h3>Channel preview</h3>
+      <p>{linked ? 'This video is in your private channel preview.' : 'When this video is ready, add it to the private channel preview. Your collection choice above is saved separately.'}</p>
+      {!linked && <>
+        {!ready && <p role="status">{!managed ? 'Upload your video on Video first.' : video?.processing?.state === 'failed' ? 'Processing failed. Retry on Video.' : video?.processing?.state === 'revoked' ? 'Video rights were revoked; publication is blocked.' : 'Wait for private video processing to finish on Video.'}</p>}
+        {!sourceReady && <p role="status">Confirm source permission on Publish before adding this video.</p>}
+        {!publicArtwork && <p role="status">Approve your uploaded thumbnail on Publish before adding this video.</p>}
+        {ready && sourceReady && publicArtwork && <button disabled={busy} onClick={linkDraft}>Add to channel preview</button>}
+      </>}
+    </>}
+    {page === 'publish' && <>
+      <h3>Publish</h3>
+      {liveLoaded && <p role="status">{inLive ? `${ready ? 'Published' : 'Referenced but currently blocked'} in live release #${live!.sequence}${draftAfterLive ? ' · newer private draft changes await approval' : ''}` : 'Private draft · this video is not in the current live release.'}</p>}
+      {liveError && <p role="alert">Live release status is unavailable. Reopen this video before relying on its status.</p>}
+      {!ready && <p role="status">{!managed ? 'Upload a video on Video.' : video?.processing?.state === 'failed' ? 'Processing failed. Retry on Video.' : video?.processing?.state === 'revoked' ? 'Video rights were revoked. Replace the video or resolve the revocation.' : 'Private video processing must finish before publication.'} <button type="button" onClick={() => onNavigate('video')}>Go to Video</button></p>}
+      {!sourceReady && <div className="video-review-requirement"><h4>Confirm your source</h4><p>Keep private proof that you control this video and can show it on TV.</p>
+        {source?.type === 'creator_upload' && source.state === 'discovered' ? <><label className="field"><span>Private proof (PDF, PNG or JPEG)</span><input type="file" accept="application/pdf,image/png,image/jpeg" onChange={event => setSourceEvidence(event.target.files?.[0] ?? null)}/></label>
+          <label className="check"><input type="checkbox" checked={sourceApproved} onChange={event => setSourceApproved(event.target.checked)}/> I control this video source and have TV display permission.</label>
+          {sourceApproved && sourceEvidence ? <button disabled={busy} onClick={verifySource}>Save source permission</button> : <p>Choose proof and confirm permission to continue.</p>}</>
+          : <p>Review this source’s permission in Catalog before publishing.</p>}</div>}
+      {!publicArtwork && <div className="video-review-requirement"><h4>Approve your thumbnail</h4>
+        {privateArtwork?.tvDisplayRights?.status === 'cleared' ? <><p>Your uploaded thumbnail is private. Confirm it may appear on TV; FireLaunch will deliver the approved image when the channel goes live.</p>
+          <label className="check"><input type="checkbox" checked={artworkApproved} onChange={event => setArtworkApproved(event.target.checked)}/> I approve TV display of this uploaded thumbnail.</label>
+          {artworkApproved && <button disabled={busy} onClick={approveThumbnail}>Save thumbnail approval</button>}</>
+          : <p>Add a licensed thumbnail on Details, then confirm its rights on Video. <button type="button" onClick={() => onNavigate('details')}>Go to Details</button></p>}</div>}
+      {!linked && <p role="status">Add this video to your private channel preview on Channel. <button type="button" onClick={() => onNavigate('channel')}>Go to Channel</button></p>}
+      {linked && ready && sourceReady && publicArtwork && <><p>Publishing replaces the whole live channel, not just this video. Review every item, approve the draft, then confirm the live release.</p>
+        <button onClick={() => setShowPublication(value => !value)}>{showPublication ? 'Hide live review' : 'Review live channel'}</button>
+        {showPublication && <LivePublication key={`${project.revision}:${inventory.revision}`} project={project} hosted simple onPublished={() => { setLiveError(false); void readDeployment(project.id)
           .then(deployment => readLiveSummary(project.id, deployment.id))
           .then(value => { setLive(value); setLiveLoaded(true); })
-          .catch(() => { setLiveLoaded(false); setLiveError(true); }); }}/>}</li>
-    </ol>
+          .catch(() => { setLiveLoaded(false); setLiveError(true); }); }}/>}</>}
+    </>}
   </section>;
 }

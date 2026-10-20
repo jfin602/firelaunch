@@ -5,19 +5,33 @@ import { catalogItemSchema, catalogSourceSchema, mediaAssetSchema, mediaUseEligi
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { canonicalBytes } from './publication-repository.js';
 import { RepositoryError } from './repository.js';
+import type { ManagedArtworkDelivery } from './managed-artwork.js';
 
 const MAX_MANIFEST_BYTES = 1_048_576;
 const deploymentIdSchema = z.string().regex(/^dep_[a-f0-9]{32}$/);
 const releaseIdSchema = z.string().regex(/^rel_[a-f0-9]{32}$/);
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/);
 const publicPath = /^\/public\/v1\/deployments\/(dep_[a-f0-9]{32})\/(current|releases\/(rel_[a-f0-9]{32}))$/;
+const artworkPath = /^\/api\/public-artwork\/(dep_[a-f0-9]{32})\/(rel_[a-f0-9]{32})\/(ma_[a-f0-9]{32})\/([a-f0-9]{64})\.(png|jpg)$/;
 const notFound = () => new RepositoryError('NOT_FOUND', 'Route not found');
 
 type StoredRelease = { id: string; sequence: number; sha256: string; manifest_bytes: string;
   creator_account_id: string; project_id: string };
 
 export class PublicReleaseResolver {
-  constructor(private readonly projects: HostedProjectRepository) {}
+  constructor(private readonly projects: HostedProjectRepository, private readonly artworkDelivery?: ManagedArtworkDelivery) {}
+
+  async artwork(deploymentId: string, releaseId: string, assetId: string, sha256: string,
+    ext: 'png' | 'jpg'): Promise<{ body: Buffer; contentType: 'image/png' | 'image/jpeg' }> {
+    if (!this.artworkDelivery) throw notFound();
+    const release = await this.release(deploymentId, releaseId);
+    const parsed = publishedManifestSchema.safeParse(JSON.parse(release.manifest_bytes));
+    if (!parsed.success) throw notFound();
+    const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+    const expectedUrl = this.artworkDelivery.url(deploymentId, releaseId, assetId, sha256, contentType);
+    if (!parsed.data.media.some(media => media.id === assetId && media.kind === 'artwork' && media.url === expectedUrl)) throw notFound();
+    return { body: await this.artworkDelivery.read(deploymentId, releaseId, assetId, sha256, contentType), contentType };
+  }
 
   async release(deploymentId: string, releaseId: string): Promise<StoredRelease> {
     deploymentIdSchema.parse(deploymentId);
@@ -70,6 +84,19 @@ export class PublicReleaseResolver {
     [row.creator_account_id, row.project_id, ids]);
     if (assets.rows.length !== ids.length) throw notFound();
     const current = new Map(assets.rows.map(asset => [asset.id, asset]));
+    const managedArtworkIds = manifest.data.media.flatMap(media => {
+      if (media.kind !== 'artwork' || !media.url.includes('/api/public-artwork/')) return [];
+      const record = current.get(media.id);
+      const parsed = mediaAssetSchema.safeParse(record?.record);
+      if (!parsed.success || parsed.data.location.type !== 'private_object') throw notFound();
+      return [parsed.data.location.objectId];
+    });
+    const privateArtwork = managedArtworkIds.length ? await this.projects.pool.query<{
+      id: string; sha256: string; content_type: string
+    }>(`SELECT id, sha256, content_type FROM private_objects
+      WHERE id = ANY($1::text[]) AND creator_account_id = $2 AND project_id = $3 AND kind = 'media'`,
+    [managedArtworkIds, row.creator_account_id, row.project_id]) : { rows: [] };
+    const artworkObjects = new Map(privateArtwork.rows.map(object => [object.id, object]));
     for (const media of manifest.data.media) {
       const record = current.get(media.id);
       const parsed = mediaAssetSchema.safeParse(record?.record);
@@ -87,12 +114,39 @@ export class PublicReleaseResolver {
         source.data.id !== item.data.sourceRecord.sourceId || source.data.creatorAccountId !== row.creator_account_id ||
         source.data.projectId !== row.project_id || source.data.state === 'discovered' ||
         ['unknown', 'revoked'].includes(source.data.permission.retrieval) ||
-        ['unknown', 'revoked'].includes(source.data.permission.tvDisplay)) throw notFound();
+        ['unknown', 'revoked'].includes(source.data.permission.tvDisplay) ||
+        (media.kind === 'artwork' && parsed.data.location.type === 'private_object' &&
+          !media.url.includes('/api/public-artwork/'))) throw notFound();
+      if (media.kind === 'artwork' && media.url.includes('/api/public-artwork/')) {
+        const url = new URL(media.url);
+        const match = artworkPath.exec(url.pathname);
+        const object = parsed.data.location.type === 'private_object' ? artworkObjects.get(parsed.data.location.objectId) : undefined;
+        if (!this.artworkDelivery || !match || parsed.data.location.type !== 'private_object' ||
+          !object || object.sha256 !== match[4] || object.content_type !== (match[5] === 'png' ? 'image/png' : 'image/jpeg') ||
+          match[1] !== deploymentId || match[2] !== row.id || match[3] !== media.id ||
+          media.url !== this.artworkDelivery.url(match[1]!, match[2]!, match[3]!, match[4]!,
+            match[5] === 'png' ? 'image/png' : 'image/jpeg')) throw notFound();
+      }
     }
     if (bound.some(binding => !current.has(binding.artworkAssetId) ||
       binding.playbackAssetId && !current.has(binding.playbackAssetId))) throw notFound();
     return row;
   }
+}
+
+export async function publicArtworkRoute(request: IncomingMessage, response: ServerResponse,
+  resolver: PublicReleaseResolver): Promise<void> {
+  const match = artworkPath.exec(request.url ?? '');
+  if (request.method !== 'GET' || !match || request.headers['content-length'] !== undefined ||
+    request.headers['transfer-encoding'] !== undefined || request.headers.range !== undefined ||
+    (request.headers['if-none-match'] !== undefined &&
+      (typeof request.headers['if-none-match'] !== 'string' || request.headers['if-none-match'].length > 128))) throw notFound();
+  const { body, contentType } = await resolver.artwork(match[1]!, match[2]!, match[3]!, match[4]!, match[5] as 'png' | 'jpg');
+  const etag = `"${match[4]}"`;
+  const headers = { 'content-type': contentType, 'cache-control': 'public, max-age=0, must-revalidate',
+    'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', etag };
+  if (request.headers['if-none-match'] === etag) { response.writeHead(304, headers); response.end(); return; }
+  response.writeHead(200, { ...headers, 'content-length': body.length }); response.end(body);
 }
 
 export async function publicReleaseRoute(request: IncomingMessage, response: ServerResponse, resolver: PublicReleaseResolver): Promise<void> {

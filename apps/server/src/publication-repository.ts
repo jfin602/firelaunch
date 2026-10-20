@@ -11,6 +11,7 @@ import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { RepositoryError } from './repository.js';
 import type { S3MediaStorage } from './media-storage.js';
+import type { ManagedArtworkDelivery, PreparedArtwork } from './managed-artwork.js';
 
 const ids = {
   project: z.string().regex(/^ch_[a-f0-9]{32}$/),
@@ -58,7 +59,8 @@ function failure(error: unknown): never {
 
 /** No HTTP route. The caller must supply a verified session principal. */
 export class PublicationRepository {
-  constructor(private readonly projects: HostedProjectRepository, private readonly mediaStorage?: S3MediaStorage) {}
+  constructor(private readonly projects: HostedProjectRepository, private readonly mediaStorage?: S3MediaStorage,
+    private readonly managedArtwork?: ManagedArtworkDelivery) {}
 
   private async locked(client: PoolClient, principal: AuthenticatedPrincipal, projectId: string, deploymentId: string): Promise<Locked> {
     if (!principal?.accountId || !principal.issuer || !principal.subject) throw new RepositoryError('NOT_FOUND', 'Project not found');
@@ -146,14 +148,29 @@ export class PublicationRepository {
     bindings: PublicationBindings, releaseId: string, publishedAt: string, promote = false): Promise<PublishedManifest> {
     const resolvedPlayback = await this.resolvedPlayback(client, state, bindings, false);
     try {
+      const artworkCopies: PreparedArtwork[] = [];
+      let artworkBytes = 0;
+      for (const assetId of new Set(bindings.content.map(binding => binding.artworkAssetId))) {
+        const asset = state.inventory.mediaAssets.find(value => value.id === assetId);
+        if (!asset || asset.location.type !== 'private_object') continue;
+        if (!this.managedArtwork || asset.kind !== 'artwork' || !asset.deliveryEligible ||
+          !mediaUseEligible(asset, 'television_display')) conflict('Uploaded thumbnail is not approved for publication');
+        const prepared = await this.managedArtwork.prepare(state.owner, state.channel.id, asset.location.objectId,
+          channelDeploymentSchema.parse(state.deployment).id, releaseId, asset.id);
+        artworkBytes += prepared.body.length;
+        if (artworkBytes > 20_000_000) conflict('Managed artwork exceeds release limit');
+        artworkCopies.push(prepared);
+      }
+      const resolvedArtwork = new Map(artworkCopies.map(value => [value.assetId, value.url] as const));
       const manifest = projectApprovedManifest({
         approval: publicationApprovalSchema.parse({ state: 'approved', creatorAccountId: state.owner,
           projectId: state.channel.id, revisions: { channel: state.channelRevision, catalog: state.catalogRevision },
           approvalId, approvedAt }),
-        deployment: state.deployment, channel, inventory: state.inventory, bindings, resolvedPlayback,
+        deployment: state.deployment, channel, inventory: state.inventory, bindings, resolvedPlayback, resolvedArtwork,
         releaseId, releaseSequence: state.liveSequence + 1,
         ...(state.liveId ? { previousReleaseId: state.liveId } : {}), publishedAt
       });
+      if (promote) for (const artwork of artworkCopies) await this.managedArtwork!.publish(artwork);
       if (promote && resolvedPlayback.size) {
         const promoted = await this.resolvedPlayback(client, state, bindings, true);
         if (!isDeepStrictEqual([...promoted], [...resolvedPlayback])) conflict('Published HLS URL differs from reviewed rendition');

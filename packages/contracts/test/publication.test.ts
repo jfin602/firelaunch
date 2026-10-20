@@ -68,6 +68,32 @@ const input = () => ({
   approval: approval(), deployment: deployment(), channel: channel(), inventory: inventory(), bindings: bindings(),
   releaseId: `rel_${hex('a')}`, releaseSequence: 1, publishedAt: timestamp
 });
+
+test('approved private thumbnail resolves only through a release-scoped managed URL', () => {
+  const base = input();
+  const managedUrl = `https://studio.example.com/api/public-artwork/${base.deployment.id}/${base.releaseId}/${artworkId}/${'a'.repeat(64)}.jpg`;
+  const selected = { ...base,
+    channel: { ...base.channel, content: [{ ...base.channel.content[0]!, artwork: 'assets/catalog-placeholder.png' }] },
+    inventory: { ...base.inventory, mediaAssets: [base.inventory.mediaAssets[0]!, {
+      ...base.inventory.mediaAssets[1]!, location: { type: 'private_object' as const, objectId: `ma_${hex('9')}` }
+    }] } };
+  assert.throws(() => projectApprovedManifest(selected));
+  const released = projectApprovedManifest({ ...selected, resolvedArtwork: new Map([[artworkId, managedUrl]]) });
+  assert.equal(released.channel.content[0]?.artwork, managedUrl);
+  assert.equal(released.media.find(asset => asset.id === artworkId)?.url, managedUrl);
+  assert.doesNotMatch(JSON.stringify(released), /private_object|objectId|assets\/catalog-placeholder/);
+  const nextReleaseId = `rel_${hex('f')}`;
+  const nextUrl = managedUrl.replace(base.releaseId, nextReleaseId);
+  const rollback = projectApprovedManifest({ ...selected, channel: released.channel,
+    releaseId: nextReleaseId, releaseSequence: 2, previousReleaseId: base.releaseId,
+    resolvedArtwork: new Map([[artworkId, nextUrl]]) });
+  assert.equal(rollback.channel.content[0]?.artwork, nextUrl, 'rollback creates a new immutable artwork URL');
+  assert.throws(() => projectApprovedManifest({ ...selected, inventory: { ...selected.inventory,
+    mediaAssets: [selected.inventory.mediaAssets[0]!, { ...selected.inventory.mediaAssets[1]!, deliveryEligible: false }] },
+  resolvedArtwork: new Map([[artworkId, managedUrl]]) }));
+  assert.throws(() => projectApprovedManifest({ ...selected, channel: base.channel,
+    resolvedArtwork: new Map([[artworkId, managedUrl]]) }));
+});
 const bookContent = () => ({ id: `item_${hex('1')}`, title: 'Field Guide', description: 'A book',
   artwork: bookArtworkUrl, presentation: 'information' as const });
 const bookItem = () => ({ ...catalogItem(), id: bookItemId, kind: 'book' as const,

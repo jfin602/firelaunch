@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { CatalogItem, Collection } from '@firelaunch/contracts';
-import { ApiError, deletePrivateObject, readVideoAssetStatus, readVideoUpload, retryVideoProcessing, uploadPrivateMedia, writeCatalog, type CatalogSnapshot, type VideoUploadStatus } from './api.js';
+import { ApiError, deletePrivateObject, readPrivateThumbnail, readVideoAssetStatus, readVideoUpload, retryVideoProcessing, uploadPrivateMedia, writeCatalog, type CatalogSnapshot, type VideoUploadStatus } from './api.js';
 import { extractVideoThumbnail, hashVideoFile, readVideoDuration, titleFromFilename, validateVideoFile } from './video-upload.js';
 import { startVideoTransfer, stopVideoTransfer, subscribeVideoTransfers, videoTransfer, type VideoTransfer } from './video-transfer.js';
+import type { VideoPage } from './video-pages.js';
 
 const claim = (use: 'television_display' | 'television_playback', assertedAt: string) =>
   ({ status: 'cleared' as const, basis: 'creator_asserted' as const, permittedUse: use, assertedAt });
@@ -14,18 +15,15 @@ async function saveThumbnail(projectId: string, itemId: string, thumbnail: File,
   if (!['image/jpeg', 'image/png'].includes(thumbnail.type) || thumbnail.size < 1 || thumbnail.size > 1_000_000)
     throw new Error('Choose a PNG or JPEG thumbnail under 1 MB.');
   const current = await refresh();
-  const priorArtwork = current.mediaAssets.find(value => value.catalogItemId === itemId && value.kind === 'artwork' && value.location.type === 'private_object');
   const uploaded = await uploadPrivateMedia(projectId, thumbnail);
   let attached = false;
   try {
-    const { id: artworkId, creatorAccountId: _owner, projectId: _project, ...priorRecord } = priorArtwork ?? {};
     await writeCatalog(projectId, 'media-assets', current.revision, {
-      ...priorRecord, schemaVersion: 1, catalogItemId: itemId, kind: 'artwork', location: { type: 'private_object', objectId: uploaded.id },
+      schemaVersion: 1, catalogItemId: itemId, kind: 'artwork', location: { type: 'private_object', objectId: uploaded.id },
       tvDisplayRights: claim('television_display', new Date().toISOString()), tvPlaybackRights: unknown(), deliveryEligible: false
-    }, artworkId);
+    });
     attached = true;
     await refresh();
-    if (priorArtwork?.location.type === 'private_object') await deletePrivateObject(projectId, priorArtwork.location.objectId).catch(() => undefined);
   } catch (reason) {
     if (!attached) await deletePrivateObject(projectId, uploaded.id).catch(() => undefined);
     throw new Error(`Thumbnail could not be attached: ${reason instanceof Error ? reason.message : String(reason)}`);
@@ -132,9 +130,9 @@ export function VideoLibraryStatus({ projectId, assetId }: { projectId: string; 
   return <span>{status}</span>;
 }
 
-export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCreated, onClose, onBusyChange, existingItem }: {
+export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCreated, onClose, onBusyChange, existingItem, page = 'video' }: {
   accountId: string; projectId: string; inventory: CatalogSnapshot; refresh: () => Promise<CatalogSnapshot>;
-  onCreated: (itemId: string) => void; onClose: () => void; onBusyChange?: (busy: boolean) => void; existingItem?: CatalogItem;
+  onCreated: (itemId: string) => void; onClose: () => void; onBusyChange?: (busy: boolean) => void; existingItem?: CatalogItem; page?: VideoPage;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState(existingItem?.creatorOverrides?.title ?? existingItem?.sourceRecord.metadata.title ?? '');
@@ -143,6 +141,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
   const [collectionId, setCollectionId] = useState(() => inventory.collections.find(value => existingItem && value.itemIds.includes(existingItem.id) && !(value.kind === 'series' && value.title === 'Videos'))?.id ?? '');
   const [newCategory, setNewCategory] = useState('');
   const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState('');
   const [thumbnailNotice, setThumbnailNotice] = useState('');
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [itemId, setItemId] = useState(existingItem?.id ?? '');
@@ -152,9 +151,27 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
+  const latestArtwork = [...(inventory.items.find(value => value.id === (existingItem?.id ?? itemId))?.mediaAssetIds ?? [])]
+    .reverse().map(id => inventory.mediaAssets.find(asset => asset.id === id))
+    .find(asset => asset?.kind === 'artwork' && asset.location.type === 'private_object');
+  const thumbnailObjectId = latestArtwork?.location.type === 'private_object' ? latestArtwork.location.objectId : '';
   const busyRef = useRef(false);
   const activeRef = useRef(true);
   useEffect(() => { activeRef.current = true; return () => { activeRef.current = false; }; }, []);
+  useEffect(() => {
+    if (page !== 'details' || typeof URL.createObjectURL !== 'function') { setThumbnailPreview(''); return; }
+    let active = true;
+    let preview = '';
+    const show = (blob: Blob) => {
+      if (!active) return;
+      preview = URL.createObjectURL(blob);
+      setThumbnailPreview(preview);
+    };
+    if (thumbnail) show(thumbnail);
+    else if (thumbnailObjectId) void readPrivateThumbnail(projectId, thumbnailObjectId).then(show).catch(() => { if (active) setThumbnailPreview(''); });
+    else setThumbnailPreview('');
+    return () => { active = false; if (preview) URL.revokeObjectURL(preview); };
+  }, [page, projectId, thumbnail, thumbnailObjectId]);
   useEffect(() => {
     if (!busy) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
@@ -205,7 +222,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
     try {
       if (!file) throw new Error('Choose an MP4 video.');
       validateVideoFile(file);
-      if (!title.trim()) throw new Error('Enter a video title.');
+      if (!title.trim()) throw new Error('Enter a video title on Details.');
       if (title.trim().length > 160) throw new Error('Keep the title under 160 characters.');
       if (!rightsConfirmed) throw new Error('Confirm your television display, artwork and playback rights.');
       if (thumbnail && (!['image/jpeg', 'image/png'].includes(thumbnail.type) || thumbnail.size < 1 || thumbnail.size > 1_000_000))
@@ -287,7 +304,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
       await writeCatalog(projectId, 'items', current.revision, { ...record, creatorOverrides: {
         ...owned.creatorOverrides, title: title.trim(), description: description.trim(), editedAt: new Date().toISOString()
       } }, id);
-      await saveVideoPlacement(projectId, id, collectionId, refresh);
+      await refresh();
     } catch (reason) { setError(reason instanceof ApiError && reason.status === 409 ? 'Catalog changed in another tab. Review the saved draft and retry.' : reason instanceof Error ? reason.message : String(reason)); await refresh().catch(() => undefined); }
     finally { setWorking(false); }
   };
@@ -301,6 +318,13 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
         { schemaVersion: 1, kind: 'series', title, itemIds: [itemId] });
       setCollectionId(added.record.id); setNewCategory(''); await refresh();
     } catch (reason) { setError(reason instanceof ApiError && reason.status === 409 ? 'Catalog changed in another tab. Review the saved draft and retry.' : reason instanceof Error ? reason.message : String(reason)); await refresh().catch(() => undefined); }
+    finally { setWorking(false); }
+  };
+  const savePlacement = async () => {
+    if (!itemId || busyRef.current) return;
+    setError(''); setWorking(true);
+    try { await saveVideoPlacement(projectId, itemId, collectionId, refresh); }
+    catch (reason) { setError(reason instanceof ApiError && reason.status === 409 ? 'Library changed in another tab. Review the category and retry.' : reason instanceof Error ? reason.message : String(reason)); }
     finally { setWorking(false); }
   };
   const retry = async () => {
@@ -317,33 +341,48 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
     catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
     finally { setWorking(false); }
   };
-  return <section className="video-upload-panel" aria-label={existingItem ? 'Replace video' : 'Add Video'}>
-    <div className="video-upload-heading"><div><span className="eyebrow">PRIVATE VIDEO DRAFT</span><h3>{existingItem ? 'Replace video' : 'Add Video'}</h3></div><button type="button" disabled={busy} onClick={onClose}>Close</button></div>
-    <p>Your video stays private. Processing and TV publication require separate review.</p>
-    <div className={`video-dropzone${dragging ? ' dragging' : ''}`} onDragEnter={event => { event.preventDefault(); setDragging(true); }} onDragOver={event => event.preventDefault()}
-      onDragLeave={event => { event.preventDefault(); setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); chooseFile(event.dataTransfer.files[0] ?? null); }}>
-      <strong>Drop an MP4 here</strong><span>or choose a file · up to 2 GB · 2 hours</span>
-      <input aria-label="Video file" type="file" accept=".mp4,video/mp4" disabled={busy} onChange={event => chooseFile(event.target.files?.[0] ?? null)}/>
-    </div>
-    {file && <p className="video-file" role="status">Selected: {file.name} · {(file.size / 1_000_000).toFixed(1)} MB</p>}
-    <div className="video-form-grid"><label className="field"><span>Title *</span><input required maxLength={160} value={title} onChange={event => { setTitleEdited(true); setTitle(event.target.value); }}/></label>
-      <label className="field"><span>Category</span><select value={collectionId} onChange={event => setCollectionId(event.target.value)}><option value="">Videos</option>{inventory.collections.filter(value => !(value.kind === 'series' && value.title === 'Videos')).map(value => <option key={value.id} value={value.id}>{value.title}</option>)}</select></label></div>
-    {itemId && <div className="button-row"><label className="field"><span>New category (optional)</span><input maxLength={120} value={newCategory} onChange={event => setNewCategory(event.target.value)}/></label><button type="button" disabled={busy || !newCategory.trim()} onClick={() => void createCategory()}>Create category</button></div>}
-    <label className="field"><span>Description (optional)</span><textarea maxLength={4000} value={description} onChange={event => setDescription(event.target.value)}/></label>
-    <label className="field"><span>Custom thumbnail (optional)</span><input type="file" accept="image/png,image/jpeg" onChange={event => setThumbnail(event.target.files?.[0] ?? null)}/></label>
-    <p className="video-file">Without a custom thumbnail, a draft placeholder appears until reviewed TV artwork is available.</p>
-    {thumbnailNotice && <p role="status" className="video-upload-notice">{thumbnailNotice}</p>}
-    <label className="check video-rights"><input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)}/> I own or license TV display rights for this video and its artwork, and TV playback and streaming rights.</label>
-    <div className="button-row"><button className="primary" disabled={busy || transfer?.state === 'uploading'} onClick={() => void submit()}>{busy ? 'Preparing…' : existingItem ? 'Replace video upload' : 'Upload Video'}</button>
-      {existingItem && <button type="button" disabled={busy} onClick={() => void saveDetails()}>Save draft details</button>}
-      {existingItem && thumbnail && <button type="button" disabled={busy || !rightsConfirmed} onClick={() => void updateThumbnail()}>Save thumbnail only</button>}
-      {session?.processing?.state === 'failed' && <button type="button" disabled={busy} onClick={() => void retry()}>Retry processing</button>}
-      {transfer?.state === 'uploading' && <button type="button" onClick={() => stopVideoTransfer(accountId, projectId, itemId)}>Stop upload</button>}</div>
-    {transfer?.state === 'uploading' && <><progress aria-label="Video upload progress" value={transfer.progress} max="100"/><p role="status" className="video-upload-notice">{transfer.progress === 0 ? 'Preparing private upload…' : transfer.progress < 100 ? `Uploading ${transfer.progress}%` : 'Upload sent; finishing private verification…'}</p></>}
-    {transfer && ['failed', 'stopped'].includes(transfer.state) && <p role="alert">{transfer.error}</p>}
-    {session?.state === 'initiated' && transfer?.state !== 'uploading' && <p role="status">This upload is incomplete. If you refreshed or closed the tab, the file selection was lost. Select the MP4 again to retry; the saved draft is kept. Uploads do not resume after refresh.</p>}
-    {session && <p role="status" className={`video-upload-notice${session.processing?.state === 'failed' ? ' video-upload-failed' : ''}`}>{videoProcessingMessage(session)}</p>}
-    {itemId && error && <p>Draft saved in your library. Select it to continue after reload.</p>}
+  if (page === 'publish') return null;
+  return <section className="video-upload-panel" aria-label={page === 'video' ? existingItem ? 'Replace video' : 'Add Video' : page === 'details' ? 'Video details' : 'Channel category'}>
+    {page === 'video' && <>
+      <h3>{existingItem ? 'Video upload' : 'Add your video'}</h3><p>Your video stays private until you approve and publish the channel.</p>
+      <div className={`video-dropzone${dragging ? ' dragging' : ''}`} onDragEnter={event => { event.preventDefault(); setDragging(true); }} onDragOver={event => event.preventDefault()}
+        onDragLeave={event => { event.preventDefault(); setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); chooseFile(event.dataTransfer.files[0] ?? null); }}>
+        <strong>Drop an MP4 here</strong><span>or choose a file · up to 2 GB · 2 hours</span>
+        <input aria-label="Video file" type="file" accept=".mp4,video/mp4" disabled={busy} onChange={event => chooseFile(event.target.files?.[0] ?? null)}/>
+      </div>
+      {file && <p className="video-file" role="status">Selected: {file.name} · {(file.size / 1_000_000).toFixed(1)} MB</p>}
+      {!title.trim() && file && <p role="status">Add a title on Details before starting the upload.</p>}
+      <label className="check video-rights"><input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)}/> I own or license this video and thumbnail for TV display and streaming.</label>
+      <div className="button-row"><button className="primary" disabled={busy || transfer?.state === 'uploading' || !file || !title.trim() || !rightsConfirmed} onClick={() => void submit()}>{busy ? 'Preparing…' : existingItem ? 'Replace video' : 'Upload video'}</button>
+        {session?.processing?.state === 'failed' && <button type="button" disabled={busy} onClick={() => void retry()}>Retry processing</button>}
+        {transfer?.state === 'uploading' && <button type="button" onClick={() => stopVideoTransfer(accountId, projectId, itemId)}>Stop upload</button>}</div>
+      {transfer?.state === 'uploading' && <><progress aria-label="Video upload progress" value={transfer.progress} max="100"/><p role="status" className="video-upload-notice">{transfer.progress === 0 ? 'Preparing private upload…' : transfer.progress < 100 ? `Uploading ${transfer.progress}%` : 'Upload sent; finishing private verification…'}</p></>}
+      {transfer && ['failed', 'stopped'].includes(transfer.state) && <p role="alert">{transfer.error}</p>}
+      {session?.state === 'initiated' && transfer?.state !== 'uploading' && <p role="status">This upload is incomplete. Select the MP4 again to retry; your saved details remain. Uploads do not resume after refresh.</p>}
+      {session && <p role="status" className={`video-upload-notice${session.processing?.state === 'failed' ? ' video-upload-failed' : ''}`}>{videoProcessingMessage(session)}</p>}
+    </>}
+    {page === 'details' && <>
+      <h3>Video details</h3><p>Edit details while your video uploads or processes.</p>
+      <label className="field"><span>Title *</span><input required maxLength={160} value={title} onChange={event => { setTitleEdited(true); setTitle(event.target.value); }}/></label>
+      <label className="field"><span>Description (optional)</span><textarea maxLength={4000} value={description} onChange={event => setDescription(event.target.value)}/></label>
+      <label className="field"><span>Thumbnail (PNG or JPEG, up to 1 MB)</span><input type="file" accept="image/png,image/jpeg" onChange={event => setThumbnail(event.target.files?.[0] ?? null)}/></label>
+      {thumbnailPreview && <img className="video-thumbnail-preview" src={thumbnailPreview} alt="Uploaded thumbnail preview"/>}
+      <p className="video-file">{thumbnail ? `Selected thumbnail: ${thumbnail.name}` : thumbnailObjectId ? 'Uploaded thumbnail saved privately.' : 'No uploaded thumbnail yet.'} TV display requires approval on Publish.</p>
+      {thumbnailNotice && <p role="status" className="video-upload-notice">{thumbnailNotice}</p>}
+      {existingItem ? <div className="button-row"><button type="button" disabled={busy} onClick={() => void saveDetails()}>Save details</button>
+        {thumbnail && <button type="button" disabled={busy || !rightsConfirmed} onClick={() => void updateThumbnail()}>Save thumbnail</button>}</div>
+        : <p role="status">Choose an MP4 on Video to create this draft. Its title and thumbnail will be saved with the upload.</p>}
+      {existingItem && thumbnail && !rightsConfirmed && <p>Confirm video and thumbnail rights on Video before saving a new thumbnail.</p>}
+    </>}
+    {page === 'channel' && <>
+      <h3>Channel category</h3>
+      {!itemId ? <p>Upload a video first, then choose where it appears in your library.</p> : <>
+        <label className="field"><span>Category</span><select value={collectionId} onChange={event => setCollectionId(event.target.value)}><option value="">Videos</option>{inventory.collections.filter(value => !(value.kind === 'series' && value.title === 'Videos')).map(value => <option key={value.id} value={value.id}>{value.title}</option>)}</select></label>
+        <div className="button-row"><button type="button" disabled={busy} onClick={() => void savePlacement()}>Save category</button></div>
+        <div className="button-row"><label className="field"><span>New category (optional)</span><input maxLength={120} value={newCategory} onChange={event => setNewCategory(event.target.value)}/></label><button type="button" disabled={busy || !newCategory.trim()} onClick={() => void createCategory()}>Create category</button></div>
+      </>}
+    </>}
+    {itemId && error && <p>Your draft is still in the library. Reopen it after refreshing if needed.</p>}
     {error && <p role="alert" className="catalog-error">{error}</p>}
   </section>;
 }
