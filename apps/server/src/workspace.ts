@@ -7,6 +7,7 @@ import { channelSpecSchema, type ChannelProject } from '@firelaunch/contracts';
 import { doctor, type ToolchainReport } from '@firelaunch/generator/doctor';
 import { generateProject, writeGeneratedProject } from '@firelaunch/generator';
 import { ProjectRepository, RepositoryError } from './repository.js';
+import { isTrustedVegaAsset, isTrustedVegaAssetPath, TRUSTED_VEGA_ASSET_MAX_BYTES } from './trusted-vega-assets.js';
 
 const MAX_FILE = 256_000;
 const MAX_FILES = 400;
@@ -169,7 +170,8 @@ export class WorkspaceService {
   }); }
   async read(id: string, name: string) {
     const { root } = await this.location(id);
-    if (!(await regular(root, true)) || !textName.test(safeName(name))) throw new RepositoryError('NOT_FOUND', 'Generated text file not found');
+    if (!(await regular(root, true)) || !textName.test(safeName(name)) && !isTrustedVegaAssetPath(name))
+      throw new RepositoryError('NOT_FOUND', 'Generated text file not found');
     const file = await guarded(root, name);
     if (!(await regular(file))) throw new RepositoryError('NOT_FOUND', 'Generated text file not found');
     const handle = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
@@ -177,8 +179,11 @@ export class WorkspaceService {
     let sha256: string;
     try {
       const info = await handle.stat();
-      if (!info.isFile() || info.size > MAX_FILE) throw new RepositoryError('STORAGE_ERROR', 'Generated text file too large');
+      if (!info.isFile() || info.size > (isTrustedVegaAssetPath(name) ? TRUSTED_VEGA_ASSET_MAX_BYTES : MAX_FILE))
+        throw new RepositoryError('STORAGE_ERROR', 'Generated text file too large');
       const bytes = await handle.readFile();
+      if (isTrustedVegaAssetPath(name) && !isTrustedVegaAsset(name, bytes))
+        throw new RepositoryError('STORAGE_ERROR', 'Bundled vendor source changed');
       sha256 = hash(bytes);
       content = bytes.toString('utf8');
     } finally { await handle.close(); }

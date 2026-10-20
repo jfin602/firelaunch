@@ -7,6 +7,7 @@ import { isIP } from 'node:net';
 import { generateProject } from '@firelaunch/generator';
 import type { ChannelDeployment, ChannelProject } from '@firelaunch/contracts';
 import { RepositoryError } from './repository.js';
+import { isTrustedVegaAsset, isTrustedVegaAssetPath, TRUSTED_VEGA_ASSET_MAX_BYTES } from './trusted-vega-assets.js';
 
 export const DEPENDENCY_LOCK_COMMAND = Object.freeze(['npm', 'install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund']);
 export const DEPENDENCY_INSTALL_COMMAND = Object.freeze(['npm', 'ci', '--no-audit', '--no-fund']);
@@ -44,17 +45,20 @@ function validFiles(files: Record<string, string>): Record<string, string> {
   if (!names.length || names.length > 400) invalid('Invalid source file count');
   let total = 0;
   for (const name of names) {
+    const content = files[name]!;
+    const trusted = typeof content === 'string' && isTrustedVegaAsset(name, content);
     if (!name || name.length > 240 || name.includes('\\') || name.includes('\0') || name.startsWith('/') ||
       name.split('/').some(part => !part || part === '.' || part === '..' || part.startsWith('.')) ||
-      !(/\.(?:js|jsx|ts|tsx|json|toml|md|txt)$|^(?:README|LICENSE)$/i.test(name))) invalid('Unsafe source path');
-    const content = files[name]!;
-    if (typeof content !== 'string' || content.includes('\0') || Buffer.byteLength(content) > 256_000)
+      !trusted && !(/\.(?:js|jsx|ts|tsx|json|toml|md|txt)$|^(?:README|LICENSE)$/i.test(name))) invalid('Unsafe source path');
+    if (typeof content !== 'string' || content.includes('\0') ||
+      Buffer.byteLength(content) > (trusted ? TRUSTED_VEGA_ASSET_MAX_BYTES : 256_000))
       invalid('Unsafe source content');
     total += Buffer.byteLength(content);
     if (total > 8_000_000) invalid('Source exceeds build input limit');
     if (/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/i.test(content) ||
       /https?:\/\/[^\s"'`<>]+(?:X-Amz-|[?&](?:token|signature|secret|key)=|\/api\/(?:private|preview|media\/private))/i.test(content))
       invalid('Private credential or capability in source');
+    if (trusted) continue;
     for (const match of content.matchAll(/https?:\/\/[^\s"'`<>)}\]]+/g)) {
       let url: URL;
       try { url = new URL(match[0]); } catch { continue; }
@@ -179,7 +183,9 @@ async function verifyMaterializedSource(input: ReleaseBuildInput, destination: s
     }
     const file = join(destination, name);
     const info = await lstat(file);
-    if (!info.isFile() || info.isSymbolicLink() || info.size > 256_000 || sha256(await readFile(file)) !== expectedHash)
+    if (!info.isFile() || info.isSymbolicLink() ||
+      info.size > (isTrustedVegaAssetPath(name) ? TRUSTED_VEGA_ASSET_MAX_BYTES : 256_000) ||
+      sha256(await readFile(file)) !== expectedHash)
       conflict('Worker source changed after dependency or native build');
   }
 }

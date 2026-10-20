@@ -8,6 +8,7 @@ import { projectSchema, type ChannelProject } from '@firelaunch/contracts';
 import type { Pool } from 'pg';
 import { RepositoryError } from '../repository.js';
 import { audit } from '../operations.js';
+import { isTrustedVegaAsset, isTrustedVegaAssetPath, TRUSTED_VEGA_ASSET_MAX_BYTES } from '../trusted-vega-assets.js';
 
 const projectId = /^ch_[a-f0-9]{32}$/;
 const accountId = /^cr_[a-f0-9]{32}$/;
@@ -110,9 +111,11 @@ export async function readLegacyProject(dataRoot: string, id: string): Promise<L
         }
         if (entry.isDirectory()) await visit(absolute, name);
         else if (entry.isFile()) {
-          if (!textName.test(name)) unsafe('Unsupported generated file requires manual recovery');
+          if (!textName.test(name) && !isTrustedVegaAssetPath(name)) unsafe('Unsupported generated file requires manual recovery');
           if (Object.keys(files).length >= MAX_FILES) unsafe('Too many generated files');
-          const bytes = await readBounded(absolute, MAX_FILE);
+          const bytes = await readBounded(absolute, isTrustedVegaAssetPath(name) ? TRUSTED_VEGA_ASSET_MAX_BYTES : MAX_FILE);
+          if (isTrustedVegaAssetPath(name) && !isTrustedVegaAsset(name, bytes))
+            unsafe('Modified vendor asset requires manual recovery');
           total += bytes.length;
           if (total > MAX_TOTAL) unsafe('Generated source exceeds import limit');
           files[name] = textFile(bytes);
@@ -121,7 +124,8 @@ export async function readLegacyProject(dataRoot: string, id: string): Promise<L
     }
     await visit(path.join(home, 'generated'));
     for (const [name, value] of Object.entries(baseline)) {
-      if (!name || name.length > 240 || name.includes('\\') || name.split('/').some(part => !part || part === '.' || part === '..' || part.startsWith('.')) || !textName.test(name) ||
+      if (!name || name.length > 240 || name.includes('\\') || name.split('/').some(part => !part || part === '.' || part === '..' || part.startsWith('.')) ||
+        !textName.test(name) && !isTrustedVegaAssetPath(name) ||
         typeof value !== 'string' || !hexHash.test(value)) unsafe('Invalid baseline file entry');
     }
     const names = new Set([...Object.keys(files), ...Object.keys(baseline)]);

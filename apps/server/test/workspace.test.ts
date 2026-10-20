@@ -22,6 +22,9 @@ test('generation, guarded text edits and regeneration never overwrite custom wor
   assert.equal((await workspace.overview(id)).generated, false);
   await workspace.generate(id);
   const original = await workspace.read(id, 'src/App.js');
+  const vendor = await workspace.read(id, 'src/hlsjs/hls.mjs');
+  assert.ok(vendor.content.length > 256_000);
+  await assert.rejects(workspace.save(id, vendor.path, 'modified', vendor.sha256), { code: 'INVALID_INPUT' });
   await assert.rejects(workspace.read(id, '../project.json'));
   await assert.rejects(workspace.read(id, '/etc/passwd'));
   await assert.rejects(workspace.save(id, 'src/App.js', 'bad', '0'.repeat(64)), { code: 'CONFLICT' });

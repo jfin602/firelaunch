@@ -6,6 +6,7 @@ import type { HostedProjectRepository } from './hosted-repository.js';
 import { assertExportableMedia } from './hosted-media-policy.js';
 import { PublicationRepository } from './publication-repository.js';
 import { createReleaseBuildInput, type ReleaseBuildInput } from './release-build.js';
+import { isTrustedVegaAsset, isTrustedVegaAssetPath, TRUSTED_VEGA_ASSET_MAX_BYTES } from './trusted-vega-assets.js';
 
 const textName = /\.(?:js|jsx|ts|tsx|json|toml|md|txt)$|^(?:README|LICENSE)$/i;
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -20,7 +21,8 @@ export const sourceMatchesBaseline = (content: string | undefined, baseline: str
   content !== undefined && baseline !== undefined && (/^sha256:[a-f0-9]{64}$/.test(baseline) ? hash(content) === baseline.slice(7) : content === baseline);
 function safeName(name: string): void {
   if (!name || name.length > 240 || name.includes('\\') || name.includes('\0') || name.startsWith('/') ||
-    name.split('/').some(part => !part || part === '.' || part === '..' || part.startsWith('.')) || !textName.test(name))
+    name.split('/').some(part => !part || part === '.' || part === '..' || part.startsWith('.')) ||
+    !textName.test(name) && !isTrustedVegaAssetPath(name))
     throw new RepositoryError('INVALID_INPUT', 'Unsafe generated text file path');
 }
 
@@ -88,13 +90,16 @@ export class HostedWorkspaceService {
     const source = await this.repository.source(principal, id);
     const content = source?.files[name];
     if (content === undefined) throw new RepositoryError('NOT_FOUND', 'Generated text file not found');
-    if (Buffer.byteLength(content) > 256_000) throw new RepositoryError('STORAGE_ERROR', 'Generated text file too large');
+    if (Buffer.byteLength(content) > (isTrustedVegaAssetPath(name) ? TRUSTED_VEGA_ASSET_MAX_BYTES : 256_000) ||
+      isTrustedVegaAssetPath(name) && !isTrustedVegaAsset(name, content))
+      throw new RepositoryError('STORAGE_ERROR', 'Generated text file is oversized or changed');
     return { path: name, content, sha256: hash(content) };
   }
 
   async save(principal: AuthenticatedPrincipal, id: string, name: string, content: string, expectedHash: string) {
     await this.repository.read(principal, id);
     safeName(name);
+    if (isTrustedVegaAssetPath(name)) throw new RepositoryError('INVALID_INPUT', 'Bundled vendor source is read-only');
     if (Buffer.byteLength(content) > 256_000 || content.includes('\0')) throw new RepositoryError('INVALID_INPUT', 'Text edit exceeds size limit');
     await this.repository.saveSource(principal, id, name, content, expectedHash);
     return this.read(principal, id, name);

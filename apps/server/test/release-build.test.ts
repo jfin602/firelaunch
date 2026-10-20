@@ -31,6 +31,17 @@ async function stored(): Promise<StoredSource> {
     files, baseline: { ...files } };
 }
 
+test('hosted source exposes the pinned player as read-only code', async () => {
+  const source = await stored();
+  const repository = { async read() { return project; }, async source() { return source; } } as unknown as HostedProjectRepository;
+  const workspace = new HostedWorkspaceService(repository);
+  const vendor = await workspace.read(owner, project.id, 'src/hlsjs/hls.mjs');
+  assert.ok(vendor.content.length > 256_000);
+  await assert.rejects(workspace.save(owner, project.id, vendor.path, 'modified', vendor.sha256), { code: 'INVALID_INPUT' });
+  source.files[vendor.path] += '\n// changed\n';
+  await assert.rejects(workspace.read(owner, project.id, vendor.path), { code: 'STORAGE_ERROR' });
+});
+
 test('creator build input pins published deployment and preserves safe edited source', async () => {
   const source = await stored();
   source.files['src/App.js'] += '\n// creator edit\n';
@@ -67,7 +78,8 @@ test('malicious paths, private URLs, credentials and manifest edits are rejected
   for (const [name, body] of [
     ['../escape.js', 'hello'], ['src/secret.js', 'https://host.test/api/private/asset'],
     ['src/secret.js', 'https://host.test/media?X-Amz-Signature=abc'],
-    ['src/secret.js', 'AKIAABCDEFGHIJKLMNOP']
+    ['src/secret.js', 'AKIAABCDEFGHIJKLMNOP'],
+    ['src/hlsjs/hls.mjs', 'modified vendor source']
   ]) {
     const source = await stored(); source.files[name] = body;
     await assert.rejects(createReleaseBuildInput(project, source, deployment, release, owner.accountId), { code: 'INVALID_INPUT' });
