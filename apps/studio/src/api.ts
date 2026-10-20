@@ -74,6 +74,8 @@ export const readSource = (id: string, path: string) => request(`/${id}/code/fil
 export const saveSource = (id: string, file: SourceFile, content: string) => request(`/${id}/code/file`, json({ path: file.path, expectedHash: file.sha256, content })) as Promise<SourceFile>;
 export const buildStatus = (id: string) => request(`/${id}/build`) as Promise<BuildEvidence>;
 export const runBuild = (id: string) => request(`/${id}/build`, json({})) as Promise<BuildEvidence>;
+export type NativeExportStatus = { status: 'blocked' | 'queued' | 'building' | 'ready' | 'failed' | 'expired'; reason?: string; job: { id: string } | null; downloadReady: boolean };
+export const nativeExportStatus = (id: string) => request(`/${encodeURIComponent(id)}/export-app`) as Promise<NativeExportStatus>;
 export const readiness = (id: string) => request(`/${id}/readiness`) as Promise<Readiness>;
 export const createBundle = (id: string) => request(`/${id}/bundle`, json({})) as Promise<{ path?: string; files?: string[]; status?: 'blocked'; reason?: string; submitted: false }>;
 

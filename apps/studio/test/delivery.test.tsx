@@ -8,6 +8,7 @@ import { createElement } from 'react';
 import { createApi } from '../../server/src/api.js';
 import { ProjectRepository } from '../../server/src/repository.js';
 import App from '../src/App.js';
+import { Delivery } from '../src/Delivery.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://127.0.0.1:4173/' });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement });
@@ -54,4 +55,26 @@ test('Studio Code edit, blocked Build and Publish bundle remain truthful', async
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test('hosted Build shows blocked native export, no download, and clears project-scoped status on switch', async () => {
+  const nativeFetch = globalThis.fetch;
+  const project = (id: string) => ({ id, revision: 1 }) as Parameters<typeof Delivery>[0]['project'];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith('/code')) return Response.json({ generated: true, files: [], changed: [], stale: false, path: null });
+    if (url.endsWith('/build')) return Response.json({ status: 'blocked', reason: 'No isolated worker' });
+    if (url.endsWith('/readiness')) return Response.json({ checks: [], copy: {}, assets: {}, submitted: false });
+    if (url.endsWith('/export-app')) return Response.json({ status: 'blocked', reason: `No isolated worker for ${url.includes('/ch_first/') ? 'first' : 'second'}`, job: null, downloadReady: false });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+  try {
+    const view = render(createElement(Delivery, { project: project('ch_first'), surface: 'Build', hosted: true }));
+    await waitFor(() => assert.ok(screen.getByText(/No isolated worker for first/)));
+    assert.equal((screen.getByRole('button', { name: 'Download Vega ZIP' }) as HTMLButtonElement).disabled, true);
+    view.rerender(createElement(Delivery, { project: project('ch_second'), surface: 'Build', hosted: true }));
+    await waitFor(() => assert.ok(screen.getByText(/No isolated worker for second/)));
+    assert.equal(screen.queryByText(/No isolated worker for first/), null);
+    assert.equal((screen.getByRole('button', { name: 'Run Vega release build' }) as HTMLButtonElement).disabled, true);
+  } finally { cleanup(); globalThis.fetch = nativeFetch; }
 });

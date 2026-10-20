@@ -123,6 +123,21 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
         if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method ?? '') && !mode.auth.authorizedMutation(request, session)) { await audit(hostedRepository?.pool, 'auth_denied', 'denied', session.principal.accountId); respond(response, 403, { error: { code: 'CSRF', message: 'Invalid request origin or CSRF token' } }); return; }
         if (hostedRepository && hostedWorkspace) {
           const principal = session.principal;
+          if (segments[3] === 'export-app' && !url.search) {
+            const projectId = segments[2]!;
+            if (segments.length === 4 && request.method === 'GET') {
+              respond(response, 200, await hostedWorkspace.exportStatus(principal, projectId)); return;
+            }
+            if (segments.length === 4 && request.method === 'POST') {
+              await hostedRepository.read(principal, projectId);
+              z.strictObject({}).parse(await body(request));
+              respond(response, 503, { error: { code: 'NATIVE_WORKER_UNAVAILABLE',
+                message: (await hostedWorkspace.exportStatus(principal, projectId)).reason } }); return;
+            }
+            // No artifact identifiers exist until a separately isolated worker is qualified.
+            await hostedRepository.read(principal, projectId);
+            throw new RepositoryError('NOT_FOUND', 'Native export not found');
+          }
           if (segments[3] === 'preview-hls') {
             if (!privatePreview || url.search || segments.length !== 6 ||
               !['GET', 'HEAD'].includes(request.method ?? '')) throw new RepositoryError('NOT_FOUND', 'Route not found');

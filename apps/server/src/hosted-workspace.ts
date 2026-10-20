@@ -24,7 +24,8 @@ function safeName(name: string): void {
     throw new RepositoryError('INVALID_INPUT', 'Unsafe generated text file path');
 }
 
-const blockedBuild = { status: 'blocked' as const, reason: 'Hosted Vega builds require an isolated build service',
+export const NATIVE_EXPORT_BLOCKER = 'Native export is blocked: no separately isolated Vega build worker with verified host limits and artifact transport is configured. Ask the operator to provision and qualify that worker.';
+const blockedBuild = { status: 'blocked' as const, reason: NATIVE_EXPORT_BLOCKER,
   toolchain: { missing: ['isolated hosted build'], node: { detail: 'Hosted build disabled' }, npm: { detail: 'Hosted build disabled' },
     vegaSdk: { detail: 'Hosted build disabled' }, vegaCli: { detail: 'Hosted build disabled' }, device: { detail: 'No device evidence' } } };
 
@@ -117,6 +118,11 @@ export class HostedWorkspaceService {
   }
 
   async build(principal: AuthenticatedPrincipal, id: string) { return this.buildStatus(principal, id); }
+
+  async exportStatus(principal: AuthenticatedPrincipal, id: string) {
+    await this.repository.read(principal, id);
+    return { status: 'blocked' as const, reason: NATIVE_EXPORT_BLOCKER, job: null, downloadReady: false };
+  }
 
   async readiness(principal: AuthenticatedPrincipal, id: string) {
     const project = await this.repository.read(principal, id);
