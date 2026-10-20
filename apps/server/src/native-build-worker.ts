@@ -28,13 +28,21 @@ async function runSandbox(image: string, jobDir: string, signal: AbortSignal): P
     '--chdir','/job','/usr/bin/node','/opt/firelaunch-build-app/apps/server/dist/native-build-child.js'];
   await new Promise<void>((resolvePromise, reject) => {
     const child = spawn('/usr/bin/bwrap', args, { env: { PATH: '/usr/bin:/bin' },
-      stdio: ['ignore','ignore','ignore'], detached: true });
+      stdio: ['ignore','ignore','pipe'], detached: true });
+    let stderrTail = '';
+    let timedOut = false;
+    child.stderr?.on('data', (chunk: Buffer) => { stderrTail = (stderrTail + chunk.toString('utf8')).slice(-16_384); });
     const stop = () => { try { process.kill(-child.pid!, 'SIGKILL'); } catch { child.kill('SIGKILL'); } };
-    const timer = setTimeout(stop, 12 * 60_000);
+    const timer = setTimeout(() => { timedOut = true; stop(); }, 12 * 60_000);
     signal.addEventListener('abort', stop, { once: true });
     child.on('error', reject);
-    child.on('close', code => { clearTimeout(timer); signal.removeEventListener('abort', stop);
-      if (code === 0 && !signal.aborted) resolvePromise(); else reject(new Error('Sandbox build failed or stopped')); });
+    child.on('close', (code, exitSignal) => { clearTimeout(timer); signal.removeEventListener('abort', stop);
+      if (code === 0 && !signal.aborted) resolvePromise();
+      else {
+        process.stderr.write(`Native sandbox exit ${JSON.stringify({ code, signal: exitSignal, timedOut,
+          leaseLost: signal.aborted })}\n${stderrTail}\n`);
+        reject(new Error('Sandbox build failed or stopped'));
+      } });
   });
 }
 
@@ -102,7 +110,22 @@ async function processJob(queue: NativeBuildQueue, job: Job, root: string, image
       !await queue.complete(job.jobId,job.leaseToken,evidence)) {
       await rm(target,{ force:true }); throw new Error('Artifact changed or lease lost');
     }
-  } catch {
+  } catch (error) {
+    process.stderr.write(`Native job ${job.jobId} failed: ${error instanceof Error ? error.message : 'unknown'}\n`);
+    if (error instanceof Error && error.message === 'Sandbox build failed or stopped') {
+      const expected = job.input.files['manifest.toml'];
+      const actual = await readFile(join(dir,'source','manifest.toml'),'utf8').catch(() => null);
+      if (typeof expected === 'string' && actual !== null && actual !== expected) {
+        const before = expected.split('\n');
+        const after = actual.split('\n');
+        const changed = Array.from({ length: Math.max(before.length,after.length) },(_,i) => i)
+          .filter(i => before[i] !== after[i]).slice(0,8).map(i => ({ line:i+1,
+            before:(before[i] ?? '').slice(0,160), after:(after[i] ?? '').slice(0,160) }));
+        const detail = JSON.stringify(changed).replace(/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g,'[redacted-key]')
+          .replace(/\b(?:token|secret|password|authorization|credential)\s*[:=]\s*[^\s,;]+/gi,'[redacted-secret]');
+        process.stderr.write(`Native manifest delta ${detail}\n`);
+      }
+    }
     await queue.fail(job.jobId,job.leaseToken,'SANDBOX_BUILD_FAILED');
   } finally { clearInterval(timer); controller.abort(); await rm(dir,{ recursive:true,force:true }); }
 }

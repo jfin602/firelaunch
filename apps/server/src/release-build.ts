@@ -179,14 +179,14 @@ async function verifyMaterializedSource(input: ReleaseBuildInput, destination: s
     for (const part of parts.slice(0, -1)) {
       current = join(current, part);
       const folder = await lstat(current);
-      if (!folder.isDirectory() || folder.isSymbolicLink()) conflict('Worker source directory changed');
+      if (!folder.isDirectory() || folder.isSymbolicLink()) conflict(`Worker source directory changed: ${name}`);
     }
     const file = join(destination, name);
     const info = await lstat(file);
     if (!info.isFile() || info.isSymbolicLink() ||
       info.size > (isTrustedVegaAssetPath(name) ? TRUSTED_VEGA_ASSET_MAX_BYTES : 256_000) ||
       sha256(await readFile(file)) !== expectedHash)
-      conflict('Worker source changed after dependency or native build');
+      conflict(`Worker source changed after dependency or native build: ${name}`);
   }
 }
 

@@ -8,6 +8,15 @@ import { assertNativeBuildLimits } from './native-build-limits.js';
 const PINNED: NativeToolchain = { node: 'v24.21.0', npm: '12.2.0', vegaCli: '1.4.4', vegaSdk: '0.24.12112' };
 const deadline = Date.now() + 12 * 60_000;
 const deny = (reason: string): never => { throw new Error(reason); };
+const OUTPUT_TAIL = 4_096;
+function safeTail(value: string): string {
+  return value.slice(-OUTPUT_TAIL).replace(/\x1b\[[0-9;]*m/g, '')
+    .replace(/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g, '[redacted-key]')
+    .replace(/\b(?:Bearer|Basic)\s+[^\s]+/gi, '[redacted-authorization]')
+    .replace(/(https?:\/\/)[^\s/?#]+[^\s]*/gi, '$1[redacted-url]')
+    .replace(/\b(?:token|secret|password|authorization|credential)\s*[:=]\s*[^\s,;]+/gi, '[redacted-secret]')
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, ' ');
+}
 
 async function assertSandbox(): Promise<void> {
   if (process.version !== PINNED.node ||
@@ -46,23 +55,43 @@ async function main(): Promise<void> {
   const invoke = async (command: readonly string[], cwd: string) => {
     if (cwd !== '/job/source' || Date.now() >= deadline) deny('Build timed out');
     const startedAt = Date.now();
-    const chunks: Buffer[] = [];
-    let bytes = 0;
+    const stage = command[0] === 'npm' ? `npm ${command[1]}` : command[1] === 'build-vega' ? 'vega release build' : `vpt ${command[1]}`;
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
+    let stdoutTail = '';
+    let stderrTail = '';
+    let infoOutput = '';
+    let timedOut = false;
+    let exitSignal: NodeJS.Signals | null = null;
     const exitCode = await new Promise<number>((resolve, reject) => {
       const child = spawn(command[0]!, command.slice(1), { cwd, shell: false, detached: true,
         env: { HOME: '/tmp', TMPDIR: '/tmp', PATH: '/usr/bin:/bin:/opt/vega/bin',
           KEPLER_SDK_PATH: sdkPath, CI: 'true',
           npm_config_offline: 'true', npm_config_cache: '/job/npm-cache', npm_config_update_notifier: 'false' },
-        stdio: ['ignore', 'pipe', 'ignore'] });
+        stdio: ['ignore', 'pipe', 'pipe'] });
       const kill = () => { try { process.kill(-child.pid!, 'SIGKILL'); } catch { child.kill('SIGKILL'); } };
-      const timer = setTimeout(kill, Math.max(1, deadline - Date.now()));
-      child.stdout?.on('data', (chunk: Buffer) => { bytes += chunk.length;
-        if (bytes > 64_000) kill(); else if (command[0] === 'vpt' && command[1] === 'info') chunks.push(chunk); });
+      const timer = setTimeout(() => { timedOut = true; kill(); }, Math.max(1, deadline - Date.now()));
+      child.stdout?.on('data', (chunk: Buffer) => {
+        stdoutBytes += chunk.length;
+        stdoutTail = (stdoutTail + chunk.toString('utf8')).slice(-OUTPUT_TAIL);
+        if (command[0] === 'vpt' && command[1] === 'info') {
+          infoOutput += chunk.toString('utf8');
+          if (Buffer.byteLength(infoOutput) > 64_000) kill();
+        }
+      });
+      child.stderr?.on('data', (chunk: Buffer) => {
+        stderrBytes += chunk.length;
+        stderrTail = (stderrTail + chunk.toString('utf8')).slice(-OUTPUT_TAIL);
+      });
       child.on('error', reject);
-      child.on('close', code => { clearTimeout(timer); resolve(code ?? -1); });
+      child.on('close', (code, signal) => { clearTimeout(timer); exitSignal = signal; resolve(code ?? -1); });
     });
-    if (Date.now() >= deadline || bytes > 64_000) deny('Build command exceeded limit');
-    return { exitCode, startedAt, stdout: Buffer.concat(chunks).toString('utf8') };
+    process.stderr.write(`Native command ${JSON.stringify({ stage, exitCode, signal: exitSignal, timedOut,
+      stdoutBytes, stderrBytes, elapsedMs: Date.now() - startedAt })}\n`);
+    if (exitCode !== 0 || timedOut) process.stderr.write(`Native command tails ${JSON.stringify({
+      stage, stdout: safeTail(stdoutTail), stderr: safeTail(stderrTail) })}\n`);
+    if (timedOut || Date.now() >= deadline) deny('Build command timed out');
+    return { exitCode, startedAt, stdout: infoOutput };
   };
   const evidence = await produceIsolatedRelease(input, '/job/source', PINNED, invoke);
   await copyFile(join('/job/source', evidence.artifactPath), '/job/output.vpkg');

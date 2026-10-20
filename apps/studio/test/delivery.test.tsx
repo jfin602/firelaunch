@@ -65,16 +65,19 @@ test('hosted Build shows blocked native export, no download, and clears project-
     if (url.endsWith('/code')) return Response.json({ generated: true, files: [], changed: [], stale: false, path: null });
     if (url.endsWith('/build')) return Response.json({ status: 'blocked', reason: 'No isolated worker' });
     if (url.endsWith('/readiness')) return Response.json({ checks: [], copy: {}, assets: {}, submitted: false });
-    if (url.endsWith('/export-app')) return Response.json({ status: 'blocked', reason: `No isolated worker for ${url.includes('/ch_first/') ? 'first' : 'second'}`, job: null, downloadReady: false });
+    if (url.endsWith('/export-app')) return url.includes('/ch_first/')
+      ? Response.json({ status: 'failed', reason: 'Native build failed', job: { id: 'job_failed' }, downloadReady: false })
+      : Response.json({ status: 'blocked', reason: 'No isolated worker for second', job: null, downloadReady: false });
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
   try {
     const view = render(createElement(Delivery, { project: project('ch_first'), surface: 'Build', hosted: true }));
-    await waitFor(() => assert.ok(screen.getByText(/No isolated worker for first/)));
+    await waitFor(() => assert.ok(screen.getByText(/Native build failed/)));
+    assert.equal((screen.getByRole('button', { name: 'Request Vega build' }) as HTMLButtonElement).disabled, false);
     assert.equal((screen.getByRole('button', { name: 'Download Vega ZIP' }) as HTMLButtonElement).disabled, true);
     view.rerender(createElement(Delivery, { project: project('ch_second'), surface: 'Build', hosted: true }));
     await waitFor(() => assert.ok(screen.getByText(/No isolated worker for second/)));
-    assert.equal(screen.queryByText(/No isolated worker for first/), null);
+    assert.equal(screen.queryByText(/Native build failed/), null);
     assert.equal((screen.getByRole('button', { name: 'Run Vega release build' }) as HTMLButtonElement).disabled, true);
   } finally { cleanup(); globalThis.fetch = nativeFetch; }
 });
