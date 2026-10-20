@@ -99,6 +99,11 @@ test('generated client verifies releases and retains last-known-good across fail
       ['private media', rollback.pointer, canonicalBytes({ ...rollback.manifest,
         channel: { ...rollback.manifest.channel, content: rollback.manifest.channel.content.map(item => ({ ...item,
           artwork: 'https://resolver.example.org/api/private-objects/key' })) } })],
+      ['S3 original', rollback.pointer, canonicalBytes({ ...rollback.manifest,
+        channel: { ...rollback.manifest.channel, content: rollback.manifest.channel.content.map(item => ({ ...item,
+          mediaUrl: 'https://bucket.s3.amazonaws.com/original/master.m3u8' })) },
+        media: rollback.manifest.media.map(asset => asset.kind === 'video'
+          ? { ...asset, url: 'https://bucket.s3.amazonaws.com/original/master.m3u8' } : asset) })],
       ['oversize', rollback.pointer, 'x'.repeat(1_048_577)]
     ];
     for (const [name, pointer, bytes] of variants) {

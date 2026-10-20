@@ -1,0 +1,23 @@
+# P7 P3 implementation evidence — 2026-10-20
+
+Starting HEAD: `779d17f541d6d7238da900342303aeb5e3917ed6` (`0.7.2`). This runner continuation began with uncommitted P3 source, tests, version fields and this evidence note; those changes were inspected and retained.
+The failed runner transcript is `.codex-runs/p7/2026-10-20T15-51-54-731Z/P3.events.jsonl`.
+It stopped at the prompt time limit after finding that URL-mode `.m3u8` playback was unsupported for adaptive HLS. It tried Amazon's Shaka build, which required an absent Java 21 runtime, made no source changes and ran no focused tests. No VirtualDevice was connected, but P3 is an implementation checkpoint and does not require installed-device evidence.
+
+## SDK integration
+
+- Vega CLI `1.4.4`, active SDK `main@0.24.12112`, Node `24.21.0`; npm `12.2.0` was invoked for the generated project. Amazon's [SDK 0.24 playback guide](https://developer.amazon.com/docs/vega/0.24/media-player-select-playback) specifies MSE for adaptive HLS. The [SDK 0.24 Hls.js guide](https://developer.amazon.com/docs/vega/0.24/media-player-hls-player) supplies a Vega port. Its provenance and license are recorded in `templates/vega-channel/src/hlsjs/README.md`.
+- The generated client now bundles that patched Hls.js build, installs the Vega media polyfills, and uses MSE for `.m3u8`. It uses URL mode only for flat media. The player initializes on surface creation, starts HLS playback after `MANIFEST_PARSED`, exposes play/pause/10-second seek/mute through TV events, reports loading/errors, and destroys HLS/media resources on surface loss, item change or Back. A late HLS event after Back cannot restart playback. A second surface waits for cleanup. Page and detail views render published HTTPS artwork; local legacy assets retain a placeholder.
+- The release client still verifies deployment/package identity, canonical bytes and SHA-256, preserves last-known-good on restart/failure, and rejects old/wrong releases. Its public URL validation now matches the publication contract's S3 and private-path exclusions. Rights and approved media binding remain enforced by the publication resolver; no private source URL is bundled.
+
+## Checks
+
+- **27 focused tests passed, 0 failed/skipped**: native lifecycle and late-manifest/Back race, generator, remote release/LKG, publication rights and URL validation, managed artwork and public resolver including exact release-scoped artwork `GET`/ETag/revocation, and TV D-pad state.
+- Generator typecheck and build passed. `vega project doctor` passed after copying a freshly generated bound fixture into the already SDK-linked `/tmp/firelaunch-p7-p3-bound` directory; the SDK cannot create a new workspace link in its read-only installation from this sandbox. Vega SDK `0.24.12112` compiled Metro/Hermes JS and packaged an x86_64 Release VPKG with the final App source: 1,132,972 bytes, SHA-256 `2f8b01f99c73b2adb612cf9b44cf5abc7cf3485cedc1a7020f6734ba2a79a375`. This example-origin fixture is **only build compatibility evidence**, not a creator export or installed playback result. `vega device list` reported `No devices found`.
+- `git diff --check` passed. Only root `package.json` and the two top-level `package-lock.json` version fields advanced to `0.7.3` after these checks. Workspace versions are unchanged.
+
+## External limits for P4
+
+A read-only host probe of the historically approved FREE CloudFront master returned HTTP 206 with `application/vnd.apple.mpegurl` and `#EXTM3U` bytes. This is host-side availability, not a full playlist graph, current-rights decision or device playback. A Studio-host probe of the documented `/public/v1/.../current` path returned HTML rather than pointer JSON; it does not establish a safe public resolver origin. The earlier bare `/api/public-artwork/` 404 likewise says nothing about an exact release-bound image URL. With no VirtualDevice attached, **device-reachable TLS and anonymous artwork delivery remain NOT VERIFIED**. The missing authorized route is an origin that exposes only the release-bound `GET /api/public-artwork/{deploymentId}/{releaseId}/{assetId}/{sha256}.jpg|png` for the actual approved release, with resolver checks for current rights and immutable bytes; the operator must test the exact URL and safe redirects on the device. No cloud permissions, publication, encoding or staging deployment changed here.
+
+P2's separately isolated hosted build worker and real signed-in Studio ZIP download remain unavailable per `P2-worker-blocker.md`. P4 owns those prerequisites plus installing the exact downloaded creator VPKG and observing artwork, HLS/audio, controls, Back and restart on VirtualDevice. Neither the local fixture nor source tests qualify P7 GREEN or alter the separate Phase 6 correction.

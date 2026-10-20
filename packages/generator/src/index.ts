@@ -60,6 +60,8 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
     start: 'react-native start', 'build:release': 'react-native build-vega --build-type Release'
   }, dependencies: { 'react-native': '0.83.0', '@amazon-devices/react-native-kepler': '~4.0.0',
     react: '19.2.0', '@amazon-devices/react-native-w3cmedia': '~2.3.2',
+    '@xmldom/xmldom': '0.8.15', 'base-64': '1.0.0',
+    'fastestsmallesttextencoderdecoder': '1.0.22',
     ...(bound ? {
       '@react-native-async-storage/async-storage': 'npm:@amazon-devices/react-native-async-storage__async-storage@2.1.9000000000',
       zod: '4.6.5'

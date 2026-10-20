@@ -4,32 +4,55 @@ import { KeplerVideoSurfaceView, VideoPlayer } from '@amazon-devices/react-nativ
 import bundled from './channel.json';
 import { installRelease } from './release-client';
 import { activeItem, initialState, itemFocusId, navFocusId, transition } from './tv-runtime';
+import { createPlaybackController } from './playback-controller';
+import { createHlsPlayer, installHlsPolyfills } from './hlsjs/adapter';
 
-function Playback({ item, muted }) {
-  const player = useRef(null);
-  if (!player.current) player.current = new VideoPlayer();
-  const onSurfaceViewCreated = async handle => {
-    await player.current.initialize();
-    player.current.setSurfaceHandle(handle);
-    player.current.muted = muted;
-    player.current.autoplay = true;
-    player.current.src = item.mediaUrl;
-  };
-  const onSurfaceViewDestroyed = async handle => {
-    player.current.clearSurfaceHandle(handle);
-    await player.current.deinitialize();
-  };
-  return item.presentation === 'audio' ? <View style={styles.audioPlayback}>
-    {item.artwork.startsWith('http') ? <Image source={{ uri: item.artwork }} style={styles.audioArtwork} /> : <View style={styles.audioArtwork} />}
-    <Text style={styles.audioLabel}>Now listening</Text>
-    <KeplerVideoSurfaceView style={styles.audioSurface} onSurfaceViewCreated={onSurfaceViewCreated}
-      onSurfaceViewDestroyed={onSurfaceViewDestroyed} />
-  </View> : <KeplerVideoSurfaceView style={styles.video} onSurfaceViewCreated={onSurfaceViewCreated}
-    onSurfaceViewDestroyed={onSurfaceViewDestroyed} />;
+function Playback({ item, muted, controls }) {
+  const [playback, setPlayback] = useState({ status: 'loading', message: 'Loading video' });
+  const controller = useRef(null);
+  const stopping = useRef(Promise.resolve());
+  const mounted = useRef(true);
+  const newController = () => createPlaybackController({
+    createVideo: () => new VideoPlayer(), createHls: createHlsPlayer,
+    installPolyfills: installHlsPolyfills, onState: setPlayback
+  });
+  if (!controller.current) controller.current = newController();
+  useEffect(() => {
+    mounted.current = true;
+    controls.current = controller.current;
+    return () => {
+      mounted.current = false;
+      controls.current = null;
+      if (!controller.current.isClosed()) stopping.current = controller.current.stop();
+    };
+  }, []);
+  const audio = item.presentation === 'audio';
+  return <View style={audio ? styles.audioPlayback : styles.videoPlayback}>
+    {audio && (item.artwork.startsWith('https://')
+      ? <Image source={{ uri: item.artwork }} style={styles.audioArtwork} /> : <View style={styles.audioArtwork} />)}
+    {audio && <Text style={styles.playbackStatus}>Now listening</Text>}
+    <KeplerVideoSurfaceView style={audio ? styles.audioSurface : styles.video}
+      onSurfaceViewCreated={async handle => {
+        await stopping.current;
+        if (!mounted.current) return;
+        if (controller.current.isClosed()) controller.current = newController();
+        controls.current = controller.current;
+        await controller.current.start(handle, item, muted);
+      }}
+      onSurfaceViewDestroyed={() => {
+        if (!controller.current.isClosed()) stopping.current = controller.current.stop();
+      }} />
+    <Text style={styles.playbackStatus}>{playback.message}</Text>
+    <Text style={styles.playbackStatus}>Left / Right: seek 10s · Select: play / pause · Up / Down: mute · Back: details</Text>
+    {playback.status === 'error' && <Text style={styles.playbackStatus}>Press Back to return to details.</Text>}
+  </View>;
 }
 
 export default function App() {
   const [view, setView] = useState(() => ({ channel: bundled, state: initialState(bundled) }));
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  const controls = useRef(null);
   const { channel, state } = view;
   const dispatch = command => setView(previous => ({ ...previous,
     state: transition(previous.channel, previous.state, command) }));
@@ -44,6 +67,14 @@ export default function App() {
     const handler = new TVEventHandler();
     handler.enable(null, (_, event) => {
       if (event?.eventKeyAction !== 0) return;
+      if (viewRef.current.state.screen === 'playback') {
+        if (event?.eventType === 'left' || event?.eventType === 'rewind') { controls.current?.seek(-10); return; }
+        if (event?.eventType === 'right' || event?.eventType === 'fastForward') { controls.current?.seek(10); return; }
+        if (['select', 'enter', 'playPause'].includes(event?.eventType)) { void controls.current?.toggle(); return; }
+        if (event?.eventType === 'play') { void controls.current?.play(); return; }
+        if (event?.eventType === 'pause') { controls.current?.pause(); return; }
+        if (event?.eventType === 'up' || event?.eventType === 'down') { controls.current?.toggleMute(); return; }
+      }
       const command = { up: 'up', down: 'down', left: 'left', right: 'right', select: 'select', enter: 'select' }[event?.eventType];
       if (command) dispatch(command);
     });
@@ -56,6 +87,7 @@ export default function App() {
   const focusStyle = { borderColor: brand.primaryColor };
   return <View style={[styles.screen, { backgroundColor: brand.backgroundColor }]}>
     {state.screen === 'page' ? <>
+      {brand.logo?.startsWith('https://') && <Image source={{ uri: brand.logo }} style={styles.brandLogo} />}
       {brand.showTitle !== false && <Text style={[styles.heading, { color: brand.textColor }]}>{channel.title}</Text>}
       <View style={styles.nav}>{channel.pages.map(target => <Pressable key={target.id}
         focusable={false}
@@ -72,7 +104,7 @@ export default function App() {
               state: transition(previous.channel, { screen: 'page', pageId: page.id, focusId }, 'select') }))}
               style={[styles.card, module.kind === 'hero' && styles.hero,
                 state.focusId === focusId && [styles.focused, focusStyle]]}>
-              {content.artwork.startsWith('http') ? <Image source={{ uri: content.artwork }} style={styles.artwork} />
+              {content.artwork.startsWith('https://') ? <Image source={{ uri: content.artwork }} style={styles.artwork} />
                 : <View style={styles.artwork} />}
               <Text style={{ color: brand.textColor }}>{content.title}</Text>
             </Pressable>;
@@ -81,13 +113,14 @@ export default function App() {
     </> : <>
       <Text style={[styles.heading, { color: brand.textColor }]}>{item?.title}</Text>
       {state.screen === 'detail' ? <>
+        {item?.artwork?.startsWith('https://') && <Image source={{ uri: item.artwork }} style={styles.detailArtwork} />}
         <Text style={{ color: brand.textColor }}>{item?.description}</Text>
         {item?.presentation === 'information' ? <Pressable focusable={false} style={[styles.card, styles.focused, focusStyle]} onPress={() => dispatch('back')}>
           <Text style={{ color: brand.textColor }}>Back to channel</Text>
         </Pressable> : <Pressable focusable={false} style={[styles.card, styles.focused, focusStyle]} onPress={() => dispatch('select')}>
           <Text style={{ color: brand.textColor }}>{item?.presentation === 'audio' ? 'Play audio' : 'Play film'}</Text>
         </Pressable>}
-      </> : item && <Playback item={item} muted={channel.playback.startMuted} />}
+      </> : item && <Playback key={item.id} item={item} muted={channel.playback.startMuted} controls={controls} />}
       <Pressable focusable={false} onPress={() => dispatch('back')}><Text style={{ color: brand.textColor }}>Back</Text></Pressable>
     </>}
   </View>;
@@ -100,8 +133,10 @@ const styles = StyleSheet.create({
   rail: { flexDirection: 'row' }, grid: { flexDirection: 'row', flexWrap: 'wrap' },
   card: { width: 250, padding: 12, borderWidth: 4, borderColor: 'transparent', marginRight: 16 },
   hero: { width: 420 }, artwork: { height: 160, width: '100%', marginBottom: 12 },
-  focused: { borderWidth: 4 }, video: { flex: 1 },
+  brandLogo: { width: 160, height: 80, resizeMode: 'contain' },
+  detailArtwork: { width: 420, height: 240, resizeMode: 'contain', marginBottom: 20 },
+  focused: { borderWidth: 4 }, videoPlayback: { flex: 1 }, video: { flex: 1 },
   audioPlayback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  audioArtwork: { width: 320, height: 320 }, audioLabel: { color: '#FFFFFF', fontSize: 30, marginTop: 24 },
+  audioArtwork: { width: 320, height: 320 }, playbackStatus: { color: '#FFFFFF', fontSize: 24, marginTop: 12 },
   audioSurface: { width: 1, height: 1, opacity: 0 }
 });

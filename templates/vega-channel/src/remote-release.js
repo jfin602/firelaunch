@@ -13,8 +13,10 @@ const publicUrl = z.string().max(2048).refine(value => {
     return url.protocol === 'https:' && !!host && !url.username && !url.password && !url.search && !url.hash &&
       !host.startsWith('[') && !/^\d+\.\d+\.\d+\.\d+$/.test(host) && host !== 'localhost' &&
       !host.endsWith('.localhost') && !host.endsWith('.local') && !host.endsWith('.internal') &&
+      !host.endsWith('.amazonaws.com') && !host.endsWith('.amazonaws.com.cn') &&
       (!url.port || url.port === '443') &&
-      !url.pathname.split('/').some(part => decodeURIComponent(part).toLowerCase() === 'private-objects');
+      !url.pathname.split('/').some(part =>
+        ['staged', 'original', 'private-objects'].includes(decodeURIComponent(part).toLowerCase()));
   } catch { return false; }
 });
 const unique = values => new Set(values).size === values.length;
