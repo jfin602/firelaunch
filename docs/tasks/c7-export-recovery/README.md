@@ -1,6 +1,6 @@
 # c7-export-recovery — Hosted Vega export and real device recovery
 
-**Status: authored for execution on 2026-10-20, not run. This correction is scoped to P7 failures documented in ../p7/closeout.md. Fixed version: 0.7.3 in root package.json and the two top-level package-lock.json version fields. Do not increment to 0.7.4 in this correction.**
+**Status: R1 local Studio bundle repair and separate owner-authorized staging rollout recorded on 2026-10-20; R2 isolated worker, R3 ZIP integration and R4 independent device qualification remain open. This correction is scoped to P7 failures documented in ../p7/closeout.md. Fixed version: 0.7.3 in root package.json and the two top-level package-lock.json version fields. Do not increment to 0.7.4 in this correction.**
 
 ## Mission and deadline
 
@@ -13,6 +13,7 @@ The October 23, 2026 noon America/Chicago (CDT) target remains. Deliver a real o
 - P2 created build-input/ZIP verifiers and guarded `export-app` routes but deliberately left hosted export **blocked** because there is NO isolated worker host, job store or authenticated artifact delivery. Native Hls.js MSE code builds an example-origin VPKG but not an actual creator export.
 - The graphical VirtualDevice launched momentarily then reported `running:false`, `qemu:-1` and no connected serial; P7 contains no independent Vega playback or authenticated creator ZIP.
 - One P7 closeout aggregate: 341 tests, 326 passed, 0 failed, 15 skipped. That is local source evidence, NOT external qualification. Historical P5/c5/Q2 F7/P6-Q3 states stay unchanged.
+- The later [Studio repair rollout](studio-rollout-20261020.md) activated 0.7.3/schema 14 and directly verified signed-out and owner-authenticated browser rendering. It did not create a worker, creator ZIP or installed Vega playback; original P7 P4 remains NOT GREEN.
 
 Read [assessment](prompt-assessment.md), [plan](implementation-plan.md), [P7 closeout](../p7/closeout.md), [P2 worker blocker](../p7/P2-worker-blocker.md), [P3 evidence](../p7/P3-evidence.md), [current state](../../CURRENT-STATE.md), and [staging runbook](../../../scripts/staging/README.md).
 

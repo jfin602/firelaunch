@@ -1,13 +1,19 @@
 # FireLaunch Current State
 
-Last documentation reconciliation: 2026-10-20 (GitHub P7 P4 NOT GREEN closeout and rollback; no fresh live host/AWS inspection in this update).
+Last documentation reconciliation: 2026-10-20 18:54 UTC (owner-authorized 0.7.3 Studio staging repair; fresh host and browser checks, no fresh AWS control-plane inspection).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
 
-## October 20 P7 failure and approved c7-export-recovery (current execution)
+## October 20 18:52 UTC — Studio staging repair activated
+
+The owner authorized deployment of the latest Studio repair. The protected script activated `/srv/firelaunch/releases/20261020T185232Z-2b17f1479a0e` at root **0.7.3** with schema **14 → 14** and a verified encrypted predeploy backup. The active service is healthy, the retired 4185 service remains inactive, and the former healthy 0.6.7 release is the rollback target. A real HTTPS browser rendered both signed-out sign-in and an existing owner-authenticated project Home; a fresh tab also rendered Home, with no browser console errors. New and retained predecessor JS assets returned JavaScript MIME. Public release #1 pointer and approved HLS master hashes were unchanged before/after. See the [bounded rollout evidence](tasks/c7-export-recovery/studio-rollout-20261020.md).
+
+This was a **Studio startup repair**, not P7 GREEN. The exact historical blank-root exception remains unproven. Hosted Export App remains safely blocked without a separately isolated native worker; no creator ZIP or Vega install/playback was tested. c7 P2/P3 and manual final device qualification remain open. The source checkout contains uncommitted R1 script/docs changes, and the runner owns any implementation commit.
+
+## Earlier October 20 P7 failure and approved c7-export-recovery
 
 The historical [P7 P4 closeout](tasks/p7/closeout.md) is **NOT GREEN**. Tested local 0.7.3 source reached P1-P3 runner commits (661ba6e, 779d17f, 0cec1c7), then a protected 0.7.3 staging rollout rendered an empty React root despite successful HTTPS/JS/CSS responses. Protected rollback restored the last healthy 0.6.7 Studio and schema 14; authorized release #1 public pointer and HLS master hashes remained unchanged. The 0.7.3 archive and rollback are source/deployment evidence, NOT a creator ZIP. The closeout initially called its Hls.js compatibility repairs uncommitted; those repairs and the closeout are now present on GitHub main at 88257d4. Always reconcile actual local worktree/host readbacks before subsequent actions.
 
-[**c7-export-recovery**](tasks/c7-export-recovery/README.md) is the next approved docs/prompt stack, **NOT EXECUTED**. Its fixed root version is **0.7.3**. Checkpoint sequence: P1 diagnose/repair blank Studio and preflight VVD, P2 qualify a separately isolated native build worker, P3 integrate authenticated owner ZIP job/download, P4 manual protected rollout and independent ZIP-to-VVD video playback. Browser console/root-cause evidence and a persistent graphical VVD are missing; an HTTP 200/static build is not proof of rendering. The worker host/job transport are also missing; existing export endpoints intentionally fail closed. Preserve staging 0.6.7 until a tested, separately authorized release meets visible UI smoke and worker prerequisites.
+[**c7-export-recovery**](tasks/c7-export-recovery/README.md) remains the fixed-version **0.7.3** correction. R1 browser/release-bundle work and the separate owner-authorized Studio rollout are recorded above. P2 must qualify a separately isolated native worker, P3 must integrate authenticated owner ZIP job/download, and P4 must independently qualify the ZIP-to-VVD video path. The original failed-session console error and a persistent graphical VVD are still missing. The worker host/job transport are also missing; existing export endpoints intentionally fail closed.
 
 P7 exported creator-bound VPKG, live ZIP delivery and Vega HLS/audio remain UNQUALIFIED, independent of 326 local passes / 15 skips. No docs authorization to deploy, provision worker/cloud/network, alter public media, run paid MediaConvert, or publish a creator release is implied. Future Phase 8/9 priorities remain downstream; original P7 P4 NOT GREEN and historical Q2 F7/P5/c5/Q3 statuses are not relabeled.
 

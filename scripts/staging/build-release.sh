@@ -2,10 +2,15 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-output="${1:?Usage: build-release.sh /absolute/output.tar.gz}"
+output="${1:?Usage: build-release.sh /absolute/output.tar.gz /absolute/active-studio-index.html}"
+prior_index="${2:?Usage: build-release.sh /absolute/output.tar.gz /absolute/active-studio-index.html}"
 [[ "$output" = /* ]] || { echo 'Output path must be absolute' >&2; exit 1; }
+[[ "$prior_index" = /* && -f "$prior_index" && ! -L "$prior_index" ]] || { echo 'Active Studio index must be an absolute regular file' >&2; exit 1; }
 [[ "$(node -p 'process.versions.node.split(".")[0]')" = 24 ]] || { echo 'Node 24 is required' >&2; exit 1; }
 [[ "$(npm --version | cut -d. -f1)" = 12 ]] || { echo 'npm 12 is required' >&2; exit 1; }
+
+# Check the new entrypoint before packaging.
+node "$repo/scripts/staging/smoke-studio.mjs" "$repo/apps/studio/dist"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -16,6 +21,23 @@ for app in server studio; do
 done
 cp -a "$repo/apps/server/dist" "$repo/apps/server/migrations" "$tmp/release/apps/server/"
 cp -a "$repo/apps/studio/dist" "$tmp/release/apps/studio/"
+# Carry only the active entrypoint's hashed JS/CSS into the new bundle. Browsers
+# may hold that HTML across the atomic release switch; Nginx currently returns
+# index.html (HTTP 200, text/html) for missing module paths.
+mapfile -t prior_assets < <(grep -oE '/assets/[A-Za-z0-9_-]+\.(js|css)' "$prior_index" | sort -u)
+[[ ${#prior_assets[@]} -ge 2 && ${#prior_assets[@]} -le 8 ]] || { echo 'Unexpected active Studio asset inventory' >&2; exit 1; }
+for asset in "${prior_assets[@]}"; do
+  source_asset="$(dirname "$prior_index")$asset"
+  target_asset="$tmp/release/apps/studio/dist$asset"
+  [[ -f "$source_asset" && ! -L "$source_asset" && "$(stat -c %s "$source_asset")" -le 5000000 ]] || { echo "Unsafe or missing prior Studio asset: $asset" >&2; exit 1; }
+  if [[ -e "$target_asset" ]]; then
+    cmp -s "$source_asset" "$target_asset" || { echo "Studio asset hash-name collision: $asset" >&2; exit 1; }
+  else
+    cp "$source_asset" "$target_asset"
+  fi
+done
+# A previously cached entrypoint must execute with the assembled release.
+node "$repo/scripts/staging/smoke-studio.mjs" "$tmp/release/apps/studio/dist" "$prior_index"
 for package in agent channel-engine contracts generator tv; do
   mkdir -p "$tmp/release/packages/$package"
   cp "$repo/packages/$package/package.json" "$tmp/release/packages/$package/"
