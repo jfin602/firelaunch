@@ -41,6 +41,10 @@ After safely synchronizing GitHub main into the intended local checkout:
 
 The runner stops before P6; run its fast manual UX smoke and protected live Studio deployment after P1-P5 pass. If operator permissions/backup/rollback are unavailable, report DEPLOYMENT BLOCKED rather than bypassing controls. This authoring does not deploy the product.
 
+## Urgent playback/artwork regression — must repair before P6 deployment
+
+Owner screenshots (2026-10-19 Firefox) show TV Preview failing to play AV Test In HD and an uploaded thumbnail still rendering as a placeholder. Follow [R1 browser-playback and thumbnail repair](R1-browser-playback-thumbnail-repair.txt) against the actual local/deployed source, which may be newer than GitHub main; P6 now requires both defects repaired and focused tests/browser smoke before deployment. A private READY HLS asset cannot be made public just to obtain preview playback. No paid encode, public publication, CDN exposure or destructive AWS work is authorized by this repair. If either blocking regression persists, UX NOT GREEN and do not deploy that candidate.
+
 ## Owner-approved P6 acceleration (2026-10-19)
 
 P6 autonomously repairs observed blocking issues (maximum two focused cycles), runs quick browser/targeted checks, deploys the tested app via the protected exact-command backup/rollback process, and puts the existing AWS private-upload/MediaConvert-completion pipeline into a ready-for-client-upload state. Configuration activation is pre-authorized only for the existing verified staging resources; check pending jobs and cost guards before unpausing. Do not trigger paid test encoding or change public content. Report UX, deployment and AWS readiness independently; Q2, actual two-hour paid processing and Vega qualification remain separate.
