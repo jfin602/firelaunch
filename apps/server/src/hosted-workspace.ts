@@ -4,6 +4,8 @@ import { RepositoryError } from './repository.js';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { assertExportableMedia } from './hosted-media-policy.js';
+import { PublicationRepository } from './publication-repository.js';
+import { createReleaseBuildInput, type ReleaseBuildInput } from './release-build.js';
 
 const textName = /\.(?:js|jsx|ts|tsx|json|toml|md|txt)$|^(?:README|LICENSE)$/i;
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -27,7 +29,34 @@ const blockedBuild = { status: 'blocked' as const, reason: 'Hosted Vega builds r
     vegaSdk: { detail: 'Hosted build disabled' }, vegaCli: { detail: 'Hosted build disabled' }, device: { detail: 'No device evidence' } } };
 
 export class HostedWorkspaceService {
-  constructor(private readonly repository: HostedProjectRepository) {}
+  constructor(private readonly repository: HostedProjectRepository,
+    private readonly publication: Pick<PublicationRepository, 'currentSummary'> = new PublicationRepository(repository)) {}
+
+  /** Internal worker submission contract. No hosted build route calls this in P1. */
+  async releaseBuildInput(principal: AuthenticatedPrincipal, id: string): Promise<ReleaseBuildInput> {
+    const project = await this.repository.read(principal, id);
+    assertExportableMedia(project.spec);
+    const deployment = await this.repository.readDeployment(principal, id);
+    if (deployment.creatorAccountId !== principal.accountId) throw new RepositoryError('NOT_FOUND', 'Project not found');
+    const release = await this.publication.currentSummary(principal, id, deployment.id);
+    const source = await this.repository.source(principal, id);
+    const input = await createReleaseBuildInput(project, source, deployment,
+      release ? { releaseId: release.releaseId, sequence: release.sequence } : null, principal.accountId);
+    // Repeat after assembling the snapshot. P2 must call this again before artifact acceptance/download.
+    const current = await this.repository.read(principal, id);
+    const currentDeployment = await this.repository.readDeployment(principal, id);
+    const currentSource = await this.repository.source(principal, id);
+    const currentRelease = await this.publication.currentSummary(principal, id, currentDeployment.id);
+    const confirmed = await createReleaseBuildInput(current, currentSource, currentDeployment,
+      currentRelease ? { releaseId: currentRelease.releaseId, sequence: currentRelease.sequence } : null, principal.accountId);
+    if (confirmed.fingerprint !== input.fingerprint) throw new RepositoryError('CONFLICT', 'Build input changed during snapshot');
+    return input;
+  }
+
+  async assertReleaseBuildInputCurrent(principal: AuthenticatedPrincipal, id: string, fingerprint: string): Promise<void> {
+    const current = await this.releaseBuildInput(principal, id);
+    if (current.fingerprint !== fingerprint) throw new RepositoryError('CONFLICT', 'Build input changed');
+  }
 
   async overview(principal: AuthenticatedPrincipal, id: string) {
     const project = await this.repository.read(principal, id);
