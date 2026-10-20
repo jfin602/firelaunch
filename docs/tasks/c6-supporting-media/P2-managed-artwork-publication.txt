@@ -1,0 +1,23 @@
+TASK: Correction 6 / P2 — Approved immutable artwork publication bridge
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Build the server-only transition from an existing owner-scoped private thumbnail into an immutable rights-approved public delivery poster that can satisfy current PublishedManifest v1 without manually hosted artwork URLs.
+
+PREFLIGHT
+Read c6-supporting-media plan/ADR 0014, P1 handoff, ADR 0009/0011/0013. Inspect catalog-projection, publication-repository, media-storage, private-objects, publication.ts, owner/rights/source checks, schema and tests; verify root version and current git state. Preserve prior release #1 and current video IDs.
+
+IMPLEMENT
+Reuse existing private artwork record and existing publisher-only storage role. Build a narrow owner+project+CatalogItem+artwork-ID verifier: accepted JPEG/PNG only, strict bytes/size/MIME/hash, current source provenance and display rights, no revocation and correct catalog approval/revision. Derive an immutable versioned owner-scoped delivery key and a deterministic stable CloudFront HTTPS poster URL. Use an idempotent verified copy/publish method, never public ACL or raw private capability in URL. Mirror the managed HLS resolvedPlayback approach with an explicit resolvedArtwork mapping into server-side catalog/ChannelSpec preview and projectApprovedManifest, preserving strict v1 media kinds/artwork bindings and existing TV compatibility. A preflight readiness check may compute the future URL but must not publish the image. Actual image promotion only on explicit creator-approved immutable channel release, with asset/revision rechecks and no live pointer switch on failed S3 copies. Existing public URLs remain supported in advanced compatibility mode; no new creator external URL requirement. Keep old published poster and old release intact on replacement. Avoid premature CDN accessibility assumptions; CloudFront policy is P3.
+
+VALIDATION
+Local mocked/fake S3 and publication/contract tests: owner and rights positive, missing/foreign/revoked/bad-format/tampered/unsafe path negative, no unapproved promotion, same reviewed vs published URL, idempotent retry, old release pointer unmodified, strict manifest v1 compatibility. Affected typechecks/build, git diff --check. No AWS cloud change, real publish, MediaConvert or schema change.
+
+GIT / HANDOFF
+Runner owns commit. Report exact resolver/copy API, tests, if any unsupported existing schema needs focused separate correction, and P3 exact CDN allowlist inputs. Hard cap 15 minutes, target 8.

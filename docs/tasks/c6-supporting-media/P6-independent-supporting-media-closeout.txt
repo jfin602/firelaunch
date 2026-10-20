@@ -1,0 +1,29 @@
+TASK: Correction 6 / P6 — Independent supporting media closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Rapidly and independently assess owner-visible thumbnails and locally verified rights-approved artwork publication and OPTIONAL subtitle foundation. Avoid needless historical qualification and never invent public CDN/device proof.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, docs/CURRENT-STATE.md, ADR 0014, c6-supporting-media README/assessment/plan, P1-P5 runner evidence and exact candidate Git SHA. Verify Node24/npm12, root 0.6.7, no destructive worktree actions and no unapproved schema/Cf rollout.
+
+REAL CREATOR UX
+In a permitted authenticated browser, open Add Video and choose an owned file, verify immediate custom thumbnail or generated still, continue from upload to processing/waiting, confirm Home/Catalog/popup and private TV Preview show it without requiring a public URL. Reopen/reload/project switch, select replacement and inspect original thumbnail priority, private-binary URL not leaked. Existing fixture or authorized non-billable private dry run only; no new MediaConvert CreateJob, no public release, no old asset deletion. Test narrow/mobile/keyboard where available. Without access state BROWSER NOT VERIFIED; don't claim browser GREEN from jsdom alone. Verify artwork/private/public separation with read-only/public-negative tests, keeping previous published release #1 unchanged.
+
+INDEPENDENT CODE
+Run focused owner-isolation and artwork public-copy/canonical manifest tests (including denied/foreign/revoked/unapproved, exact CDN policy, checksum/mime), private WebVTT optionality/invalid format/replacement tests, and the appropriate aggregate only when essential after P1-P5 evidence. Execute npm run codex:stack:validate -- c6-supporting-media, typecheck/build and git diff --check; record exact counts and source version. If migration exists, record independent protected operator rehearsal needed: this manual closeout does not apply migration on host. Strict PublishedManifest v1 and native Vega must remain compatible.
+
+DISPOSITION / CLOSEOUT
+Write docs/tasks/c6-supporting-media/closeout.md with exact SHA/version, P1-P5 commits, tests, browser observations, immediate artwork status, secure approved artwork publication readiness, optional subtitle private storage/UI, historical public release #1 preservation and known blockers. Use LOCAL SUPPORTING MEDIA GREEN only if actual local creator flow and deterministic server/security tests pass; otherwise NOT GREEN and smallest repair. Mark CLOUD IMAGE DELIVERY NOT QUALIFIED until separate operator-approved CloudFront policy and real exact allowlist 200/403 observed. Mark NATIVE SUBTITLE PLAYBACK NOT QUALIFIED and Q2 F7/Q3 NOT GREEN/UNSTARTED separately. Report DEPLOYED only with actual verified host evidence; no deployment is authorized by writing/running this local correction stack.
+
+AUTHORITY
+Independent MANUAL closeout; do NOT self-commit, amend, reset or move HEAD; no version bump, AWS public exposure, paid processing, creator publication, destructive S3 cleanup or Ngest changes. Keep current schema/release #1/backups intact. Escalate only missing narrow operator permissions for later production rollout, not as an excuse to bypass them.
+
+FINAL RESPONSE
+Short factual local GREEN/NOT GREEN; exact tested SHA/version, focused evidence, new thumbnail result, publish delivery AWS limitation, subtitle optionality and next action. Stop on genuine blockers; no repeated broad cycles.

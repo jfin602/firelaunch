@@ -1,0 +1,23 @@
+TASK: Correction 6 / P4 — Optional private WebVTT subtitle foundation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Make the supporting-media model future-ready for OPTIONAL subtitle tracks without adding a required publish step, exposing caption files or modifying current Vega manifest/player.
+
+PREFLIGHT
+Read ADR 0014, c6-supporting-media README/assessment/plan and P1-P3 handoffs. Inspect actual current data model, private-object upload API/quota, Studio video Details page and owner/schema tests. Confirm Git state/version and current c6-usability worktree integration.
+
+IMPLEMENT
+Introduce the smallest additive backward-compatible private subtitle-track contract (parent creator/project/video item/asset IDs, independent track ID, normalized BCP-47 language, canonical UTF-8 WebVTT .vtt format, bounded size/hash/version and lifecycle). Reuse existing owner-scoped private object repository/storage and existing authorization/CSRF; never add a new S3 bucket or public key. Validate WebVTT header/UTF-8, cue structure, duration/line/size bounds, reject malformed text, unsafe HTML/script/external cues and duplicate active language; allow multiple distinct languages and versioned replacement without deleting referenced historical objects. Add small OPTIONAL subtitle upload/list/remove controls in the current Details page only if safely bounded; otherwise document the backend capability and defer the UI with truthful status. Omission must never block upload, encode, channel draft, artwork review, creator publication or native export. Do not change strict PublishedManifest v1, ChannelSpec, native Vega template, CloudFront .vtt allowlist or claim TV subtitles actually work. If additive DB migration is required, isolate it, maintain schema compatibility/rollback and leave live deployment approval for independent operator review; do not run it on staging in this prompt.
+
+VALIDATION
+Focused contract/API owner/CSRF/WebVTT parser tests: valid English/Spanish, malformed header/Unicode/cues/external refs, oversize, duplicate language, stale revision, replacement/deletion, foreign access, no-subtitle happy path and exact unchanged v1 published manifest. Affected typecheck/build/diff check; no AWS writes, paid MediaConvert or public release.
+
+GIT / HANDOFF
+Runner commits; root 0.6.7 unchanged. Report if migration is present, whether an upload UI is ready, deferred native caption compatibility and P5 regression inputs. <=8 minute target, hard 15 minute ceiling.

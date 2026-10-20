@@ -1,0 +1,23 @@
+TASK: Correction 6 / P5 — Supporting media usability and regression convergence
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Converge immediate artwork and safe public poster readiness with minimal UI friction and no regressions in c6-usability playback/creator rights.
+
+PREFLIGHT
+Read c6-supporting-media plan/P1-P4 handoffs and current c6-usability video popup/playback tests. Check actual local HEAD, dirty work, version and source drift; do not erase active fixes. Verify public release #1 remains historically unchanged.
+
+IMPLEMENT
+Unify displays across initial file selection, paused/active upload, encoding, READY, failed/revoked, video cards, Home, Catalog, popup Details and private TV Preview. Verify owner-scoped saved thumbnail on reload, safe custom > generated > existing/legacy fallback, instant updates when thumbnail replaced, cleanup on project/account switching and no exposure of private capability/object paths. Remove external artwork URL as a normal-flow blocker; keep optional advanced legacy source support. Display a simple clear Publish readiness explanation for private vs public artwork without implying automatic exposure. Preserve 0.6.7 Studio theme and video playback, rights/provenance gates, server artwork release copying and existing manifest semantics. Subtitles optional and disabled/deferred native playback message; never block normal video. Tighten only observed issues using focused tests, not broad redesign.
+
+VALIDATION
+Focused Studio/private API/catalog/publication/subtitle tests, relevant typecheck/build and git diff --check. Check no duplicate images or stale requests, invalid MIME, failed copy, unrelated public access, wrong tenant and public release #1 immutability; preserve native Vega build compatibility. Don't rerun full historical Q2/Q3 or paid processing; one aggregate in final closeout only if justified.
+
+GIT / HANDOFF
+Runner owns commit; provide exact test totals, current code SHA and manual browser smoke instructions for P6. No live deployment, IAM, CloudFront, MediaConvert charges or version bump. If mandatory public image CDN policy is pending operator review, record it clearly rather than silently disabling safety.

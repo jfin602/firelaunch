@@ -1,0 +1,23 @@
+TASK: Correction 6 / P3 — Exact approved image CDN policy and denial tests
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Design and locally validate a precise CloudFront/public S3 artwork-delivery extension that permits ONLY rights-approved immutable JPEG/PNG objects. Do not deploy AWS changes in this runner step.
+
+PREFLIGHT
+Read ADR 0014, c6-supporting-media plan, P2 image delivery key contract, docs/integrations/aws-vod-foundation.md, infra/aws/staging/cloudformation/02-firelaunch-staging-foundation.yaml (ApprovedFreeDeliveryPrefix, FreeDeliveryPathFunction, DeliveryPathFunction), OAC S3 policy, release #1 evidence. Check HEAD/versions and no local work loss.
+
+IMPLEMENT
+Inspect exact existing free HLS master/segment allowlist and ensure current release #1 remains accessible under the resulting proposed policy. Implement minimal template/source policy change or separate review-only additive proposal for approved image path authorization: exact owner/project/video/artwork/version keys tied to creator-approved immutable release, stable hostname, allowed .jpg/.jpeg/.png with verified MIME, private staged/original denial, normalized path and no query-based signed escapes. Preserve CloudFront OAC, bucket Block Public Access, publisher IAM separation, and current free vs future paid behavior. A wildcard allowing all delivery JPEGs is NOT sufficient; do not introduce unrestricted public image listing or access. If deployment semantics need a revised approved-asset registry/policy and exceed bounded work, provide safe alternative/blocked proposal rather than an insecure shortcut. Do not submit real CloudFormation change sets, deploy CloudFront, change IAM or widen existing viewer policy; specific external operator approval is still required even if existing MediaConvert queue configuration is pre-authorized.
+
+VALIDATION
+Focused deterministic CloudFormation/function/policy tests: approved exact poster positive in projected policy, unrelated creator/project/path/old/unapproved key 403, private/original/staged/encoded malformed path denial, existing release #1 HLS untouched, missing policy fail-closed, JPEG/PNG MIME, no new public S3 bucket. Where possible provide reviewed diff and exact AWS operation required later. No live AWS mutation or paid job, no full suite.
+
+GIT / HANDOFF
+Runner commits proposal/tests only. Record local checks and that LIVE PUBLIC POSTER ACCESS IS NOT QUALIFIED until separately approved AWS rollout/real viewer proof. Source version stays 0.6.7.

@@ -1,0 +1,23 @@
+TASK: Correction 6 / P1 — Immediate owner-private thumbnail display
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.6.7`.
+
+GOAL
+Remove thumbnail placeholders immediately when creator-provided or safely extracted art exists. Persisted artwork must appear everywhere independently of video encoding, without exposing secrets or changing public TV media URLs.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/workflow.md, ADR 0014 and c6-supporting-media README/assessment/plan. Inspect actual local git status/HEAD and all in-progress c6-usability/popup/playback source, Home, Catalog, VideoUpload, Preview, API, private-object owner capability routes and tests; do not reset/rewrite concurrent changes. Confirm root and lockfiles version 0.6.7.
+
+IMPLEMENT
+Reuse existing artwork MediaAsset(kind=artwork, location=private_object) and linked owner/project/CatalogItem association. Show creator-chosen JPEG/PNG immediately using a local in-memory object URL; fall back to successful video frame extraction, then existing saved owned image, then valid legacy source artwork, then placeholder. Persist chosen/generated art as early as safely possible without requiring video upload/MediaConvert completion, and don't overwrite a previously approved asset on failed attachment. Build a shared owner-authorized async artwork component/resolver used in Home, Catalog, video popup and upload/encoding/READY/failed cards. Retrieve saved image via existing authenticated short-lived private-object capability issued with POST and GET content using x-private-capability header, then Blob + URL.createObjectURL; never use capability in img src, URL query, ChannelSpec, logs or storage. Revoke blob URLs/abort stale requests on item, project, account or unmount; deny foreign/expired access. For private TV Preview use an explicitly Studio-only owner-scoped visual URL overlay or visual projection, never inject an expiring/private source into the canonical exportable ChannelSpec. Prefer creator custom image to generated still. Reopen/reload must show saved image with no reupload. Do not alter Amazon template or public delivery.
+
+VALIDATION
+Focused Studio component/asset tests for selection/processing/reload/custom-first, broken image fallback, owner/account/project isolation, capability-free DOM, blob cleanup and public ChannelSpec unchanged. Studio typecheck/build, git diff --check. No paid MediaConvert, AWS writes or global test loops.
+
+GIT / HANDOFF
+Runner commits, do not self-commit/amend or change 0.6.7. Report exact affected files/tests, image priority and P2 published artwork boundary. Target under 8 minutes; stop at 15-minute ceiling with exact blocker.
