@@ -1,9 +1,15 @@
 # c6-usability — Progressive creator video workspace
 
-Status: DOCS APPLIED / PROMPTS AUTHORED / NOT EXECUTED OR QUALIFIED.
+Status (2026-10-20 reconciliation): **P1-P5 IMPLEMENTED; P6 BOUNDED STAGING UX SMOKE PASS / DEPLOYED; AWS INGEST CONFIGURATION ACTIVE.** The original prompt stack and historical qualification limitations remain preserved.
 Approved: 2026-10-19 US Central. Deadline: October 23 at noon.
 Version: root and lockfile 0.6.7 unchanged for all prompts.
 See [assessment](prompt-assessment.md), [plan](implementation-plan.md), [product model](../../PRODUCT-MODEL.md), [architecture](../../ARCHITECTURE.md), [current state](../../CURRENT-STATE.md).
+
+## October 20 handoff — c6-usability is not the next implementation stack
+
+[c6-usability P6 closeout](closeout.md) records source candidate `151d06517bc21a646a2c6ad4ddfe8ff81ef24171`, guarded staging release `20261020T003757Z-383bf652a604`, 55 Studio and 16 targeted server P6 passes, signed-in Home/Catalog video popup smoke, and reviewed AWS changes enabling the existing MediaConvert queue and EventBridge completion rule. No paid MediaConvert job, new upload finalization, public release or full two-hour live test occurred during P6. The browser test covered saved metadata/reopen and truthful state; failed/retry transitions remain test-only evidence. See [current state](../../CURRENT-STATE.md) for the overall Q2/Q3 and source freshness ledger.
+
+**Do not restart P1-P6** to implement already-shipped video workflow mechanics or reactivate AWS. Their written instructions below are historical design/execution context. New video/creative overlap (thumbnail persistence, private playback, artwork publication) is routed to [c6-supporting-media](../c6-supporting-media/README.md) and focused integration acceptance. The newest inspected GitHub commit `b0d2897` may be newer than the deployed P6 candidate and must not be treated as staged. Vega export/installed playback now owns the critical deadline path. Keep Q2 F7 PARTIAL/NOT GREEN, Q3 device UNQUALIFIED and real two-hour encode UNQUALIFIED.
 
 ## Goal
 
