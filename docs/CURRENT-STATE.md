@@ -1,13 +1,19 @@
 # FireLaunch Current State
 
-Last documentation reconciliation: 2026-10-20 19:02 UTC (manual R1 closeout and local VirtualDevice preflight; live Studio deployment facts remain the 18:52 UTC rollout observations, no fresh AWS control-plane inspection).
+Last documentation reconciliation: 2026-10-20 20:22 UTC (owner-authorized R2 one-VPS queue/worker host activation and sandbox readback; no staging application deployment or new AWS inspection).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
 
+<<<<<<< HEAD
 ## October 20 owner decision — one-VPS native export continuation
 
 **Active next work:** [c7-export-recovery](tasks/c7-export-recovery/README.md) R2/R3/R4 manual prompts, fixed root `0.7.3`; R1 Studio startup is **SCOPED GREEN** and must not be rerun. R2 implements an existing-muffinos `firelaunch-build-worker.service` and a simple one-at-a-time PostgreSQL build queue in a separate additive `firelaunch_build` schema in the current instance. Protect the main schema-14 migration history and prior 0.6.7/0.7.3 rollback. Restricted disposable build child has no app/DB/AWS credentials. R3 adds creator-authenticated job/status/ZIP download in the existing Studio/API; R4 is delta-only real downloaded VPKG/Vega playback acceptance. No second VPS, Redis, distributed queue or remote worker transport.
 
 **Evidence boundary:** inspected GitHub main at `c2569e7` shows existing producer and ZIP primitives but no operating hosted native worker/queue or real creator ZIP. Owner-reported local P2-evidence.md was not available on inspected GitHub; reconcile it before R2 edits. R1 live Studio 0.7.3 is a dated successful rollout, not export/device GREEN. Graphical VirtualDevice remains `running:false`, `qemu:-1` and without serial. Preserve existing approved free HLS release #1 hashes and historic P7 P4 NOT GREEN. Successful unrelated R1/P6/P7 tests need not be rerun; only modified worker/export security and new device evidence are acceptance gates.
+=======
+## October 20 R2 one-VPS worker continuation
+
+**[R2 HOST WORKER ACTIVE / BUILD QUALIFICATION OPEN](tasks/c7-export-recovery/R2-evidence.md).** The owner selected a dedicated PostgreSQL queue and sandboxed worker on the existing muffinos VPS and authorized host installation. The optional queue schema, dedicated role, 12 GB private job filesystem, pinned Node/npm/Vega runtime, scoped AppArmor allowance and separate systemd worker are installed. The worker and staging service were active at the 20:22 UTC readback. A real bubblewrap child probe verified effective 1 CPU/2 GiB/128 task limits, no route, and no PostgreSQL or staging mounts. Real PostgreSQL queue tests pass locally. A sandboxed offline fixed-dependency install passed with scripts disabled, but no creator source or fresh VPKG has passed on muffinos; Hosted Export App remains blocked pending R3 owner-bound job/status/download integration and full R2 build proof. The earlier external-host-only [P2-evidence](tasks/c7-export-recovery/P2-evidence.md) is historical. No staging application deployment, publication or AWS mutation occurred in this continuation.
+>>>>>>> be95af3 (R2: Setup worker sandbox and work process)
 
 ## October 20 18:52 UTC — Studio staging repair activated
 

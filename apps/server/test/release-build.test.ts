@@ -79,6 +79,7 @@ test('malicious paths, private URLs, credentials and manifest edits are rejected
     ['../escape.js', 'hello'], ['src/secret.js', 'https://host.test/api/private/asset'],
     ['src/secret.js', 'https://host.test/media?X-Amz-Signature=abc'],
     ['src/secret.js', 'AKIAABCDEFGHIJKLMNOP'],
+    ['src/too-large.js', 'x'.repeat(256_001)],
     ['src/hlsjs/hls.mjs', 'modified vendor source']
   ]) {
     const source = await stored(); source.files[name] = body;
