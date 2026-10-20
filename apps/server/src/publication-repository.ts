@@ -42,6 +42,7 @@ type Locked = { owner: string; channel: ChannelSpec; channelRevision: number; ca
   inventory: CatalogInventory; deployment: unknown; liveId: string | null; liveSequence: number };
 
 const newId = (prefix: string) => `${prefix}_${randomUUID().replaceAll('-', '')}`;
+const releaseForApproval = (approvalId: string) => `rel_${ids.approval.parse(approvalId).slice(3)}`;
 const digest = (bytes: string) => createHash('sha256').update(bytes).digest('hex');
 export function canonicalBytes(value: unknown): string {
   const sort = (entry: unknown): unknown => Array.isArray(entry) ? entry.map(sort) :
@@ -151,12 +152,13 @@ export class PublicationRepository {
       const artworkCopies: PreparedArtwork[] = [];
       let artworkBytes = 0;
       for (const assetId of new Set(bindings.content.map(binding => binding.artworkAssetId))) {
+        const binding = bindings.content.find(value => value.artworkAssetId === assetId)!;
         const asset = state.inventory.mediaAssets.find(value => value.id === assetId);
         if (!asset || asset.location.type !== 'private_object') continue;
-        if (!this.managedArtwork || asset.kind !== 'artwork' || !asset.deliveryEligible ||
+        if (!this.managedArtwork || asset.catalogItemId !== binding.catalogItemId || asset.kind !== 'artwork' || !asset.deliveryEligible ||
           !mediaUseEligible(asset, 'television_display')) conflict('Uploaded thumbnail is not approved for publication');
-        const prepared = await this.managedArtwork.prepare(state.owner, state.channel.id, asset.location.objectId,
-          channelDeploymentSchema.parse(state.deployment).id, releaseId, asset.id);
+        const prepared = await this.managedArtwork.prepare(state.owner, state.channel.id, binding.catalogItemId, asset.location.objectId,
+          channelDeploymentSchema.parse(state.deployment).id, releaseId, asset.id, client);
         artworkBytes += prepared.body.length;
         if (artworkBytes > 20_000_000) conflict('Managed artwork exceeds release limit');
         artworkCopies.push(prepared);
@@ -195,7 +197,8 @@ export class PublicationRepository {
     } catch { throw new RepositoryError('STORAGE_ERROR', 'Invalid immutable release'); }
   }
 
-  private async reviewedSelection(client: PoolClient, state: Locked, input: PublicationApprovalRequest): Promise<{ channel: ChannelSpec; bindings: PublicationBindings; rollback: boolean }> {
+  private async reviewedSelection(client: PoolClient, state: Locked, input: PublicationApprovalRequest,
+    approvalId = newId('ap')): Promise<{ channel: ChannelSpec; bindings: PublicationBindings; rollback: boolean }> {
     if (state.channelRevision !== input.revisions.channel || state.catalogRevision !== input.revisions.catalog ||
       state.liveId !== input.expectedLiveReleaseId) conflict('Draft or live release changed; review again');
     if (state.catalogRevision === 0) conflict('No approved catalog media is ready for publication');
@@ -205,7 +208,8 @@ export class PublicationRepository {
     const channel = historical?.channel ?? state.channel;
     const bindings = historical?.bindings ?? input.bindings!;
     await this.requireReviewedItems(client, state, input.projectId, bindings);
-    await this.manifest(client, state, newId('ap'), new Date().toISOString(), channel, bindings, newId('rel'), new Date().toISOString());
+    await this.manifest(client, state, approvalId, new Date().toISOString(), channel, bindings,
+      releaseForApproval(approvalId), new Date().toISOString());
     return { channel, bindings, rollback: !!historical };
   }
 
@@ -269,8 +273,8 @@ export class PublicationRepository {
     try {
       await client.query('BEGIN');
       const state = await this.locked(client, principal, input.projectId, input.deploymentId);
-      const { channel, bindings, rollback } = await this.reviewedSelection(client, state, input);
       const approvalId = newId('ap');
+      const { channel, bindings, rollback } = await this.reviewedSelection(client, state, input, approvalId);
       const approvedAt = new Date().toISOString();
       await client.query(`INSERT INTO publication_approvals(id, creator_account_id, project_id, deployment_id,
         channel_revision, catalog_revision, expected_live_release_id, rollback_source_release_id, channel_snapshot, bindings, approved_at)
@@ -314,7 +318,7 @@ export class PublicationRepository {
         if (!isDeepStrictEqual(source.channel, channel) || !isDeepStrictEqual(source.bindings, bindings)) conflict('Rollback snapshot changed');
       }
       await this.requireReviewedItems(client, state, projectId, bindings);
-      const releaseId = newId('rel');
+      const releaseId = releaseForApproval(approvalId);
       const publishedAt = new Date().toISOString();
       const manifest = await this.manifest(client, state, approvalId, row.approved_at.toISOString(), channel, bindings, releaseId, publishedAt, true);
       const bytes = canonicalBytes(manifest);

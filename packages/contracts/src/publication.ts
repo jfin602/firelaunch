@@ -48,12 +48,18 @@ const publicMediaSchema = z.strictObject({
   id: id('ma'), kind: z.enum(['video', 'audio', 'artwork']), url: publicUrlSchema
 });
 const managedArtworkPath = /^\/api\/public-artwork\/(dep_[a-f0-9]{32})\/(rel_[a-f0-9]{32})\/(ma_[a-f0-9]{32})\/([a-f0-9]{64})\.(png|jpg)$/;
+const managedCdnArtworkPath = /^\/media\/([a-f0-9]{32})\/([a-f0-9]{32})\/([a-f0-9]{32})\/delivery\/artwork\/rel_[a-f0-9]{32}\/([a-f0-9]{64})\/poster\.(png|jpg)$/;
 function sameManagedArtwork(previous: string, next: string): boolean {
   try {
     const oldUrl = new URL(previous), newUrl = new URL(next);
     const oldPath = managedArtworkPath.exec(oldUrl.pathname), newPath = managedArtworkPath.exec(newUrl.pathname);
-    return !!oldPath && !!newPath && oldUrl.origin === newUrl.origin && !oldUrl.search && !oldUrl.hash &&
+    if (oldPath && newPath) return oldUrl.origin === newUrl.origin && !oldUrl.search && !oldUrl.hash &&
       [1, 3, 4, 5].every(index => oldPath[index] === newPath[index]);
+    const oldCdn = managedCdnArtworkPath.exec(oldUrl.pathname), newCdn = managedCdnArtworkPath.exec(newUrl.pathname);
+    if (oldPath && newCdn) return !oldUrl.search && !oldUrl.hash &&
+      oldPath[3] === `ma_${newCdn[3]}` && oldPath[4] === newCdn[4] && oldPath[5] === newCdn[5];
+    return !!oldCdn && !!newCdn && oldUrl.origin === newUrl.origin && !oldUrl.search && !oldUrl.hash &&
+      [1, 2, 3, 4, 5].every(index => oldCdn[index] === newCdn[index]);
   } catch { return false; }
 }
 const publicDeploymentSchema = z.strictObject({

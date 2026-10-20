@@ -10,6 +10,8 @@ import type { HostedProjectRepository } from '../src/hosted-repository.js';
 import type { HostedAuth } from '../src/auth/sessions.js';
 import { canonicalBytes } from '../src/publication-repository.js';
 import { ManagedArtworkDelivery } from '../src/managed-artwork.js';
+import { PublicReleaseResolver } from '../src/public-resolver.js';
+import type { S3MediaStorage } from '../src/media-storage.js';
 import type { PrivateObjectStore } from '../src/private-objects.js';
 import { catalogItemSchema, catalogSourceSchema, mediaAssetSchema, publishedManifestSchema } from '@firelaunch/contracts';
 
@@ -183,7 +185,7 @@ test('public thumbnail route requires an approved release, unchanged private sou
   const original = fixtureChannel();
   const owner = `cr_${hex('f')}`, itemId = `ci_${hex('3')}`, videoId = `ma_${hex('1')}`;
   const artworkId = `ma_${hex('2')}`, objectId = `ma_${hex('6')}`;
-  const image = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 1, 2]);
+  const image = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 8, 1, 2, 3, 4, 5, 6, 0xff, 0xd9]);
   const imageHash = createHash('sha256').update(image).digest('hex');
   const path = `/api/public-artwork/${deploymentId}/${releaseId}/${artworkId}/${imageHash}.jpg`;
   const imageUrl = `https://studio.example.com${path}`;
@@ -254,5 +256,18 @@ test('public thumbnail route requires an approved release, unchanged private sou
     assert.equal((await get()).status, 404, 'replacing the source invalidates the old live thumbnail');
     currentObjectHash = imageHash; revoked = true;
     assert.equal((await get()).status, 404, 'revoked artwork cannot resolve');
+    revoked = false;
+    const cdnUrl = `https://media.example.org/media/${owner.slice(3)}/${original.id.slice(3)}/${artworkId.slice(3)}/delivery/artwork/${releaseId}/${imageHash}/poster.jpg`;
+    const cdnManifest = { ...manifest,
+      channel: { ...channel, content: channel.content.map(content => ({ ...content, artwork: cdnUrl })) },
+      media: manifest.media.map(media => media.id === artworkId ? { ...media, url: cdnUrl } : media) };
+    release.manifest_bytes = canonicalBytes(cdnManifest);
+    release.sha256 = digest(release.manifest_bytes);
+    const cdnStorage = { publishedArtworkUrl: () => cdnUrl } as unknown as S3MediaStorage;
+    const cdnResolver = new PublicReleaseResolver(repository,
+      new ManagedArtworkDelivery(pool, store, 'https://studio.example.com', cdnStorage));
+    assert.equal((await cdnResolver.release(deploymentId, releaseId)).sha256, release.sha256);
+    currentObjectHash = '0'.repeat(64);
+    await assert.rejects(cdnResolver.release(deploymentId, releaseId), 'a replaced source cannot resolve old CDN art');
   } finally { await new Promise<void>(resolve => api.close(() => resolve())); }
 });

@@ -13,6 +13,7 @@ const releaseIdSchema = z.string().regex(/^rel_[a-f0-9]{32}$/);
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/);
 const publicPath = /^\/public\/v1\/deployments\/(dep_[a-f0-9]{32})\/(current|releases\/(rel_[a-f0-9]{32}))$/;
 const artworkPath = /^\/api\/public-artwork\/(dep_[a-f0-9]{32})\/(rel_[a-f0-9]{32})\/(ma_[a-f0-9]{32})\/([a-f0-9]{64})\.(png|jpg)$/;
+const cdnArtworkPath = /^\/media\/([a-f0-9]{32})\/([a-f0-9]{32})\/([a-f0-9]{32})\/delivery\/artwork\/(rel_[a-f0-9]{32})\/([a-f0-9]{64})\/poster\.(png|jpg)$/;
 const notFound = () => new RepositoryError('NOT_FOUND', 'Route not found');
 
 type StoredRelease = { id: string; sequence: number; sha256: string; manifest_bytes: string;
@@ -85,10 +86,11 @@ export class PublicReleaseResolver {
     if (assets.rows.length !== ids.length) throw notFound();
     const current = new Map(assets.rows.map(asset => [asset.id, asset]));
     const managedArtworkIds = manifest.data.media.flatMap(media => {
-      if (media.kind !== 'artwork' || !media.url.includes('/api/public-artwork/')) return [];
+      if (media.kind !== 'artwork') return [];
       const record = current.get(media.id);
       const parsed = mediaAssetSchema.safeParse(record?.record);
-      if (!parsed.success || parsed.data.location.type !== 'private_object') throw notFound();
+      if (!parsed.success) throw notFound();
+      if (parsed.data.location.type !== 'private_object') return [];
       return [parsed.data.location.objectId];
     });
     const privateArtwork = managedArtworkIds.length ? await this.projects.pool.query<{
@@ -116,8 +118,9 @@ export class PublicReleaseResolver {
         ['unknown', 'revoked'].includes(source.data.permission.retrieval) ||
         ['unknown', 'revoked'].includes(source.data.permission.tvDisplay) ||
         (media.kind === 'artwork' && parsed.data.location.type === 'private_object' &&
-          !media.url.includes('/api/public-artwork/'))) throw notFound();
-      if (media.kind === 'artwork' && media.url.includes('/api/public-artwork/')) {
+          !media.url.includes('/api/public-artwork/') && !media.url.includes('/delivery/artwork/'))) throw notFound();
+      if (media.kind === 'artwork' && parsed.data.location.type === 'private_object' &&
+        media.url.includes('/api/public-artwork/')) {
         const url = new URL(media.url);
         const match = artworkPath.exec(url.pathname);
         const object = parsed.data.location.type === 'private_object' ? artworkObjects.get(parsed.data.location.objectId) : undefined;
@@ -126,6 +129,18 @@ export class PublicReleaseResolver {
           match[1] !== deploymentId || match[2] !== row.id || match[3] !== media.id ||
           media.url !== this.artworkDelivery.url(match[1]!, match[2]!, match[3]!, match[4]!,
             match[5] === 'png' ? 'image/png' : 'image/jpeg')) throw notFound();
+      }
+      if (media.kind === 'artwork' && parsed.data.location.type === 'private_object' &&
+        media.url.includes('/delivery/artwork/')) {
+        const url = new URL(media.url);
+        const match = cdnArtworkPath.exec(url.pathname);
+        const object = parsed.data.location.type === 'private_object' ? artworkObjects.get(parsed.data.location.objectId) : undefined;
+        const contentType = match?.[6] === 'png' ? 'image/png' : 'image/jpeg';
+        if (!this.artworkDelivery || !match || !object || object.sha256 !== match[5] ||
+          object.content_type !== contentType || match[1] !== row.creator_account_id.slice(3) ||
+          match[2] !== row.project_id.slice(3) || match[3] !== media.id.slice(3) ||
+          match[4] !== row.id || media.url !== this.artworkDelivery.deliveryUrl(row.creator_account_id,
+            row.project_id, row.id, media.id, match[5]!, contentType)) throw notFound();
       }
     }
     if (bound.some(binding => !current.has(binding.artworkAssetId) ||

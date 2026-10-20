@@ -71,7 +71,7 @@ const input = () => ({
 
 test('approved private thumbnail resolves only through a release-scoped managed URL', () => {
   const base = input();
-  const managedUrl = `https://studio.example.com/api/public-artwork/${base.deployment.id}/${base.releaseId}/${artworkId}/${'a'.repeat(64)}.jpg`;
+  const managedUrl = `https://media.example.org/media/${creatorAccountId.slice(3)}/${base.channel.id.slice(3)}/${artworkId.slice(3)}/delivery/artwork/${base.releaseId}/${'a'.repeat(64)}/poster.jpg`;
   const selected = { ...base,
     channel: { ...base.channel, content: [{ ...base.channel.content[0]!, artwork: 'assets/catalog-placeholder.png' }] },
     inventory: { ...base.inventory, mediaAssets: [base.inventory.mediaAssets[0]!, {
@@ -88,6 +88,12 @@ test('approved private thumbnail resolves only through a release-scoped managed 
     releaseId: nextReleaseId, releaseSequence: 2, previousReleaseId: base.releaseId,
     resolvedArtwork: new Map([[artworkId, nextUrl]]) });
   assert.equal(rollback.channel.content[0]?.artwork, nextUrl, 'rollback creates a new immutable artwork URL');
+  const legacyUrl = `https://studio.example.com/api/public-artwork/${base.deployment.id}/${base.releaseId}/${artworkId}/${'a'.repeat(64)}.jpg`;
+  const legacyRollback = projectApprovedManifest({ ...selected,
+    channel: { ...released.channel, content: [{ ...released.channel.content[0]!, artwork: legacyUrl }] },
+    releaseId: nextReleaseId, releaseSequence: 2, previousReleaseId: base.releaseId,
+    resolvedArtwork: new Map([[artworkId, nextUrl]]) });
+  assert.equal(legacyRollback.channel.content[0]?.artwork, nextUrl);
   assert.throws(() => projectApprovedManifest({ ...selected, inventory: { ...selected.inventory,
     mediaAssets: [selected.inventory.mediaAssets[0]!, { ...selected.inventory.mediaAssets[1]!, deliveryEligible: false }] },
   resolvedArtwork: new Map([[artworkId, managedUrl]]) }));

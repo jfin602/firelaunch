@@ -91,6 +91,35 @@ const setup = () => { const originals = new FakeS3(); const delivery = new FakeS
     originals as unknown as S3Client, delivery as unknown as S3Client,
     publisher as unknown as S3Client, operator as unknown as S3Client, async () => {}) }; };
 
+test('artwork uses an exact owner/release/hash CDN key and publisher-only immutable S3 write', async () => {
+  const { storage, delivery, publisher } = setup();
+  const releaseId = `rel_${'1'.repeat(32)}`;
+  const image = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 8, 1, 2, 3, 4, 5, 6, 0xff, 0xd9]);
+  const hash = sha(image);
+  const key = storage.artworkDeliveryKey(scope, releaseId, hash, 'image/jpeg');
+  const url = storage.publishedArtworkUrl(scope, releaseId, hash, 'image/jpeg');
+  assert.equal(url, `https://media.example.org/${key}`);
+  const uploadOnly = new S3MediaStorage(config, new FakeS3() as unknown as S3Client,
+    new FakeS3() as unknown as S3Client);
+  assert.throws(() => uploadOnly.publishedArtworkUrl(scope, releaseId, hash, 'image/jpeg'), /CloudFront publication unavailable/);
+  assert.equal(delivery.objects.size, 0, 'review only computes a URL');
+  assert.equal(await storage.publishVerifiedArtwork(scope, releaseId, image, hash, 'image/jpeg'), url);
+  assert.equal(await storage.publishVerifiedArtwork(scope, releaseId, image, hash, 'image/jpeg'), url);
+  assert.deepEqual(delivery.objects.get(key)?.body, image);
+  assert.equal(publisher.calls.filter(call => call.name === 'PutObjectCommand').length, 2);
+  assert.equal(delivery.calls.length, 0, 'control client cannot write a public object');
+  assert.throws(() => storage.artworkDeliveryKey(other, '../unsafe', hash, 'image/jpeg'));
+  await assert.rejects(storage.publishVerifiedArtwork(scope, releaseId, Buffer.from('wrong'), hash, 'image/jpeg'));
+  const record = delivery.objects.get(key)!;
+  record.sha = 'tampered';
+  await assert.rejects(storage.publishVerifiedArtwork(scope, releaseId, image, hash, 'image/jpeg'));
+  const nextRelease = `rel_${'2'.repeat(32)}`;
+  publisher.failNext = 'PutObjectCommand';
+  await assert.rejects(storage.publishVerifiedArtwork(scope, nextRelease, image, hash, 'image/jpeg'));
+  assert.equal(delivery.objects.has(storage.artworkDeliveryKey(scope, nextRelease, hash, 'image/jpeg')), false);
+  assert.deepEqual(delivery.objects.get(key)?.body, image, 'earlier release bytes remain untouched');
+});
+
 test('authenticated preview storage reads only bounded staged bytes with matching checksum', async () => {
   const { storage, delivery } = setup();
   const body = Buffer.from('#EXTM3U\n#EXT-X-VERSION:3\n');

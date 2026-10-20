@@ -157,6 +157,41 @@ export class S3MediaStorage {
     return `${scopePath(scope)}/delivery/${renditionId(setId)}/${versionSha256}/${outputName(name)}`;
   }
 
+  artworkDeliveryKey(scope: MediaScope, releaseId: string, sha256: string, contentType: 'image/png' | 'image/jpeg'): string {
+    if (!/^rel_[a-f0-9]{32}$/.test(releaseId) || !hex64.test(sha256) ||
+      !['image/png', 'image/jpeg'].includes(contentType)) reject('invalid artwork version');
+    return `${scopePath(scope)}/delivery/artwork/${releaseId}/${sha256}/poster.${contentType === 'image/png' ? 'png' : 'jpg'}`;
+  }
+
+  publishedArtworkUrl(scope: MediaScope, releaseId: string, sha256: string,
+    contentType: 'image/png' | 'image/jpeg'): string {
+    return new URL(this.artworkDeliveryKey(scope, releaseId, sha256, contentType), this.deliveryOrigin()).toString();
+  }
+
+  /** The caller owns approval and rights. Only the publisher role can create an immutable delivery object. */
+  async publishVerifiedArtwork(scope: MediaScope, releaseId: string, body: Buffer, sha256: string,
+    contentType: 'image/png' | 'image/jpeg'): Promise<string> {
+    const key = this.artworkDeliveryKey(scope, releaseId, sha256, contentType);
+    const url = this.publishedArtworkUrl(scope, releaseId, sha256, contentType);
+    if (!Buffer.isBuffer(body) || body.length < 12 || body.length > 1_000_000 || digest(body) !== sha256 ||
+      (contentType === 'image/png' && !(body.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) &&
+        body.subarray(-8, -4).toString('ascii') === 'IEND')) ||
+      (contentType === 'image/jpeg' && !(body[0] === 0xff && body[1] === 0xd8 && body[2] === 0xff &&
+        body.subarray(-2).equals(Buffer.from([0xff, 0xd9])))))
+      reject('artwork bytes or checksum differ');
+    try {
+      await this.requirePublisher().send(new PutObjectCommand({ Bucket: this.config.deliveryBucket, Key: key,
+        Body: body, ContentType: contentType, ContentLength: body.length, ServerSideEncryption: 'AES256',
+        ChecksumSHA256: checksum(sha256), IfNoneMatch: '*', CacheControl: 'public, max-age=60' }));
+    } catch (error) { if (!failure(error)) reject('S3 artwork publication failed'); }
+    const head = await this.request(() => this.requirePublisher().send(new HeadObjectCommand({
+      Bucket: this.config.deliveryBucket, Key: key, ChecksumMode: 'ENABLED' })));
+    if (head.ContentLength !== body.length || head.ContentType !== contentType || head.ServerSideEncryption !== 'AES256' ||
+      head.ChecksumType !== 'FULL_OBJECT' || head.ChecksumSHA256 !== checksum(sha256) || !head.ETag)
+      reject('published artwork metadata or checksum differs');
+    return url;
+  }
+
   publishedMasterUrl(scope: MediaScope, input: MediaRenditionSet): string {
     const set = mediaRenditionSetSchema.parse(input);
     if (set.revokedAt || set.creatorAccountId !== scope.creatorAccountId ||

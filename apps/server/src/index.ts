@@ -22,10 +22,10 @@ const mode = serverModeFromEnv(process.env, hostedRepository
 const repository = new ProjectRepository(process.env.FIRELAUNCH_DATA_DIR ?? '.firelaunch-data');
 const privateStore = hostedRepository ? privateObjectStoreFromEnv(process.env) : undefined;
 const privateObjects = hostedRepository && privateStore ? new PrivateObjectService(hostedRepository, privateStore) : undefined;
-const managedArtwork = hostedRepository && privateStore && process.env.FIRELAUNCH_PUBLIC_ORIGIN?.startsWith('https://')
-  ? new ManagedArtworkDelivery(hostedRepository.pool, privateStore, process.env.FIRELAUNCH_PUBLIC_ORIGIN) : undefined;
 const mediaStorage = hostedRepository && process.env.FIRELAUNCH_MEDIA_AWS_REGION
   ? mediaStorageFromEnv(process.env) : undefined;
+const managedArtwork = hostedRepository && privateStore && mediaStorage && process.env.FIRELAUNCH_PUBLIC_ORIGIN?.startsWith('https://')
+  ? new ManagedArtworkDelivery(hostedRepository.pool, privateStore, process.env.FIRELAUNCH_PUBLIC_ORIGIN, mediaStorage) : undefined;
 const managed = hostedRepository && mediaStorage && process.env.FIRELAUNCH_MEDIACONVERT_ACCOUNT && process.env.FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN
   ? await (async () => {
     const config = mediaConvertConfigFromEnv(process.env);
