@@ -1,6 +1,6 @@
 # ADR 0014 — Per-video supporting media, immediate artwork and optional subtitles
 
-Status: OWNER ACCEPTED FOR DOCUMENTATION (2026-10-19 US Central) / NOT IMPLEMENTED OR EXTERNALLY QUALIFIED.
+Status: OWNER ACCEPTED DESIGN (2026-10-19 US Central); **PARTIAL SOURCE IMPLEMENTATION OBSERVED 2026-10-20; EXTERNAL ACCEPTANCE AND FINAL DELIVERY ARCHITECTURE NOT QUALIFIED.**
 Supersedes: no earlier ADR; complements ADR 0009 immutable releases, 0011 managed VOD and 0013 free/protected access.
 Implementation: [c6-supporting-media](../tasks/c6-supporting-media/README.md). Root correction version 0.6.7 unchanged.
 
@@ -17,6 +17,14 @@ FireLaunch already stores uploaded/generated thumbnails as private `MediaAsset(k
 5. **Optional subtitle foundation**: a subtitle track is a separate child of the parent video with stable ID, creator/project/video identity, normalized BCP 47 language tag, canonical validated UTF-8 WebVTT (.vtt), original private object identity, checksum/size, version/replace/revoke state and optional rights/provenance as appropriate. Missing captions MUST NOT block upload, encode, catalog draft, preview, FREE publication or native export. Reject HTML/script, external URLs, path traversal, malformed cues, excessive file size and duplicate same-language active tracks. Support optional private storage and a minimal Details-page uploader if safely bounded; preserve multiple languages and replacement semantics. SRT import/conversion is deferred, not silently supported.
 6. **Subtitle delivery and Vega playback are deferred**. Do not add subtitle fields to strict PublishedManifest v1/ChannelSpec/native template until a versioned backwards-compatible contract and real Vega VirtualDevice caption support are independently designed and qualified. A private .vtt upload is NOT a claim that TV subtitles work. Later public .vtt requires exact immutable delivery scope, viewer policy and MIME `text/vtt`, explicit release approval and a native client capable of selecting tracks.
 7. **Deadline and precedence**: P0 fix saved/new thumbnail display everywhere and P0 implement locally tested, rights-safe managed artwork public-promotion code; P1 optional subtitle data/storage/UI if bounded, but prioritize October 23 noon video pipeline/native export. Never let absent subtitles block video publication. No paid MediaConvert tests or cloud operations from this correction's runner prompts.
+
+## October 20 source-implementation variance (provisional; not a blanket ADR reversal)
+
+The reviewed GitHub `main` at `b0d2897eb79c6ffafe0ac394f561550cad9c0826` contains `apps/server/src/managed-artwork.ts`, `public-resolver.ts`, publication integration and tests. In that source, approved artwork is verified against an owner-scoped private object and copied to a **release-scoped immutable private-object key**, then resolved by an explicitly release-bound **Studio HTTPS** `/api/public-artwork/<deployment>/<release>/<asset>/<sha>.(jpg|png)` URL. The public resolver checks release membership, current media rights, revocation and canonical hashes. This differs materially from Decision 4's proposed **CloudFront exact JPEG/PNG allowlist and delivery-key publisher**; it is not evidence that CloudFront image policy has been activated. The old approved free HLS policy remains a separate security boundary.
+
+**Disposition:** retain the owner's intended invariants (separate private vs explicitly approved public artwork, immutable owner/release binding, no arbitrary public image wildcard, fail-closed rights/revocation). Treat this route as a candidate simplification **pending** focused review of browser and external Vega HTTPS reachability, public-only exposure and Nginx routing, owner/foreign/revoked/unknown negative responses, authorization changes over time, object survival/rollback, request volume/performance, and approved release manifest/TV compatibility. Only after those pass should a later explicit decision formally replace the CloudFront-specific implementation requirement. If the Studio route fails these acceptance criteria, retain/fix the narrow approved CloudFront proposal rather than weakening media authorization. No new CDN/IAM/CloudFormation change or public creator publication is authorized by this note.
+
+This is an implementation reconciliation, **not** a completed `c6-supporting-media` P6 closeout, independent device qualification, caption support or Q2 F7 GREEN. See [October 20 task routing](../tasks/c6-supporting-media/README.md) and [current state](../CURRENT-STATE.md).
 
 ## Consequences
 
