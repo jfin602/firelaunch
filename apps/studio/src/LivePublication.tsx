@@ -169,6 +169,7 @@ export function LivePublication({ project, hosted, onPublished, simple = false }
       {project.revision !== status.revisions.channel || catalog.revision !== status.revisions.catalog ? <p role="alert">Draft changed elsewhere. Refresh before approval.</p> : null}
       {!simple && <p>Deployment: {deployment.appName} · {deployment.packageId}. Changes to the native package require a separate qualified build.</p>}
       <h3>{simple ? 'Review channel items' : 'Review TV content bindings'}</h3><p>{simple ? 'Every item needs an approved source, thumbnail and playable media where required. Processing or revoked videos cannot go live.' : 'Choose owned catalog items and rights-cleared artwork and playback. Managed video appears only after verified upload and ready HLS processing. Uploading, failed, revoked, or unverified media blocks approval. Server readiness also checks that the draft URL matches the verified CloudFront master. Writing may be informational without playback.'}</p>
+      <p>Uploaded thumbnails are private in Studio. Selecting an approved thumbnail prepares it for review; only your confirmed channel publication copies eligible artwork to an immutable public poster. Public poster access also requires the approved CDN policy.</p>
       {project.spec.content.map(content => {
         const choice = choiceFor(content.id);
         const item = itemById.get(choice.catalogItemId);

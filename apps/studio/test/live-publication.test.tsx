@@ -56,6 +56,7 @@ test('writing release requires explicit approval and confirmation; history reloa
   try {
     const mounted = render(createElement(LivePublication, { project, hosted: true }));
     await screen.findByText('No live releases yet.');
+    assert.ok(screen.getByText(/Uploaded thumbnails are private in Studio/));
     assert.deepEqual(calls, []);
     assert.equal((screen.getByRole('button', { name: 'Approve draft for live review' }) as HTMLButtonElement).disabled, true);
     fireEvent.change(screen.getByLabelText('Reviewed catalog item'), { target: { value: itemId } });

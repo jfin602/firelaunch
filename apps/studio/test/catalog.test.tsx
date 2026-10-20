@@ -44,7 +44,7 @@ test('catalog-first Studio reviews import, preserves draft books and lets creato
     throw new Error(`Unexpected ${method} ${url}`);
   }) as typeof fetch;
   try {
-    render(createElement(Catalog, { projectId, hosted: true }));
+    render(createElement(Catalog, { projectId, accountId: owner, hosted: true }));
     await screen.findByRole('heading', { name: 'Build your channel library.' });
     fireEvent.click(await screen.findByText('Import or enter other catalog content'));
     fireEvent.change(await screen.findByRole('combobox', { name: 'Creator type' }), { target: { value: 'writing' } });
@@ -125,7 +125,7 @@ test('Studio file preview belongs to its source and rejects a later oversized fi
     return json(inventory);
   }) as typeof fetch;
   try {
-    render(createElement(Catalog, { projectId, hosted: true }));
+    render(createElement(Catalog, { projectId, accountId: owner, hosted: true }));
     const sourceSelect = await screen.findByRole('combobox', { name: 'Select source' });
     fireEvent.change(sourceSelect, { target: { value: sourceId } });
     const valid = Object.assign(new dom.window.File(['externalId,kind,title\na,audio,Episode'], 'audio.csv', { type: 'text/csv' }),
@@ -152,12 +152,14 @@ test('library cards keep artwork provenance, rights truth and image fallback', a
   const sourceRecord = (value: string, title: string, artworkUrl: string) => ({ sourceId, externalId: identifier(value), observedAt: new Date().toISOString(), metadata: { title, artworkUrl } });
   inventory.sources = [{ ...common, id: sourceId, type: 'creator_upload', state: 'discovered', permission: { retrieval: 'unknown', tvDisplay: 'unknown' } }];
   inventory.items = [
-    { ...common, id: itemId, kind: 'video', creatorOverrides: { title: 'Creator cut', artworkUrl: 'https://art.example/creator.jpg', editedAt: new Date().toISOString() }, sourceRecord: sourceRecord('film-1', 'Source cut', 'https://art.example/source.jpg'), externalIdentifiers: [identifier('film-1')], mediaAssetIds: [`ma_${'f'.repeat(32)}`] },
+    { ...common, id: itemId, kind: 'video', creatorOverrides: { title: 'Creator cut', artworkUrl: 'https://art.example/creator.jpg', editedAt: new Date().toISOString() }, sourceRecord: sourceRecord('film-1', 'Source cut', 'https://art.example/source.jpg'), externalIdentifiers: [identifier('film-1')], mediaAssetIds: [`ma_${'f'.repeat(32)}`, `ma_${'6'.repeat(32)}`, `ma_${'7'.repeat(32)}`] },
     { ...common, id: videoId, kind: 'video', sourceRecord: sourceRecord('film-2', 'Private film', 'https://bucket.s3.amazonaws.com/private.jpg'), externalIdentifiers: [identifier('film-2')], mediaAssetIds: [`ma_${'9'.repeat(32)}`] }
   ];
   inventory.collections = [{ schemaVersion: 1, creatorAccountId: owner, projectId, id: `col_${'f'.repeat(32)}`, title: 'Films', kind: 'series', itemIds: [itemId] }];
   inventory.mediaAssets = [
     { schemaVersion: 1, creatorAccountId: owner, projectId, id: `ma_${'f'.repeat(32)}`, catalogItemId: itemId, kind: 'video', location: { type: 'managed_hls' }, deliveryEligible: false, tvDisplayRights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_display', assertedAt: new Date().toISOString() }, tvPlaybackRights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_playback', assertedAt: new Date().toISOString() } },
+    { schemaVersion: 1, creatorAccountId: owner, projectId, id: `ma_${'6'.repeat(32)}`, catalogItemId: itemId, kind: 'artwork', location: { type: 'https', url: 'https://art.example/old.jpg' }, deliveryEligible: true, tvDisplayRights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_display', assertedAt: new Date().toISOString() }, tvPlaybackRights: { status: 'unknown', basis: 'none', permittedUse: 'none' } },
+    { schemaVersion: 1, creatorAccountId: owner, projectId, id: `ma_${'7'.repeat(32)}`, catalogItemId: itemId, kind: 'artwork', location: { type: 'private_object', objectId: `ma_${'5'.repeat(32)}` }, deliveryEligible: false, tvDisplayRights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_display', assertedAt: new Date().toISOString() }, tvPlaybackRights: { status: 'unknown', basis: 'none', permittedUse: 'none' } },
     { schemaVersion: 1, creatorAccountId: owner, projectId, id: `ma_${'9'.repeat(32)}`, catalogItemId: videoId, kind: 'artwork', location: { type: 'private_object', objectId: `ma_${'8'.repeat(32)}` }, deliveryEligible: false, tvDisplayRights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_display', assertedAt: new Date().toISOString() }, tvPlaybackRights: { status: 'unknown', basis: 'none', permittedUse: 'none' } }
   ];
   globalThis.fetch = (async input => {
@@ -165,9 +167,10 @@ test('library cards keep artwork provenance, rights truth and image fallback', a
     return json({ uploadId: null, uploadState: null, processingAvailable: false, processing: null });
   }) as typeof fetch;
   try {
-    render(createElement(Catalog, { projectId, hosted: true }));
+    render(createElement(Catalog, { projectId, accountId: owner, hosted: true }));
     const creator = await screen.findByRole('button', { name: 'Select Creator cut · video' });
     assert.equal(creator.querySelector('img')?.getAttribute('src'), 'https://art.example/creator.jpg');
+    assert.match(creator.textContent ?? '', /Private artwork saved · publication review required/);
     assert.match(creator.textContent ?? '', /video · Films/);
     assert.match(creator.textContent ?? '', /TV display cleared · playback cleared/);
     const privateFilm = screen.getByRole('button', { name: 'Select Private film · video' });

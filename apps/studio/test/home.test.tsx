@@ -235,7 +235,8 @@ test('Home and reopened video popup show the saved owned image before encoding',
     await waitFor(() => assert.equal(card.querySelector('.home-art img')?.getAttribute('src'), 'blob:https://studio.example/saved'));
     fireEvent.click(card);
     fireEvent.click((await screen.findByRole('dialog')).querySelector('.video-workspace-page-buttons button')!);
-    await waitFor(() => assert.equal(screen.getByRole('dialog').querySelector('.video-workspace-art img')?.getAttribute('src'), 'blob:https://studio.example/saved'));
+    await waitFor(() => assert.equal(screen.getByRole('dialog').querySelector('.video-thumbnail-art img')?.getAttribute('src'), 'blob:https://studio.example/saved'));
+    assert.equal(screen.getByRole('dialog').querySelectorAll('img').length, 1, 'one saved poster in the video popup');
     assert.doesNotMatch(document.body.innerHTML, /private-token|private-objects/);
   } finally { mock.restore(); URL.createObjectURL = create; URL.revokeObjectURL = revoke; }
 });

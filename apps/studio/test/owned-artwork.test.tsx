@@ -39,6 +39,8 @@ test('owned saved art uses header capability, survives reload, and revokes blob 
     view.rerender(createElement(OwnedArtwork, { ...props, accountId: foreign }));
     await waitFor(() => assert.ok(revoked.includes('blob:https://studio.example/owned-art')));
     assert.ok(screen.getByLabelText('Artwork unavailable'));
+    view.rerender(createElement(OwnedArtwork, { ...props, accountId: null, assets: [] }));
+    assert.equal(view.container.querySelector('img'), null, 'session loss must hide legacy artwork as well');
     view.rerender(createElement(OwnedArtwork, { ...props, assets: [] }));
     assert.equal(view.container.querySelector('img')?.getAttribute('src'), 'https://art.example/legacy.jpg');
     fireEvent.error(view.container.querySelector('img')!);
@@ -65,6 +67,10 @@ test('local custom thumbnail takes priority without a private request', async ()
     const view = render(createElement(OwnedArtwork, { item, assets: [asset], projectId: project, accountId: owner, className: 'art', fallback, localFile: file }));
     await waitFor(() => assert.equal(view.container.querySelector('img')?.getAttribute('src'), 'blob:https://studio.example/custom'));
     assert.equal(calls, 0);
+    view.rerender(createElement(OwnedArtwork, { item, assets: [asset], projectId: project, accountId: null, className: 'art', fallback, localFile: file }));
+    await waitFor(() => assert.equal(view.container.querySelector('img'), null));
+    view.rerender(createElement(OwnedArtwork, { item, assets: [asset], projectId: project, accountId: foreign, className: 'art', fallback, localFile: file }));
+    await waitFor(() => assert.equal(view.container.querySelector('img'), null));
   } finally { cleanup(); globalThis.fetch = previousFetch; URL.createObjectURL = create; URL.revokeObjectURL = revoke; }
 });
 
@@ -88,4 +94,34 @@ test('switching account aborts an in-flight capability and never paints its late
     await waitFor(() => assert.equal(view.container.querySelector('img'), null));
     assert.equal(created, 0);
   } finally { cleanup(); globalThis.fetch = previousFetch; URL.createObjectURL = create; }
+});
+
+test('replacing the linked thumbnail paints the new private image and revokes the old blob', async () => {
+  const previousFetch = globalThis.fetch, create = URL.createObjectURL, revoke = URL.revokeObjectURL;
+  const nextAssetId = `ma_${'2'.repeat(32)}`, nextObjectId = `ma_${'3'.repeat(32)}`;
+  const requested: string[] = [], revoked: string[] = [];
+  let created = 0;
+  URL.createObjectURL = () => `blob:https://studio.example/art-${++created}`;
+  URL.revokeObjectURL = url => { revoked.push(url); };
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input);
+    requested.push(path);
+    if (path.endsWith('/capability')) return json({ capability: 'header-only' });
+    assert.equal(new Headers(init?.headers).get('x-private-capability'), 'header-only');
+    return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { headers: { 'content-type': 'image/jpeg' } });
+  }) as typeof fetch;
+  try {
+    const props = { item, assets: [asset], projectId: project, accountId: owner, className: 'art', fallback };
+    const view = render(createElement(OwnedArtwork, props));
+    await waitFor(() => assert.equal(view.container.querySelector('img')?.getAttribute('src'), 'blob:https://studio.example/art-1'));
+    view.rerender(createElement(OwnedArtwork, { ...props, item: { ...item, mediaAssetIds: [assetId, nextAssetId] },
+      assets: [asset, { ...asset, id: nextAssetId, location: { type: 'private_object', objectId: nextObjectId } }] }));
+    await waitFor(() => assert.equal(view.container.querySelector('img')?.getAttribute('src'), 'blob:https://studio.example/art-2'));
+    assert.deepEqual(revoked, ['blob:https://studio.example/art-1']);
+    assert.equal(view.container.querySelectorAll('img').length, 1);
+    assert.ok(requested.some(path => path.includes(nextObjectId)));
+    assert.doesNotMatch(view.container.innerHTML, /header-only|private-objects/);
+    view.unmount();
+    assert.ok(revoked.includes('blob:https://studio.example/art-2'));
+  } finally { cleanup(); globalThis.fetch = previousFetch; URL.createObjectURL = create; URL.revokeObjectURL = revoke; }
 });
