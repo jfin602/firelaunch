@@ -1,10 +1,21 @@
 # p6-live-vod - Real managed HLS publication and Vega qualification
 
-Status: OWNER APPROVED MANUAL PLAN; 2026-10-18 owner reports a successful encode, but Q1 completion and Q2/Q3 live qualification are NOT independently confirmed by this document. See actual task closeouts.
+Status (2026-10-20 reconciliation): **Q1/real HLS and approved Q2 free release #1 evidenced; F7 PARTIAL / Q2 OVERALL NOT GREEN; Q3 INSTALLED VEGA NOT QUALIFIED.** P6 c6-usability subsequently deployed updated Studio and enabled existing ingest queue/event rule with zero new paid jobs. Earlier paragraphs describe dated starting conditions; prefer current closeouts.
 Date: 2026-10-17 UTC
 Type: Three MANUAL GPT-6 Sol High qualification checkpoints, not a runner stack.
 Version: Existing running `0.6.7` stays unchanged for preparation and correction; historical P6 P8 proposed `0.6.8` must not be advanced without a separately reviewed version/closeout decision.
 Authority: [hybrid access ADR 0013](../../decisions/0013-hybrid-video-access.md), [managed provider ADR 0011](../../decisions/0011-aws-vod-foundation.md), [qualification matrix](qualification-matrix.md).
+
+## October 20 deadline routing — use existing release, do not re-run Q1/Q2
+
+Owner delivery is **Friday 2026-10-23 at 12:00 PM America/Chicago (CDT)**. See [current state](../../CURRENT-STATE.md), [updated roadmap](../../roadmap/mvp-roadmap.md), [Q2 closeout](Q2-closeout.md) and [c6-usability P6 closeout](../c6-usability/closeout.md) before any operation.
+
+- The earlier Q1/F7 bounded MediaConvert evidence demonstrates an actual completed managed job and verified private READY HLS. An explicit creator FREE publication and public CloudFront/video release #1 also exist. **Do not** repeat old Q1 encode or Q2 F5/F6 public/owner loops merely because this original plan still mentions them; fresh long-form client processing remains unqualified and is not necessary for the first emulator export proof.
+- The `c6-usability` P6 protected release deployed `0.6.7`; the existing client MediaConvert queue is now recorded **ACTIVE** and completion rule **ENABLED** as of 2026-10-20. The older PAUSED/DISABLED statements in this file are historic Q1/F7 snapshots. P6 incurred no new paid encode or public mutation. Verify external state before any operator action.
+- Media/creative overlap is now the immediate short repair stream, with `b0d2897` private preview/thumb/public-artwork source work requiring integration and external release verification; [c6-supporting-media](../c6-supporting-media/README.md) details the divergence from the original CloudFront artwork design.
+- **Critical Q3 track now starts with packaging feasibility**, not another AWS approval loop: inspect hosted `Delivery.tsx` isolated-build limitation, build a real creator/deployment-bound downloadable VPKG, and install on an independent Vega VirtualDevice. Reuse the existing explicit approved FREE release #1 and public-only HTTPS resolver for a read-only device smoke where rights/current access still permit it. If it is revoked, unavailable or insufficient, stop that test rather than silently replacing it or publishing someone else's content.
+- **Evidence separation:** early device build/install/read-only smoke may proceed without falsely marking F7/Q2 GREEN; it does **not** waive F7 revocation/security controls, creator approvals, or all historic Q3 v1/v2/v3/LKG checks. Record a limited **delivery/emulator acceptance** result separately from strict full Q3/P6 qualification. A real security/access leak is a blocker; missing duplicate evidence does not justify paid reprocessing.
+- No `/docs-apply` authorization itself permits a paid test encode, live creator publication, S3 cleanup, CDN/IAM broadening or irreversible infrastructure changes. Subtitles, advanced merchandising and entitlement/paywall work are excluded from core October 23 delivery.
 
 ## Purpose and trusted starting evidence
 
