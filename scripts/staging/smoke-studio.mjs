@@ -60,24 +60,29 @@ try {
   assert.ok(port, 'Chrome debugging port unavailable');
   const target = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find(item => item.type === 'page');
   assert.ok(target, 'Chrome page unavailable');
-  const socket = new WebSocket(target.webSocketDebuggerUrl);
-  await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
   let nextId = 0;
-  const pending = new Map();
-  const errors = [];
-  socket.onmessage = event => {
-    const message = JSON.parse(event.data);
-    if (message.id && pending.has(message.id)) { const { resolve, reject } = pending.get(message.id); pending.delete(message.id); message.error ? reject(new Error(message.error.message)) : resolve(message.result); }
-    if (message.method === 'Runtime.exceptionThrown') errors.push(message.params.exceptionDetails.text + ': ' + (message.params.exceptionDetails.exception?.description ?? ''));
-    if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') errors.push(message.params.args.map(arg => arg.value ?? arg.description).join(' '));
-    if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
-      const entry = message.params.entry;
-      if (!(entry.url?.endsWith('/api/auth/session') && entry.text.includes('401'))) errors.push(`${entry.url ?? ''} ${entry.text}`);
-    }
-  };
-  const send = (method, params = {}) => new Promise((resolve, reject) => { const id = ++nextId; pending.set(id, { resolve, reject }); socket.send(JSON.stringify({ id, method, params })); });
-  await Promise.all([send('Page.enable'), send('Runtime.enable'), send('Log.enable')]);
-  async function check(label, expected) {
+  async function connect(page) {
+    const socket = new WebSocket(page.webSocketDebuggerUrl);
+    await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
+    const pending = new Map();
+    const errors = [];
+    socket.onmessage = event => {
+      const message = JSON.parse(event.data);
+      if (message.id && pending.has(message.id)) { const { resolve, reject } = pending.get(message.id); pending.delete(message.id); message.error ? reject(new Error(message.error.message)) : resolve(message.result); }
+      if (message.method === 'Runtime.exceptionThrown') errors.push(message.params.exceptionDetails.text + ': ' + (message.params.exceptionDetails.exception?.description ?? ''));
+      if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') errors.push(message.params.args.map(arg => arg.value ?? arg.description).join(' '));
+      if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
+        const entry = message.params.entry;
+        if (!(entry.url?.endsWith('/api/auth/session') && entry.text.includes('401'))) errors.push(`${entry.url ?? ''} ${entry.text}`);
+      }
+    };
+    const send = (method, params = {}) => new Promise((resolve, reject) => { const id = ++nextId; pending.set(id, { resolve, reject }); socket.send(JSON.stringify({ id, method, params })); });
+    await Promise.all([send('Page.enable'), send('Runtime.enable'), send('Log.enable')]);
+    return { socket, send, errors };
+  }
+  const first = await connect(target);
+  async function check(page, label, expected) {
+    const { send, errors } = page;
     errors.length = 0;
     await send('Page.navigate', { url: origin });
     let state;
@@ -92,10 +97,16 @@ try {
     assert.ok(state?.visible && state.root.includes(expected), `${label}: visible UI missing`);
     assert.equal(errors.length, 0, `${label}: browser console/runtime errors`);
   }
-  await check('signed-out', 'Sign in to FireLaunch');
+  await check(first, 'signed-out', 'Sign in to FireLaunch');
   signedIn = true;
-  await check('signed-in', 'Startup smoke channel');
-  socket.close();
+  await check(first, 'signed-in', 'Startup smoke channel');
+  const { targetId } = await first.send('Target.createTarget', { url: 'about:blank' });
+  const freshTarget = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find(item => item.id === targetId);
+  assert.ok(freshTarget, 'Fresh Chrome tab unavailable');
+  const fresh = await connect(freshTarget);
+  await check(fresh, 'fresh signed-in tab', 'Startup smoke channel');
+  fresh.socket.close();
+  first.socket.close();
   console.log('Production-built Studio browser smoke passed');
 } finally {
   if (chrome && chrome.exitCode === null) {
