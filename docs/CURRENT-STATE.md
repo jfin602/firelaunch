@@ -64,3 +64,7 @@ The `/docs-apply` and prompt-authoring approvals **do not** authorize paid Media
 5. Dated closeouts and older prompts: immutable historical scope and evidence. A historical command, provider, path, qualification or phase label is not active merely because it appears in an old file.
 
 Reconcile the actual local checkout (git status/branch, uncommitted changes) and live AWS/staging state before executing commands. No documentation state should be treated as proof that the host was inspected after its evidence timestamp.
+
+## 2026-10-19 owner-approved supporting-media design (NOT implemented)
+
+[c6-supporting-media](tasks/c6-supporting-media/README.md) and [ADR 0014](decisions/0014-video-supporting-media.md) specify immediate thumbnail display through all private video states, safe reuse of already uploaded private artwork, rights-checked immutable public poster delivery, and optional private WebVTT subtitle-track foundation in the same logical video media aggregate. No new bucket or destructive migration; existing uploaded thumbnail private objects stay linked in place. Existing strict published-manifest v1 and native Vega subtitle playback remain unchanged until future separate compatibility proof. This is planning/prompt-authoring authority only, not a live asset, AWS/CDN policy, approval, software deploy or MediaConvert result. Q2 F7 remains PARTIAL/NOT GREEN and Q3 UNSTARTED per dated evidence; source and current runtime must be rechecked before execution.
