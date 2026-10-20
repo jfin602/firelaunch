@@ -1,0 +1,9 @@
+# P4 private subtitle foundation handoff
+
+Local source change only. Root version remains 0.6.7. This is not a staging migration or TV caption qualification.
+
+- Migration 014 adds a private track history table and permits `text/vtt` in the existing private-object table. Its down script refuses rollback while track history exists and retains the widened MIME constraint. Migration applies on a future hosted server startup, so staging schema recovery and backup review need separate operator approval before deployment.
+- Owner-scoped, CSRF-protected `video-subtitles` endpoints upload, list and remove tracks for a validated video item/asset. New uploads and replacements keep old object records. Existing private-object quota, storage and download capability route apply. Generic private-object upload rejects `text/vtt`; upload must pass the WebVTT validator and parent checks.
+- A small optional Details control is available after a video item and video asset exist. The control says private captions do not yet appear in the TV app. Absent tracks never enter ChannelSpec or PublishedManifest v1 and do not affect draft, encode, publication or native export.
+- P5 regression inputs: upload valid English and Spanish, replacement with matching version, duplicate active language denial, stale version denial, remove/history retention, invalid UTF-8/header/cues/URL/markup/size denial, foreign account/project and missing CSRF denial. Recheck no-subtitle upload/draft/release/export, exact v1 manifest compatibility, Studio Details reload, and private-object quota. Real PostgreSQL/API integration tests need a disposable `FIRELAUNCH_TEST_DATABASE_URL`; none was configured in this P4 run.
+- Native Vega caption selection, public `.vtt` delivery, CloudFront policy and live browser/device compatibility remain deferred.

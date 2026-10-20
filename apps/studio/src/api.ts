@@ -112,6 +112,24 @@ export async function uploadPrivateMedia(id: string, file: File): Promise<{ id: 
   return await request(`/${id}/private-objects`, json({ kind: 'media', contentType: file.type, contentBase64: btoa(binary) })) as { id: string; contentType: string };
 }
 
+export type SubtitleTrack = { id: string; itemId: string; videoAssetId: string; objectId: string; language: string; format: 'text/vtt'; byteSize: number; sha256: string; version: number; state: 'active' };
+export async function listVideoSubtitles(projectId: string, itemId: string, videoAssetId: string): Promise<SubtitleTrack[]> {
+  const result = await request(`/${projectId}/video-subtitles/${itemId}/${videoAssetId}`) as { tracks: SubtitleTrack[] };
+  return result.tracks;
+}
+export async function uploadVideoSubtitle(projectId: string, itemId: string, videoAssetId: string, language: string, file: File,
+  prior?: SubtitleTrack): Promise<SubtitleTrack> {
+  if (file.size < 15 || file.size > 262144 || !file.name.toLowerCase().endsWith('.vtt')) throw new ApiError('Choose a WebVTT .vtt file under 256 KB.', 400);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return await request(`/${projectId}/video-subtitles`, json({ itemId, videoAssetId, language, contentBase64: btoa(binary),
+    expectedVersion: prior?.version ?? 0, ...(prior ? { replaceTrackId: prior.id } : {}) })) as SubtitleTrack;
+}
+export async function removeVideoSubtitle(projectId: string, track: SubtitleTrack): Promise<void> {
+  await request(`/${projectId}/video-subtitles/${track.id}`, { ...json({ expectedVersion: track.version }), method: 'DELETE' });
+}
+
 export async function uploadPrivateEvidence(id: string, file: File): Promise<{ id: string; contentType: string }> {
   if (file.size > 700_000 || !['application/pdf', 'image/png', 'image/jpeg'].includes(file.type))
     throw new ApiError('Choose a PDF, PNG or JPEG evidence file under 700 KB.', 400);

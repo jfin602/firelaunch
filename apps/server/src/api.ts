@@ -22,10 +22,14 @@ import type { ManagedArtworkDelivery } from './managed-artwork.js';
 import type { MediaUploadService } from './media-upload-service.js';
 import type { S3MediaStorage } from './media-storage.js';
 import { PrivateVideoPreview } from './private-video-preview.js';
+import { VideoSubtitles } from './video-subtitles.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
 const privatePutSchema = z.strictObject({ kind: z.enum(['media', 'evidence']), contentType: z.string().max(100), contentBase64: z.string().min(1).max(1_000_000).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) });
+const subtitleUploadSchema = z.strictObject({ itemId: z.string().regex(/^ci_[a-f0-9]{32}$/), videoAssetId: z.string().regex(/^ma_[a-f0-9]{32}$/),
+  language: z.string().min(2).max(35), contentBase64: z.string().min(1).max(350_000).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/),
+  expectedVersion: z.number().int().nonnegative(), replaceTrackId: z.string().regex(/^st_[a-f0-9]{32}$/).optional() });
 const MAX_BODY_BYTES = 1_000_000;
 const catalogWriteSchema = z.strictObject({ expectedRevision: z.number().int().nonnegative(), record: z.record(z.string(), z.unknown()) });
 const catalogDeleteSchema = z.strictObject({ expectedRevision: z.number().int().nonnegative() });
@@ -88,6 +92,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
   const publicResolver = mode?.mode === 'hosted' && hostedRepository ? new PublicReleaseResolver(hostedRepository, managedArtwork) : null;
   const privatePreview = hostedRepository && catalog && mediaPublisher
     ? new PrivateVideoPreview(hostedRepository, catalog, mediaPublisher) : null;
+  const subtitles = hostedRepository && privateObjects ? new VideoSubtitles(hostedRepository, privateObjects) : null;
   return createServer(async (request, response) => {
     try {
       if (request.url?.startsWith('/api/public-artwork/') || request.url === '/api/public-artwork') {
@@ -154,6 +159,21 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
               if (segments[5] === 'abort') { respond(response, 200, await mediaUploads.abort(principal, projectId, uploadId, await body(request))); return; }
             }
             respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return;
+          }
+          if (segments[3] === 'video-subtitles' && subtitles) {
+            if (url.search) throw new RepositoryError('NOT_FOUND', 'Route not found');
+            const projectId = segments[2]!;
+            if (segments.length === 4 && request.method === 'POST') {
+              respond(response, 201, await subtitles.upload(principal, projectId, subtitleUploadSchema.parse(await body(request)))); return;
+            }
+            if (segments.length === 6 && request.method === 'GET') {
+              respond(response, 200, { tracks: await subtitles.list(principal, projectId, segments[4]!, segments[5]!) }); return;
+            }
+            if (segments.length === 5 && request.method === 'DELETE') {
+              const input = z.strictObject({ expectedVersion: z.number().int().positive() }).parse(await body(request));
+              respond(response, 200, await subtitles.remove(principal, projectId, segments[4]!, input.expectedVersion)); return;
+            }
+            throw new RepositoryError('NOT_FOUND', 'Route not found');
           }
           if (segments[3] === 'publication' && publication) {
             if (url.search || segments.length !== 6) { respond(response, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' } }); return; }
@@ -249,6 +269,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             if (segments.length === 4 && !url.search && request.method === 'POST') {
               await hostedRepository.read(principal, projectId);
               const input = privatePutSchema.parse(await body(request));
+              if (input.contentType === 'text/vtt') throw new RepositoryError('INVALID_INPUT', 'Use the subtitle track endpoint');
               respond(response, 201, await privateObjects.put(principal, projectId, input.kind, input.contentType, Buffer.from(input.contentBase64, 'base64'))); return;
             }
             if (segments.length === 5 && !url.search) {

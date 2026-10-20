@@ -20,7 +20,7 @@ export interface PrivateObjectStore {
 const keySchema = z.string().regex(/^private\/[a-f0-9]{64}$/);
 const objectIdSchema = z.string().regex(/^(ma|ev)_[a-f0-9]{32}$/);
 const allowedTypes = {
-  media: ['image/png', 'image/jpeg', 'video/mp4', 'audio/mpeg'],
+  media: ['image/png', 'image/jpeg', 'video/mp4', 'audio/mpeg', 'text/vtt'],
   evidence: ['image/png', 'image/jpeg', 'application/pdf']
 } as const;
 const maximumBytes = 1_000_000;
@@ -33,6 +33,7 @@ function matchesContentType(contentType: string, content: Buffer): boolean {
   if (contentType === 'video/mp4') return content.length >= 12 && content.readUInt32BE(0) >= 8 && content.subarray(4, 8).toString('ascii') === 'ftyp';
   if (contentType === 'audio/mpeg') return content.subarray(0, 3).toString('ascii') === 'ID3' ||
     (content.length >= 4 && content[0] === 0xff && (content[1]! & 0xe0) === 0xe0 && (content[1]! & 0x06) !== 0);
+  if (contentType === 'text/vtt') return content.subarray(0, 6).toString('ascii') === 'WEBVTT';
   return false;
 }
 const digest = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
@@ -212,11 +213,14 @@ export class PrivateObjectService {
       await client.query('BEGIN');
       const locked = await client.query('SELECT 1 FROM private_objects WHERE id = $1 AND creator_account_id = $2 FOR UPDATE', [objectId, principal.accountId]);
       if (!locked.rowCount) throw missing();
+      const subtitle = await client.query('SELECT 1 FROM video_subtitle_tracks WHERE object_id = $1 AND project_id = $2 AND creator_account_id = $3', [objectId, projectId, principal.accountId]);
+      if (subtitle.rowCount) throw new RepositoryError('CONFLICT', 'Subtitle history retains this private object');
       await client.query('INSERT INTO private_object_garbage(object_key) VALUES ($1) ON CONFLICT DO NOTHING', [row.object_key]);
       await client.query('DELETE FROM private_objects WHERE id = $1 AND creator_account_id = $2', [objectId, principal.accountId]);
       await client.query('COMMIT');
-    } catch {
+    } catch (error) {
       await client.query('ROLLBACK');
+      if (error instanceof RepositoryError) throw error;
       await audit(this.pool, 'storage_failed', 'failure', principal.accountId);
       throw new RepositoryError('STORAGE_ERROR', 'Private object delete failed');
     } finally { client.release(); }
