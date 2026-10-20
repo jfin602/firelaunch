@@ -513,9 +513,14 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
       VALUES ($1,$2,$3,$4,now()) ON CONFLICT (asset_id) DO UPDATE SET revoked_at=now()`,
     [playback.id, item.id, project.id, owner.accountId]);
     await assert.rejects(new PublicReleaseResolver(restarted).current(deploymentId), { code: 'NOT_FOUND' });
+    await assert.rejects(reserveRevokedMediaInvalidation(restarted.pool, project.id, playback.id), /Active release/);
+    await restarted.pool.query('DELETE FROM publication_live_pointers WHERE project_id=$1 AND creator_account_id=$2',
+      [project.id, owner.accountId]);
     const reservation = await reserveRevokedMediaInvalidation(restarted.pool, project.id, playback.id);
     assert.deepEqual(reservation.scope, { creatorAccountId: owner.accountId, projectId: project.id, mediaAssetId: playback.id });
     await finishMediaInvalidation(restarted.pool, reservation.auditId, false);
+    const retryReservation = await reserveRevokedMediaInvalidation(restarted.pool, project.id, playback.id);
+    await finishMediaInvalidation(restarted.pool, retryReservation.auditId, true);
     await assert.rejects(reserveRevokedMediaInvalidation(restarted.pool, project.id, playback.id), /rate limit/);
     await assert.rejects(reserveRevokedMediaInvalidation(restarted.pool, foreignProject.id, playback.id), /Revoked owned/);
     assert.equal((await restarted.pool.query('SELECT manifest_bytes FROM publication_releases WHERE id=$1',

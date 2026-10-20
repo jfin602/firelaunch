@@ -1,7 +1,15 @@
 # FireLaunch Current State
 
+<<<<<<< HEAD
 Last documentation reconciliation: 2026-10-20 (GitHub source and dated staging closeout; no fresh live host/AWS inspection).
+=======
+Last documentation reconciliation: 2026-10-20 UTC (supporting-media staging only; other gates retain their own dated evidence).
+>>>>>>> 2d9443e (c6-supporting-media closeout not green)
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
+
+## Latest supporting-media staging observation (2026-10-20 UTC)
+
+The owner-authorized [c6-supporting-media closeout](tasks/c6-supporting-media/closeout.md) records an authenticated private replacement of the supplied 15-second MP4, one completed MediaConvert job, a saved 640×360 private poster, and versioned private sample WebVTT captions. The missing schema-14 subtitle-table grant was repaired; a Studio fix preserves saved artwork when a video is replaced without choosing a new poster. Protected staging release `/srv/firelaunch/releases/20261020T134949Z-75e17f52896b` is active from archive SHA-256 `75e17f52896bb5b1cd991d90f7e119020cd63bb7bfe506166e364f25cc739793`, database schema **14**, version **0.6.7**. The previous schema-14 release and verified encrypted backup were retained. Source HEAD is `37b1981ed415ab9b33d66f1ca3ca67025c76c09f` with **uncommitted repair changes**; the archive hash identifies the exact deployed build. The encode queue and completion rule were already ACTIVE/ENABLED on readback and were not changed by this repair. Existing public release #1 pointer and master retained their original hashes. **Private supporting-media creator flow GREEN on staging; cloud image delivery and native subtitle playback NOT QUALIFIED.** Q2 F7 remains PARTIAL / Q2 NOT GREEN and Q3 UNSTARTED. Older 2026-10-19 staging facts below are historical observations.
 
 
 

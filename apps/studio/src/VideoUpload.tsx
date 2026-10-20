@@ -155,7 +155,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
   const thumbnailObjectId = ownedArtworkObject(inventory.items.find(value => value.id === (existingItem?.id ?? itemId)), inventory.mediaAssets, projectId, accountId);
   const artworkItem = inventory.items.find(value => value.id === (existingItem?.id ?? itemId));
   const artworkPreview = (alt: string) => <OwnedArtwork item={artworkItem} assets={inventory.mediaAssets} projectId={projectId} accountId={accountId}
-    localFile={thumbnail ?? generatedThumbnail} className="video-thumbnail-art" imageClassName="video-thumbnail-preview" alt={alt}
+    localFile={thumbnail ?? (thumbnailObjectId ? null : generatedThumbnail)} className="video-thumbnail-art" imageClassName="video-thumbnail-preview" alt={alt}
     fallback={<span className="video-thumbnail-fallback" aria-label="Artwork unavailable">▣</span>}/>;
   const busyRef = useRef(false);
   const activeRef = useRef(true);
@@ -226,10 +226,6 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
       if (!activeRef.current) return;
       const externalId = await hashVideoFile(file);
       if (!activeRef.current) return;
-      const chosenThumbnail = thumbnail ?? generatedThumbnail ?? await extractVideoThumbnail(file);
-      if (!activeRef.current) return;
-      setThumbnailNotice(chosenThumbnail ? thumbnail ? 'Custom thumbnail saved as private draft artwork.' : 'Video still saved as private draft artwork.'
-        : 'No thumbnail could be extracted. A draft placeholder remains until you add artwork.');
       let current = await refresh();
       let ownedItemId = itemId || current.items.find(value => value.kind === 'video' && value.sourceRecord.externalId.provider === 'creator' && value.sourceRecord.externalId.value === externalId)?.id || '';
       if (!ownedItemId) {
@@ -261,6 +257,11 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
           current = await refresh();
         }
       }
+      const savedArtwork = ownedArtworkObject(current.items.find(value => value.id === ownedItemId), current.mediaAssets, projectId, accountId);
+      const chosenThumbnail = thumbnail ?? (savedArtwork ? null : generatedThumbnail ?? await extractVideoThumbnail(file));
+      if (!activeRef.current) return;
+      setThumbnailNotice(chosenThumbnail ? thumbnail ? 'Custom thumbnail saved as private draft artwork.' : 'Video still saved as private draft artwork.'
+        : savedArtwork ? 'Previously saved private thumbnail kept.' : 'No thumbnail could be extracted. A draft placeholder remains until you add artwork.');
       if (chosenThumbnail) { await saveThumbnail(projectId, ownedItemId, chosenThumbnail, refresh); current = await refresh(); }
       const savedCollectionId = collectionId || current.collections.find(value => value.itemIds.includes(ownedItemId) && !(value.kind === 'series' && value.title === 'Videos'))?.id || '';
       if (!collectionId && savedCollectionId) setCollectionId(savedCollectionId);
