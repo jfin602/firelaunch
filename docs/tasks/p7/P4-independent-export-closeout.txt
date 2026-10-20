@@ -1,0 +1,30 @@
+TASK: Phase 7 / P4 — Independent Vega ZIP export and playback closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- This prompt's assigned project version is `0.7.4`.
+
+TYPE
+Independent MANUAL browser/Vega VirtualDevice qualification; not a runner implementation prompt. One final closeout: `docs/tasks/p7/closeout.md`.
+
+MISSION
+Evidence-based GREEN only if an authenticated real creator downloads a ZIP from deployed FireLaunch Studio, extracts it away from the developer workspace, installs its actual creator/deployment-bound x86_64 VPKG in an independent Vega VirtualDevice, and navigates/plays creator-approved free HLS with audio, seek/Back and functional restart.
+
+PREFLIGHT
+Read P7 README/assessment/plan and P1-P3 commits/handoffs, docs/CURRENT-STATE.md, docs/tasks/{p5/P8-device-runbook.md,p6-live-vod/Q3-vega-device-playback.txt,c5-vega/closeout.md,c6-supporting-media/README.md}, current Q2 F7 rights/release evidence. Inspect actual local HEAD/worktree and root/lock version 0.7.3, Node24/npm12, present real SDK/CLI, independent VirtualDevice OS/architecture, authenticated browser availability, owner project/deployment, approved still-valid free published release #1/public-artwork origin and scoped isolated worker. Version 0.7.4 is the manual closeout target, not permission to deploy, publish or change versions before a coherent final review. Any live hosting/build service release, managed asset publication, AWS/CDN modification or metered encode requires separate explicit owner/operator authorization; no unsafe sudo or alternate credential bypass. If browser access requires an attached Chrome session, report that concrete prerequisite.
+
+END-TO-END MANUAL QUALIFICATION
+1. Confirm protected deployed Studio/worker exact tested source and health; a local mock worker is not sufficient. In actual authenticated Studio create/use creator-owned project and existing approved published FREE video; verify rights/artwork and stable public-only HTTPS resolver. Do not create another release without separate creator consent. Exercise owner and foreign-creator export/download denial where real independent identities available; do not fabricate second session.
+2. Click Export App; observe actual queued/build/ready, then download **ZIP via owner browser**. Save exact ZIP SHA/bytes/headers/job/source/creator/project/deployment/release IDs. Extract under a fresh unrelated path; verify README/export-info.json/SHA256SUMS, VPKG checksum/package architecture/identity and scan files for secrets/private object paths. No developer-tree read/copy as replacement for the downloaded package.
+3. Start real graphical Vega VirtualDevice, confirm CLI, installed SDK, simulated OS 1.2 x86_64 or actual reported target; held terminal if required. Follow verified `vega device install-app --device <serial> --packagePath <vpkg>` and `vega device launch-app --device <serial> --appName <package.id>.main` syntax from runbook/installed SDK. Install the extracted package ONCE. Record exact command and package SHA, visible screenshots/logs, public HTTPS resolver and CloudFront master/segment requests from device, true branded channel and licensed art.
+4. Navigate D-pad shelves/detail/select; start FREE HLS video and confirm **visible moving picture plus audible sound**, pause/resume/seek, Back to detail/Home and focus restored. Cold-stop/relaunch installed package and confirm actual content/media still playable. If rights/URL/SSL/codec/SDK player issues, diagnose the exact observed failure; at most two bounded focused repair/retest cycles within existing safety scope, otherwise NOT GREEN with concrete handoff. Do not run a large historic Q3 v1/v2/offline/fault/v3 matrix or falsely claim those gates GREEN.
+5. Check no private original/staged media, unapproved/revoked/foreign media or creator session credentials are exported or publicly reachable. Preserve published release #1 and Q2 historical state. Run focused tests for changed code, one appropriate `npm run check` on final tree, `npm run codex:stack:validate -- p7`, `git diff --check`, record exact pass/fail/skip counts and candidate status.
+
+CLOSEOUT
+Write `docs/tasks/p7/closeout.md` with gate-by-gate ZIP/download/owner/isolation/artifact/native display+HLS/audio/remote/restart results, exact HEAD and dirty diff, root+lock version, source/bundle/VPKG SHA, SDK/CLI/device identity, rights/release proof, browser screenshots and redacted device/server network logs, test numbers, operator approvals, gaps and GREEN or NOT GREEN. An authored script or successful build does NOT qualify this manual evidence.
+
+GIT / SAFETY
+Manual P4 does not self-commit or rewrite HEAD. After reviewing clean coherent P3 source, update root package and the two top-level lockfile version entries to 0.7.4 only under the normal approved phase closeout/version process; if not authorized, leave version 0.7.3 and report proposed 0.7.4 uncommitted. No AWS jobs, public CDN/rights changes, host deployment, data deletion, Appstore submission, private credential handling, Ngest changes, physical Fire TV or paid entitlement claims without separate scope. Preserve historical P5/c5/Q2 F7 and broader Q3 NOT GREEN or unqualified statuses.

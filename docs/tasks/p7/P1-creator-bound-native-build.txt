@@ -1,0 +1,23 @@
+TASK: Phase 7 / P1 — Creator-bound Vega release build producer
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.7.1`.
+
+GOAL
+Provide a reproducible, revision-checked producer for a real creator/deployment-bound x86_64 React Native for Vega VPKG without enabling unsafe hosted builds. A locally compiled synthetic fixture is never a completed creator export.
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/CURRENT-STATE.md, docs/workflow.md, docs/tasks/p7/{README.md,prompt-assessment.md,implementation-plan.md}, c5-vega closeout, packages/generator, apps/server/src/{hosted-workspace,hosted-repository,workspace}.ts, templates/vega-channel and touched tests. Inspect current local git branch/HEAD/status, root+lock versions, runner prior prefix, Node 24/npm 12, Vega CLI/SDK/virtual device availability and the parallel creative/video correction. Reconcile without reset/forced pull or overwritten edits. A coherent 0.7.0 baseline must already exist; otherwise state exact version conflict and stop rather than quietly altering Phase 6.
+
+IMPLEMENT
+Add the narrow reusable, isolated-worker-consumable immutable build-input snapshot/producer: authenticated owner project's ChannelSpec/source revision, exact ChannelDeployment and package identifier, published public-only HTTPS manifest endpoint, source hash/fingerprint, edited-source preservation and strict stale/revision conflicts. Never forge a public release, overwrite custom/unknown files or substitute example.org/localhost for a creator deployment. Apply safe file-name/symlink/size checks, prevent secret/private URL export, verify `src/release-config.json` and manifest category/OS. Keep native build invocation fixed; use the actual installed SDK-compatible `react-native build-vega --target x86_64 --build-type Release` path, verify fresh nonempty .vpkg, size/hash and source/toolchain provenance. Run external builds ONLY in an already isolated disposable/local developer environment, not the hosted API or staging service. If signed-in real owner project or SDK unavailable, finish deterministic contract producer/tests and explicitly report **real VPKG not yet observed**, not a fake result. Do not expose hosted runBuild/buildStatus as enabled in P1.
+
+VALIDATION
+Focused generator, hosted workspace/revision/owner-deployment and build-identity tests including stale/malicious/foreign/custom source; affected typecheck/build, git diff --check. Attempt real native build only when supported environment and owned approved fixture are available; capture exit, path/hash and actual identity if obtained, never claim a device pass.
+
+GIT / HANDOFF
+Runner owns P1 commit. Do not commit, move HEAD, deploy, authorize publication or operate AWS. Set only root package.json and the two root package-lock.json version fields to 0.7.1; workspace versions unchanged. Report precise candidate SHA/status, security/test counts, VPKG proof or narrow external blocker and stable build-input contract for P2. Target <=8 minutes, 15-minute hard ceiling; stop with exact narrow next action if isolation/SDK access blocked.

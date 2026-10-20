@@ -1,0 +1,23 @@
+TASK: Phase 7 / P3 — Vega published artwork and adaptive HLS playback
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.7.3`.
+
+GOAL
+Make the P1/P2 exported client compatible with approved real immutable channel content: branded shelves and rights-cleared artwork, native adaptive HLS with audio/remote controls and safe restart. Do not infer native HLS success from Firefox/browser Preview.
+
+PREFLIGHT
+Read P7 README/assessment/plan, P2 handoff, docs/tasks/p6-live-vod/Q3-vega-device-playback.txt, docs/tasks/p5/P8-device-runbook.md, templates/vega-channel/src/{App.js,release-client.js,remote-release.js}, generator/TV runtime, published manifest/media/managed-artwork contracts and actual installed SDK samples. Inspect actual HEAD, dirty source and root versions; retain ongoing Phase 6 creative work. Check current SDK support for adaptive HLS/MSE/player API with documented evidence rather than guessing imports.
+
+IMPLEMENT
+Repair only observed native integration defects: correct released catalog/shelves/title/approved HTTPS thumbnails on 10-foot UI; use exact published release identity/digest and last-known-good cache; do not allow private-preview URLs, revoked/draft media, insecure redirects, signed S3 originals or foreign content. Verify whether release-scoped `/api/public-artwork/` is publicly reachable over valid TLS on independent device; if not, record precise missing safely authorized origin path, never broaden permissions automatically. Implement the SDK-supported HLS player path and proper surface initialize/play/pause/resume/seek/cleanup, remote D-pad/select/Back, meaningful loading/error state, audio unmuted per approved spec and app restart behavior. Keep default Videos shelf and one eligible approved free item only; no new placement/captions/paid flow. If SDK unavailable, use focused tests and preserve explicit NOT VERIFIED status for native playback until manual P4.
+
+VALIDATION
+Focused native template/player lifecycle, generator, published manifest/URL/rights, artwork, TV remote-state tests, affected build/typecheck and git diff --check. If SDK/VVD present, run the freshly generated build and record direct limited device evidence; don't substitute those for the exact *downloaded* P4 artifact. Do not create/publish new media, run MediaConvert or alter CloudFront.
+
+GIT / HANDOFF
+Runner owns P3 commit; no self-commit, deployment or Appstore claims. Set only root package and top-level lockfile versions to 0.7.3, leave workspaces unchanged. Report exact tests and media SDK findings; separate native observed vs deterministic claims, and list owner/operator handoff needed for P4. <=8 minute target / 15-minute hard stop.

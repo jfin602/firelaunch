@@ -1,0 +1,25 @@
+TASK: Phase 7 / P2 — Isolated hosted Vega ZIP export and Studio download
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.7.2`.
+
+GOAL
+Connect the real P1 build input to an opt-in, genuinely isolated native worker and an authenticated creator download of an intact ZIP containing that build's actual x86_64 VPKG. Do not confuse source JSON or an Appstore submission checklist with the export.
+
+PREFLIGHT
+Read Phase 7 README, assessment/plan, P1 runner handoff, docs/CURRENT-STATE.md, apps/server/src/{hosted-workspace,api,hosted-repository}.ts, apps/studio/src/{api,Delivery}.tsx, existing auth/CSRF and tests. Inspect actual HEAD/version/dirty files; confirm no concurrent Phase 6 correction files would be overwritten. Verify P1 records builder interface and available isolated worker host/config; a process executing creator code under `firelaunch-staging.service` is not isolation.
+
+IMPLEMENT
+Implement bounded creator-authenticated create/status/download job routes, preserving existing auth+CSRF; capture immutable owner, project, revision, deployment/package, SHA/fingerprint and signed-off public origin; enforce job idempotency, concurrency, timeouts, expirations, restart-safe truthful state and stale/cancel/foreign denial. Route source to a separately constrained native build worker with per-job ephemeral filesystem, no control-plane/AWS/PG credentials, narrow egress/dependency policy, CPU/disk/memory/time/process limits, cleanup and fixed build commands; validate worker output origin and the actual fresh VPKG before storing anything. Never enable a privileged shared-host subprocess or accept arbitrary shell/paths from clients.
+
+Create a downloadable ZIP only for a verified ready native artifact: `*_x86_64.vpkg`, `README.md` (real independent Vega install/launch steps), `export-info.json` (nonsecret hashes/deployment/toolchain), `SHA256SUMS`. Verify bounded ZIP paths/content/size and both ZIP and VPKG checksums; owner-scoped download must not reveal shared storage paths or secrets. Wire Studio Build/Export App UI with accurate queued/building/ready/failed/expired states, failure/retry, download, and project-switch isolation, updating readiness without claiming device or Appstore qualification. Preserve existing editable Code and separate human submission bundle. A missing safe worker must leave build/export explicitly BLOCKED with an actionable reason, not a fake success or insecure bypass. No actual VPS deployment or new cloud budget approval in this prompt.
+
+VALIDATION
+Focused tests for good owner/job/ZIP integrity, two authenticated principals, unauthenticated/CSRF/foreign/expired/stale/cross-project denial, worker absent/dead/restart, traversal/symlink/archive bomb, races/replay and Studio status/download behavior; affected typecheck/build plus git diff --check. Use a fake worker for deterministic API tests, **not** as evidence of a real native ZIP. Report exact separate-worker host/permission/deploy blocker when live worker unavailable.
+
+GIT / HANDOFF
+Runner owns P2 commit. Never self-commit/force push, touch AWS/IAM/CloudFront, deploy staging or loosen native isolation. Update only root package and two top lockfile versions to 0.7.2. Report test counts, job/download contract, actual vs simulated artifact provenance, worker activation needs and P3 native playback handoff. Target <=8 minutes, hard stop at 15; if too large, retain secure blocked state and give narrow follow-up rather than lowering protections.

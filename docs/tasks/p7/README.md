@@ -1,15 +1,15 @@
 # P7 — Vega Export & Device Qualification
 
-**Status (October 20, 2026): planning approved; NOT IMPLEMENTED / NOT QUALIFIED.** Planned 0.7.x band; not an automatic release version bump. Deadline: October 23, 2026 noon America/Chicago (internal target 11:30 AM; freeze target October 22 5 PM).
+**Status (October 20, 2026): ASSESSMENT, PLAN AND P1–P4 PROMPTS AUTHORED; implementation NOT STARTED / native delivery NOT QUALIFIED.** Planned 0.7.x band; not an automatic release version bump. Deadline: October 23, 2026 noon America/Chicago (internal target 11:30 AM; freeze target October 22 5 PM).
 
 ## Goal
 From signed-in Studio, a creator downloads a ZIP with a fresh real creator/deployment-bound x86_64 Vega release VPKG, extracts it independently, installs it on Vega VirtualDevice, sees their approved branding/shelves/artwork and plays their approved published free HLS video with sound, remote controls and success after app restart. A Studio browser Preview, fixture VPKG or ZIP of source files is not sufficient.
 
-## Four checkpoints (assessment/plan/prompts not yet authored)
-1. **P1 creator-bound native build:** inspect actual git worktree and approved publication binding; reuse existing native generator/SDK; produce nonempty real owned VPKG, source/toolchain/release metadata and SHA-256. Verify public HTTPS manifest endpoint.
-2. **P2 isolated ZIP export:** separate constrained native build worker with owner/project/CSRF authorization, ephemeral workspace, resource/time/network bounds, safe artifact collection and owner-only download. Hosted Studio shows progress/failures and downloads ZIP. Do not bypass the existing disabled-hosted-build guard by running creator code as the shared VPS service.
-3. **P3 native content/playback:** approved published immutable manifest, correct thumbnails, native SDK-compatible adaptive HLS player; focused device navigation/detail/Back/pause/seek/audio/restart repairs. No secrets, private signed URLs or unpublished content.
-4. **P4 independent manual closeout:** from real creator Studio download the actual ZIP, extract/install/launch its exact VPKG on external VirtualDevice, verify branding, content, playback/controls and restart, record hashes/logs and GREEN/NOT GREEN. Manual independent gate, not runner-owned.
+## Executable Prompt Stack (authored; not executed)
+1. **[P1 creator-bound native build](P1-creator-bound-native-build.txt):** inspect actual git worktree and approved publication binding; reuse existing native generator/SDK; produce nonempty real owned VPKG, source/toolchain/release metadata and SHA-256. Verify public HTTPS manifest endpoint.
+2. **[P2 isolated ZIP export](P2-isolated-zip-export.txt):** separate constrained native build worker with owner/project/CSRF authorization, ephemeral workspace, resource/time/network bounds, safe artifact collection and owner-only download. Hosted Studio shows progress/failures and downloads ZIP. Do not bypass the existing disabled-hosted-build guard by running creator code as the shared VPS service.
+3. **[P3 native content/playback](P3-native-hls-integration.txt):** approved published immutable manifest, correct thumbnails, native SDK-compatible adaptive HLS player; focused device navigation/detail/Back/pause/seek/audio/restart repairs. No secrets, private signed URLs or unpublished content.
+4. **[P4 independent manual closeout](P4-independent-export-closeout.txt):** from real creator Studio download the actual ZIP, extract/install/launch its exact VPKG on external VirtualDevice, verify branding, content, playback/controls and restart, record hashes/logs and GREEN/NOT GREEN. Manual independent gate, not runner-owned.
 
 ZIP minimum: verified x86_64 VPKG, README with independent Vega VirtualDevice install/launch steps, nonsecret export-info.json, and SHA256SUMS. An extra ARM package is optional unless separately built and verified. ZIP is delivery wrapper; VPKG is the native installable artifact. The exported runtime references approved public-only HTTPS PublishedManifest and verified free HLS/artwork, not local loopback, private originals, temporary signed URLs, creator tokens or AWS credentials.
 
@@ -19,3 +19,21 @@ Reuse current ChannelSpec, CatalogItem, MediaAsset, ChannelDeployment, approved 
 The separate Phase 6 creative/video correction can proceed concurrently and P7 consumes its final publication interfaces. Use still-valid existing approved FREE release #1 only if rights permit. No new paid encode, public CDN/IAM mutation, creator publication or VPS deployment authorized by this document. Historical P5/c5 NOT GREEN, Q2 F7 PARTIAL and broader Q3 v1/v2/offline/fault/rollback qualification remain separate; do not invent success.
 
 Implementation checkpoints P1–P3 will use focused checks with runner-owned commits once prompts are authored, usually within 8 minutes per prompt (15-minute hard cap). P4 runs manually. GREEN only when the exact independently downloaded archive and contained real VPKG run actual published HLS on VirtualDevice. Physical Fire TV, Appstore approval, paid entitlements and billing are outside scope.
+
+## Prompt planning and execution notes (authored October 20)
+
+Read [prompt assessment](prompt-assessment.md) and [implementation plan](implementation-plan.md). P1–P3 use `GPT-6 Sol High` and have **Browser required: no**; P4 uses `GPT-6 Sol High`, **Browser required: yes**, and is the **one final manual closeout**. Target versions: P1 `0.7.1`, P2 `0.7.2`, P3 `0.7.3`, P4 `0.7.4`. No `/activate` command.
+
+**Version conflict to resolve before starting:** The current GitHub root is `0.6.7`, while the phase runner for `p7` requires a coherent `0.7.0` baseline, then advances each checkpoint. The separately running Phase 6 creative/video correction must be reconciled first. Do **not** blindly bump/reset it or infer a 0.7.x product release from prompt authoring. This is an ordinary version-only transition, not a new approval ritual. Run stack grammar validation immediately; run the stack only after a version-only 0.7.0 baseline exists.
+
+```bash
+cd /home/jfin/dev/firelaunch
+git status --short
+git log -1 --oneline
+node --version && npm --version
+npm run codex:stack:validate -- p7
+# After integrating and committing the coherent 0.7.0 phase baseline:
+npm run codex:stack -- p7
+```
+
+Runner owns P1–P3 commits and stops for the independent P4 manual browser/VVD closeout. Browser/SDK/real-public-origin absence is a recorded blocker, never permission to run untrusted builds on the shared VPS or substitute a fixture. P4 writes `docs/tasks/p7/closeout.md` only after actual qualification; it is not pre-created by this authoring task.
