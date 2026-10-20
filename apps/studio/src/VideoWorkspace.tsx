@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ChannelProject } from '@firelaunch/contracts';
 import { readCatalog, type CatalogSnapshot } from './api.js';
-import { safeArtwork } from './artwork-url.js';
+import { OwnedArtwork } from './OwnedArtwork.js';
 import { NewVideoUpload, VideoLibraryStatus } from './VideoUpload.js';
 import { VideoReview } from './VideoReview.js';
 import { rememberVideoPage, savedVideoPage, videoPageKey, videoPages, type VideoPage } from './video-pages.js';
@@ -83,7 +83,6 @@ export function VideoWorkspace({ selection, project, onIdentity, onClose, onProj
   const item = inventory?.items.find(value => value.id === selection.itemId && value.kind === 'video');
   const asset = inventory?.mediaAssets.find(value => value.catalogItemId === item?.id && value.kind === 'video' && value.location.type === 'managed_hls');
   const title = item?.creatorOverrides?.title ?? item?.sourceRecord.metadata.title;
-  const art = item && safeArtwork(item);
   return createPortal(<div className="video-workspace-backdrop"><div ref={dialog} className="video-workspace" role="dialog" aria-modal="true" aria-labelledby="video-workspace-title" onKeyDown={onKeyDown}>
     <header className="video-workspace-header"><div><span className="eyebrow">PRIVATE VIDEO WORKSPACE</span><h2 id="video-workspace-title">{title ?? (selection.itemId ? 'Video draft' : 'Add Video')}</h2><p>{selection.itemId ? 'Saved in this channel library. Review or replace the private upload here.' : 'Start a private video draft for this channel.'}</p></div><button ref={closeButton} type="button" disabled={uploading} onClick={requestClose} aria-label="Close video workspace">Close ×</button></header>
     <nav className="video-workspace-pages" aria-label="Video workspace pages">
@@ -95,7 +94,7 @@ export function VideoWorkspace({ selection, project, onIdentity, onClose, onProj
       {error && <p role="alert" className="catalog-error">{error}</p>}
       {!inventory && !error && <p role="status">Loading video library…</p>}
       {inventory && selection.itemId && !item && createdId.current !== selection.itemId && <p role="alert">This video draft is unavailable in the current channel.</p>}
-      {page === 'video' && item && <div className="video-workspace-summary"><span className="video-workspace-art">{art ? <img src={art} alt="" referrerPolicy="no-referrer" /> : <span aria-label="Artwork unavailable">▣</span>}</span><div><strong>{title}</strong><p>{asset ? <VideoLibraryStatus projectId={selection.projectId} assetId={asset.id}/> : 'Draft · no playable upload'}</p><small>Artwork and TV rights remain subject to review before publication.</small></div></div>}
+      {page === 'video' && item && <div className="video-workspace-summary"><OwnedArtwork item={item} assets={inventory?.mediaAssets ?? []} projectId={selection.projectId} accountId={selection.accountId} className="video-workspace-art" fallback={<span aria-label="Artwork unavailable">▣</span>}/><div><strong>{title}</strong><p>{asset ? <VideoLibraryStatus projectId={selection.projectId} assetId={asset.id}/> : 'Draft · no playable upload'}</p><small>Artwork and TV rights remain subject to review before publication.</small></div></div>}
       {inventory && (!selection.itemId || item || createdId.current === selection.itemId) && <NewVideoUpload accountId={selection.accountId} projectId={selection.projectId} inventory={inventory} refresh={refresh} page={page} {...(item ? { existingItem: item } : {})} onCreated={id => { createdId.current = id; rememberVideoPage(videoPageKey(selection.accountId, selection.projectId, id), page); onIdentity(id); }} onClose={requestClose} onBusyChange={value => { uploadingRef.current = value; setUploading(value); }}/ >}
       {page === 'publish' && !item && inventory && <p>Upload a video on the Video page before reviewing publication.</p>}
       {inventory && item && (page === 'channel' || page === 'publish') && <VideoReview page={page} project={project} item={item} inventory={inventory} refresh={refresh} onProjectUpdate={onProjectUpdate} onNavigate={selectPage}/>}

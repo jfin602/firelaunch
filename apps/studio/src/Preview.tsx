@@ -3,13 +3,38 @@ import { contentPresentation, isPlayableContent, type ChannelSpec } from '@firel
 import { activeItem, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
 import { keyboardCommand, navigate, reconcile } from './preview-state.js';
 import { VideoPlayer } from './VideoPlayer.js';
+import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex } from '@noble/hashes/utils';
+import { readCatalog, type CatalogSnapshot } from './api.js';
+import { OwnedArtwork, ownedArtworkObject, useOwnedArtwork } from './OwnedArtwork.js';
 
 function artwork(url: string): string {
   return url.startsWith('assets/') ? `/media/${url.slice(7)}` : url;
 }
+function catalogContentId(itemId: string): string {
+  return `item_${bytesToHex(sha256(new TextEncoder().encode(`catalog-content-v1\0${itemId}`))).slice(0, 32)}`;
+}
 
-export function Preview({ spec, hosted = false }: { spec: ChannelSpec; hosted?: boolean }) {
+function PreviewArtwork({ contentId, source, inventory, projectId, accountId }: { contentId: string; source: string; inventory: CatalogSnapshot | null; projectId?: string; accountId?: string | null | undefined }) {
+  const item = inventory?.items.find(value => catalogContentId(value.id) === contentId);
+  const objectId = projectId && inventory ? ownedArtworkObject(item, inventory.mediaAssets, projectId, accountId ?? null) : null;
+  const privateUrl = useOwnedArtwork(projectId ?? '', accountId ?? null, objectId, null, contentId);
+  const [failed, setFailed] = useState('');
+  const url = privateUrl && privateUrl !== failed ? privateUrl : artwork(source);
+  return <img src={url} alt="" onError={() => setFailed(url)}/>;
+}
+
+export function Preview({ spec, hosted = false, accountId, libraryRevision = 0 }: { spec: ChannelSpec; hosted?: boolean; accountId?: string | null | undefined; libraryRevision?: number }) {
   const tv = televisionFromSpec(spec);
+  const [inventory, setInventory] = useState<CatalogSnapshot | null>(null);
+  useEffect(() => {
+    setInventory(null);
+    if (!hosted || !accountId) return;
+    let active = true;
+    void readCatalog(spec.id).then(data => { if (active && data.projectId === spec.id && data.creatorAccountId === accountId &&
+      [...data.items, ...data.mediaAssets].every(value => value.projectId === spec.id && value.creatorAccountId === accountId)) setInventory(data); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [spec.id, hosted, accountId, libraryRevision]);
   const [state, setState] = useState<TvState | null>(null);
   const current = reconcile(tv, state);
   const screenRef = useRef<HTMLDivElement>(null);
@@ -45,6 +70,7 @@ export function Preview({ spec, hosted = false }: { spec: ChannelSpec; hosted?: 
 
   const page = tv.pages.find(candidate => candidate.id === current.pageId)!;
   const item = activeItem(tv, current);
+  const privateDrafts = hosted && inventory ? inventory.items.filter(value => value.kind === 'video' && !spec.content.some(content => content.id === catalogContentId(value.id))).slice(0, 8) : [];
   const focus = (id: string) => current.focusId === id ? ' focused' : '';
   const selectFocus = (focusId: string) => setState(transition(tv, { screen: 'page', pageId: page.id, focusId }, 'select'));
   const style = { '--tv-accent': tv.brand.primaryColor, '--tv-bg': tv.brand.backgroundColor, '--tv-text': tv.brand.textColor, fontFamily: tv.brand.typography === 'serif' ? 'Georgia, serif' : 'inherit' } as React.CSSProperties;
@@ -65,20 +91,24 @@ export function Preview({ spec, hosted = false }: { spec: ChannelSpec; hosted?: 
               {module.kind === 'text' ? <p>{module.body}</p> : <div className="tv-items">{module.items.map(content => {
                 const id = itemFocusId(page.id, module.id, content.id);
                 return <button key={id} data-tv-focus={id} className={'tv-card' + focus(id)} onClick={() => selectFocus(id)} aria-label={`Open ${content.title}`}>
-                  <span className="tv-art"><img src={artwork(content.artwork)} alt="" /></span><span className="tv-card-caption">{content.title}</span>
+                  <span className="tv-art"><PreviewArtwork contentId={content.id} source={content.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/></span><span className="tv-card-caption">{content.title}</span>
                 </button>;
               })}</div>}
             </section>)}
+            {privateDrafts.length > 0 && <section className="tv-module tv-grid studio-private-artwork" aria-label="Private video draft artwork">
+              <h3>Private video drafts · artwork preview only</h3><div className="tv-items">{privateDrafts.map(draft =>
+                <div className="tv-card" key={draft.id}><span className="tv-art"><OwnedArtwork item={draft} assets={inventory!.mediaAssets} projectId={spec.id} accountId={accountId ?? null} className="studio-draft-art" fallback={<span aria-label="Artwork unavailable">▣</span>}/></span><span className="tv-card-caption">{draft.creatorOverrides?.title ?? draft.sourceRecord.metadata.title}</span></div>)}</div>
+            </section>}
           </div>
         </> : item && <div className={'tv-overlay tv-' + current.screen}>
           {current.screen === 'detail' ? <>
-            <img src={artwork(item.artwork)} alt="" />
+            <PreviewArtwork contentId={item.id} source={item.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/>
             <div className="tv-detail-copy"><span className="eyebrow">{contentPresentation(item) === 'video' ? 'NOW SHOWING' : contentPresentation(item) === 'audio' ? 'NOW LISTENING' : 'ABOUT THIS TITLE'} · {item.category ?? 'FEATURE'}</span><h2>{item.title}</h2><p>{item.description}</p>
               {isPlayableContent(item) ? <button data-tv-focus={current.focusId} className="tv-play focused" onClick={() => dispatch('select')}>▶ &nbsp; {contentPresentation(item) === 'audio' ? 'Play audio' : 'Play film'}</button>
                 : <button data-tv-focus={current.focusId} className="tv-play focused" onClick={() => dispatch('back')}>← Back to channel</button>}
               <small>{isPlayableContent(item) ? 'Press Enter to play · Escape to go back' : 'Press Escape to go back'}</small></div>
           </> : <div className="tv-player">{contentPresentation(item) === 'audio'
-            ? <><img src={artwork(item.artwork)} alt="" /><audio key={item.id} src={item.mediaUrl} controls autoPlay muted={tv.playback.startMuted} /></>
+            ? <><PreviewArtwork contentId={item.id} source={item.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/><audio key={item.id} src={item.mediaUrl} controls autoPlay muted={tv.playback.startMuted} /></>
             : <VideoPlayer key={item.id} source={item.mediaUrl!} startMuted={tv.playback.startMuted}
                 contentId={item.id} {...(hosted ? { projectId: spec.id } : {})} />}
             <div className="tv-player-footer"><strong>{item.title}</strong><button className="tv-play focused" onClick={() => dispatch('back')}>← Back to details</button></div></div>}

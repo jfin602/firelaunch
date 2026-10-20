@@ -210,6 +210,36 @@ test('private object and signed artwork URLs stay out of Home image elements', a
   } finally { mock.restore(); }
 });
 
+test('Home and reopened video popup show the saved owned image before encoding', async () => {
+  const artworkId = `ma_${'f'.repeat(32)}`, objectId = `ma_${'1'.repeat(32)}`;
+  const owned = { ...film(firstId), mediaAssetIds: [artworkId] };
+  const media = { schemaVersion: 1, id: artworkId, creatorAccountId: owner, projectId: firstId, catalogItemId: itemId,
+    kind: 'artwork', location: { type: 'private_object', objectId }, deliveryEligible: false,
+    tvDisplayRights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_display', assertedAt: '2026-10-20T00:00:00.000Z' },
+    tvPlaybackRights: { status: 'unknown', basis: 'none', permittedUse: 'none' } };
+  const mock = setup([first], () => json({ ...empty(firstId), sources: [source], items: [owned], mediaAssets: [media] }));
+  const previousFetch = globalThis.fetch, create = URL.createObjectURL, revoke = URL.revokeObjectURL;
+  URL.createObjectURL = () => 'blob:https://studio.example/saved'; URL.revokeObjectURL = () => {};
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input);
+    if (path.endsWith(`/${objectId}/capability`)) return json({ capability: 'private-token' });
+    if (path.endsWith(`/${objectId}/content`)) {
+      assert.equal(new Headers(init?.headers).get('x-private-capability'), 'private-token');
+      return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { headers: { 'content-type': 'image/jpeg' } });
+    }
+    return previousFetch(input, init);
+  }) as typeof fetch;
+  try {
+    render(createElement(App));
+    const card = await screen.findByRole('button', { name: 'Open Director Cut video' });
+    await waitFor(() => assert.equal(card.querySelector('.home-art img')?.getAttribute('src'), 'blob:https://studio.example/saved'));
+    fireEvent.click(card);
+    fireEvent.click((await screen.findByRole('dialog')).querySelector('.video-workspace-page-buttons button')!);
+    await waitFor(() => assert.equal(screen.getByRole('dialog').querySelector('.video-workspace-art img')?.getAttribute('src'), 'blob:https://studio.example/saved'));
+    assert.doesNotMatch(document.body.innerHTML, /private-token|private-objects/);
+  } finally { mock.restore(); URL.createObjectURL = create; URL.revokeObjectURL = revoke; }
+});
+
 test('fast project switch ignores stale catalog response and shows only selected project', async () => {
   let resolveFirst!: (value: Response) => void;
   const pendingFirst = new Promise<Response>(resolve => { resolveFirst = resolve; });

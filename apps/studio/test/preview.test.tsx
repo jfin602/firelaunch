@@ -8,13 +8,53 @@ import { televisionFromSpec, initialState, itemFocusId, navFocusId } from '@fire
 import { Preview } from '../src/Preview.js';
 import { keyboardCommand, navigate, reconcile } from '../src/preview-state.js';
 import { studioVideoSource } from '../src/VideoPlayer.js';
+import { createHash } from 'node:crypto';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost' });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement });
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.window.navigator });
 Object.defineProperty(dom.window.HTMLMediaElement.prototype, 'pause', { value: () => {} });
 Object.defineProperty(dom.window.HTMLMediaElement.prototype, 'load', { value: () => {} });
-const { cleanup, fireEvent, render, screen } = await import('@testing-library/react');
+const { cleanup, fireEvent, render, screen, waitFor } = await import('@testing-library/react');
+
+test('hosted Preview projects saved private artwork visually without changing ChannelSpec', async () => {
+  const previousFetch = globalThis.fetch, create = URL.createObjectURL, revoke = URL.revokeObjectURL;
+  const spec = fixtureChannel(), before = JSON.stringify(spec), owner = `cr_${'a'.repeat(32)}`;
+  const itemId = `ci_${'b'.repeat(32)}`, assetId = `ma_${'c'.repeat(32)}`, objectId = `ma_${'d'.repeat(32)}`, sourceId = `src_${'e'.repeat(32)}`;
+  const contentId = `item_${createHash('sha256').update('catalog-content-v1\0').update(itemId).digest('hex').slice(0, 32)}`;
+  spec.content[0]!.id = contentId;
+  const module = spec.pages[0]!.modules[0]!;
+  if (module.kind === 'text') throw new Error('Expected artwork module');
+  module.contentIds = [contentId];
+  const canonical = JSON.stringify(spec);
+  const paths: string[] = [];
+  URL.createObjectURL = () => 'blob:http://localhost/studio-art'; URL.revokeObjectURL = () => {};
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input); paths.push(path);
+    if (path.endsWith('/catalog')) {
+      const externalId = { provider: 'creator', kind: 'upload_id', value: 'film-1' };
+      const unknown = { status: 'unknown', basis: 'none', permittedUse: 'none' };
+      return new Response(JSON.stringify({ schemaVersion: 1, revision: 1, projectId: spec.id, creatorAccountId: owner,
+        sources: [{ schemaVersion: 1, id: sourceId, creatorAccountId: owner, projectId: spec.id, type: 'creator_upload', state: 'discovered', permission: { retrieval: 'unknown', tvDisplay: 'unknown' } }],
+        items: [{ schemaVersion: 1, id: itemId, creatorAccountId: owner, projectId: spec.id, kind: 'video', sourceRecord: { sourceId, externalId, observedAt: '2026-10-20T00:00:00.000Z', metadata: { title: 'Oceans' } }, externalIdentifiers: [externalId], mediaAssetIds: [assetId] }],
+        mediaAssets: [{ schemaVersion: 1, id: assetId, creatorAccountId: owner, projectId: spec.id, catalogItemId: itemId, kind: 'artwork', location: { type: 'private_object', objectId }, tvDisplayRights: unknown, tvPlaybackRights: unknown, deliveryEligible: false }], collections: [] }), { headers: { 'content-type': 'application/json' } });
+    }
+    if (path.endsWith('/capability')) return new Response(JSON.stringify({ capability: 'secret' }), { headers: { 'content-type': 'application/json' } });
+    assert.equal(new Headers(init?.headers).get('x-private-capability'), 'secret');
+    return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { headers: { 'content-type': 'image/jpeg' } });
+  }) as typeof fetch;
+  try {
+    const view = render(createElement(Preview, { spec, hosted: true, accountId: owner }));
+    await waitFor(() => assert.equal(view.container.querySelector('.tv-art img')?.getAttribute('src'), 'blob:http://localhost/studio-art'));
+    assert.equal(JSON.stringify(spec), canonical);
+    assert.notEqual(canonical, before);
+    assert.doesNotMatch(JSON.stringify(spec), /blob:|secret|private-objects/);
+    assert.equal(paths.filter(path => path.endsWith('/catalog')).length, 1);
+    view.rerender(createElement(Preview, { spec: fixtureChannel(), hosted: true, accountId: owner }));
+    await waitFor(() => assert.equal(view.container.querySelector('.studio-private-artwork img')?.getAttribute('src'), 'blob:http://localhost/studio-art'));
+    assert.match(view.container.querySelector('.studio-private-artwork')?.textContent ?? '', /artwork preview only/);
+  } finally { cleanup(); globalThis.fetch = previousFetch; URL.createObjectURL = create; URL.revokeObjectURL = revoke; }
+});
 
 test('Studio replaces only canonical managed HLS with its owner-scoped same-origin route', () => {
   const project = `ch_${'a'.repeat(32)}`, content = `item_${'b'.repeat(32)}`;

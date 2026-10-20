@@ -1,17 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { ChannelProject, CatalogItem } from '@firelaunch/contracts';
+import type { ChannelProject } from '@firelaunch/contracts';
 import { ApiError, readCatalog, type CatalogSnapshot } from './api.js';
 import { VideoLibraryStatus } from './VideoUpload.js';
-import { safeArtwork } from './artwork-url.js';
-
-function Artwork({ item }: { item: CatalogItem }) {
-  const [failed, setFailed] = useState(false);
-  const url = safeArtwork(item);
-  return <span className={`home-art home-art-${item.kind}`}>
-    {url && !failed ? <img src={url} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)}/>
-      : <span className="home-art-fallback" aria-label="Artwork unavailable">{item.kind === 'video' ? '▣' : item.kind === 'audio' ? '♫' : '◇'}</span>}
-  </span>;
-}
+import { OwnedArtwork } from './OwnedArtwork.js';
 
 export function Home({ project, projects, accountId, hosted, libraryRevision = 0, onSelectProject, onNewChannel, onPreview, onSurface, onOpenVideo }: {
   project: ChannelProject; projects: ChannelProject[]; accountId: string | null; hosted: boolean; libraryRevision?: number;
@@ -65,7 +56,7 @@ export function Home({ project, projects, accountId, hosted, libraryRevision = 0
           const title = item.creatorOverrides?.title ?? item.sourceRecord.metadata.title;
           const rights = asset?.tvPlaybackRights?.status === 'revoked' ? 'Playback rights revoked' : asset?.tvPlaybackRights?.status === 'cleared' ? 'Playback rights asserted' : 'Playback rights unknown';
           return <button key={item.id} className="home-media-card" onClick={() => item.kind === 'video' && onOpenVideo ? onOpenVideo(item.id) : onSurface('Catalog')} aria-label={item.kind === 'video' ? `Open ${title} video` : `Open ${title} in Catalog`}>
-            <Artwork item={item}/><span className="home-media-copy"><strong>{title}</strong><small>{item.kind === 'book' || item.kind === 'listing' ? 'Informational · no playback' : item.kind === 'video' ? 'Video · private draft' : 'Audio · private draft'}</small>
+            <OwnedArtwork item={item} assets={catalog?.mediaAssets ?? []} projectId={project.id} accountId={accountId} className={`home-art home-art-${item.kind}`} fallback={<span className="home-art-fallback" aria-label="Artwork unavailable">{item.kind === 'video' ? '▣' : item.kind === 'audio' ? '♫' : '◇'}</span>}/><span className="home-media-copy"><strong>{title}</strong><small>{item.kind === 'book' || item.kind === 'listing' ? 'Informational · no playback' : item.kind === 'video' ? 'Video · private draft' : 'Audio · private draft'}</small>
               <small>{item.kind === 'video' || item.kind === 'audio' ? rights : 'Review display rights in Catalog'}</small>
               {item.kind === 'video' && <><small>{asset ? <VideoLibraryStatus key={`${project.id}:${item.id}:${asset.id}`} projectId={project.id} assetId={asset.id}/> : 'No upload yet · open to add an MP4'}</small><small className="video-card-action">Open video →</small></>}</span>
           </button>;

@@ -172,7 +172,7 @@ test('library cards keep artwork provenance, rights truth and image fallback', a
     assert.match(creator.textContent ?? '', /TV display cleared · playback cleared/);
     const privateFilm = screen.getByRole('button', { name: 'Select Private film · video' });
     assert.equal(privateFilm.querySelector('img'), null, 'private S3 artwork is never fetched');
-    assert.match(privateFilm.textContent ?? '', /Private artwork attached · no public thumbnail/);
+    assert.match(privateFilm.textContent ?? '', /Private artwork saved · publication review required/);
     fireEvent.error(creator.querySelector('img')!);
     assert.equal(creator.querySelector('img'), null);
     assert.ok(creator.querySelector('[aria-label="Artwork unavailable"]'));

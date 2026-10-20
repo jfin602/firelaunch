@@ -124,10 +124,11 @@ export async function uploadPrivateEvidence(id: string, file: File): Promise<{ i
 export async function deletePrivateObject(id: string, objectId: string): Promise<void> {
   await request(`/${id}/private-objects/${objectId}`, { method: 'DELETE' });
 }
-export async function readPrivateThumbnail(id: string, objectId: string): Promise<Blob> {
-  const capability = await request(`/${id}/private-objects/${objectId}/capability`, json({})) as { capability: string };
+export async function readPrivateThumbnail(id: string, objectId: string, signal?: AbortSignal): Promise<Blob> {
+  const capability = await request(`/${id}/private-objects/${objectId}/capability`, { ...json({}), ...(signal ? { signal } : {}) }) as { capability: string };
+  if (signal?.aborted) throw new DOMException('Artwork request canceled', 'AbortError');
   const response = await fetch(`/api/projects/${encodeURIComponent(id)}/private-objects/${encodeURIComponent(objectId)}/content`, {
-    credentials: 'same-origin', headers: { 'x-private-capability': capability.capability }, cache: 'no-store'
+    credentials: 'same-origin', headers: { 'x-private-capability': capability.capability }, cache: 'no-store', ...(signal ? { signal } : {})
   });
   if (!response.ok) throw new ApiError('Thumbnail preview unavailable', response.status);
   const contentType = response.headers.get('content-type');

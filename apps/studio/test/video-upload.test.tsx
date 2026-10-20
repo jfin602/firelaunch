@@ -356,7 +356,7 @@ test('reopened unfinished draft explains file loss and requires selection before
 
 test('later thumbnail replacement creates a private draft asset and preserves prior live artwork', async () => {
   const oldObject = id('ma', '7'), newObject = id('ma', '8'), artworkId = id('ma', '9'), nextArtworkId = id('ma', 'a');
-  const item = { id: itemId, kind: 'video', sourceRecord: { metadata: { title: 'Film' } }, mediaAssetIds: [artworkId] } as any;
+  const item = { id: itemId, creatorAccountId: owner, projectId, kind: 'video', sourceRecord: { metadata: { title: 'Film' } }, mediaAssetIds: [artworkId] } as any;
   const inventory = { revision: 4, sources: [], items: [item], collections: [], mediaAssets: [
     { id: artworkId, catalogItemId: itemId, kind: 'artwork', location: { type: 'private_object', objectId: oldObject },
       schemaVersion: 1, tvDisplayRights: { status: 'cleared' }, tvPlaybackRights: { status: 'unknown' }, deliveryEligible: false }
@@ -470,9 +470,9 @@ test('details remain editable while the private video is processing', async () =
 test('saved thumbnail preview uses an owner-scoped private capability and a local blob URL', async () => {
   const prior = globalThis.fetch, priorCreate = URL.createObjectURL, priorRevoke = URL.revokeObjectURL;
   const objectId = id('ma', '5'), artworkId = id('ma', '6');
-  const item = { id: itemId, kind: 'video', sourceRecord: { metadata: { title: 'Film' } }, mediaAssetIds: [artworkId] } as any;
+  const item = { id: itemId, creatorAccountId: owner, projectId, kind: 'video', sourceRecord: { metadata: { title: 'Film' } }, mediaAssetIds: [artworkId] } as any;
   const inventory = { revision: 1, items: [item], sources: [], collections: [], mediaAssets: [
-    { id: artworkId, catalogItemId: itemId, kind: 'artwork', location: { type: 'private_object', objectId } }
+    { id: artworkId, creatorAccountId: owner, projectId, catalogItemId: itemId, kind: 'artwork', location: { type: 'private_object', objectId } }
   ] } as any;
   const requested: string[] = [];
   URL.createObjectURL = () => 'blob:https://studio.example/private-preview';

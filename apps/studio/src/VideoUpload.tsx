@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { CatalogItem, Collection } from '@firelaunch/contracts';
-import { ApiError, deletePrivateObject, readPrivateThumbnail, readVideoAssetStatus, readVideoUpload, retryVideoProcessing, uploadPrivateMedia, writeCatalog, type CatalogSnapshot, type VideoUploadStatus } from './api.js';
+import { ApiError, deletePrivateObject, readVideoAssetStatus, readVideoUpload, retryVideoProcessing, uploadPrivateMedia, writeCatalog, type CatalogSnapshot, type VideoUploadStatus } from './api.js';
+import { OwnedArtwork, ownedArtworkObject } from './OwnedArtwork.js';
 import { extractVideoThumbnail, hashVideoFile, readVideoDuration, titleFromFilename, validateVideoFile } from './video-upload.js';
 import { startVideoTransfer, stopVideoTransfer, subscribeVideoTransfers, videoTransfer, type VideoTransfer } from './video-transfer.js';
 import type { VideoPage } from './video-pages.js';
@@ -141,7 +142,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
   const [collectionId, setCollectionId] = useState(() => inventory.collections.find(value => existingItem && value.itemIds.includes(existingItem.id) && !(value.kind === 'series' && value.title === 'Videos'))?.id ?? '');
   const [newCategory, setNewCategory] = useState('');
   const [thumbnail, setThumbnail] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState('');
+  const [generatedThumbnail, setGeneratedThumbnail] = useState<File | null>(null);
   const [thumbnailNotice, setThumbnailNotice] = useState('');
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [itemId, setItemId] = useState(existingItem?.id ?? '');
@@ -151,27 +152,21 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
-  const latestArtwork = [...(inventory.items.find(value => value.id === (existingItem?.id ?? itemId))?.mediaAssetIds ?? [])]
-    .reverse().map(id => inventory.mediaAssets.find(asset => asset.id === id))
-    .find(asset => asset?.kind === 'artwork' && asset.location.type === 'private_object');
-  const thumbnailObjectId = latestArtwork?.location.type === 'private_object' ? latestArtwork.location.objectId : '';
+  const thumbnailObjectId = ownedArtworkObject(inventory.items.find(value => value.id === (existingItem?.id ?? itemId)), inventory.mediaAssets, projectId, accountId);
+  const artworkItem = inventory.items.find(value => value.id === (existingItem?.id ?? itemId));
+  const artworkPreview = (alt: string) => <OwnedArtwork item={artworkItem} assets={inventory.mediaAssets} projectId={projectId} accountId={accountId}
+    localFile={thumbnail ?? generatedThumbnail} className="video-thumbnail-art" imageClassName="video-thumbnail-preview" alt={alt}
+    fallback={<span className="video-thumbnail-fallback" aria-label="Artwork unavailable">▣</span>}/>;
   const busyRef = useRef(false);
   const activeRef = useRef(true);
   useEffect(() => { activeRef.current = true; return () => { activeRef.current = false; }; }, []);
   useEffect(() => {
-    if (page !== 'details' || typeof URL.createObjectURL !== 'function') { setThumbnailPreview(''); return; }
+    if (!file) { setGeneratedThumbnail(null); return; }
     let active = true;
-    let preview = '';
-    const show = (blob: Blob) => {
-      if (!active) return;
-      preview = URL.createObjectURL(blob);
-      setThumbnailPreview(preview);
-    };
-    if (thumbnail) show(thumbnail);
-    else if (thumbnailObjectId) void readPrivateThumbnail(projectId, thumbnailObjectId).then(show).catch(() => { if (active) setThumbnailPreview(''); });
-    else setThumbnailPreview('');
-    return () => { active = false; if (preview) URL.revokeObjectURL(preview); };
-  }, [page, projectId, thumbnail, thumbnailObjectId]);
+    setGeneratedThumbnail(null);
+    void extractVideoThumbnail(file).then(image => { if (active) setGeneratedThumbnail(image); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [file]);
   useEffect(() => {
     if (!busy) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
@@ -231,7 +226,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
       if (!activeRef.current) return;
       const externalId = await hashVideoFile(file);
       if (!activeRef.current) return;
-      const chosenThumbnail = thumbnail ?? await extractVideoThumbnail(file);
+      const chosenThumbnail = thumbnail ?? generatedThumbnail ?? await extractVideoThumbnail(file);
       if (!activeRef.current) return;
       setThumbnailNotice(chosenThumbnail ? thumbnail ? 'Custom thumbnail saved as private draft artwork.' : 'Video still saved as private draft artwork.'
         : 'No thumbnail could be extracted. A draft placeholder remains until you add artwork.');
@@ -266,6 +261,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
           current = await refresh();
         }
       }
+      if (chosenThumbnail) { await saveThumbnail(projectId, ownedItemId, chosenThumbnail, refresh); current = await refresh(); }
       const savedCollectionId = collectionId || current.collections.find(value => value.itemIds.includes(ownedItemId) && !(value.kind === 'series' && value.title === 'Videos'))?.id || '';
       if (!collectionId && savedCollectionId) setCollectionId(savedCollectionId);
       current = await saveVideoPlacement(projectId, ownedItemId, savedCollectionId, refresh);
@@ -282,7 +278,6 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
         if (existing.tvDisplayRights?.status !== 'cleared' || existing.tvPlaybackRights?.status !== 'cleared')
           throw new Error('Video rights were revoked or need review. Resolve rights in the library before replacing this upload.');
       }
-      if (chosenThumbnail) await saveThumbnail(projectId, ownedItemId, chosenThumbnail, refresh);
       void startVideoTransfer({ accountId, projectId, itemId: ownedItemId, assetId: ownedAssetId, file,
         durationSeconds: inspectedDurationSeconds, sha256: externalId })
         .then(result => { if (activeRef.current) { setSession(result); return refresh(); } })
@@ -351,6 +346,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
         <input aria-label="Video file" type="file" accept=".mp4,video/mp4" disabled={busy} onChange={event => chooseFile(event.target.files?.[0] ?? null)}/>
       </div>
       {file && <p className="video-file" role="status">Selected: {file.name} · {(file.size / 1_000_000).toFixed(1)} MB</p>}
+      {artworkPreview('Video thumbnail preview')}
       {!title.trim() && file && <p role="status">Add a title on Details before starting the upload.</p>}
       <label className="check video-rights"><input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)}/> I own or license this video and thumbnail for TV display and streaming.</label>
       <div className="button-row"><button className="primary" disabled={busy || transfer?.state === 'uploading' || !file || !title.trim() || !rightsConfirmed} onClick={() => void submit()}>{busy ? 'Preparing…' : existingItem ? 'Replace video' : 'Upload video'}</button>
@@ -366,7 +362,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
       <label className="field"><span>Title *</span><input required maxLength={160} value={title} onChange={event => { setTitleEdited(true); setTitle(event.target.value); }}/></label>
       <label className="field"><span>Description (optional)</span><textarea maxLength={4000} value={description} onChange={event => setDescription(event.target.value)}/></label>
       <label className="field"><span>Thumbnail (PNG or JPEG, up to 1 MB)</span><input type="file" accept="image/png,image/jpeg" onChange={event => setThumbnail(event.target.files?.[0] ?? null)}/></label>
-      {thumbnailPreview && <img className="video-thumbnail-preview" src={thumbnailPreview} alt="Uploaded thumbnail preview"/>}
+      {artworkPreview('Uploaded thumbnail preview')}
       <p className="video-file">{thumbnail ? `Selected thumbnail: ${thumbnail.name}` : thumbnailObjectId ? 'Uploaded thumbnail saved privately.' : 'No uploaded thumbnail yet.'} TV display requires approval on Publish.</p>
       {thumbnailNotice && <p role="status" className="video-upload-notice">{thumbnailNotice}</p>}
       {existingItem ? <div className="button-row"><button type="button" disabled={busy} onClick={() => void saveDetails()}>Save details</button>
