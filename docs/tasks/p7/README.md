@@ -1,6 +1,6 @@
 # P7 — Vega Export & Device Qualification
 
-**Status (October 20, 2026): ASSESSMENT, PLAN AND P1–P4 PROMPTS AUTHORED; implementation NOT STARTED / native delivery NOT QUALIFIED.** Planned 0.7.x band; not an automatic release version bump. Deadline: October 23, 2026 noon America/Chicago (internal target 11:30 AM; freeze target October 22 5 PM).
+**Status (October 20, 2026): P1–P4 PROMPTS AUTHORED; P7 ENTRY BASELINE `0.7.0` APPROVED AND BEING ESTABLISHED; implementation NOT STARTED / native delivery NOT QUALIFIED.** Planned implementation versions 0.7.1–0.7.4. Deadline: October 23, 2026 noon America/Chicago (internal target 11:30 AM; freeze target October 22 5 PM).
 
 ## Goal
 From signed-in Studio, a creator downloads a ZIP with a fresh real creator/deployment-bound x86_64 Vega release VPKG, extracts it independently, installs it on Vega VirtualDevice, sees their approved branding/shelves/artwork and plays their approved published free HLS video with sound, remote controls and success after app restart. A Studio browser Preview, fixture VPKG or ZIP of source files is not sufficient.
@@ -24,15 +24,16 @@ Implementation checkpoints P1–P3 will use focused checks with runner-owned com
 
 Read [prompt assessment](prompt-assessment.md) and [implementation plan](implementation-plan.md). P1–P3 use `GPT-6 Sol High` and have **Browser required: no**; P4 uses `GPT-6 Sol High`, **Browser required: yes**, and is the **one final manual closeout**. Target versions: P1 `0.7.1`, P2 `0.7.2`, P3 `0.7.3`, P4 `0.7.4`. No `/activate` command.
 
-**Version conflict to resolve before starting:** The current GitHub root is `0.6.7`, while the phase runner for `p7` requires a coherent `0.7.0` baseline, then advances each checkpoint. The separately running Phase 6 creative/video correction must be reconciled first. Do **not** blindly bump/reset it or infer a 0.7.x product release from prompt authoring. This is an ordinary version-only transition, not a new approval ritual. Run stack grammar validation immediately; run the stack only after a version-only 0.7.0 baseline exists.
+**P7 preflight:** GitHub `main` now integrates the Phase 6 playback repair in `8f984b4`; this entry transition sets root `package.json` plus two top-level `package-lock.json` version fields to `0.7.0`, with all workspace versions/source unchanged. The authored P1–P4 prompt target versions remain `0.7.1` through `0.7.4`. This is a source-control/runner baseline, **not** a deployed native package or proof of VirtualDevice playback. Confirm your LOCAL checkout is clean or reconcile pending dirty changes before pulling and starting. Do not clobber concurrent creative work, uploaded media or staging. The operator-approved public poster CloudFront change remains separate; an already-approved free release can be used for P7 if valid and device-reachable.
 
 ```bash
 cd /home/jfin/dev/firelaunch
 git status --short
+# If clean, update local checkout from the accepted Phase 7 baseline:
+git pull --ff-only
 git log -1 --oneline
 node --version && npm --version
 npm run codex:stack:validate -- p7
-# After integrating and committing the coherent 0.7.0 phase baseline:
 npm run codex:stack -- p7
 ```
 

@@ -1,6 +1,6 @@
 # P7 — Prompt assessment: creator-bound Vega ZIP and independent playback
 
-Date: 2026-10-20. Scope approved in [P7 README](README.md) and [delivery roadmap](../../roadmap/mvp-roadmap.md). **Assessment only, not build/device evidence.** Root version observed on GitHub main: 0.6.7. Phase versions 0.7.1–0.7.4 require a separately coherent 0.7.0 baseline before runner execution; this document does not modify package versions. Target: October 23 noon America/Chicago (handoff 11:30 AM).
+Date: 2026-10-20. Scope approved in [P7 README](README.md) and [delivery roadmap](../../roadmap/mvp-roadmap.md). **Assessment only, not build/device evidence.** Root Phase 7 entry version is now planned/committed as `0.7.0` through a version-only source-control transition. Phase prompts target `0.7.1`–`0.7.4`. Validate the actual local checkout and runner grammar before starting; assessment itself is not a native build or browser/device pass. Target: October 23 noon America/Chicago (handoff 11:30 AM).
 
 ## Existing evidence to reuse
 
@@ -8,7 +8,7 @@ Date: 2026-10-20. Scope approved in [P7 README](README.md) and [delivery roadmap
 - `apps/server/src/hosted-workspace.ts` generates/stores owner-scoped source in PostgreSQL, protects custom edits, exposes JSON source export and deliberately returns `Hosted Vega builds require an isolated build service` from `buildStatus/build`; `bundle` is blocked. `apps/server/src/api.ts` already scopes hosted project routes by authenticated principal and CSRF for writes, while `apps/studio/src/Delivery.tsx` disables hosted Build and shows artifact **paths**, not a downloadable ZIP. Existing `apps/server/src/workspace.ts` local build wrapper verifies a fresh VPKG but is NOT safe to invoke on the shared hosted server.
 - `templates/vega-channel/src/App.js` currently sets `VideoPlayer.src = item.mediaUrl`; this is not real adaptive HLS proof. `docs/tasks/p6-live-vod/Q3-vega-device-playback.txt` documents the native SDK/MSE or compatible player inspection and independent device procedure. `docs/tasks/p5/P8-device-runbook.md` contains actual Vega CLI install/launch commands.
 - Dated Phase 6 Q1 real managed private READY HLS and creator-approved Q2 FREE CloudFront release #1 exist. Q2 F7 remains PARTIAL/NOT GREEN; source artwork `/api/public-artwork/` implementation may be newer than the deployed version and is not proven reachable from VVD. Reuse only still-authorized public URLs. No new encode or creator publication is authorized.
-- `docs/tasks/c6-supporting-media/` and the separate unfinished creative/video correction own creator media UI, thumbnail persistence, private Preview and publication artwork. P7 must consume its compatible final contracts without overwriting a parallel worktree.
+- `docs/tasks/c6-supporting-media/` and the independent creative/video correction own creator media UI, thumbnail persistence, private Preview and publication artwork. Phase 6 committed playback repairs are integrated into GitHub main at `8f984b4`; P7 must preserve their contracts and any still-uncommitted local work. The owner-reported private Studio playback Green does not prove the external Vega device or public poster access.
 
 ## Gap and decision matrix
 
