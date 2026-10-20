@@ -8,7 +8,7 @@ Video, audio, and writing professionals who already sell work in the Amazon ecos
 
 **Your Amazon catalog. Your own Fire TV channel.**
 
-FireLaunch turns a creator's existing, authorized catalog and licensed media into a television-native channel. It offers AI-assisted generation, a visual TV editor and Preview, creator-owned Vega source and publishing guidance, and ongoing remote content synchronization.
+FireLaunch turns a creator's existing, authorized catalog and licensed media into a television-native channel. It offers AI-assisted generation, a visual TV editor and Preview, creator-owned Vega source and publishing guidance, and creator-approved remote channel updates and an independently exportable Vega package.
 
 **Individual ownership is non-negotiable.** Each channel is a distinct branded application submitted and controlled through its creator's Amazon Developer account. FireLaunch is the builder/management service, not a single viewer app aggregating creators. Creator assets, content, app identity, listing, code and release decisions remain independently owned and exportable.
 
@@ -20,18 +20,22 @@ FireLaunch turns a creator's existing, authorized catalog and licensed media int
 4. Generate a meaningful design tailored to video, audio or writing: films and trailers; albums, audio samples and episodes; or an author bookshelf with readings, interviews and companion media.
 5. Customize and approve through the Studio, Preview or ChannelAgent. Prompt-first creation remains available as an alternate entry. The ordinary workflow does not require code.
 6. Export/build a creator-specific Vega project, qualify it on television and submit through the creator's own Amazon Developer Console.
-7. Publish an approved, versioned channel manifest and synchronize supported source changes to the installed app, without a new binary for ordinary compatible catalog/layout updates.
+7. Explicitly publish an approved, versioned channel manifest. Installed apps may fetch compatible approved channel/layout changes without binary reinstall; external catalog sources are not automatically polled or synchronized.
 
 A product listing is not a playback license. A sparse list of product cards is not a sufficient television experience. Separate rights, quality and integration-permission gates apply to every source.
 
 ## Product boundaries
 
-- `ChannelSpec` remains canonical for TV layout and navigation; catalog/source/sync state is a separate, versioned domain.
+- `ChannelSpec` remains canonical for TV layout and navigation; catalog/source/rights state is a separate, versioned domain.
 - Vega is the launch target; exported source and direct code editing remain available for advanced creators.
 - Only approved integrations may import/display Amazon data on TV. KDP, Audible, Seller Central and affiliate data are different ecosystems; no universal connector is promised.
 - Publish is separate from drafts; content rolls out via immutable manifests with caching, compatibility checks, rollback and guarded creator overrides.
 - New app permissions, native code or incompatible runtime changes still require a qualified new package and the applicable Appstore review.
 - No shared FireLaunch viewer app, team workspaces, multi-TV platform exports, viewer purchases or advertising in launch MVP.
+
+## Current October 20 product scope
+
+P7 provides actual downloadable ZIP with a creator-bound Vega release VPKG and independent VirtualDevice playback of approved HLS. P8 independently confirms the creative/video workflow, and P9 qualifies the MVP by October 23 noon Central. Automatic catalog synchronization and standalone SaaS billing/Console operations have been removed from the forward roadmap. Manual imports, explicit publication and refresh of approved manifests stay.
 
 ## Historical P0 hackathon scope
 

@@ -6,6 +6,10 @@ Type: Three MANUAL GPT-6 Sol High qualification checkpoints, not a runner stack.
 Version: Existing running `0.6.7` stays unchanged for preparation and correction; historical P6 P8 proposed `0.6.8` must not be advanced without a separately reviewed version/closeout decision.
 Authority: [hybrid access ADR 0013](../../decisions/0013-hybrid-video-access.md), [managed provider ADR 0011](../../decisions/0011-aws-vod-foundation.md), [qualification matrix](qualification-matrix.md).
 
+## Phase 7–9 routing decision (October 20)
+
+The new [Phase 7](../p7/README.md) owns fresh real creator-bound x86_64 VPKG build, isolated hosted ZIP delivery, external VirtualDevice install and working approved free HLS/artwork playback for the October 23 deadline. [Phase 8](../p8/README.md) confirms creative/video behavior from the separately finishing Phase 6 correction; [Phase 9](../p9/README.md) performs final creator-to-device acceptance. This does not rename historical p6-live-vod/Q3 or mark its broader manifest v1/v2/offline/fault/rollback gates GREEN. Use the still-authorized published FREE release #1 for read-only device smoke when permitted. No automatic external catalog synchronization.
+
 ## October 20 deadline routing — use existing release, do not re-run Q1/Q2
 
 Owner delivery is **Friday 2026-10-23 at 12:00 PM America/Chicago (CDT)**. See [current state](../../CURRENT-STATE.md), [updated roadmap](../../roadmap/mvp-roadmap.md), [Q2 closeout](Q2-closeout.md) and [c6-usability P6 closeout](../c6-usability/closeout.md) before any operation.

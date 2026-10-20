@@ -6,6 +6,14 @@ FireLaunch is a creator-owned Fire TV channel studio with authenticated hosted c
 
 Historical P0 qualification was NOT GREEN at 0.0.7. Preserve [P0 closeout](docs/tasks/p0/closeout.md) and historical phase results without presenting them as the current application status.
 
+## Current October 20 approved Phase 7–9 plan (docs only)
+
+[Phase 7](docs/tasks/p7/README.md) targets actual creator-bound x86_64 Vega ZIP export, independent installation and free HLS playback. [Phase 8](docs/tasks/p8/README.md) confirms the full creative/video publication pipeline. [Phase 9](docs/tasks/p9/README.md) confirms an integrated Studio-to-independent-VirtualDevice walkthrough by Friday October 23 noon Central. Planned version bands: 0.7.x, 0.8.x, 0.9.x, not shipped software.
+
+Intended journey: creator explicitly publishes rights-cleared content -> clicks Export App -> authenticated ZIP download includes actual x86_64 VPKG, README, export-info.json and SHA256SUMS -> independently extract and install/launch on Vega VirtualDevice -> see actual branded channel and published artwork/video -> HLS audio, remote control and app restart work. Current hosted Delivery.tsx still blocks unsafe in-process native builds pending isolated worker; a fixture VPKG or source bundle is not proof.
+
+Automatic external catalog synchronization and a standalone creator billing/Console operations phase have been removed. Manual creator-import/re-import, explicit approval and native refresh of already published manifests remain; MediaConvert processing after creator uploads continues. Physical Fire TV/Appstore and paid video are outside this deadline.
+
 ## Approved future Studio visual baseline
 
 The owner-approved [Desert Heat Studio visual baseline](docs/design/studio-visual-baseline.md), [ADR 0012](docs/decisions/0012-studio-visual-identity.md) and [approved screenshot provenance](docs/design/references/README.md) establish the new **future** full-bleed dark cinematic creator Studio UI, dimmed canyon background, warm restrained orange-red controls and independently colored media artwork. **Documentation only:** this is not the currently shipped Studio style or a qualified deployment.

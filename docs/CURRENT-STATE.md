@@ -5,6 +5,16 @@ Purpose: The current, evidence-linked operational and planning entry point. A da
 
 
 
+## October 20 owner-approved phase direction (planning, not runtime qualification)
+
+**Active future phases:** [P7 Vega Export & Device Qualification](tasks/p7/README.md) (0.7.x planned), [P8 Creative Pipeline Confirmation](tasks/p8/README.md) (0.8.x planned), [P9 Final MVP Launch Qualification](tasks/p9/README.md) (0.9.x planned). Deadline Friday October 23 2026 at noon America/Chicago; internal handoff target 11:30 AM CDT. These are not released versions or new evidence of an exported package/device pass.
+
+P7 first: securely build a real creator/deployment-bound x86_64 VPKG; provide an authenticated Studio ZIP download via an actually isolated native build worker; independently extract and install in Vega VirtualDevice, show creator-specific published branding/artwork/shelves, play rights-approved free HLS with sound/D-pad/pause/seek/Back, and validate restart. Existing Delivery.tsx blocks hosted builds until isolation is built; do not remove that guard without safe replacement. A local fixture is insufficient. P8 confirms the separately finished creative/video correction and that the exact approved creator content appears in the installed app. P9 performs final creator walkthrough and focused checks.
+
+**Removed:** planned automatic catalog synchronization, background source polling/diffs and automatic catalog publishing; standalone subscription/Developer Console operations phase also removed. Creator-initiated initial/repeat imports, explicit approved publication and native refresh of already published manifests remain. Managed MediaConvert processing after creator upload is separate and still required. Legacy sync schemas/code are not deleted by documentation only.
+
+Q2 F7 stays PARTIAL/NOT GREEN and external Q3 Vega proof NOT QUALIFIED. Preserve the approved existing FREE release #1, private S3, revocation/owner/CSRF/rights controls and all prior closeouts. No documentation change authorizes AWS mutations, paid jobs, new content publication or staging deployment.
+
 ## October 20 delivery status — supersedes older planning snapshots
 
 **Deadline:** owner delivery Friday 2026-10-23 at **12:00 PM America/Chicago** (CDT). The roadmap also contains a historical 12:00 PM PDT hackathon timestamp; do not silently treat the time zones as equal.
@@ -41,8 +51,8 @@ Fresh [host and HTTPS inspection](staging-consolidation-2026-10-19.md) found one
 | Approved free CloudFront HLS, owned public manifest | **Q2 overall NOT GREEN; release #1 accessible** | [Q2 closeout](tasks/p6-live-vod/Q2-closeout.md); an isolated F7 test release was temporarily accessible, then its artwork right and CDN access were revoked; video lifecycle proof remains open |
 | Progressive two-hour popup and close/reopen UX | **P6 STAGING SMOKE PASS, BOUNDED** | [P6 closeout](tasks/c6-usability/closeout.md); no new paid job; actual two-hour throughput not proven |
 | Creative/video preview, thumbnail, publication artwork integration | **NEW SOURCE AT b0d2897; NOT STAGING/DEVICE QUALIFIED** | [c6-supporting-media](tasks/c6-supporting-media/README.md); reconcile source, public artwork origin and end-to-end proof |
-| Creator-specific downloadable Vega export | **NOT QUALIFIED; CRITICAL DELIVERY RISK** | Hosted build service/download path not evidenced; fixture VPKG is insufficient |
-| Actual creator-bound Vega VirtualDevice playback and v1/v2/v3 LKG | **NOT QUALIFIED** | [p6-live-vod Q3](tasks/p6-live-vod/Q3-vega-device-playback.txt) |
+| P7 downloadable creator-specific Vega ZIP/export | **PLANNED / NOT QUALIFIED; CRITICAL DELIVERY RISK** | [P7](tasks/p7/README.md): isolated hosted build and direct ZIP download not evidenced; fixture VPKG insufficient |
+| P7 independent creator-bound Vega playback / historical Q3 LKG matrix | **NOT QUALIFIED** | [P7](tasks/p7/README.md) owns minimum export/playback; [historical Q3](tasks/p6-live-vod/Q3-vega-device-playback.txt) remains wider unqualified evidence |
 | P5/c5 creator-bound real device and HTTPS acceptance | **Historical NOT GREEN** | Retain [P5](tasks/p5/closeout.md), [c5](tasks/c5-vega/closeout.md); carried into Q3 |
 | P2/c2 complete production hosting S1-S6, P4 live provider, physical Fire TV and Appstore | **Not fully qualified** | Historical closeouts and later launch gates remain independently open |
 | Desert Heat Studio visual redesign | **Docs/prompt stack authored, not qualified as deployed** | [c6-desert-heat-studio](tasks/c6-desert-heat-studio/README.md) and [ADR 0012](decisions/0012-studio-visual-identity.md) |

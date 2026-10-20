@@ -1,6 +1,18 @@
 # FireLaunch Architecture
 
-## Current deployed and planned media architecture (2026-10-18)
+## Current forward architecture (owner decision October 20)
+
+The active roadmap is [P7 native Vega export](tasks/p7/README.md), [P8 creative pipeline confirmation](tasks/p8/README.md), then [P9 final MVP qualification](tasks/p9/README.md). All older future phase numbering and FFmpeg guidance below is dated background, not a current implementation request.
+
+P7 must generate native Vega source from an authenticated creator's real ChannelSpec, CatalogItem/MediaAsset and ChannelDeployment with pinned public-only HTTPS PublishedManifest identity. The downloadable ZIP contains the verified x86_64 native VPKG, README/install instructions, nonsecret export provenance and SHA256SUMS. Host native builds only inside an isolated constrained worker with per-owner job authorization, CSRF, ephemeral filesystem, bounded CPU/disk/network/time, safe artifact collection/expiration and owner-scoped download. Never execute arbitrary creator code in the privileged shared staging API/VPS process. Validate build provenance, actual artifact, correct target package identity and no private URLs/credentials/foreign data.
+
+The installed native app reads strictly approved immutable manifests from device-reachable public endpoints, renders verified published artwork and plays creator-approved FREE HLS in SDK-compatible media surfaces with remote navigation and restart. Private Studio Preview URLs, signed S3 originals, AWS credentials and unpublished data never enter exported manifests/packages.
+
+P8 reuses existing creative/video contracts to verify saved/reopened edits, early selected/generated thumbnails, correct private Preview, explicit publication and exact installed-client rendering. P9 independently qualifies the complete Studio -> ZIP -> VVD -> playback/restart demonstration. Physical hardware, paid access, billing and Appstore approval remain outside the October 23 scope.
+
+No automatic catalog polling/diffs/reconciliation/auto-publication will be built. Manual initial/repeat catalog import, explicit creator approval, and installed-client refresh of already published revisions remain. MediaConvert background completion after creator upload is not catalog synchronization. Before any later code cleanup, audit legacy sync-oriented types/jobs and preserve data compatibility.
+
+## Historical deployed/planned media architecture (2026-10-18; superseded by later evidence)
 
 Read [CURRENT-STATE](CURRENT-STATE.md), [ADR 0011](decisions/0011-aws-vod-foundation.md), [ADR 0013](decisions/0013-hybrid-video-access.md), and [p6-live-vod](tasks/p6-live-vod/README.md) before executing any old implementation recipe in this architecture document. Real hosted Add Video private ingestion and owned Postgres/S3 persistence are STAGING UX GREEN; the managed MediaConvert processing adapter is offline LOCAL GREEN, but a real HLS job, approved free CloudFront release and native Vega VirtualDevice playback are NOT QUALIFIED. AWS Foundation nested-role/prefix correction was deployed and simulated at a dated checkpoint with queue PAUSED, EventBridge DISABLED and CloudFront DISABLED; reverify actual state.
 

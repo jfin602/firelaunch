@@ -141,7 +141,7 @@ Ship a rights-safe local/sample Wild Earth-style project with placeholder/genera
 - component marketplace
 - automated Developer Console credentials/submission
 
-## Launch-MVP product model extension (planned P1-P8, accepted 2026-10-09)
+## Historical 2026-10-09 launch product model (current phase override below)
 
 The preceding P0 nouns, local storage, golden path and deferrals are historical, not descriptions of the finished hosted product. Launch additions extend the canonical `ChannelSpec` model; they do not replace its validated TV presentation contract.
 
@@ -152,14 +152,13 @@ The preceding P0 nouns, local storage, golden path and deferrals are historical,
 - **ChannelProject:** creator-scoped workspace containing one channel and its catalog configuration; no shared team access in MVP.
 - **ChannelDeployment:** one independent Fire TV application identity, package identifier, manifest endpoint, artifact/release lineage and Amazon Developer Console listing status. Each creator owns the app/account/listing, not FireLaunch. One account may own multiple independently published projects.
 
-### Catalog, media and synchronization
+### Catalog, media and creator-reviewed updates
 
 - **CatalogSource:** type, provider/external identity, permission/verification state, feed or seller authorization, refresh capability, last-success/error and safe secret references. Supported launch fallback: creator-controlled CSV/JSON, HTTPS feed and media uploads.
 - **CatalogItem:** stable internal ID, namespaced source IDs (including ASIN where applicable), type, title, metadata, artwork, provenance, imported field ownership, rights state and association to Collections.
 - **MediaAsset:** independently authorized video/audio/artwork references or uploads, codec/playability data where needed, licensing/rights declaration, delivery eligibility and captions/other metadata.
 - **Collection:** curated series, bookshelf, featured programming, album/playlist or rail, stable item references and editorial order.
-- **SyncPolicy:** selected source-owned fields, creator overrides, new-item publication/review rule, removals/grace behavior and cadence.
-- **SyncObservation:** checkpoint/diff, source provenance, validation, last run/errors and accepted/rejected/queued state.
+- **ImportReview:** creator-initiated repeat import with provenance, override protection and explicit approval/rejection. Previously proposed scheduled SyncPolicy/SyncObservation behaviors are retired from the forward product plan; preserve any persisted legacy types pending compatibility audit.
 - **PublishedManifest:** immutable, versioned, public TV-safe snapshot composed from approved ChannelSpec, catalog selection and media references, linked to one ChannelDeployment and compatible client schema.
 
 `ChannelSpec` is canonical for presentation and TV navigation. The catalog records canonical content inventory and provenance. Publication validates and projects both; neither imports nor AI models may bypass schema validation or creator review rules.
@@ -168,17 +167,17 @@ The preceding P0 nouns, local storage, golden path and deferrals are historical,
 
 - **Discovered:** a possible source or item match; identity and import rights unverified.
 - **Verified:** the creator has demonstrated control/permissions using a supported mechanism.
-- **Syncing:** a permitted, functioning ongoing source with observable sync health.
+- **Imported:** an explicitly reviewed creator-controlled source snapshot; background refresh is not implied.
 
 An Amazon author/seller name or ASIN cannot authorize import. No universal KDP, Audible, Seller Central or affiliate-content access is promised. Amazon connectors ship only when authorization and downstream TV use are proven.
 
 ### Field and update policies
 
-Source-owned fields can refresh; creator-owned fields must not be overwritten. AI suggestions are proposals until accepted. New external items default to review; deletions use a grace period; revocation stops ingestion and is visible. Draft items and private tokens never enter published payloads. A failed refresh retains the last approved release.
+Source-owned fields may update only on creator-initiated, reviewed imports; creator-owned fields must not be overwritten. AI suggestions remain proposals until accepted. New external items default to review; no automatic missing-item deletion is performed. Draft items and private tokens never enter published payloads. Failed repeat imports leave the last approved release intact.
 
 ### Launch golden path
 
-Account -> catalog import/rights -> video/audio/writing-specific generation -> visual Preview/edit -> approve live manifest -> creator-owned source/build/Console submission -> ongoing permitted synchronization and live TV refresh. Prompt-first creation and advanced Code remain optional. A product listing without licensed playable content is not a finished TV experience.
+Account -> creator-initiated catalog import/rights -> video/audio/writing-specific generation -> Preview/edit -> explicitly approve a live manifest -> download independent creator-owned Vega package -> native playback; the installed app can refresh already approved published releases. Prompt-first creation and advanced Code remain optional. A product listing without licensed playable content is not a finished TV experience.
 
 ### Launch gates and deferrals
 
@@ -196,7 +195,7 @@ An optional `ChannelDeployment` has a globally unique native package ID and rele
 
 A `CatalogSource` is a creator-and-project-scoped origin with its own proof of retrieval/display permission. `CatalogItem` stores stable source-scoped external identifiers and immutable observed source metadata separately from creator editing overrides; an item can be a non-playable book or listing. `Collection` expresses deliberate programming order (bookshelf, playlist, album, featured rail), not a playback license. `MediaAsset` is independently attached to a catalog item and may be private/rights-unknown even when inventory is complete. An evidence reference is not itself a verified grant, and neither a public Amazon identifier nor an upload demonstrates television reuse permission.
 
-**Phase 3 creator workflow:** choose a source type -> upload CSV/JSON or supply a permitted HTTPS feed -> inspect parsed records, invalid rows and duplicates -> approve selected changes -> curate collections -> attach owned/licensed media and separate display/playback rights -> save a project-scoped catalog draft. Creator override fields survive repeated imports. New external items require review; no automatic publication or silent missing-item removal. Empty and non-playable inventories are valid drafts but not implicitly playable television channels. P4 owns generation into `ChannelSpec`; P5 owns remote public delivery; P6 owns ongoing refresh/reconciliation.
+**Phase 3 creator workflow:** choose a source type -> upload CSV/JSON or supply a permitted HTTPS feed -> inspect parsed records, invalid rows and duplicates -> approve selected changes -> curate collections -> attach owned/licensed media and separate display/playback rights -> save a project-scoped catalog draft. Creator override fields survive repeated imports. New external items require review; no automatic publication or silent missing-item removal. Empty and non-playable inventories are valid drafts but not implicitly playable television channels. P4 owns generation into ChannelSpec; P5 owns approved remote public delivery. Automatic external catalog refresh/reconciliation is no longer planned.
 
 Phase 2 P7 and c2 remain **NOT GREEN**. P3 completed its implemented local catalog foundation with automated tenant regression and sequential live Google identities; simultaneous independent real browser profiles, full foreign API negatives, HTTPS OIDC/cookie behavior and independent HTTPS S3 recovery remain unqualified preproduction security gates. Neither passed catalog tests nor local-only authentication are grounds to label the entire hosted service production-qualified.
 
@@ -208,7 +207,7 @@ P4 maps creator-selected, persisted approved CatalogItems and Collections into a
 
 
 **Phase 5 published delivery:** A creator-owned ChannelDeployment holds one stable native package identity and approved public HTTPS resolver. ChannelSpec and catalog remain editable private drafts; editing alone does not publish. Creator approval binds project/catalog revisions and rights; immutable PublishedManifest snapshots and an atomic release pointer control what an anonymous installed television reads. Informational books do not require playback; audio/video require approved device-reachable TV playback rights and separate display rights. The TV validates compatible releases, stores last-known-good state and falls back on bad or offline fetch; rollback is a new approved, monotonically sequenced release, not mutable history. A real VirtualDevice suffices for P5 testing of one same-installed-VPKG remote update, while physical Fire TV and Appstore approval stay P8 release gates. No live Bedrock or production VPS is needed to start the implementation. See ADR 0009.
-P4 uses bounded server-authorized catalog inspection and provider-neutral ChannelAgent structured mutations, never raw model-generated JSON replacement or client-provided creator IDs. A successful real non-mock model call grounding on imported catalog plus persisted, valid ChannelSpec change and interactive Preview is required for P4 GREEN. Deterministic starter layouts work offline for video, audio and writing; mock tests do not prove live provider qualification. Authentication/private Preview and generated-source sanitization remain separate from P5 public immutable media/manifest delivery; P6 owns automatic sync. Full hosted release security readiness remains unqualified until inherited S1–S6 gates pass.
+P4 uses bounded server-authorized catalog inspection and provider-neutral ChannelAgent structured mutations, never raw model-generated JSON replacement or client-provided creator IDs. A successful real non-mock model call grounding on imported catalog plus persisted, valid ChannelSpec change and interactive Preview is required for P4 GREEN. Deterministic starter layouts work offline for video, audio and writing; mock tests do not prove live provider qualification. Authentication/private Preview and generated-source sanitization remain separate from P5 public immutable media/manifest delivery; Automatic external catalog synchronization is removed from the forward product roadmap. Full hosted release security readiness remains unqualified until inherited S1–S6 gates pass.
 
 
 ## Historical P6 AWS media plan (initial FFmpeg design; superseded by ADR 0011)
@@ -218,6 +217,10 @@ P5's historical approved PublishedManifest/ChannelSpec contracts remain the comp
 Media moves through upload pending -> uploaded -> probing -> processing -> verified/ready or failed; separately track TV-display/playback rights, approval, revocation and delivery eligibility. FFprobe can approve safe stream copy/repackaging, otherwise transcode a bounded two-quality HLS profile (480p/720p initially, optional 1080p). Every rendition-set publication must resolve to stable validated CloudFront HTTPS media usable by the P5 wire format, with no signed private S3 URL or temporary query credentials. Private storage from P2/P3 for small evidence and uploads remains distinct; P6 handles scalable video masters.
 
 For **future** subscribers, public playback manifests must not contain per-viewer credentials. Viewer identity, Amazon/Roku billing and playback entitlements require a separately approved device/provider contract. Initial P6 is free-to-view rights-cleared video. P6 (0.6.x) precedes planned P7 sync (0.7.x), P8 publishing/SaaS (0.8.x), P9 launch (0.9.x); all earlier P6/P7/P8 references in historical phase plans remain historical, not renamed evidence.
+
+## Current owner-approved phase/product override (2026-10-20)
+
+[P7](tasks/p7/README.md) owns downloadable Vega ZIP/native-device HLS qualification; [P8](tasks/p8/README.md) owns independent creative pipeline confirmation; [P9](tasks/p9/README.md) owns final October 23 MVP qualification. Bands 0.7.x–0.9.x are planned, not deployed. Automatic source polling/diffs/sync workers, auto-publishing catalog changes and standalone billing/Developer Console operations have been removed. Creator-driven imports/re-imports, explicit publication, published-manifest refresh and asynchronous MediaConvert responses to creator uploads remain. Legacy SyncPolicy/SyncObservation and prior P7/P8/P9 descriptions are historic; do not destructively remove stored compatibility records without a separate review.
 
 ## Current verified video baseline and future access (2026-10-18)
 

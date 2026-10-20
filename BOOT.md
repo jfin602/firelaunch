@@ -2,7 +2,13 @@
 
 Read this file before substantial repository-aware work.
 
-**Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) first for dated source/staging/AWS facts, current gates and next execution.** This boot file includes historical P0-P6 decisions; older activation instructions are preserved as history and MUST NOT override that current ledger, ADR 0011/0013, or p6-live-vod Q1-Q3. Last current-state reconciliation: 2026-10-18 UTC.
+**Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) first for dated source/staging/AWS facts, current gates and next execution.** This boot file includes historical P0-P6 decisions; older activation instructions are preserved as history and MUST NOT override that current ledger, ADR 0011/0013, or p6-live-vod Q1-Q3. Last current-state reconciliation: 2026-10-20 UTC.
+
+## Current roadmap decision (October 20, supersedes dated future allocations below)
+
+P7 Vega Export & Device Qualification -> P8 Creative Pipeline Confirmation -> P9 Final MVP Launch Qualification. See docs/tasks/p7/README.md, docs/tasks/p8/README.md and docs/tasks/p9/README.md. Versions 0.7.x/0.8.x/0.9.x are phase targets only. By October 23 noon Central a signed-in creator must download a ZIP with an actual creator-bound Vega x86_64 VPKG and independently install/navigate/play approved HLS in VirtualDevice including restart. Hosted native builds require real isolation; existing disabled state may not be bypassed. Phase 8 consumes the separate creative/video correction and Phase 9 closes the integrated demonstration.
+
+The formerly planned automatic catalog synchronization/source polling and standalone billing/Appstore operations phase are removed. Manual import, explicit publication and remote reads of already approved manifests remain, as does MediaConvert after creator upload. Q2 F7 PARTIAL/NOT GREEN and Q3 native playback NOT QUALIFIED remain distinct. Historical P0-P6 instructions below, including older proposed P7/P8/P9 numbering, are not the active execution plan and do not imply new AWS/deployment permissions.
 
 ## Mission
 

@@ -45,13 +45,13 @@ Every creator's channel has an independent application identity, developer accou
 The normal journey starts from an authorized content catalog; blank/prompt-first creation remains available. A creator-controlled import must work when Amazon API access is unavailable.
 
 15. Discovery is not authorization.
-Seller names, author pages, storefront URLs and ASINs are discovery clues, not permission to import, redistribute or sync. Distinguish discovered, verified and actively syncing states.
+Seller names, author pages, storefront URLs and ASINs are discovery clues, not permission to import or redistribute. Distinguish discovered and verified states; no automatic ongoing external-source synchronization is planned.
 
 16. Rights and real TV value are required.
 A listing does not grant playback rights. Audio, video and writing creators need substantive television-native playback, navigation and presentation.
 
-17. Creator edits survive synchronization.
-Field-level provenance and ownership prevent blind overwrites. New items default to review and missing ones receive a grace/review state.
+17. Creator edits survive creator-initiated repeat imports.
+Field-level provenance and ownership prevent blind overwrites. New imported items require review; no background polling or automatic missing-item deletion is planned.
 
 18. Approved manifests are immutable.
 Draft is not live. The Vega app validates published revisions, caches last known-good state, and supports rollback without blanking the channel on refresh failure.

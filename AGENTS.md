@@ -13,13 +13,14 @@ Before implementation:
 8. the active docs/tasks/<stack>/ README, prompt-assessment and implementation-plan
 9. the current prompt
 
-## Current operational priority (2026-10-18)
+## Current operational priority (owner-approved October 20)
 
-- Read [current state](docs/CURRENT-STATE.md) before interpreting historical phase sections below. Root version is 0.6.7 at the recorded source baseline; c6-video-publishing-ux is STAGING UX GREEN, c6-aws-vod is LOCAL GREEN only, and the deployed AWS Foundation correction was last observed UPDATE_COMPLETE with encode queue PAUSED, EventBridge DISABLED and CloudFront DISABLED.
-- The **next active execution is manual p6-live-vod Q1**, then Q2 and Q3 after their independent GREEN gates. Read [p6-live-vod README](docs/tasks/p6-live-vod/README.md), matrix, and [ADR 0013](docs/decisions/0013-hybrid-video-access.md). These prompts are on main, not an unmerged docs branch. Do not run the Prompt Stack runner for them.
-- For new media, AWS MediaConvert (ADR 0011) supersedes FFmpeg. For publication, only creator-approved FREE video may eventually use a public CloudFront delivery path; future purchase/rental/subscription video requires a separately qualified protected viewer-entitlement path. Do not treat conceptual paid modes as shipped features.
-- `/docs-apply` or authored prompts are **not** operator authorization for queue activation, paid jobs, CloudFormation, IAM, enabling CloudFront, changing host/DNS, deployment, or creator publication. Stop for precise approval at each Q gate. Preserve current single staging service, schema 13, private originals, backups, previous release, owner/CSRF/rights and Ngest.
-- Sections marked active/current below are **dated historical decisions** unless explicitly reaffirmed by this current operational priority and their later ADR/closeout. Never rerun P6 FFmpeg or old p6 runner prompts or relabel historical NOT GREEN closeouts.
+- Read docs/CURRENT-STATE.md and docs/roadmap/mvp-roadmap.md before any implementation. Delivery deadline: Friday October 23 2026 noon America/Chicago, internal target 11:30 AM. Older activation guidance below is dated historical authority only.
+- **Current roadmap:** [P7 Vega Export & Device Qualification](docs/tasks/p7/README.md) -> [P8 Creative Pipeline Confirmation](docs/tasks/p8/README.md) -> [P9 Final MVP Launch Qualification](docs/tasks/p9/README.md). Planned version bands 0.7.x/0.8.x/0.9.x are NOT deployed, qualified or automatically approved version bumps.
+- P7: authenticated Studio ZIP with actual creator/deployment-bound x86_64 release VPKG; externally install in Vega VirtualDevice and play explicitly published free HLS with artwork/remote controls/restart. Hosted builds remain disabled unless separately isolated. Never run untrusted creator-edited source in the shared VPS application context or leak private objects/credentials into exported code.
+- P8: verify the independently finishing Phase 6 creative/video correction, save/reopen/thumbnail/private Preview, explicit publication and exported-client content. P9: one realistic end-to-end owner walkthrough, focused final regression and evidence. Do not repeat earlier paid encode or extensive historic matrices simply to make progress.
+- Automatic external catalog synchronization, scheduled feed polling/diff/reconciliation, and auto-catalog-publication are REMOVED from current product. Manual initial/repeat import and creator-approved immutable remote manifest refresh remain. MediaConvert handling of creator-initiated videos remains. No standalone creator billing/Appstore operations phase.
+- Preserve historical P5/c5/Q2 F7 NOT GREEN and Q3 unqualified states and all prior prompt checkpoint identities. No docs approval permits creator publication, infrastructure changes, paid AWS processing, staging deploy or rights relaxation.
 
 ## Repository behavior
 
