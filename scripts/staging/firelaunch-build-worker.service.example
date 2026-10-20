@@ -21,7 +21,9 @@ PrivateTmp=yes
 PrivateDevices=yes
 ProtectSystem=strict
 ProtectHome=yes
-ProtectKernelTunables=yes
+# bubblewrap must mount a private /proc. The child masks /proc/sys with an empty
+# tmpfs, while this unprivileged supervisor has no capabilities or host egress.
+ProtectKernelTunables=no
 ProtectKernelModules=yes
 ProtectControlGroups=yes
 ProtectClock=yes

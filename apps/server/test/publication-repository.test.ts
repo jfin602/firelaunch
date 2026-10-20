@@ -433,7 +433,11 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
       releaseId: rollback.manifest.releaseId, sequence: 3,
       revisions: rollback.manifest.approvedContentRevision, catalogItemIds: [item.id]
     });
+    const buildSnapshot = await publication.currentBuildSnapshot(owner, project.id, deploymentId, rollback.manifest.releaseId);
+    assert.deepEqual(buildSnapshot.channel, spec);
+    assert.equal(buildSnapshot.revision, rollback.manifest.approvedContentRevision.channel);
     await assert.rejects(publication.currentSummary(foreign, project.id, deploymentId), { code: 'NOT_FOUND' });
+    await assert.rejects(publication.currentBuildSnapshot(foreign, project.id, deploymentId, rollback.manifest.releaseId), { code: 'NOT_FOUND' });
     await assert.rejects(other.history(foreign, project.id, deploymentId), { code: 'NOT_FOUND' });
     await first.pool.end(); first = undefined;
     const restarted = await HostedProjectRepository.connect(url.toString()); first = restarted;

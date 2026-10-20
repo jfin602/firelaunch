@@ -20,10 +20,11 @@ const project: ChannelProject = { id: spec.id, spec, revision: 3,
 const deployment: ChannelDeployment = { schemaVersion: 1, id: `dep_${'a'.repeat(32)}`,
   creatorAccountId: owner.accountId, projectId: spec.id, channelId: spec.id,
   appName: 'Creator channel', packageId: 'com.creator.channel', releaseControl: 'creator',
-  nativeReleaseApproval: 'pending_creator',
+  nativeReleaseApproval: 'creator_approved',
   manifestEndpoint: `https://channels.creator.tv/public/v1/deployments/dep_${'a'.repeat(32)}/current`,
   consoleEvidence: { state: 'none' } };
-const release = { releaseId: `rel_${'d'.repeat(32)}`, sequence: 1 };
+const release = { releaseId: `rel_${'d'.repeat(32)}`, sequence: 1,
+  revisions: { channel: project.revision, catalog: 0 }, catalogItemIds: [] as string[] };
 async function stored(): Promise<StoredSource> {
   const generated = await generateProject(spec, deployment);
   const files = Object.fromEntries(generated.files);
@@ -50,6 +51,10 @@ test('creator build input pins published deployment and preserves safe edited so
   assert.equal(input.publishedRelease.releaseId, release.releaseId);
   assert.equal(input.files['src/App.js'], source.files['src/App.js']);
   assert.equal(input.manifestEndpoint, deployment.manifestEndpoint);
+  const originBound = await createReleaseBuildInput(project, source,
+    { ...deployment, manifestEndpoint: 'https://channels.creator.tv/' }, release, owner.accountId);
+  assert.equal(originBound.manifestEndpoint, deployment.manifestEndpoint);
+  assert.equal(originBound.fingerprint, input.fingerprint);
   assert.equal(input.packageId, deployment.packageId);
   assert.deepEqual(RELEASE_BUILD_COMMAND, ['./node_modules/.bin/react-native', 'build-vega', '--target', 'x86_64', '--build-type', 'Release']);
   const dir = await mkdtemp(join(tmpdir(), 'firelaunch-release-input-'));
@@ -162,7 +167,7 @@ test('worker rejects a VPT-validated package with a different application identi
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
-test('hosted snapshot denies foreign identity and detects source, revision or release drift', async () => {
+test('hosted snapshot denies foreign identity, preserves released revision, and detects source or release drift', async () => {
   let source = await stored();
   let currentProject = project;
   let currentRelease = release;
@@ -173,12 +178,17 @@ test('hosted snapshot denies foreign identity and detects source, revision or re
     readDeployment: async () => { guarded(); return deployment; },
     source: async () => { guarded(); return source; }
   } as unknown as HostedProjectRepository;
-  const publication = { currentSummary: async () => { guarded(); return currentRelease; } } as unknown as PublicationRepository;
+  const publication = { currentSummary: async () => { guarded(); return currentRelease; },
+    currentBuildSnapshot: async () => { guarded(); return { channel: spec, revision: project.revision }; }
+  } as unknown as PublicationRepository;
   const workspace = new HostedWorkspaceService(repository, publication);
   const first = await workspace.releaseBuildInput(owner, project.id);
   active = foreign;
   await assert.rejects(workspace.releaseBuildInput(foreign, project.id), { code: 'NOT_FOUND' });
   active = owner;
+  await assert.rejects(new HostedWorkspaceService({ ...repository,
+    readDeployment: async () => ({ ...deployment, nativeReleaseApproval: 'pending_creator' })
+  } as HostedProjectRepository, publication).releaseBuildInput(owner, project.id), { code: 'CONFLICT' });
   source = { ...source, files: { ...source.files, 'src/App.js': `${source.files['src/App.js']}\n// edit` } };
   await assert.rejects(workspace.assertReleaseBuildInputCurrent(owner, project.id, first.fingerprint), { code: 'CONFLICT' });
   source = await stored();
@@ -186,5 +196,7 @@ test('hosted snapshot denies foreign identity and detects source, revision or re
   await assert.rejects(workspace.assertReleaseBuildInputCurrent(owner, project.id, first.fingerprint), { code: 'CONFLICT' });
   currentRelease = release;
   currentProject = { ...project, revision: 4 };
-  await assert.rejects(workspace.releaseBuildInput(owner, project.id), { code: 'CONFLICT' });
+  assert.equal((await workspace.releaseBuildInput(owner, project.id)).fingerprint, first.fingerprint);
+  source = null as unknown as StoredSource;
+  assert.equal((await workspace.releaseBuildInput(owner, project.id)).fingerprint, first.fingerprint);
 });

@@ -33,25 +33,47 @@ const blockedBuild = { status: 'blocked' as const, reason: NATIVE_EXPORT_BLOCKER
 
 export class HostedWorkspaceService {
   constructor(private readonly repository: HostedProjectRepository,
-    private readonly publication: Pick<PublicationRepository, 'currentSummary'> = new PublicationRepository(repository)) {}
+    private readonly publication: Pick<PublicationRepository, 'currentSummary' | 'currentBuildSnapshot'> = new PublicationRepository(repository)) {}
 
   /** Internal worker submission contract. No hosted build route calls this in P1. */
   async releaseBuildInput(principal: AuthenticatedPrincipal, id: string): Promise<ReleaseBuildInput> {
     const project = await this.repository.read(principal, id);
-    assertExportableMedia(project.spec);
     const deployment = await this.repository.readDeployment(principal, id);
     if (deployment.creatorAccountId !== principal.accountId) throw new RepositoryError('NOT_FOUND', 'Project not found');
+    if (deployment.nativeReleaseApproval !== 'creator_approved')
+      throw new RepositoryError('CONFLICT', 'Native deployment is not creator-approved');
     const release = await this.publication.currentSummary(principal, id, deployment.id);
+    if (!release) throw new RepositoryError('CONFLICT', 'No creator-approved published release');
+    const approved = await this.publication.currentBuildSnapshot(principal, id, deployment.id, release.releaseId);
+    if (approved.revision !== release.revisions.channel)
+      throw new RepositoryError('CONFLICT', 'Approved channel revision changed');
+    assertExportableMedia(approved.channel);
+    const approvedProject = { ...project, spec: approved.channel, revision: approved.revision };
     const source = await this.repository.source(principal, id);
-    const input = await createReleaseBuildInput(project, source, deployment,
-      release ? { releaseId: release.releaseId, sequence: release.sequence } : null, principal.accountId);
+    const generated = !source ? await generateProject(approved.channel, deployment) : null;
+    const releaseSource = source ?? (generated ? { specRevision: approved.revision,
+      fingerprint: generated.fingerprint, files: Object.fromEntries(generated.files),
+      baseline: Object.fromEntries(generated.files) } : null);
+    const input = await createReleaseBuildInput(approvedProject, releaseSource, deployment,
+      { releaseId: release.releaseId, sequence: release.sequence }, principal.accountId);
     // Repeat after assembling the snapshot. P2 must call this again before artifact acceptance/download.
     const current = await this.repository.read(principal, id);
     const currentDeployment = await this.repository.readDeployment(principal, id);
+    if (currentDeployment.nativeReleaseApproval !== 'creator_approved')
+      throw new RepositoryError('CONFLICT', 'Native deployment approval changed during snapshot');
     const currentSource = await this.repository.source(principal, id);
     const currentRelease = await this.publication.currentSummary(principal, id, currentDeployment.id);
-    const confirmed = await createReleaseBuildInput(current, currentSource, currentDeployment,
-      currentRelease ? { releaseId: currentRelease.releaseId, sequence: currentRelease.sequence } : null, principal.accountId);
+    if (!currentRelease || currentRelease.releaseId !== release.releaseId)
+      throw new RepositoryError('CONFLICT', 'Published release changed during snapshot');
+    const currentApproved = await this.publication.currentBuildSnapshot(principal, id, currentDeployment.id, currentRelease.releaseId);
+    if (currentApproved.revision !== currentRelease.revisions.channel)
+      throw new RepositoryError('CONFLICT', 'Approved channel changed during snapshot');
+    const currentGenerated = !currentSource ? await generateProject(currentApproved.channel, currentDeployment) : null;
+    const confirmed = await createReleaseBuildInput({ ...current, spec: currentApproved.channel, revision: currentApproved.revision },
+      currentSource ?? (currentGenerated ? { specRevision: currentApproved.revision,
+        fingerprint: currentGenerated.fingerprint, files: Object.fromEntries(currentGenerated.files),
+        baseline: Object.fromEntries(currentGenerated.files) } : null), currentDeployment,
+      { releaseId: currentRelease.releaseId, sequence: currentRelease.sequence }, principal.accountId);
     if (confirmed.fingerprint !== input.fingerprint) throw new RepositoryError('CONFLICT', 'Build input changed during snapshot');
     return input;
   }

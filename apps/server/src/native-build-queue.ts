@@ -41,10 +41,20 @@ export class NativeBuildQueue {
           release_sequence,input_fingerprint,source_hash,input)
          SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10 FROM channel_deployments d
          JOIN channel_ownerships o ON o.project_id=d.project_id AND o.creator_account_id=d.creator_account_id
-         WHERE d.id=$4 AND d.project_id=$3 AND d.creator_account_id=$2 AND d.package_id=$5 RETURNING id`,
+         JOIN channel_projects c ON c.id=d.project_id AND c.creator_account_id=d.creator_account_id
+         JOIN publication_live_pointers p ON p.deployment_id=d.id AND p.project_id=d.project_id
+           AND p.creator_account_id=d.creator_account_id
+         JOIN publication_releases r ON r.id=p.release_id AND r.deployment_id=p.deployment_id
+           AND r.project_id=p.project_id AND r.creator_account_id=p.creator_account_id
+         JOIN publication_approvals a ON a.id=r.approval_id AND a.deployment_id=r.deployment_id
+           AND a.project_id=r.project_id AND a.creator_account_id=r.creator_account_id
+         WHERE d.id=$4 AND d.project_id=$3 AND d.creator_account_id=$2 AND d.package_id=$5
+           AND d.deployment->>'nativeReleaseApproval'='creator_approved'
+           AND a.channel_revision=$11 AND p.release_id=$6 AND p.sequence=$7 RETURNING id`,
         [jobId,input.creatorAccountId,input.projectId,input.deploymentId,input.packageId,
-          input.publishedRelease.releaseId,input.publishedRelease.sequence,input.fingerprint,input.sourceHash,JSON.stringify(input)]);
-      if (!result.rows[0]) fail('Build owner or deployment changed');
+          input.publishedRelease.releaseId,input.publishedRelease.sequence,input.fingerprint,input.sourceHash,
+          JSON.stringify(input),input.specRevision]);
+      if (!result.rows[0]) fail('Build owner, deployment or published release changed');
       return jobId;
     });
   }
@@ -123,10 +133,19 @@ export class NativeBuildQueue {
        FROM firelaunch_build.jobs WHERE id=$3 AND creator_account_id=$1 AND project_id=$2`,
       [ownerId,projectId,jobId]);
     const row = result.rows[0];
-    return row ? { id:row.id,state:row.state,attempt:row.attempt,errorCode:row.error_code,
-      artifactSha256:row.state === 'ready' ? row.artifact_sha256 : null,
-      artifactBytes:row.state === 'ready' ? Number(row.artifact_bytes) : null,
+    return row ? { id:row.id,state:row.expires_at.getTime() <= Date.now() ? 'expired' : row.state,
+      attempt:row.attempt,errorCode:row.error_code,
+      artifactSha256:row.state === 'ready' && row.expires_at.getTime() > Date.now() ? row.artifact_sha256 : null,
+      artifactBytes:row.state === 'ready' && row.expires_at.getTime() > Date.now() ? Number(row.artifact_bytes) : null,
       expiresAt:row.expires_at.toISOString() } : null;
+  }
+
+  /** The export route has one active job per owned project; expose its most recent receipt. */
+  async latestStatus(ownerId: string, projectId: string): Promise<Awaited<ReturnType<NativeBuildQueue['status']>>> {
+    const result = await this.pool.query<{ id: string }>(
+      `SELECT id FROM firelaunch_build.jobs WHERE creator_account_id=$1 AND project_id=$2
+       ORDER BY created_at DESC,id DESC LIMIT 1`, [ownerId,projectId]);
+    return result.rows[0] ? this.status(ownerId,projectId,result.rows[0].id) : null;
   }
 
   /** Opaque names only; expired rows cannot be retried or downloaded. */

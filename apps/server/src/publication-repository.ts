@@ -267,6 +267,35 @@ export class PublicationRepository {
     finally { client.release(); }
   }
 
+  /** Source for a native package is the immutable, approved live release, not a later Studio draft. */
+  async currentBuildSnapshot(principal: AuthenticatedPrincipal, projectId: string, deploymentId: string,
+    releaseId: string): Promise<{ channel: ChannelSpec; revision: number }> {
+    ids.project.parse(projectId); ids.deployment.parse(deploymentId); ids.release.parse(releaseId);
+    const identity = await this.projects.pool.query(`SELECT 1 FROM provider_identities
+      WHERE creator_account_id=$1 AND issuer=$2 AND subject=$3`,
+    [principal.accountId, principal.issuer, principal.subject]);
+    if (!identity.rowCount) throw new RepositoryError('NOT_FOUND', 'Deployment not found');
+    const result = await this.projects.pool.query<{ channel_snapshot: unknown; channel_revision: number;
+      manifest_bytes: string; sha256: string }>(`SELECT a.channel_snapshot,a.channel_revision,r.manifest_bytes,r.sha256
+      FROM publication_live_pointers p JOIN publication_releases r
+        ON r.id=p.release_id AND r.deployment_id=p.deployment_id
+        AND r.project_id=p.project_id AND r.creator_account_id=p.creator_account_id
+      JOIN publication_approvals a ON a.id=r.approval_id AND a.deployment_id=r.deployment_id
+        AND a.project_id=r.project_id AND a.creator_account_id=r.creator_account_id
+      WHERE p.deployment_id=$1 AND p.project_id=$2 AND p.creator_account_id=$3 AND p.release_id=$4`,
+    [deploymentId,projectId,principal.accountId,releaseId]);
+    const row = result.rows[0];
+    if (!row) throw new RepositoryError('NOT_FOUND', 'Published release not found');
+    if (digest(row.manifest_bytes) !== row.sha256)
+      throw new RepositoryError('STORAGE_ERROR', 'Release integrity failed');
+    const manifest = publishedManifestSchema.parse(JSON.parse(row.manifest_bytes));
+    const channel = channelSpecSchema.parse(row.channel_snapshot);
+    if (channel.id !== projectId || manifest.releaseId !== releaseId ||
+      manifest.approvedContentRevision.channel !== row.channel_revision)
+      throw new RepositoryError('CONFLICT', 'Approved channel snapshot differs from live release');
+    return { channel, revision: row.channel_revision };
+  }
+
   async approve(principal: AuthenticatedPrincipal, raw: unknown): Promise<{ approvalId: string; approvedAt: string }> {
     const input = approvalRequest.parse(raw);
     const client = await this.projects.pool.connect();

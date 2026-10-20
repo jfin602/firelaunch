@@ -32,12 +32,12 @@ function validEndpoint(endpoint: string, deploymentId: string): string {
   try { url = new URL(endpoint); } catch { return invalid('Invalid public manifest endpoint'); }
   const host = url.hostname.toLowerCase().replace(/\.$/, '');
   if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || url.port ||
-    url.pathname !== `/public/v1/deployments/${deploymentId}/current` || isIP(host) ||
+    !['/', `/public/v1/deployments/${deploymentId}/current`].includes(url.pathname) || isIP(host) ||
     host.startsWith('[') || /\.(?:test|invalid|example)$/.test(host) ||
     host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal') ||
     host === 'example.org' || host.endsWith('.example.org') || host === 'example.com' || host.endsWith('.example.com') ||
     host === 'example.net' || host.endsWith('.example.net')) invalid('Release requires a real public-only HTTPS resolver');
-  return url.toString();
+  return new URL(`/public/v1/deployments/${deploymentId}/current`, url.origin).toString();
 }
 
 function validFiles(files: Record<string, string>): Record<string, string> {

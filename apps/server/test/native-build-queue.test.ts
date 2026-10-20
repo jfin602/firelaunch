@@ -37,42 +37,76 @@ test('real PostgreSQL queue serializes claims, reclaims leases and enforces owne
       const pool = new Pool({ host:socket,port:54329,database:'postgres',user:process.env.USER,max:8 });
       try {
         await pool.query('CREATE TABLE channel_ownerships(project_id text,creator_account_id text)');
-        await pool.query('CREATE TABLE channel_deployments(id text,project_id text,creator_account_id text,package_id text)');
+        await pool.query('CREATE TABLE channel_projects(id text,creator_account_id text,revision integer)');
+        await pool.query('CREATE TABLE channel_deployments(id text,project_id text,creator_account_id text,package_id text,deployment jsonb)');
+        await pool.query('CREATE TABLE publication_live_pointers(deployment_id text,project_id text,creator_account_id text,release_id text,sequence integer)');
+        await pool.query('CREATE TABLE publication_releases(id text,deployment_id text,project_id text,creator_account_id text,approval_id text)');
+        await pool.query('CREATE TABLE publication_approvals(id text,deployment_id text,project_id text,creator_account_id text,channel_revision integer)');
         const ddl = await readFile(new URL('../migrations/build_queue_001.sql',import.meta.url),'utf8');
         await pool.query(ddl);
         await pool.query(ddl);
-        const queue = new NativeBuildQueue(pool);
+        await pool.query(`CREATE ROLE build_api LOGIN; CREATE ROLE build_worker LOGIN;
+          GRANT SELECT ON channel_deployments,channel_ownerships,channel_projects,publication_live_pointers,
+            publication_releases,publication_approvals TO build_api;
+          GRANT USAGE ON SCHEMA firelaunch_build TO build_api,build_worker;
+          GRANT SELECT,INSERT,UPDATE ON firelaunch_build.jobs TO build_api;
+          GRANT SELECT ON firelaunch_build.jobs TO build_worker;
+          GRANT UPDATE (state,attempt,lease_token,lease_until,heartbeat_at,updated_at,error_code,
+            artifact_name,artifact_sha256,artifact_bytes,evidence) ON firelaunch_build.jobs TO build_worker`);
+        const apiPool = new Pool({ host:socket,port:54329,database:'postgres',user:'build_api',max:4 });
+        const workerPool = new Pool({ host:socket,port:54329,database:'postgres',user:'build_worker',max:4 });
+        const queue = new NativeBuildQueue(apiPool);
+        const worker = new NativeBuildQueue(workerPool);
+        try {
+        await assert.rejects(workerPool.query('SELECT * FROM channel_deployments'), /permission denied/);
+        await assert.rejects(workerPool.query('INSERT INTO firelaunch_build.jobs(id) VALUES ($1)', ['job_'+'a'.repeat(32)]), /permission denied/);
         for (const digit of ['1','2']) {
           const owned = input(digit);
           await pool.query('INSERT INTO channel_ownerships VALUES($1,$2)',[owned.projectId,owned.creatorAccountId]);
-          await pool.query('INSERT INTO channel_deployments VALUES($1,$2,$3,$4)',
-            [owned.deploymentId,owned.projectId,owned.creatorAccountId,owned.packageId]);
+          await pool.query('INSERT INTO channel_projects VALUES($1,$2,$3)',
+            [owned.projectId,owned.creatorAccountId,owned.specRevision]);
+          await pool.query('INSERT INTO channel_deployments VALUES($1,$2,$3,$4,$5)',
+            [owned.deploymentId,owned.projectId,owned.creatorAccountId,owned.packageId,
+              { nativeReleaseApproval:'creator_approved' }]);
+          await pool.query('INSERT INTO publication_live_pointers VALUES($1,$2,$3,$4,$5)',
+            [owned.deploymentId,owned.projectId,owned.creatorAccountId,owned.publishedRelease.releaseId,
+              owned.publishedRelease.sequence]);
+          await pool.query('INSERT INTO publication_releases VALUES($1,$2,$3,$4,$5)',
+            [owned.publishedRelease.releaseId,owned.deploymentId,owned.projectId,owned.creatorAccountId,`ap_${hex(digit)}`]);
+          await pool.query('INSERT INTO publication_approvals VALUES($1,$2,$3,$4,$5)',
+            [`ap_${hex(digit)}`,owned.deploymentId,owned.projectId,owned.creatorAccountId,owned.specRevision]);
           assert.equal(await queue.enqueue(owned),await queue.enqueue(owned));
         }
+        await assert.rejects(queue.enqueue(input('3')), /changed/);
+        assert.equal((await queue.latestStatus(input('1').creatorAccountId,input('1').projectId))?.state,'queued');
+        assert.equal(await queue.latestStatus(input('2').creatorAccountId,input('1').projectId),null);
         await assert.rejects(queue.enqueue({ ...input('1'),fingerprint:'e'.repeat(64) }),
           /different source/);
-        const [first,second] = await Promise.all([queue.claim(),queue.claim()]);
+        const [first,second] = await Promise.all([worker.claim(),worker.claim()]);
         assert.equal([first,second].filter(Boolean).length,1,'one global running job');
         const lease = first ?? second!;
         assert.equal(JSON.stringify(lease.input),JSON.stringify(input('1')),'snapshot property order retained');
         assert.equal(await queue.status(input('2').creatorAccountId,input('2').projectId,lease.jobId),null);
         assert.equal((await queue.status(input('1').creatorAccountId,input('1').projectId,lease.jobId))?.state,'running');
-        assert.equal(await queue.heartbeat(lease.jobId,lease.leaseToken),true);
-        assert.equal(await queue.heartbeat(lease.jobId,'0'.repeat(64)),false);
+        assert.equal(await worker.heartbeat(lease.jobId,lease.leaseToken),true);
+        assert.equal(await worker.heartbeat(lease.jobId,'0'.repeat(64)),false);
         assert.equal(await queue.cancel(input('2').creatorAccountId,input('2').projectId,lease.jobId),false);
         await pool.query("UPDATE firelaunch_build.jobs SET lease_until=now()-interval '1 second' WHERE id=$1",[lease.jobId]);
-        const recovered = await queue.claim();
+        const recovered = await worker.claim();
         assert.equal(recovered?.jobId,lease.jobId);
         assert.equal(recovered?.attempt,2);
-        assert.equal(await queue.heartbeat(lease.jobId,lease.leaseToken),false);
-        assert.equal(await queue.fail(recovered!.jobId,recovered!.leaseToken,'SANDBOX_FAILED'),true);
+        assert.equal(await worker.heartbeat(lease.jobId,lease.leaseToken),false);
+        assert.equal(await worker.fail(recovered!.jobId,recovered!.leaseToken,'SANDBOX_FAILED'),true);
         assert.equal(await queue.retry(input('2').creatorAccountId,input('2').projectId,recovered!.jobId),false);
         assert.equal(await queue.retry(input('1').creatorAccountId,input('1').projectId,recovered!.jobId),true);
-        const third = await queue.claim();
+        const third = await worker.claim();
         assert.equal(third?.attempt,3);
         assert.equal(await queue.cancel(input('1').creatorAccountId,input('1').projectId,third!.jobId),true);
-        assert.equal(await queue.heartbeat(third!.jobId,third!.leaseToken),false);
-        const secondOwner = (await queue.claim())!;
+        assert.equal(await worker.heartbeat(third!.jobId,third!.leaseToken),false);
+        await pool.query('UPDATE publication_live_pointers SET release_id=$2 WHERE project_id=$1',
+          [input('1').projectId,`rel_${hex('9')}`]);
+        await assert.rejects(queue.enqueue(input('1')), /published release changed/);
+        const secondOwner = (await worker.claim())!;
         assert.equal(secondOwner.input.creatorAccountId,input('2').creatorAccountId);
         const evidence = { inputFingerprint:secondOwner.input.fingerprint,sourceHash:secondOwner.input.sourceHash,
           command:['./node_modules/.bin/react-native','build-vega','--target','x86_64','--build-type','Release'],
@@ -82,20 +116,24 @@ test('real PostgreSQL queue serializes claims, reclaims leases and enforces owne
           bytes:2048,sha256:'d'.repeat(64),deploymentId:secondOwner.input.deploymentId,
           packageId:secondOwner.input.packageId,publishedRelease:secondOwner.input.publishedRelease,
           inspectedPackageId:secondOwner.input.packageId };
-        assert.equal(await queue.complete(secondOwner.jobId,secondOwner.leaseToken,
+        assert.equal(await worker.complete(secondOwner.jobId,secondOwner.leaseToken,
           { ...evidence, inputFingerprint:'f'.repeat(64) }),false,'stale fingerprint denied');
-        assert.equal(await queue.complete(secondOwner.jobId,secondOwner.leaseToken,
+        assert.equal(await worker.complete(secondOwner.jobId,secondOwner.leaseToken,
           { ...evidence, packageId:'com.example.foreign' }),false,'foreign package denied');
-        assert.equal(await queue.complete(secondOwner.jobId,secondOwner.leaseToken,evidence),true);
+        assert.equal(await worker.complete(secondOwner.jobId,secondOwner.leaseToken,evidence),true);
         assert.equal((await queue.status(input('2').creatorAccountId,input('2').projectId,secondOwner.jobId))?.artifactSha256,evidence.sha256);
         assert.equal(await queue.cancel(input('1').creatorAccountId,input('1').projectId,secondOwner.jobId),false);
         assert.equal(await queue.cancel(input('2').creatorAccountId,input('2').projectId,secondOwner.jobId),true);
-        assert.deepEqual(await queue.expiredArtifacts(),[{ jobId:secondOwner.jobId,name:`${secondOwner.jobId}.vpkg` }]);
-        assert.equal(await queue.retainArtifact(secondOwner.jobId,`${secondOwner.jobId}.vpkg`),false);
-        await queue.acknowledgeArtifactRemoval(secondOwner.jobId,`${secondOwner.jobId}.vpkg`);
-        assert.deepEqual(await queue.expiredArtifacts(),[]);
+        assert.deepEqual(await worker.expiredArtifacts(),[{ jobId:secondOwner.jobId,name:`${secondOwner.jobId}.vpkg` }]);
+        assert.equal(await worker.retainArtifact(secondOwner.jobId,`${secondOwner.jobId}.vpkg`),false);
+        await worker.acknowledgeArtifactRemoval(secondOwner.jobId,`${secondOwner.jobId}.vpkg`);
+        assert.deepEqual(await worker.expiredArtifacts(),[]);
+        await pool.query(`UPDATE firelaunch_build.jobs SET created_at=now()-interval '2 days',
+          expires_at=now()-interval '1 day' WHERE id=$1`,[secondOwner.jobId]);
+        assert.equal((await queue.latestStatus(input('2').creatorAccountId,input('2').projectId))?.state,'expired');
         const migration = await pool.query("SELECT to_regclass('public.firelaunch_schema_migrations') AS core");
         assert.equal(migration.rows[0].core,null,'queue never creates or bumps core migration');
+        } finally { await apiPool.end(); await workerPool.end(); }
       } finally { await pool.end(); }
     } finally {
       if (started) execFileSync(join(bin,'pg_ctl'),['-D',data,'-m','immediate','-w','stop'],{ stdio:'ignore' });

@@ -22,7 +22,7 @@ async function runSandbox(image: string, jobDir: string, signal: AbortSignal): P
   const args = ['--unshare-user','--unshare-pid','--unshare-net','--unshare-ipc','--unshare-uts',
     '--die-with-parent','--new-session','--clearenv',
     '--ro-bind',image,'/','--bind',jobDir,'/job',
-    '--bind',join(jobDir,'sdk-workspace'),SDK_WORKSPACE,'--proc','/proc','--dev','/dev',
+    '--bind',join(jobDir,'sdk-workspace'),SDK_WORKSPACE,'--proc','/proc','--tmpfs','/proc/sys','--dev','/dev',
     '--ro-bind','/sys/fs/cgroup','/sys/fs/cgroup','--tmpfs','/tmp',
     '--setenv','HOME','/tmp','--setenv','PATH','/usr/bin:/bin:/opt/vega/bin',
     '--chdir','/job','/usr/bin/node','/opt/firelaunch-build-app/apps/server/dist/native-build-child.js'];
@@ -50,7 +50,7 @@ async function inspectPackage(image: string, file: string, expectedPackageId: st
         '--unshare-user','--unshare-pid','--unshare-net','--unshare-ipc','--unshare-uts',
         '--die-with-parent','--new-session','--clearenv','--ro-bind',image,'/',
         '--bind',join(inspection,'sdk-workspace'),SDK_WORKSPACE,
-        '--ro-bind',file,'/artifact.vpkg','--proc','/proc','--dev','/dev','--tmpfs','/tmp',
+        '--ro-bind',file,'/artifact.vpkg','--proc','/proc','--tmpfs','/proc/sys','--dev','/dev','--tmpfs','/tmp',
         '--setenv','HOME','/tmp','--setenv','PATH','/usr/bin:/bin:/opt/vega/bin',
         '--chdir','/tmp','/usr/bin/vpt',...args,'/artifact.vpkg'],
       { env: { PATH: '/usr/bin:/bin' }, stdio: ['ignore','pipe','ignore'] });

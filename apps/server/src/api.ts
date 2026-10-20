@@ -23,6 +23,7 @@ import type { MediaUploadService } from './media-upload-service.js';
 import type { S3MediaStorage } from './media-storage.js';
 import { PrivateVideoPreview } from './private-video-preview.js';
 import { VideoSubtitles } from './video-subtitles.js';
+import { NativeBuildQueue } from './native-build-queue.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -81,11 +82,19 @@ function respond(response: ServerResponse, status: number, value: unknown): void
   response.end(JSON.stringify(value));
 }
 
+function nativeExportJobStatus(job: NonNullable<Awaited<ReturnType<NativeBuildQueue['status']>>>) {
+  return { status: job.state,
+    reason: job.state === 'failed' ? 'Native build failed; operator review is required' : undefined,
+    job: { id: job.id, attempt: job.attempt, errorCode: job.errorCode, expiresAt: job.expiresAt },
+    downloadReady: false as const };
+}
+
 export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository, privateObjects?: PrivateObjectService, mediaUploads?: MediaUploadService, mediaPublisher?: S3MediaStorage, managedArtwork?: ManagedArtworkDelivery) {
   const status = selectedProvider ? selectedProvider.name === 'mock' ? providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'mock' }) : { provider: selectedProvider.name, configured: true, message: `${selectedProvider.name} injected for this server; this status does not verify provider availability or request success.` } : providerStatus(process.env);
   const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : status.provider === 'bedrock' ? new BedrockProvider(process.env.BEDROCK_MODEL_ID!) : new OpenAIProvider(process.env.OPENAI_MODEL!, process.env.OPENAI_API_KEY!))) : null;
   const workspace = mode?.mode === 'local-legacy' ? new WorkspaceService(repository) : null;
   const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository) : null;
+  const nativeBuildQueue = mode?.mode === 'hosted' && hostedRepository ? new NativeBuildQueue(hostedRepository.pool) : null;
   const catalog = hostedRepository ? new CatalogRepository(hostedRepository) : null;
   const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog, mediaPublisher) : null;
   const publication = hostedRepository ? new PublicationRepository(hostedRepository, mediaPublisher, managedArtwork) : null;
@@ -126,15 +135,21 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
           if (segments[3] === 'export-app' && !url.search) {
             const projectId = segments[2]!;
             if (segments.length === 4 && request.method === 'GET') {
-              respond(response, 200, await hostedWorkspace.exportStatus(principal, projectId)); return;
+              await hostedRepository.read(principal, projectId);
+              const job = await nativeBuildQueue!.latestStatus(principal.accountId, projectId);
+              respond(response, 200, job ? nativeExportJobStatus(job) : { status: 'blocked', reason: 'No native build has been submitted for this project',
+                job: null, downloadReady: false }); return;
             }
             if (segments.length === 4 && request.method === 'POST') {
               await hostedRepository.read(principal, projectId);
               z.strictObject({}).parse(await body(request));
-              respond(response, 503, { error: { code: 'NATIVE_WORKER_UNAVAILABLE',
-                message: (await hostedWorkspace.exportStatus(principal, projectId)).reason } }); return;
+              const input = await hostedWorkspace.releaseBuildInput(principal, projectId);
+              const jobId = await nativeBuildQueue!.enqueue(input);
+              const job = await nativeBuildQueue!.status(principal.accountId, projectId, jobId);
+              if (!job) throw new RepositoryError('STORAGE_ERROR', 'Build job receipt unavailable');
+              respond(response, 202, nativeExportJobStatus(job)); return;
             }
-            // No artifact identifiers exist until a separately isolated worker is qualified.
+            // Artifact retrieval stays closed until R3 verifies the private VPKG and ZIP for this owner.
             await hostedRepository.read(principal, projectId);
             throw new RepositoryError('NOT_FOUND', 'Native export not found');
           }
