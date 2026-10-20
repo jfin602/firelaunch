@@ -9,6 +9,7 @@ const foreign = { accountId: id('cr', 'b') };
 const projectId = id('ch', 'c'), itemId = id('ci', 'd'), assetId = id('ma', 'e');
 const contentId = `item_${createHash('sha256').update('catalog-content-v1\0').update(itemId).digest('hex').slice(0, 32)}`;
 const url = `https://media.example.org/media/${'a'.repeat(32)}/${'c'.repeat(32)}/${'e'.repeat(32)}/delivery/${'f'.repeat(32)}/${'1'.repeat(64)}/master.m3u8`;
+const replacementUrl = url.replace(`/delivery/${'f'.repeat(32)}/`, `/delivery/${'a'.repeat(32)}/`);
 const claim = (permittedUse: string) => ({ status: 'cleared', permittedUse });
 const asset = { id: assetId, catalogItemId: itemId, kind: 'video', location: { type: 'managed_hls' },
   deliveryEligible: true, tvDisplayRights: claim('television_display'), tvPlaybackRights: claim('television_playback') };
@@ -25,26 +26,37 @@ function fixture() {
   let currentUrl = url;
   let currentSource = source;
   let currentAsset = asset;
-  let currentRow: typeof row | undefined = row;
-  const reads: string[] = [];
+  let currentRows: typeof row[] = [row];
+  let subtitles: string[] = [];
+  const reads: string[] = [], sets: string[] = [];
   const projects = { read: async (principal: typeof owner, target: string) => {
     if (principal.accountId !== owner.accountId || target !== projectId) throw Object.assign(new Error('not found'), { code: 'NOT_FOUND' });
     return { spec: { content: [{ id: contentId, presentation: 'video', mediaUrl: currentUrl }] } };
   }, pool: { query: async (_sql: string, params: string[]) => {
     assert.deepEqual(params, [owner.accountId, projectId, itemId, assetId]);
-    return { rows: currentRow ? [currentRow] : [] };
+    return { rows: currentRows };
   } } };
   const catalog = { read: async () => ({ items: [{ id: itemId, kind: 'video', sourceRecord: { sourceId: source.id },
-    mediaAssetIds: [assetId] }], sources: [currentSource], mediaAssets: [currentAsset] }) };
-  const storage = { publishedMasterUrl: () => url,
-    readStagedPreviewObject: async (_scope: unknown, _setId: string, name: string) => {
-      reads.push(name); return Buffer.from(name);
+    mediaAssetIds: [assetId] }], sources: [currentSource], mediaAssets: [currentAsset], subtitleTracks: subtitles }) };
+  const storage = { publishedMasterUrl: (_scope: unknown, set: { id: string }) =>
+    set.id === row.id ? url : replacementUrl,
+    readStagedPreviewObject: async (_scope: unknown, setId: string, name: string) => {
+      reads.push(name); sets.push(setId); return Buffer.from(name);
     } };
   const preview = new PrivateVideoPreview(projects as never, catalog as never, storage as never);
-  return { preview, reads, setUrl: (value: string) => { currentUrl = value; },
+  return { preview, reads, sets, setUrl: (value: string) => { currentUrl = value; },
+    replace: () => { currentRows = [{ ...row, id: id('rs', 'a'), rendition_set_id: id('rs', 'a'),
+      master_key: row.master_key.replace(`/${'f'.repeat(32)}/`, `/${'a'.repeat(32)}/`),
+      variants: row.variants.map(variant => ({ ...variant,
+        playlistKey: variant.playlistKey.replace(`/${'f'.repeat(32)}/`, `/${'a'.repeat(32)}/`) })) }, row]; },
+    revokeBound: () => { currentRows = currentRows.map(candidate => candidate.id === row.id
+      ? { ...candidate, revoked_at: new Date() } : candidate); },
+    failLatest: () => { currentRows = currentRows.map((candidate, index) => index === 0
+      ? { ...candidate, state: 'failed' } : candidate); },
+    setSubtitles: (tracks: string[]) => { subtitles = tracks; },
     revokeSource: () => { currentSource = { ...source, permission: { ...source.permission, tvDisplay: 'revoked' } }; },
     revokeAsset: () => { currentAsset = { ...asset, tvPlaybackRights: { status: 'revoked', permittedUse: 'television_playback' } }; },
-    revokeJob: () => { currentRow = { ...row, state: 'revoked' }; } };
+    revokeJob: () => { currentRows = [{ ...row, state: 'revoked' }]; } };
 }
 
 test('owned READY private HLS serves only its master, variants and bounded segments', async () => {
@@ -72,4 +84,23 @@ test('preview denies foreign, revoked, unpublished binding changes and stale REA
   await assert.rejects(second.preview.read(owner as never, projectId, contentId, 'master.m3u8'), { code: 'NOT_FOUND' });
   const third = fixture(); third.revokeJob();
   await assert.rejects(third.preview.read(owner as never, projectId, contentId, 'master.m3u8'), { code: 'NOT_FOUND' });
+});
+
+test('a saved prior rendition binding previews the latest owned READY replacement, with optional tracks independent', async () => {
+  const state = fixture();
+  state.replace();
+  for (const tracks of [[], ['en'], ['en', 'es']]) {
+    state.setSubtitles(tracks);
+    const result = await state.preview.read(owner as never, projectId, contentId, 'master.m3u8');
+    assert.equal(result.body.toString(), 'master.m3u8');
+  }
+  assert.deepEqual(state.sets, [id('rs', 'a'), id('rs', 'a'), id('rs', 'a')]);
+  state.setUrl('https://media.example.org/other.m3u8');
+  await assert.rejects(state.preview.read(owner as never, projectId, contentId, 'master.m3u8'), { code: 'NOT_FOUND' });
+  await assert.rejects(state.preview.read(foreign as never, projectId, contentId, 'master.m3u8'), { code: 'NOT_FOUND' });
+  state.setUrl(url);
+  state.revokeBound();
+  await assert.rejects(state.preview.read(owner as never, projectId, contentId, 'master.m3u8'), { code: 'NOT_FOUND' });
+  const failed = fixture(); failed.replace(); failed.failLatest();
+  await assert.rejects(failed.preview.read(owner as never, projectId, contentId, 'master.m3u8'), { code: 'NOT_FOUND' });
 });

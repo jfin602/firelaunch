@@ -48,18 +48,29 @@ export class PrivateVideoPreview {
           AND l.project_id = j.project_id
         WHERE j.creator_account_id = $1 AND j.project_id = $2 AND j.item_id = $3 AND j.asset_id = $4
           AND l.revoked_at IS NULL
-        ORDER BY j.created_at DESC, j.id DESC LIMIT 1`,
+        ORDER BY j.created_at DESC, j.id DESC LIMIT 100`,
       [principal.accountId, rawProjectId, item.id, assetId]);
       const row = result.rows[0];
       if (!row || row.state !== 'ready' || !row.id || row.revoked_at || row.rendition_set_id !== row.id) continue;
       try {
-        const set = mediaRenditionSetSchema.parse({ id: row.id, jobId: row.job_id,
-          creatorAccountId: row.creator_account_id, projectId: row.project_id, catalogItemId: row.item_id,
-          mediaAssetId: row.asset_id, profile: row.profile, masterKey: row.master_key,
-          masterSha256: row.master_sha256, variants: row.variants,
-          verifiedAt: row.verified_at.toISOString() });
+        const parseSet = (candidate: ReadyRow) => mediaRenditionSetSchema.parse({ id: candidate.id,
+          jobId: candidate.job_id, creatorAccountId: candidate.creator_account_id,
+          projectId: candidate.project_id, catalogItemId: candidate.item_id,
+          mediaAssetId: candidate.asset_id, profile: candidate.profile, masterKey: candidate.master_key,
+          masterSha256: candidate.master_sha256, variants: candidate.variants,
+          verifiedAt: candidate.verified_at.toISOString() });
+        const set = parseSet(row);
         const scope = { creatorAccountId: principal.accountId, projectId: rawProjectId, mediaAssetId: assetId };
-        if (content.mediaUrl !== this.storage.publishedMasterUrl(scope, set)) continue;
+        // A replacement gets a new rendition ID while a saved ChannelSpec may
+        // still name its prior READY version. Prove that URL was issued for this
+        // exact owned, verified asset before resolving the latest READY version.
+        const bound = result.rows.some(candidate => {
+          if (candidate.state !== 'ready' || !candidate.id || candidate.revoked_at ||
+            candidate.rendition_set_id !== candidate.id) return false;
+          try { return content.mediaUrl === this.storage.publishedMasterUrl(scope, parseSet(candidate)); }
+          catch { return false; }
+        });
+        if (!bound) continue;
         let expectedSha256: string | undefined;
         if (name === 'master.m3u8') expectedSha256 = set.masterSha256;
         else {
