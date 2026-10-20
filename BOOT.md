@@ -4,6 +4,10 @@ Read this file before substantial repository-aware work.
 
 **Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) first for dated source/staging/AWS facts, current gates and next execution.** This boot file includes historical P0-P6 decisions; older activation instructions are preserved as history and MUST NOT override that current ledger, ADR 0011/0013, or p6-live-vod Q1-Q3. Last current-state reconciliation: 2026-10-20 UTC.
 
+## Latest implementation direction — October 20 same-VPS manual worker continuation
+
+Owner rejected an additional VPS. The canonical P7 completion route is [c7-export-recovery](docs/tasks/c7-export-recovery/README.md) **R2 one-at-a-time PostgreSQL build queue + `firelaunch-build-worker.service` on muffinos**, R3 authenticated Studio ZIP download and R4 delta-only Vega device closeout. R1 is already SCOPED GREEN with tested Studio 0.7.3 live; don't requalify it. Keep root 0.7.3, main DB migration ledger/schema14 and compatible 0.6.7 rollback. Keep user-editable build scripts separated from worker supervisor/PG/cloud credentials by a genuinely restricted on-host sandbox. **ALL remaining prompts are manual; don't invoke the runner or self-commit without explicit owner instruction.** The old second-host and repeated full-qualification directives below are superseded.
+
 ## Current engineering handoff: c7-export-recovery (October 20 P7 closeout)
 
 [Original P7 independent closeout](docs/tasks/p7/closeout.md) is **NOT GREEN**. P1/P2/P3 reached commits 661ba6e/779d17f/0cec1c7 and target source 0.7.3. The owner-approved staging rollout showed blank React #root despite healthy HTTP static paths; protected rollback restored 0.6.7 and public free release #1 remained unchanged. Local P7 aggregate passed 326 and skipped 15. The Hls.js scanner repair and failure closeout were subsequently committed to GitHub main at 88257d4; local worktree and current host must be independently reconciled.

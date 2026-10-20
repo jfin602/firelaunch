@@ -2,6 +2,10 @@
 
 **Status (October 20, 2026): P1-P3 IMPLEMENTED through `0cec1c7` at root `0.7.3`; P4 manually closed NOT GREEN after blank-page staging rollback; creator ZIP/device playback NOT QUALIFIED.** Planned implementation versions 0.7.1–0.7.4. Deadline: October 23, 2026 noon America/Chicago (internal target 11:30 AM; freeze target October 22 5 PM).
 
+## Owner-approved P7 continuation — October 20, 2026
+
+The remaining P7 native export implementation is continued **manually** in [c7-export-recovery](../c7-export-recovery/README.md). R1 Studio 0.7.3 SCOPED GREEN is complete. R2 builds a **single-VPS dedicated systemd worker and PostgreSQL queue**, R3 adds authenticated Studio ZIP delivery, and R4 qualifies only the new queue/export/Vega device path. No second VPS, no runner, no repeat of P7 P1-P3 or unaffected GREEN work. The historical P7 P4 closeout stays NOT GREEN until its missing delivery is separately evidenced; root remains 0.7.3.
+
 ## Goal
 From signed-in Studio, a creator downloads a ZIP with a fresh real creator/deployment-bound x86_64 Vega release VPKG, extracts it independently, installs it on Vega VirtualDevice, sees their approved branding/shelves/artwork and plays their approved published free HLS video with sound, remote controls and success after app restart. A Studio browser Preview, fixture VPKG or ZIP of source files is not sufficient.
 

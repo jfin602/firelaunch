@@ -13,6 +13,10 @@ Before implementation:
 8. the active docs/tasks/<stack>/ README, prompt-assessment and implementation-plan
 9. the current prompt
 
+## Latest manual P7 continuation instruction (October 20)
+
+Read [c7-export-recovery README](docs/tasks/c7-export-recovery/README.md) first for the CURRENT owner decision: **ONE existing VPS with separate `firelaunch-build-worker.service`, existing Postgres instance and additive single-job queue**. R1 Studio startup is SCOPED GREEN; do not rerun. R2/R3/R4 are **MANUALLY invoked prompts**, never automatically invoke the Prompt Stack runner or assume runner-owned commits. Root stays 0.7.3. No second VPS or distributed worker design. Use an OS-restricted disposable native build child without DB/AWS/app credentials; one worker supervisor may use tightly scoped queue privileges. Keep main DB migration ledger at schema 14 and old 0.6.7/0.7.3 rollback intact. Reuse P7 package and ZIP validators. R4 only qualifies newly changed queue/ZIP/native device behavior with a short post-deploy Studio smoke; untouched GREEN R1/Phase 6/P7 subsystems do not need full retest. This section supersedes earlier multi-host or runner instructions elsewhere in the repo.
+
 ## Current operational priority (owner-approved October 20)
 
 - Read docs/CURRENT-STATE.md and docs/roadmap/mvp-roadmap.md before any implementation. Delivery deadline: Friday October 23 2026 noon America/Chicago, internal target 11:30 AM. Older activation guidance below is dated historical authority only.

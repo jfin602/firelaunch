@@ -1,50 +1,60 @@
-# c7-export-recovery — Hosted Vega export and real device recovery
+# c7-export-recovery — P7 continuation: single-VPS native export
 
-**Status: [R1 PASS / SCOPED GREEN](R1-closeout.md) for Studio startup recovery on 2026-10-20. The owner-authorized 0.7.3 staging rollout rendered signed-out and authenticated Home; production-bundle smoke now covers a fresh tab. The historical blank-root exception remains unproven. VirtualDevice still exits before a stable serial. R2 isolated worker, R3 ZIP integration and R4 independent device qualification remain open. This correction is scoped to P7 failures documented in ../p7/closeout.md. Fixed version: 0.7.3 in root package.json and the two top-level package-lock.json version fields. Do not increment to 0.7.4 in this correction.**
+**Status:** [R1 Studio startup SCOPED GREEN](R1-closeout.md); existing P7 P1-P3 source complete at 0.7.3; **R2 worker/queue, R3 owner ZIP, R4 native-device acceptance remain open**. P7 original [P4 closeout](../p7/closeout.md) remains NOT GREEN. Owner decision: 2026-10-20, deadline Friday 2026-10-23 12:00 America/Chicago (CDT). Root package.json and both top-level lockfile version entries remain 0.7.3. These are manually executed correction prompts; do not invoke the Prompt Stack runner, auto-commit implementation, or replay P7 P1-P3.
 
-## Mission and deadline
+## Current deployment / trusted evidence
 
-The October 23, 2026 noon America/Chicago (CDT) target remains. Deliver a real owner/deployment-bound x86_64 Vega release VPKG inside a downloadable authenticated Studio ZIP and run it independently on a stable Vega VirtualDevice with released creator branding/artwork and approved FREE HLS video/audio, pause/seek/Back and restart. A local SDK fixture, ZIP integrity unit test, browser Preview or successful staging HTTP response does not qualify the correction.
+The protected R1 release `20261020T185232Z-2b17f1479a0e` is recorded as running Studio 0.7.3 with schema 14, authenticated and signed-out Home smoke passing and previous 0.6.7 release available for rollback. The old blank-root exception is historically UNPROVEN. The R1 closeout and source are committed on GitHub through `c2569e7`. **Reuse R1 PASS without rerunning its full qualification.** The early Vega VirtualDevice preflight still reported `running:false`, `qemu:-1` and no serial; this is an R4-only blocker.
 
-## Trusted starting point
+The P7 [source/build contract](../../tasks/p7/P3-evidence.md) includes immutable creator/deployment/release source input, a checked native Vega x86_64 build command, native package verification, licensed Hls.js/MSE player and four-file ZIP validation. P7 P2 API/Studio intentionally report `NATIVE_WORKER_UNAVAILABLE`. These are reusable foundations, **not an operating native worker or downloaded creator ZIP**.
 
-- P7 P1-P3 runner checkpoints: `661ba6e` (0.7.1), `779d17f` (0.7.2), `0cec1c7` (0.7.3); original manual P7 P4 closeout **NOT GREEN**. Root remains 0.7.3. GitHub `main` at `88257d4` incorporates the closeout and Hls.js scanner repairs initially described as uncommitted.
-- Owner-approved P7 staging 0.7.3 rollout left React `#root` empty, despite matching static hashes and HTTP 200. Protected rollback restored `0.6.7`/schema 14, with approved release #1 pointer/HLS master hashes unchanged. Original browser-console exception is unknown; do not guess root cause.
-- P2 created build-input/ZIP verifiers and guarded `export-app` routes but deliberately left hosted export **blocked** because there is NO isolated worker host, job store or authenticated artifact delivery. Native Hls.js MSE code builds an example-origin VPKG but not an actual creator export.
-- The R1 [VirtualDevice preflight](R1-closeout.md) again launched momentarily, then reported `running:false`, `qemu:-1` and no connected serial; P7 contains no independent Vega playback or authenticated creator ZIP.
-- One P7 closeout aggregate: 341 tests, 326 passed, 0 failed, 15 skipped. That is local source evidence, NOT external qualification. Historical P5/c5/Q2 F7/P6-Q3 states stay unchanged.
-- The later [Studio repair rollout](studio-rollout-20261020.md) activated 0.7.3/schema 14 and directly verified signed-out and owner-authenticated browser rendering. It did not create a worker, creator ZIP or installed Vega playback; original P7 P4 remains NOT GREEN.
+A local `P2-evidence.md` was reported by the owner but is not yet present in the inspected GitHub `main`. At R2 start inspect actual local HEAD, dirty files and this record; preserve completed local R2 code if any, never rebuild or overwrite it blindly.
 
-Read [assessment](prompt-assessment.md), [plan](implementation-plan.md), [P7 closeout](../p7/closeout.md), [P2 worker blocker](../p7/P2-worker-blocker.md), [P3 evidence](../p7/P3-evidence.md), [current state](../../CURRENT-STATE.md), and [staging runbook](../../../scripts/staging/README.md).
+## LOCKED architecture: ONE existing VPS
 
-## Four-checkpoint correction
-
-| Prompt | Slice | Model | Browser/device | Version |
-| --- | --- | --- | --- | --- |
-| [P1](P1-studio-startup-recovery.txt) | Evidence-first blank Studio root repair; early VVD boot preflight | GPT-6 Sol High | no required | 0.7.3 unchanged |
-| [P2](P2-isolated-vega-worker.txt) | Qualify/build safe worker host and real creator-bound VPKG receipt | GPT-6 Sol High | no required | 0.7.3 unchanged |
-| [P3](P3-authenticated-zip-export.txt) | Durable owner-scoped ZIP jobs, API download and Studio states | GPT-6 Sol High | no required | 0.7.3 unchanged |
-| [P4](P4-independent-export-closeout.txt) | Independent signed-in staging, real downloaded ZIP and VVD HLS acceptance | GPT-6 Sol High | **yes, MANUAL** | 0.7.3 unchanged |
-
-R1 was completed manually under the owner's direct instruction; [its closeout](R1-closeout.md) is the current handoff. R2 and R3 remain sequential implementation scopes, with R4 the independent manual closeout. No `/activate` command. Do not make missing external worker/device access a reason to fabricate evidence or allow privileged fallback; report a precise external blocker and retain safe disabled states. A substantial independently identified blocker may require narrowly reviewed follow-up rather than oversized loops.
-
-## Security and operator boundary
-
-- Native build executes creator-supplied executable source: **never** run it under `firelaunch-staging.service`, VPS API/DB/AWS credentials or a weak subprocess-only isolation assumption. Require an actually qualified separate isolated host/VM/container policy: unprivileged user, no host/provider secret mounts, per-job disposable source, bounded CPU/RAM/disk/process/time, restricted outbound dependencies and HTTPS resolver, fixed commands, authenticated worker receipts/artifact transport, cleanup. A local test worker is not a hosted deployment.
-- Jobs/ZIPs are per authenticated creator/project/deployment/release/revision, CSRF-protected for creation, owner-only on status/download, guarded against stale/expired/foreign/revoked artifacts, replay and path injection. A fake worker satisfies unit tests only, not live export.
-- Preserve existing authorized FREE release #1, public/private rights boundary, private originals, schema 14, stable staging rollback, AWS budget, protected host permissions and Ngest. No new paid MediaConvert job, publication, IAM/CloudFront/CDN expansion, host provision, SSH privilege broadening, migration, VPS deployment or cache invalidation is authorized by docs/prompt writing. R4 requires explicit scoped operator and any separate creator approvals.
-- For R4 GREEN, real production-like Studio must render, browser login must succeed, real isolated worker builds a fresh owner VPKG, browser downloads a hash-checked ZIP, an independently launched graphical VVD installs that exact VPKG and plays its published free HLS picture + audible sound, controls and restart. Browser-only playback or a fixture does not qualify. Broader P6 Q3 v1/v2/offline/fault/v3 remains separate.
-
-## Execution
-
-```bash
-cd /home/jfin/dev/firelaunch
-git status --short
-git log -1 --oneline
-node --version
-npm --version
-npm run codex:stack:validate -- c7-export-recovery
-npm run codex:stack -- c7-export-recovery
+```text
+Creator Studio/API (existing firelaunch-staging.service on muffinos)
+       | authenticated owner/CSRF, immutable source/release
+       v
+Existing PostgreSQL instance, separate additive firelaunch_build.jobs queue
+       | one lease-based job at a time
+       v
+firelaunch-build-worker.service (separate process/service and OS identity)
+       | per-job disposable restricted build sandbox; NO API/AWS/PG secrets
+       v
+Verified native x86_64 .vpkg + private ZIP artifact
+       | owner-only download from existing API
+       v
+Studio Export App -> ZIP download -> independent Vega VirtualDevice
 ```
 
-If local tree is dirty, branch diverged or version differs from 0.7.3, reconcile *without reset/clobber* before runner execution. Run P4 separately after P1-P3. Only P4 writes a new `docs/tasks/c7-export-recovery/closeout.md`; leave P7 closeout unchanged. No code changes, version bump or deployment occur merely by authoring this stack.
+No second VPS, Redis, external queue broker, remote worker HTTP API, Kubernetes or cross-server signing service. The **worker supervisor** may hold a narrowly scoped queue role; the **untrusted build child** must have no access to it or to the staging app's credentials, service account, home directories, PostgreSQL socket or host filesystem. A different Node process without a tested OS restriction is not sufficient isolation. Use the lightest supported on-host sandbox (restricted service child / verified namespace/container) that actually enforces this boundary. A private artifact directory is explicitly outside the public web root.
+
+**Queue migration compatibility:** Use an additive dedicated `firelaunch_build` schema/table(s) **within the existing Postgres instance**, separately versioned or idempotently installed, with least-privilege API and worker roles. Do **not** bump or invalidate the main app's schema-14 migration ledger: both current Studio 0.7.3 and the previous 0.6.7 rollback must continue to recognize schema 14. If an operator migration would break rollback, do not apply it. No automatic live database or systemd changes are authorized by prompt authoring.
+
+## MANUAL implementation sequence (no runner)
+
+| Step | Prompt | Deliverable / focused exit |
+| --- | --- | --- |
+| **R1** | [P1 Studio recovery](P1-studio-startup-recovery.txt) | **SCOPED GREEN; do not repeat** |
+| **R2** | [P2 same-VPS queue + worker](P2-isolated-vega-worker.txt) | DB queue, service, isolated disposable build and real verified VPKG when SDK/host available; focused worker checks |
+| **R3** | [P3 owner ZIP export](P3-authenticated-zip-export.txt) | authenticated submit/status/download and real verified ZIP through Studio, using the R2 queue/worker |
+| **R4** | [P4 delta closeout](P4-independent-export-closeout.txt) | one new integrated worker/ZIP-to-actual-VVD proof; reuses unaffected green evidence |
+
+All steps use GPT-6 Sol High manually. Target one bounded work unit (normally <=8 min, 15 min hard stop); if actual host provisioning/SDK access needs a separate operator privilege, state the exact blocker and continue only safe local implementation, never propose a new VPS by default. No `/activate` or runner command.
+
+## R2 work boundaries
+
+Use the existing P7 `ReleaseBuildInput`, `NativeBuildEvidence`, VPT validation, `createNativeExport`, `hosted-workspace` ownership and Postgres foundation. Implement worker queue/claim/lease/failure/recovery and a separate `firelaunch-build-worker.service`. Exactly one active build by default, measurable admission/resources, 15-minute timeout, per-job scratch/cleanup and no credentials in executable child. A queue table is not proof the worker has run; a source-built fixture is not proof the creator has exported.
+
+## R3 work boundaries
+
+Creator-only API job creation/status/cancel/download, CSRF on mutations, revision/release fingerprint and owner checks at submission, worker result acceptance and download. Private retention and TTL; no foreign/stale/revoked/expired ZIP access. Studio shows truthful states and download after exact VPKG+ZIP verification. If the on-host sandbox is unavailable, keep Export App blocked rather than executing user code with the API privileges.
+
+## R4 delta acceptance — NO repeated broad gates
+
+**Reuse without retesting if untouched:** R1 visible signed-out/signed-in/fresh-tab Studio and production assets, scoped Phase 6 private video pipeline, existing free release #1 pointer and HLS master hashes, P7 producer/ZIP/Hls.js focused tests, unrelated catalog/editor/agent/security suites. A *short* live Studio-render sanity check after any new deployment remains necessary to detect regressions from new assets.
+
+**New direct proof only:** worker queue claim/finish/restart behavior and true process isolation, actual qualified native VPKG and owner ZIP, authenticated download/foreign denial, stable graphical Vega VirtualDevice serial, install of ZIP's exact VPKG, approved public artwork/HLS moving picture and audible sound plus pause/seek/Back/restart. R4 records PASS/NOT GREEN with exact evidence; it does not relabel historical Q2 F7, P5/c5 or the comprehensive p6 Q3 update/offline/rollback matrix.
+
+Read [assessment](prompt-assessment.md), [plan](implementation-plan.md), [R1 closeout](R1-closeout.md), [staging runbook](../../../scripts/staging/README.md), [P7 P4 historical closeout](../p7/closeout.md), and the actual source/host evidence. No docs approval permits a new paid MediaConvert encode, new public creator release, CloudFront/IAM expansion, independent infrastructure provisioning, Ngest changes or unapproved staging deployment. Preserve release #1 bytes and current rollback.
