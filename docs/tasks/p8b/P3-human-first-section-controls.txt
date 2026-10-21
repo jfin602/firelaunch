@@ -7,6 +7,9 @@ MODEL / REASONING / USAGE
 VERSIONING
 - This prompt's assigned project version is `0.8.7`.
 
+PRIORITY UI-SHELL CONTRACT — supersedes older side-editor/fullscreen assumptions
+P3: place Add Section, Choose Content, Edit Text, Move up/down, Customize and Remove inside c8-ui's HORIZONTAL dock (selected context region), without page-length scrolling or a second inspector. Active controls can scroll within the dock when content grows; moving between Pages & Layout and Appearance must protect unsaved edits. TV above remains interactive TV, not section-edit hit targets.
+
 GOAL
 Make existing Hero, Content Row, Content Grid and Text Area editing intuitive: Choose content, Edit text, Move up/down, Customize (collapsed) and Remove, while retaining bounded ChannelSpec mutations and saved-state truth.
 
