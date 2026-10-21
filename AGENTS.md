@@ -13,7 +13,13 @@ Before implementation:
 8. the active docs/tasks/<stack>/ README, prompt-assessment and implementation-plan
 9. the current prompt
 
-## Current owner-approved Phase 8 entry (2026-10-21; supersedes older C7 handoffs)
+## Current Phase 8 Wave 2 planning target — October 21
+
+Latest [Wave 1 P5 closeout](docs/tasks/p8/wave1-closeout.md) is **GREEN / DEPLOYED** for the tested Studio UX/Export scope at source version `0.8.4`; **Phase 8 remains OPEN**. Owner approved a human-first Page Layout and Full-Screen Preview Wave 2 design. Read [`p8b` README](docs/tasks/p8b/README.md) and [design spec](docs/design/page-layout-human-first.md). **Design/documents only, NOT RUNNABLE:** no `p8b` assessment/plan/prompts/version transition/qualification is yet authorized. Do not rerun `p8` P1–P5 or silently mark Phase 8 closed.
+
+Human-first requirements: Channel → **Pages & Layout**, Hero/Grid/Rows templates with Home default Hero, simple starter sections, content-first editing, selected-only inspector, Image Banner/Text Area/Image + Text bounded controls, and one stateful **View full screen** TV Preview. Preserve ChannelSpec/TV/Vega parity, old saved pages, real owner media rights, keyboard/D-pad focus and installed-client compatibility. New section types unsupported by an installed app must be blocked or require native upgrade, not silently published. Reuse [C7 R4 GREEN](docs/tasks/c7-export-recovery/R4-playback-evidence.md) media proof for unchanged paths. Base implementation prompts on the actual accepted Wave 1 source/version/worktree after explicit future prompt authoring.
+
+## Historical initial Phase 8 entry (superseded by Wave 1 closeout)
 
 Read [owner Phase 7 closeout](docs/tasks/p7/owner-closeout-2026-10-21.md). **P7/C7 is OWNER-CLOSED / ACCEPTED PARTIAL, not GREEN**: R1–R3 and exact native install/branding/artwork/Back/restart were evidenced; installed HLS first-fragment moving picture/audio/pause/seek remain NOT GREEN and carry to Phase 9 final-launch acceptance. Do not run C7 R4 as an automatic prerequisite or repeat working native worker/ZIP gates for P8 UI. Preserve historical P7/C7 NOT GREEN evidence.
 
