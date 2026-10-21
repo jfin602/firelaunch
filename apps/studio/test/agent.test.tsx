@@ -38,7 +38,6 @@ test('initial agent request persists and updates the always-on Preview; hand edi
     assert.equal(saved.spec.pages[1].title, 'Explore');
     assert.equal(saved.revision, 2);
     fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Edit appearance' }));
     assert.ok(screen.getByRole('button', { name: /Save brand/ }));
   } finally {
     cleanup(); globalThis.fetch = nativeFetch;

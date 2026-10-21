@@ -163,8 +163,8 @@ test('native fullscreen success and rejection keep one Preview and return focus'
     await screen.findByRole('button', { name: 'Exit full screen' });
     assert.equal(document.querySelectorAll('.preview-wrap').length, 1);
     assert.equal(preview, document.querySelector('.preview-wrap'));
-    assert.equal(fullscreenElement?.id, 'channel-fullscreen-root');
-    assert.ok(fullscreenElement?.querySelector('.channel-dock'));
+    assert.equal(document.fullscreenElement?.id, 'channel-fullscreen-root');
+    assert.ok(document.fullscreenElement?.querySelector('.channel-dock'));
     fullscreenElement = null;
     fireEvent(document, new dom.window.Event('fullscreenchange'));
     await waitFor(() => assert.equal(screen.queryByRole('button', { name: 'Exit full screen' }), null));

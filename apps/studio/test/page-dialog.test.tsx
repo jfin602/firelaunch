@@ -9,7 +9,7 @@ import App from '../src/App.js';
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://studio.example/' });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement });
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.window.navigator });
-const { cleanup, fireEvent, render, screen, waitFor } = await import('@testing-library/react');
+const { cleanup, fireEvent, render, screen, waitFor, within } = await import('@testing-library/react');
 const id = `ch_${'a'.repeat(32)}`;
 const session = { accountId: `cr_${'b'.repeat(32)}`, email: 'owner@example.com', csrfToken: 'csrf', expiresAt: '2099-01-01T00:00:00.000Z' };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -66,7 +66,7 @@ test('new-page dialog keeps input on conflict, retries once, saves composition a
     assert.deepEqual(current.spec.pages[0], oldHome);
     assert.deepEqual(current.spec.pages[1]?.modules.map(module => module.kind), ['grid']);
     assert.equal(current.spec.pages[1]?.modules[0]?.kind === 'grid' && current.spec.pages[1].modules[0].contentIds.length, 0);
-    await waitFor(() => assert.ok(document.activeElement === screen.getByRole('button', { name: 'Explore' })));
+    await waitFor(() => assert.ok(document.activeElement === within(screen.getByRole('navigation', { name: 'Channel pages' })).getByRole('button', { name: 'Explore' })));
     fireEvent.click(opener);
     fireEvent.change(screen.getByRole('textbox', { name: 'Page name' }), { target: { value: 'Canceled' } });
     fireEvent.keyDown(screen.getByRole('dialog', { name: 'Create a page' }), { key: 'Escape' });
