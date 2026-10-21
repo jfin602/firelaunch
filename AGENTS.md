@@ -13,6 +13,14 @@ Before implementation:
 8. the active docs/tasks/<stack>/ README, prompt-assessment and implementation-plan
 9. the current prompt
 
+## Current owner priority: c8-ui correction AFTER completed P8B (2026-10-21)
+
+**Owner reports P8B already ran locally. Do NOT change/restart/reorder P8B prompts or roll its source back to GitHub's older 0.8.4 baseline.** [TV-first Channel contract](docs/design/tv-first-channel-workspace.md) and [`c8-ui` correction](docs/tasks/c8-ui/README.md) supersede the old Channel visual layout: always-on full-width 16:9 TV above a touching horizontal editing dock with **Pages & Layout / Appearance only**, no visible AI Assistant or Close TV Preview, fullscreen TV with same dock sliding up at bottom edge for hover/touch/keyboard. Preserve all finished P8B templates, image/text modules, preview, native parity and rights checks.
+
+Correction runner P1–P3 and browser P4 provisionally require unchanged **0.8.10**, the authored P8B P6 completion version. **Before running, inspect actual local HEAD, uncommitted edits, P8B completed-prefix, P7 manual state and root+both lock versions.** If actual version differs, STOP and reconcile correction metadata (never force source to 0.8.10). GitHub main at docs review shows old 0.8.4; it is not current local source evidence. Validate `npm run codex:stack:validate -- c8-ui` then run only after safe alignment. No `/activate`, Phase 8 remains OPEN.
+
+## Historical P8B authoring handoff (superseded by c8-ui post-P8B correction)
+
 ## Current Phase 8 Wave 2 P8B prompt stack (2026-10-21)
 
 **Wave 1 GREEN/DEPLOYED at unchanged `0.8.4`; Phase 8 still OPEN.** [P8B](docs/tasks/p8b/README.md) now includes [assessment](docs/tasks/p8b/prompt-assessment.md), [plan](docs/tasks/p8b/implementation-plan.md) and P1–P7 prompts, based on [human-first page layout design](docs/design/page-layout-human-first.md). P1–P6 are implementation checkpoints `0.8.5`–`0.8.10`; **P7** is one manual browser/native parity/protected staging Wave 2 closeout (proposed `0.8.11`), NOT global Phase 8 completion. Do not run initial `p8` again or invent extra activation.
