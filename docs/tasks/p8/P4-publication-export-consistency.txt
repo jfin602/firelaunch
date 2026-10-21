@@ -1,0 +1,26 @@
+TASK: Phase 8 / P4 — Publish and export state integration
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.4`.
+
+GOAL
+Make creator Publish (approved live CONTENT) and Export (native APP build/download) independently understandable, correctly wired, and secure. Consume real c7 recovery integration; P8 must NOT create its own native worker or fake a ready ZIP.
+
+PREFLIGHT
+Read P8 docs/earlier handoffs, current-state, c7-export-recovery/{README.md,R2-evidence.md} and latest available R3/R4 records, Phase 7 ZIP contract, relevant public HLS/artwork rights/approval evidence. Inspect actual App/Delivery/LivePublication/Studio api, server native-export queue/status/download endpoints, current local/head/staging divergence; confirm approved P3 baseline 0.8.3. If c7 R2/R3/R4 is still incomplete, explicitly separate UI validation from real external acceptance.
+
+IMPLEMENT
+1. Publish workspace exposes current private draft vs immutable published live release, readiness/owner/artwork/rights blockers, explicit approval confirmation, release history and already-supported rollback. Do not trigger live publication from navigation or imply an edited draft changed the TV. Preserve revision/CSRF/ownership and rights checks.
+2. Export workspace shows owner-bound native build requested/queued/building/ready/failed/expired status, accurate reason/retry and verified authenticated ZIP download only when c7 worker actually produced and passed artifact validation; keep remote code under Advanced Source with regeneration/custom edit protections. Preserve safe disabled state if worker missing; do not enable a legacy VPS API process to execute untrusted project code.
+3. Explain that compatible catalog/layout data updates publish through approved remote manifest without requiring binary rebuild; executable changes/package identity/permissions/incompatible schema require native re-release/Appstore review. Never imply FireLaunch submitted an app to Amazon; submission handoff is separate.
+4. Check actual published manifest version/artwork/free HLS matches approved creator content and export binding, not private owner previews or stale/revoked/foreign media. Reuse existing approved FREE release #1 and actual Phase 7 device/artifact evidence only if still valid. Do not run paid encode, publish new content, rebuild source unsafely, make CloudFront changes or pretend a simulator ran.
+
+VALIDATION
+Focused UI/API tests for publish vs export entry, approval blockers, changed revision, unauthenticated/foreign/CSRF request, queued/failed/ready/expires, verified ZIP/correct owner and stale/invalid artifact denial, public-only media shape. Run affected typecheck/build and git diff --check. Real hosted ZIP/VVD device proof belongs to c7 R4 and P5; record any unavailable dependency explicitly.
+
+HANDOFF / GIT / SAFETY
+Runner owns P4 commit from coherent approved P3 version 0.8.3; set only root package and both root lockfile fields to 0.8.4. No self-commit, deployment, AWS, creator publication, unsafe worker, database migration, secret leakage, Q2/P7 retroactive relabeling. <=8 min goal and 15 min hard stop; report source/security tests, staged state evidence and manual P5 prerequisites.
