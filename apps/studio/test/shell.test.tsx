@@ -104,3 +104,105 @@ test('local project switch keeps the creator in Studio', async () => {
     assert.equal(dom.window.location.search, `?project=${second.id}`);
   } finally { restore(); }
 });
+
+test('full-screen fallback retains the live Preview, TV playback and focus on exit', async () => {
+  const restore = mockApi([first, second]);
+  const original = HTMLElement.prototype.requestFullscreen;
+  const originalPause = dom.window.HTMLMediaElement.prototype.pause;
+  const originalLoad = dom.window.HTMLMediaElement.prototype.load;
+  dom.window.HTMLMediaElement.prototype.pause = () => undefined;
+  dom.window.HTMLMediaElement.prototype.load = () => undefined;
+  Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: undefined });
+  try {
+    render(createElement(App));
+    await screen.findByRole('heading', { name: first.spec.title, level: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
+    const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
+    fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+    const player = preview.querySelector('video');
+    assert.ok(player);
+    const trigger = screen.getByRole('button', { name: 'View full screen' });
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: 'Full-screen TV Preview' });
+    assert.equal(dialog.querySelectorAll('.preview-wrap').length, 1);
+    assert.equal(dialog.querySelector('video'), player);
+    assert.equal(document.querySelector<HTMLElement>('.channel-editor')?.inert, true);
+    fireEvent.keyDown(player, { key: 'Backspace' });
+    assert.equal(dialog.querySelector('video'), null);
+    assert.ok(screen.getByRole('button', { name: /Play film/ }));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => assert.equal(screen.queryByRole('dialog', { name: 'Full-screen TV Preview' }), null));
+    await waitFor(() => assert.equal(document.activeElement, trigger));
+    assert.equal(document.querySelector<HTMLElement>('.channel-editor')?.inert, false);
+    fireEvent.click(trigger);
+    assert.ok(screen.getByRole('dialog', { name: 'Full-screen TV Preview' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Exit full screen' }));
+    await waitFor(() => assert.equal(screen.queryByRole('dialog', { name: 'Full-screen TV Preview' }), null));
+  } finally {
+    Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: original });
+    dom.window.HTMLMediaElement.prototype.pause = originalPause;
+    dom.window.HTMLMediaElement.prototype.load = originalLoad;
+    restore();
+  }
+});
+
+test('native fullscreen success and rejection keep one Preview and return focus', async () => {
+  const restore = mockApi([first]);
+  const originalRequest = HTMLElement.prototype.requestFullscreen;
+  const originalExit = document.exitFullscreen;
+  let fullscreenElement: Element | null = null;
+  Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => fullscreenElement });
+  Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: function (this: HTMLElement) { fullscreenElement = this; document.dispatchEvent(new dom.window.Event('fullscreenchange')); return Promise.resolve(); } });
+  Object.defineProperty(document, 'exitFullscreen', { configurable: true, value: () => { fullscreenElement = null; document.dispatchEvent(new dom.window.Event('fullscreenchange')); return Promise.resolve(); } });
+  try {
+    render(createElement(App));
+    await screen.findByRole('heading', { name: first.spec.title, level: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
+    const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
+    const trigger = screen.getByRole('button', { name: 'View full screen' });
+    fireEvent.click(trigger);
+    await screen.findByRole('button', { name: 'Exit full screen' });
+    assert.equal(document.querySelectorAll('.preview-wrap').length, 1);
+    assert.equal(preview, document.querySelector('.preview-wrap'));
+    fullscreenElement = null;
+    fireEvent(document, new dom.window.Event('fullscreenchange'));
+    await waitFor(() => assert.equal(screen.queryByRole('button', { name: 'Exit full screen' }), null));
+    await waitFor(() => assert.equal(document.activeElement, trigger));
+    Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: () => Promise.reject(new Error('denied')) });
+    fireEvent.click(trigger);
+    await screen.findByRole('dialog', { name: 'Full-screen TV Preview' });
+    assert.equal(document.querySelectorAll('.preview-wrap').length, 1);
+  } finally {
+    Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: originalRequest });
+    Object.defineProperty(document, 'exitFullscreen', { configurable: true, value: originalExit });
+    Reflect.deleteProperty(document, 'fullscreenElement');
+    restore();
+  }
+});
+
+test('an external project switch closes fallback before showing the next channel', async () => {
+  const restore = mockApi([first, second]);
+  const original = HTMLElement.prototype.requestFullscreen;
+  Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: undefined });
+  try {
+    render(createElement(App));
+    await screen.findByRole('heading', { name: first.spec.title, level: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View full screen' }));
+    assert.ok(screen.getByRole('dialog', { name: 'Full-screen TV Preview' }));
+    fireEvent.change(document.querySelector<HTMLSelectElement>('.project-select')!, { target: { value: second.id } });
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.equal(document.querySelector('.topbar h1')?.textContent, 'Second channel');
+    assert.equal(document.querySelector('.preview-fullscreen'), null);
+    await screen.findByRole('heading', { name: 'Second channel', level: 1 });
+    assert.equal(document.querySelectorAll('.preview-wrap').length, 1);
+  } finally {
+    Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: original });
+    restore();
+  }
+});

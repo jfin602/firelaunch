@@ -244,6 +244,63 @@ export default function App() {
   const [signedOut, setSignedOut] = useState(false);
   const [inspectorProject, setInspectorProject] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewFullscreen, setPreviewFullscreen] = useState<'native' | 'fallback' | null>(null);
+  const [fullscreenNotice, setFullscreenNotice] = useState('');
+  const previewContainer = useRef<HTMLDivElement>(null);
+  const fullscreenTrigger = useRef<HTMLButtonElement>(null);
+  const fullscreenExit = useRef<HTMLButtonElement>(null);
+  const fullscreenRequest = useRef(0);
+  const exitPreviewFullscreen = useCallback(() => {
+    fullscreenRequest.current++;
+    setFullscreenNotice('');
+    if (document.fullscreenElement === previewContainer.current) void document.exitFullscreen?.().catch(() => undefined);
+    setPreviewFullscreen(null);
+    window.setTimeout(() => fullscreenTrigger.current?.isConnected && fullscreenTrigger.current.focus(), 0);
+  }, []);
+  const enterPreviewFullscreen = () => {
+    const target = previewContainer.current;
+    if (!target) return;
+    const request = ++fullscreenRequest.current;
+    const fallback = (reason: string) => { if (request === fullscreenRequest.current && target.isConnected) { setFullscreenNotice(reason); setPreviewFullscreen('fallback'); } };
+    if (!target.requestFullscreen) { fallback('Browser full screen is unavailable. Expanded preview is open.'); return; }
+    try {
+      void target.requestFullscreen().then(() => {
+        if (request !== fullscreenRequest.current) { if (document.fullscreenElement === target) void document.exitFullscreen?.().catch(() => undefined); return; }
+        setPreviewFullscreen('native');
+      }).catch(() => fallback('Browser full screen was denied. Expanded preview is open.'));
+    } catch { fallback('Browser full screen was denied. Expanded preview is open.'); }
+  };
+  useEffect(() => {
+    if (!previewFullscreen) return;
+    fullscreenExit.current?.focus();
+    const target = previewContainer.current;
+    const background = previewFullscreen === 'fallback' ? Array.from(document.querySelectorAll<HTMLElement>('.app-shell > .sidebar, .studio-main > :not(.workspace), .channel-toolbar, .channel-editor, .workspace > .inspector')) : [];
+    background.forEach(element => { element.inert = true; });
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); exitPreviewFullscreen(); }
+      else if (event.key === 'Tab' && previewFullscreen === 'fallback' && target) {
+        const focusable = Array.from(target.querySelectorAll<HTMLElement>('button, [tabindex="0"], video[controls], audio[controls]')).filter(element => !element.hasAttribute('disabled'));
+        if (!focusable.length) return;
+        const first = focusable[0]!, last = focusable[focusable.length - 1]!;
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => { background.forEach(element => { element.inert = false; }); window.removeEventListener('keydown', onKey, true); };
+  }, [previewFullscreen, exitPreviewFullscreen]);
+  useEffect(() => {
+    const onChange = () => { if (previewFullscreen === 'native' && document.fullscreenElement !== previewContainer.current) exitPreviewFullscreen(); };
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, [previewFullscreen, exitPreviewFullscreen]);
+  useEffect(() => { if (previewFullscreen && (!previewOpen || surface !== 'Channel' || !project)) exitPreviewFullscreen(); }, [previewFullscreen, previewOpen, surface, project, exitPreviewFullscreen]);
+  const fullscreenProject = useRef(project?.id);
+  useEffect(() => {
+    if (fullscreenProject.current !== project?.id && previewFullscreen) exitPreviewFullscreen();
+    fullscreenProject.current = project?.id;
+  }, [project?.id, previewFullscreen, exitPreviewFullscreen]);
+  useEffect(() => () => { fullscreenRequest.current++; if (document.fullscreenElement === previewContainer.current) void document.exitFullscreen?.().catch(() => undefined); }, []);
   const inspectorDirty = useRef(false);
   const sectionDraftDirty = useRef(false);
   const [sectionDraftPending, setSectionDraftPending] = useState(false);
@@ -361,10 +418,10 @@ export default function App() {
       {error && <div className="error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></div>}
       {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : surface === 'Home' ? <Home key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} projects={projects} accountId={session?.accountId ?? null} hosted={!!session} libraryRevision={libraryRevision} onSelectProject={id => void switchProject(id)} onSurface={navigate} onEditChannel={() => openChannel('Appearance')} onOpenVideo={openVideo} onPreview={() => { openChannel('Appearance'); setPreviewOpen(true); window.setTimeout(() => document.getElementById('tv-preview')?.scrollIntoView?.(), 0); }}/> : <div className={`workspace ${surface === 'Channel' ? 'channel-workspace' : ''} ${inspectorProject === project.id && surface === 'Channel' && channelView === 'Appearance' ? 'has-inspector' : ''}`}>
         <div className="workspace-main" id="studio-controls">
-          {surface === 'Channel' && <div className="channel-toolbar"><div className="chips studio-subviews" role="group" aria-label="Channel views">{channelViews.map(view => <button key={view} type="button" className={channelView === view ? 'active' : ''} aria-pressed={channelView === view} onClick={() => { if (!leaveSectionDraft()) return; if (inspectorProject && !closeInspector()) return; setChannelView(view); }}>{view}</button>)}</div><button type="button" className="preview-toggle" aria-expanded={previewOpen} aria-controls="tv-preview" onClick={() => setPreviewOpen(open => !open)}>{previewOpen ? 'Close TV Preview' : 'TV Preview'}</button></div>}
+          {surface === 'Channel' && <div className="channel-toolbar"><div className="chips studio-subviews" role="group" aria-label="Channel views">{channelViews.map(view => <button key={view} type="button" className={channelView === view ? 'active' : ''} aria-pressed={channelView === view} onClick={() => { if (!leaveSectionDraft()) return; if (inspectorProject && !closeInspector()) return; setChannelView(view); }}>{view}</button>)}</div><div className="preview-actions"><button type="button" className="preview-toggle" aria-expanded={previewOpen} aria-controls="tv-preview" onClick={() => { if (previewFullscreen) exitPreviewFullscreen(); setPreviewOpen(open => !open); }}>{previewOpen ? 'Close TV Preview' : 'TV Preview'}</button>{previewOpen && <button ref={fullscreenTrigger} type="button" className="preview-toggle" onClick={enterPreviewFullscreen}>View full screen</button>}</div></div>}
           {surface === 'Export' && <div className="chips studio-subviews" role="group" aria-label="Export views">{exportViews.map(view => <button key={view} type="button" className={exportView === view ? 'active' : ''} aria-pressed={exportView === view} onClick={() => setExportView(view)}>{view}</button>)}</div>}
           <div className={previewOpen && surface === 'Channel' ? 'channel-preview-split' : ''}>
-            {surface === 'Channel' && previewOpen && <div id="tv-preview"><Preview key={`${session?.accountId ?? 'local'}:${project.id}`} spec={project.spec} hosted={!!session} accountId={session?.accountId} libraryRevision={libraryRevision}/></div>}
+            {surface === 'Channel' && previewOpen && <div id="tv-preview" ref={previewContainer} className={previewFullscreen ? 'preview-fullscreen' : undefined} role={previewFullscreen === 'fallback' ? 'dialog' : undefined} aria-modal={previewFullscreen === 'fallback' ? true : undefined} aria-label={previewFullscreen === 'fallback' ? 'Full-screen TV Preview' : undefined}>{fullscreenNotice && <p className="preview-fullscreen-notice" role="status">{fullscreenNotice}</p>}<Preview key={`${session?.accountId ?? 'local'}:${project.id}`} spec={project.spec} hosted={!!session} accountId={session?.accountId} libraryRevision={libraryRevision} fullscreen={!!previewFullscreen} onExitFullscreen={exitPreviewFullscreen} exitButtonRef={fullscreenExit}/></div>}
             <div className="channel-editor">
               {surface === 'Library' ? <Catalog project={project} hosted={!!session} {...(session ? { accountId: session.accountId } : {})} libraryRevision={libraryRevision} onOpenVideo={openVideo} onCatalogChange={() => setLibraryRevision(value => value + 1)} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => openChannel('AI Assistant')}/> : surface === 'Channel' && channelView === 'Appearance' ? <div className="panel-content"><span className="eyebrow">CHANNEL IDENTITY</span><h2>Appearance</h2><p>Choose your channel name, colors and artwork for the TV experience.</p><button type="button" ref={inspectorOpener} aria-expanded={inspectorProject === project.id} aria-controls={inspectorProject === project.id ? 'appearance-inspector' : undefined} onClick={() => { if (inspectorProject) closeInspector(); else setInspectorProject(project.id); }}>Edit appearance</button></div> : surface === 'Channel' && channelView === 'Pages & Layout' ? <Content key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} commit={commit} onDirtyChange={reportSectionDraft} accountId={session?.accountId} libraryRevision={libraryRevision}/> : surface === 'Channel' ? <AgentPanel key={project.id} project={project} {...(draftSelection ? { catalogSelection: draftSelection.selection } : {})} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery key={`${project.id}:${surface}:${exportView}`} project={project} surface={surface === 'Publish' ? 'Publish' : exportView === 'Advanced Source' ? 'Code' : 'Build'} hosted={!!session} />}
             </div>

@@ -39,7 +39,7 @@ export function PreviewArtwork({ contentId, source, inventory, projectId, accoun
   return <img src={url} alt="" onError={() => setFailed(url)}/>;
 }
 
-export function Preview({ spec, hosted = false, accountId, libraryRevision = 0 }: { spec: ChannelSpec; hosted?: boolean; accountId?: string | null | undefined; libraryRevision?: number }) {
+export function Preview({ spec, hosted = false, accountId, libraryRevision = 0, fullscreen = false, onExitFullscreen, exitButtonRef }: { spec: ChannelSpec; hosted?: boolean; accountId?: string | null | undefined; libraryRevision?: number; fullscreen?: boolean; onExitFullscreen?: () => void; exitButtonRef?: React.Ref<HTMLButtonElement> }) {
   const tv = televisionFromSpec(spec);
   const [inventory, setInventory] = useState<CatalogSnapshot | null>(null);
   useEffect(() => {
@@ -64,6 +64,7 @@ export function Preview({ spec, hosted = false, accountId, libraryRevision = 0 }
     const handleKey = (event: KeyboardEvent) => {
       const target = event.target;
       if (!(target instanceof HTMLElement) || !frameRef.current?.contains(target)) return;
+      if (fullscreen && event.key === 'Escape') return;
       if (target.closest('audio, video')) {
         // Keep native media keys, but let Back leave playback even when the player has focus.
         if (event.key !== 'Escape' && event.key !== 'Backspace') return;
@@ -75,7 +76,7 @@ export function Preview({ spec, hosted = false, accountId, libraryRevision = 0 }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, []);
+  }, [fullscreen]);
 
   useEffect(() => {
     const focused = Array.from(screenRef.current?.querySelectorAll<HTMLElement>('[data-tv-focus]') ?? [])
@@ -91,8 +92,8 @@ export function Preview({ spec, hosted = false, accountId, libraryRevision = 0 }
   const style = { '--tv-accent': tv.brand.primaryColor, '--tv-bg': tv.brand.backgroundColor, '--tv-text': tv.brand.textColor, fontFamily: tv.brand.typography === 'serif' ? 'Georgia, serif' : 'inherit' } as React.CSSProperties;
 
   return <section className="preview-wrap" aria-label="Interactive TV Preview">
-    <div className="preview-heading"><span className="eyebrow">DRAFT TV PREVIEW</span><span className="live-dot">● &nbsp;16:9 · INTERACTIVE</span></div>
-    <div className="tv-frame" ref={frameRef} tabIndex={0} style={style} aria-label="TV screen, use arrow keys, Enter and Escape">
+    <div className="preview-heading"><span className="eyebrow">DRAFT TV PREVIEW</span><span className="live-dot">● &nbsp;16:9 · INTERACTIVE</span>{fullscreen && <button ref={exitButtonRef} type="button" className="preview-exit" onClick={onExitFullscreen}>Exit full screen</button>}</div>
+    <div className="tv-frame" ref={frameRef} tabIndex={0} style={style} aria-label={`TV screen, use arrow keys, Enter and ${fullscreen ? 'Backspace' : 'Escape'}`}>
       <div className="tv-screen" ref={screenRef}>
         {current.screen === 'page' ? <>
           <header className="tv-header">
@@ -125,7 +126,7 @@ export function Preview({ spec, hosted = false, accountId, libraryRevision = 0 }
             <div className="tv-detail-copy"><span className="eyebrow">{contentPresentation(item) === 'video' ? 'NOW SHOWING' : contentPresentation(item) === 'audio' ? 'NOW LISTENING' : 'ABOUT THIS TITLE'} · {item.category ?? 'FEATURE'}</span><h2>{item.title}</h2><p>{item.description}</p>
               {isPlayableContent(item) ? <button data-tv-focus={current.focusId} className="tv-play focused" onClick={() => dispatch('select')}>▶ &nbsp; {contentPresentation(item) === 'audio' ? 'Play audio' : 'Play film'}</button>
                 : <button data-tv-focus={current.focusId} className="tv-play focused" onClick={() => dispatch('back')}>← Back to channel</button>}
-              <small>{isPlayableContent(item) ? 'Press Enter to play · Escape to go back' : 'Press Escape to go back'}</small></div>
+              <small>{isPlayableContent(item) ? `Press Enter to play · ${fullscreen ? 'Backspace' : 'Escape'} to go back` : `Press ${fullscreen ? 'Backspace' : 'Escape'} to go back`}</small></div>
           </> : <div className="tv-player">{contentPresentation(item) === 'audio'
             ? <><PreviewArtwork contentId={item.id} source={item.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/><audio key={item.id} src={item.mediaUrl} controls autoPlay muted={tv.playback.startMuted} /></>
             : <VideoPlayer key={item.id} source={item.mediaUrl!} startMuted={tv.playback.startMuted}
@@ -134,6 +135,6 @@ export function Preview({ spec, hosted = false, accountId, libraryRevision = 0 }
         </div>}
       </div>
     </div>
-    <div className="remote-bar"><div><strong>Virtual remote</strong><span>Arrow keys · Enter select · Escape back</span></div><div className="remote" aria-label="Virtual remote"><button aria-label="Up" onClick={() => dispatch('up')}>↑</button><div><button aria-label="Left" onClick={() => dispatch('left')}>←</button><button aria-label="Select" onClick={() => dispatch('select')}>OK</button><button aria-label="Right" onClick={() => dispatch('right')}>→</button></div><button aria-label="Down" onClick={() => dispatch('down')}>↓</button><button aria-label="Back" className="remote-back" onClick={() => dispatch('back')}>↩ Back</button></div></div>
+    <div className="remote-bar"><div><strong>Virtual remote</strong><span>Arrow keys · Enter select · {fullscreen ? 'Backspace TV Back · Escape Exit full screen' : 'Escape TV Back'}</span></div><div className="remote" aria-label="Virtual remote"><button aria-label="Up" onClick={() => dispatch('up')}>↑</button><div><button aria-label="Left" onClick={() => dispatch('left')}>←</button><button aria-label="Select" onClick={() => dispatch('select')}>OK</button><button aria-label="Right" onClick={() => dispatch('right')}>→</button></div><button aria-label="Down" onClick={() => dispatch('down')}>↓</button><button aria-label="Back" className="remote-back" onClick={() => dispatch('back')}>↩ Back</button></div></div>
   </section>;
 }

@@ -673,3 +673,16 @@ body { min-width: 0; }
 @media(max-width:1350px){.layout-workspace.layout-has-inspector{grid-template-columns:150px minmax(0,1fr)}.layout-inspector{grid-column:2}}
 @media(max-width:760px){.layout-workspace,.layout-workspace.layout-has-inspector{display:block}.layout-page-rail{position:static;flex-direction:row;overflow:auto;margin-bottom:20px}.layout-page-rail .eyebrow{align-self:center}.layout-page-rail button{flex:none}.layout-inspector{margin-top:20px}.layout-section{padding:14px}}
 @media(min-width:1440px){.channel-preview-split:has(.layout-workspace){grid-template-columns:minmax(0,1fr)}}
+
+/* P8B: the existing Preview container becomes the full-screen surface. */
+.preview-actions{display:flex;gap:8px;flex-wrap:wrap}
+#tv-preview.preview-fullscreen{position:fixed;inset:0;z-index:100;background:#090c0d;color:#e8e7e3;padding:clamp(8px,1.5vh,20px);overflow:auto}
+#tv-preview:fullscreen{width:100%;height:100%;background:#090c0d}
+.preview-fullscreen .preview-wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.preview-fullscreen .preview-heading,.preview-fullscreen .remote-bar{width:min(100%,calc((100dvh - 160px)*16/9));margin:0 0 10px}
+.preview-fullscreen .preview-heading{align-items:center;flex-wrap:wrap}
+.preview-fullscreen .tv-frame{width:min(100%,calc((100dvh - 160px)*16/9));max-height:calc(100dvh - 160px);flex:none;border-width:clamp(2px,.7vmin,9px)}
+.preview-fullscreen .remote-bar{margin:10px 0 0}
+.preview-exit{border:1px solid #d87951;border-radius:7px;background:#a84c2e;color:white;padding:9px 14px;font-weight:700}
+@media(max-height:540px){.preview-fullscreen .preview-heading,.preview-fullscreen .remote-bar{margin:3px 0}.preview-fullscreen .tv-frame{max-height:calc(100dvh - 115px);width:min(100%,calc((100dvh - 115px)*16/9))}}
+.preview-fullscreen-notice{position:absolute;top:4px;left:12px;margin:0;color:#ffd3bf;font-size:12px}
