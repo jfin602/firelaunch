@@ -1,5 +1,9 @@
 # FireLaunch Architecture
 
+## c8-ui3 Studio-only presentation boundary (2026-10-21)
+
+[c8-ui3](tasks/c8-ui3/README.md) is a normal-mode UI composition correction after committed c8-ui2 P1–P3 at root/lock `0.8.10`. It changes only `apps/studio/src/style.css` and small `App.tsx`/`Preview.tsx` presentation areas as needed: flush global/editor sidebar and header, cool gray editor palette, Channel-wide solid dark canvas, largest safe borderless 16:9 TV and BELOW-TV utility row/remote. Preserve the single mounted `Preview`/TV/player, fullscreen LEFT overlay and existing `ChannelSpec` canonical contracts. No native Vega, schema, worker, approval or media changes. Staging qualification is c8-ui3 P3, protected-deploy FIRST, then authenticated Codex browser visual comparison using user's attached approved image; c8-ui2 P4 is superseded but historical prompt unchanged. Phase 8 OPEN.
+
 ## Current Channel workspace presentation correction — c8-ui2 (2026-10-21)
 
 The post-P8B [c8-ui](tasks/c8-ui/closeout.md) was UI GREEN and staging DEPLOYED for a top-stage/bottom dock at `0.8.10`. New approved [c8-ui2](tasks/c8-ui2/README.md) replaces **presentation geometry only**: editor as a secondary fixed LEFT rail next to persistent main sidebar, existing Preview on RIGHT at 16:9, remote below TV; fullscreen's existing shared `channel-fullscreen-root` retains one Preview/Channel editor and transitions rail into a LEFT-edge overlay instead of bottom. Scope: `apps/studio/src/App.tsx`, `Preview.tsx` only if needed for remote placement, Studio-scoped `style.css`, related tests. No duplicate `TvState`, no new Content/Design implementation, no changes to module contracts, native renderer, auth, publication or video. Preserve P8B native static compatibility gate and historical Wave 2 NOT GREEN. See [design](design/channel-secondary-rail.md). Authored only, no new deployment, Phase 8 OPEN.
