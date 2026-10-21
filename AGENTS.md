@@ -1,5 +1,9 @@
 # FireLaunch Agent Instructions
 
+## Current owner-approved c8-ui2 correction (2026-10-21)
+
+[c8-ui P4](docs/tasks/c8-ui/closeout.md) is UI GREEN / staging DEPLOYED at tested root `0.8.10`. **NEXT** is [c8-ui2](docs/tasks/c8-ui2/README.md), assessment/plan/P1–P4 authored, source work NOT RUN. Human-first [design](docs/design/channel-secondary-rail.md): normal Channel = main sidebar + second LEFT editor rail + RIGHT 16:9 TV with virtual remote below; unify Desert Heat button styling; fullscreen = same editor as LEFT edge-reveal drawer (not bottom). Do not rewrite P8B/c8-ui, TV/ChannelSpec, native renderers or publication. Root + lock remains **0.8.10**. Check real local git status/version before `npm run codex:stack:validate -- c8-ui2` then `npm run codex:stack -- c8-ui2`; P1–P3 runner; P4 manual protected staging + authenticated browser. Scope grants, backup and rollback mandatory. P8B native static device proof remains NOT GREEN; Phase 8 OPEN.
+
 ## Read order
 
 Before implementation:
