@@ -4,7 +4,13 @@ Read this file before substantial repository-aware work.
 
 **Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) first for dated source/staging/AWS facts, current gates and next execution.** This boot file includes historical P0-P6 decisions; older activation instructions are preserved as history and MUST NOT override that current ledger, ADR 0011/0013, or p6-live-vod Q1-Q3. Last current-state reconciliation: 2026-10-20 UTC.
 
-## Current planning handoff — Phase 8 Wave 2 (2026-10-21)
+## Current execution handoff — P8B authored (2026-10-21)
+
+[Phase 8 Wave 1 closeout](docs/tasks/p8/wave1-closeout.md) is **GREEN / DEPLOYED** at tested source `0.8.4`, and Phase 8 remains OPEN. [P8B human-first Page Layout continuation](docs/tasks/p8b/README.md) now has an assessment, plan and **seven executable prompts**; original P8 P1–P5 must not be rerun. Normal p8b runner owns P1–P6 (`0.8.5`–`0.8.10`) and stops before P7's manual browser/native-layout/staging closeout (proposed `0.8.11`). The runner does not require `/activate`.
+
+Before running, inspect actual local HEAD/status, inherited P5 dirty edits and root+two lock fields (expected `0.8.4`). Safely reconcile and validate `npm run codex:stack:validate -- p8b`, then run `npm run codex:stack -- p8b`. Prompt files/docs do NOT authorize live deployment, publication, paid encoding or rights changes. P7 requires real permission and direct evidence. Human-first design authority: [layout spec](docs/design/page-layout-human-first.md); latest C7 R4 VirtualDevice GREEN is reusable for unchanged media. Phase 8 stays OPEN after Wave 2.
+
+## Historical Wave 2 design-only handoff (superseded by p8b prompt authoring)
 
 [Wave 1 P5](docs/tasks/p8/wave1-closeout.md) was **GREEN / DEPLOYED** in protected staging at root/lock `0.8.4` with Phase 8 **still OPEN**. Do not rerun `p8` or present Wave 1 as final Phase 8 closure. The owner's next priority is [`p8b` Page Layout & Full-Screen Preview](docs/tasks/p8b/README.md), governed by [human-first design](docs/design/page-layout-human-first.md): Hero/Grid/Rows templates, Home Hero by default, first-class Pages & Layout workspace, simple image/text sections with contextual customization and same-state interactive fullscreen TV Preview.
 
