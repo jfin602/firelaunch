@@ -13,6 +13,12 @@ Before implementation:
 8. the active docs/tasks/<stack>/ README, prompt-assessment and implementation-plan
 9. the current prompt
 
+## Approved P8 authoring outcome (2026-10-21)
+
+The owner approved and requested documentation+prompt authoring for [P8 Creative Studio UX & Pipeline Confirmation](docs/tasks/p8/README.md); see its [assessment](docs/tasks/p8/prompt-assessment.md), [plan](docs/tasks/p8/implementation-plan.md), and P1–P5 prompt files. **Five primary destinations:** Home / Library / Channel / Publish / Export. Channel reuses existing AI Assistant/Appearance/Pages & Shelves, Export retains Advanced Source, Publish owns creator-approved immutable live *content*, and Export owns native app build/download. Desktop right inspector is **contextual-only** for actual selected editing state, not an always-mounted third column; Library/Publish/Export remain wide, TV Preview visible/discoverable, Add Video modal retained. Protect Desert Heat and mobile/accessibility.
+
+**Docs and prompts exist, not a started/qualified Phase 8 implementation.** Current root+lock 0.7.3/schema14 and active C7 R4 manual HLS first-fragment recovery remain authoritative. Do not reset/clobber C7 work, start P8 runner on the shared checkout, bump version to 0.8.0 or claim fully working Vega playback without separate safe entry/qualification. Keep target Friday Oct 23 12:00 PM America/Chicago, internal 11:30. Older P8 descriptions below are historical planning.
+
 ## Active October 21 C7 engineering handoff
 
 **C7 PARTIAL / NOT GREEN.** Later C7 closeout proves R1 Studio startup SCOPED GREEN, R2 isolated same-VPS worker and real creator-bound native VPKG GREEN, R3 authenticated four-file Studio ZIP SCOPED GREEN. R4 independently installed the exact downloaded VPKG on a stable Vega VirtualDevice, displaying the approved channel, artwork, Back navigation and restart. **Remaining:** Hls.js parsed approved master and variant playlists but stalled at the first TS fragment (no FRAG_LOADED); moving video, independently verified sound, pause and seek remain unqualified. Run only the manual [R4 playback recovery](docs/tasks/c7-export-recovery/R4-playback-recovery.txt) with at most three focused repair cycles. Reuse existing GREEN work. Root 0.7.3 and core schema 14 unchanged; preserve approved public release #1.
