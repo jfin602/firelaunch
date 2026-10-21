@@ -1,0 +1,26 @@
+TASK: Phase 8 / P2 — Contextual inspector and full-width workspaces
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.2`.
+
+GOAL
+Make the desktop right inspector contextual-only; Library, Publish and Export should use wide primary workspaces. Retain a discoverable, functional TV Preview and real editing context.
+
+PREFLIGHT
+Read P8 README/assessment/plan and P1 handoff; current-state/c7 notes; inspect actual App.tsx, style.css, Preview.tsx, Catalog.tsx, Home.tsx, VideoWorkspace.tsx, Delivery.tsx and focus/TV tests. Verify clean/coherent P1 0.8.1 baseline; protect pending local edits. Do not repeat P1 routing or enter unsafely from an active c7 checkout.
+
+IMPLEMENT
+1. Remove permanently mounted <aside className="inspector"> and always-reserved desktop grid column. Default Library, Publish, Export and Home occupy available main width; VideoWorkspace continues using its existing accessible modal, not a second right-panel reimplementation. Do not simply CSS-hide required controls.
+2. For Channel editing only, define a small explicit selection/dismiss model (page, shelf/module, tile or appearance property as actually supported); open right inspector only on a real relevant selection. Selection state is stable per project, clears safely on project change/deletion, and close/deselect restores entire space. Do not create fake selection data or depend on decorative filler. If a formerly whole-screen editor has no meaningful selection, use a full-width editor and no inspector.
+3. Add prominent accessible TV Preview toolbar action and usable optional editing split; use existing shared TV Preview behavior including 16:9, directional focus/Back and playback. No second renderer or changes to TV branded visuals. Avoid invalid focus traps: provide labeled close/Escape semantics, focus return, status announcements and protection for unsaved edits.
+4. Responsive: no persistent empty rail; desktop selected inspector fits; tablet/mobile selected controls stack or use accessible sheet/drawer, never overlap actions or make upload/forms unusable. Keep existing Desert Heat canyon/charcoal/ember tokens and independent media colors; honor reduced motion and keyboard. Inspect ~375/768/1440 widths where testing allows.
+
+VALIDATION
+Focused component/layout tests: inspector absent by default, select/open and close/deselect restores width, project switch clears old selection, important form controls remain reachable, Preview works, mobile/wide layouts and keyboard accessibility; affected typecheck/build, git diff --check. If real browser available capture screenshots; if not, report unverified visual checks for manual P5. No unrelated creative design rewrite.
+
+HANDOFF / GIT / SAFETY
+Sequential runner owns P2 commit only when begun from approved 0.8.1 candidate; set only root package and both top-level lock version fields to 0.8.2. Do not self-commit, deploy, publish creator media, change API/rights, run AWS jobs or interfere with c7 R2-R4. <=8 minute goal, 15 minute stop; record tested sizes, inspector behavior, limitations and P3 handoff.
