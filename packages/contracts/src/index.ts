@@ -43,6 +43,20 @@ export const moduleSchema = z.discriminatedUnion('kind', [
   z.strictObject({ id: moduleIdSchema, kind: z.literal('text'), title: titleSchema, body: descriptionSchema })
 ]);
 export const pageSchema = z.strictObject({ id: pageIdSchema, title: titleSchema, modules: z.array(moduleSchema).max(30) });
+export type PageTemplate = 'hero' | 'grid' | 'rows';
+/** Stable starter IDs derived from the page ID; each template is one validated page. */
+export function createPageFromTemplate(id: string, title: string, template: PageTemplate): Page {
+  const pageId = pageIdSchema.parse(id);
+  const moduleId = (slot: number) => `mod_${pageId.slice(5, -1)}${(parseInt(pageId.at(-1)!, 16) ^ slot).toString(16)}`;
+  const modules = template === 'hero'
+    ? [{ id: moduleId(1), kind: 'hero' as const, contentIds: [] }, { id: moduleId(2), kind: 'rail' as const, title: 'Featured videos', contentIds: [] }]
+    : template === 'grid'
+      ? [{ id: moduleId(1), kind: 'grid' as const, title: 'Videos', contentIds: [] }]
+      : template === 'rows'
+        ? [{ id: moduleId(1), kind: 'rail' as const, title: 'Featured videos', contentIds: [] }, { id: moduleId(2), kind: 'rail' as const, title: 'More to watch', contentIds: [] }]
+        : (() => { throw new Error('Unknown page template'); })();
+  return pageSchema.parse({ id: pageId, title, modules });
+}
 export const contentShapeSchema = z.strictObject({
   id: itemIdSchema, title: titleSchema, description: descriptionSchema,
   artwork: artworkSchema,

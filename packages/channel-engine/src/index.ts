@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
-  brandSchema, channelSpecSchema, contentSchema, idSchema, moduleSchema, pageSchema,
+  brandSchema, channelSpecSchema, contentSchema, createPageFromTemplate, idSchema, moduleSchema, pageSchema,
   SCHEMA_VERSION, slugSchema,
   type ChannelSpec, type Page, type ContentItem
 } from '@firelaunch/contracts';
@@ -20,7 +20,7 @@ export function starterChannel(title: string, id = newId('ch'), pageId = newId('
   return channelSpecSchema.parse({
     schemaVersion: SCHEMA_VERSION, id, title, slug: slugify(title),
     brand: { primaryColor: '#49BDA5', backgroundColor: '#101820', textColor: '#FFFFFF' },
-    navigation: [pageId], pages: [{ id: pageId, title: 'Home', modules: [] }],
+    navigation: [pageId], pages: [createPageFromTemplate(pageId, 'Home', 'hero')],
     content: [], playback: { autoplayNext: false, startMuted: false }
   });
 }

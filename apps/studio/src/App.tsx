@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { ChannelMutation } from '@firelaunch/channel-engine';
-import type { ChannelProject, ContentItem, Module, Page } from '@firelaunch/contracts';
+import { createPageFromTemplate, type ChannelProject, type ContentItem, type Module, type PageTemplate } from '@firelaunch/contracts';
 import type { AgentEvent } from '@firelaunch/agent';
 import { ApiError, askAgent, createProject, getProject, getSession, listProjects, logout, mutateProject, type CatalogSelection, type StudioSession } from './api.js';
 import { Preview } from './Preview.js';
@@ -95,6 +95,14 @@ function Content({ project, commit, hosted }: { project: ChannelProject; commit:
   const [pageId, setPageId] = useState(spec.navigation[0]!);
   const [name, setName] = useState('');
   const [newPage, setNewPage] = useState('');
+  const [pageTemplate, setPageTemplate] = useState<PageTemplate>('rows');
+  const [pageDialogOpen, setPageDialogOpen] = useState(false);
+  const [pageError, setPageError] = useState('');
+  const [pageSaving, setPageSaving] = useState(false);
+  const pageSubmitting = useRef(false);
+  const pageOpener = useRef<HTMLButtonElement>(null);
+  const pageName = useRef<HTMLInputElement>(null);
+  const pageDialog = useRef<HTMLDivElement>(null);
   const [moduleTitle, setModuleTitle] = useState('');
   const [kind, setKind] = useState<'hero' | 'rail' | 'grid' | 'text'>('rail');
   const [selectedId, setSelectedId] = useState<string>('');
@@ -118,15 +126,53 @@ function Content({ project, commit, hosted }: { project: ChannelProject; commit:
       : { id, kind, title: moduleTitle.trim() || 'Collection', contentIds: [] };
     if (await commit({ type: 'addModule', pageId: page.id, module })) setModuleTitle('');
   };
+  useEffect(() => { if (pageDialogOpen) pageName.current?.focus(); }, [pageDialogOpen]);
+  const closePageDialog = () => {
+    if (pageSubmitting.current) return;
+    setPageDialogOpen(false); setPageError(''); setNewPage(''); setPageTemplate('rows');
+    window.setTimeout(() => pageOpener.current?.focus(), 0);
+  };
+  const createPage = async (event: FormEvent) => {
+    event.preventDefault();
+    if (pageSubmitting.current) return;
+    const title = newPage.trim();
+    if (!title) { setPageError('Enter a page name.'); pageName.current?.focus(); return; }
+    if (spec.pages.some(candidate => candidate.title.toLocaleLowerCase() === title.toLocaleLowerCase())) {
+      setPageError('A page with this name already exists. Choose another name.'); pageName.current?.focus(); return;
+    }
+    const next = createPageFromTemplate(newId('page'), title, pageTemplate);
+    pageSubmitting.current = true; setPageSaving(true); setPageError('');
+    try {
+      if (await commit({ type: 'addPage', page: next })) {
+        setPageId(next.id); setPageDialogOpen(false); setNewPage(''); setPageTemplate('rows');
+        window.setTimeout(() => document.querySelector<HTMLButtonElement>(`[data-page-id="${next.id}"]`)?.focus(), 0);
+      } else setPageError('Page was not saved. Review the message above, then try again.');
+    } finally { pageSubmitting.current = false; setPageSaving(false); }
+  };
+  const onPageDialogKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Escape') { event.preventDefault(); closePageDialog(); return; }
+    if (event.key !== 'Tab') return;
+    const controls = Array.from(pageDialog.current?.querySelectorAll<HTMLElement>('input:not(:disabled), button:not(:disabled)') ?? []);
+    const first = controls[0], last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  };
   return <div className="panel-content content-editor"><span className="eyebrow">YOUR PROGRAMMING</span><h2>Curate the screen.</h2><p className="muted">Catalog items are shared across pages. Modules decide where they appear.</p>
-    <div className="section-label">01 / PAGES</div><div className="chips" aria-label="Channel pages">{spec.navigation.map(id => { const target = spec.pages.find(candidate => candidate.id === id)!; return <button key={id} className={page.id === id ? 'active' : ''} aria-pressed={page.id === id} onClick={() => setPageId(id)}>{target.title}</button>; })}</div>
+    <div className="section-label">01 / PAGES</div><div className="chips" aria-label="Channel pages">{spec.navigation.map(id => { const target = spec.pages.find(candidate => candidate.id === id)!; return <button key={id} data-page-id={id} className={page.id === id ? 'active' : ''} aria-pressed={page.id === id} onClick={() => setPageId(id)}>{target.title}</button>; })}</div>
     <Field label="PAGE NAME"><input value={name} onChange={event => setName(event.target.value)} placeholder={page.title} /></Field><button disabled={!name.trim()} onClick={() => void commit({ type: 'updatePage', pageId: page.id, title: name.trim() }).then(saved => { if (saved) setName(''); })}>Rename page</button>
-    <div className="inline-form"><input aria-label="New page title" value={newPage} onChange={event => setNewPage(event.target.value)} placeholder="New page title" maxLength={120}/><button disabled={!newPage.trim()} onClick={() => { const next: Page = { id: newId('page'), title: newPage.trim(), modules: [] }; void commit({ type: 'addPage', page: next }).then(saved => { if (saved) { setPageId(next.id); setNewPage(''); } }); }}>Add page</button></div>
+    <button ref={pageOpener} type="button" onClick={() => setPageDialogOpen(true)}>New page</button>
+    {pageDialogOpen && <div className="page-dialog-backdrop"><div ref={pageDialog} role="dialog" aria-modal="true" aria-labelledby="new-page-heading" className="page-dialog" onKeyDown={onPageDialogKeyDown}>
+      <h3 id="new-page-heading">Create a page</h3><p>Name your page and choose a starting layout. You can choose content after creating it.</p>
+      <form onSubmit={event => void createPage(event)}><label htmlFor="new-page-name">Page name</label><input ref={pageName} id="new-page-name" maxLength={120} required value={newPage} onChange={event => { setNewPage(event.target.value); setPageError(''); }} />
+        <fieldset><legend>Starting layout</legend><div className="page-template-options">{(['hero', 'grid', 'rows'] as const).map(choice => <label key={choice} className={`page-template-option ${pageTemplate === choice ? 'selected' : ''}`}><input type="radio" name="page-template" value={choice} checked={pageTemplate === choice} onChange={() => setPageTemplate(choice)} /><span className={`page-template-preview ${choice}`} aria-hidden="true"><i/><i/><i/><i/></span><strong>{choice === 'hero' ? 'Hero' : choice === 'grid' ? 'Grid' : 'Rows'}</strong><small>{choice === 'hero' ? 'A featured video and a row' : choice === 'grid' ? 'A collection of video tiles' : 'Two video rows'}</small></label>)}</div></fieldset>
+        {pageError && <p className="page-dialog-error" role="alert">{pageError}</p>}
+        <div className="button-row"><button type="button" onClick={closePageDialog} disabled={pageSaving}>Cancel</button><button className="primary" type="submit" disabled={pageSaving}>{pageSaving ? 'Creating…' : 'Create page'}</button></div>
+      </form></div></div>}
     {spec.pages.length > 1 && <button className="danger" onClick={() => void commit({ type: 'removePage', pageId: page.id }).then(saved => { if (saved) setPageId(spec.navigation.find(id => id !== page.id)!); })}>Remove selected page</button>}
     <div className="section-label">02 / CATALOG</div><div className="chips" aria-label="Channel content"><button className={!selected ? 'active' : ''} aria-pressed={!selected} onClick={() => { setSelectedId(''); setDraft({ title: '', description: '', artwork: SAMPLE_ART, mediaUrl: newFilmMediaUrl(hosted), category: '' }); }}>+ New film</button>{spec.content.map(item => <button key={item.id} className={selectedId === item.id ? 'active' : ''} aria-pressed={selectedId === item.id} onClick={() => setSelectedId(item.id)}>{item.title}</button>)}</div>
     <form onSubmit={event => void saveItem(event)}><Field label="TITLE"><input required maxLength={120} value={draft.title} onChange={event => set('title', event.target.value)}/></Field><Field label="DESCRIPTION"><textarea maxLength={2000} value={draft.description} onChange={event => set('description', event.target.value)}/></Field><Field label="ARTWORK · HTTP(S) OR ASSET PATH"><input required value={draft.artwork} onChange={event => set('artwork', event.target.value)}/></Field>{selected?.presentation !== 'information' && <Field label={selected?.presentation === 'audio' ? 'PLAYABLE AUDIO URL · HTTP(S)' : 'PLAYABLE VIDEO URL · HTTP(S)'}><input required type="url" value={draft.mediaUrl} onChange={event => set('mediaUrl', event.target.value)}/></Field>}<Field label="CATEGORY"><input value={draft.category} onChange={event => set('category', event.target.value)}/></Field><div className="button-row"><button className="primary" type="submit">{selected ? selected.presentation === 'information' ? 'Save item' : selected.presentation === 'audio' ? 'Save audio' : 'Save film' : 'Add film'}</button>{selected && <button type="button" className="danger" onClick={() => void commit({ type: 'removeContent', contentId: selected.id }).then(saved => { if (saved) setSelectedId(''); })}>Remove</button>}</div></form>
     <div className="section-label">03 / TV LAYOUT · {page.title.toUpperCase()}</div><div className="inline-form"><select aria-label="Module type" value={kind} onChange={event => setKind(event.target.value as typeof kind)}><option value="hero">Hero</option><option value="rail">Rail</option><option value="grid">Grid</option><option value="text">Text</option></select><input aria-label="Module title to add" placeholder="Module title" maxLength={120} value={moduleTitle} onChange={event => setModuleTitle(event.target.value)}/><button onClick={() => void addModule()}>Add</button></div>
-    {page.modules.map(module => <ModuleEditor key={module.id} module={module} pageId={page.id} items={spec.content} commit={commit} />)}
+    {page.modules.map(module => <div key={module.id}>{module.kind !== 'text' && module.contentIds.length === 0 && <p className="module-empty">Choose content for {module.kind === 'hero' ? 'the hero' : module.title} below.</p>}<ModuleEditor module={module} pageId={page.id} items={spec.content} commit={commit} /></div>)}
   </div>;
 }
 

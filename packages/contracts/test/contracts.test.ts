@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { channelSpecSchema, contentPresentation, contentSchema, isPlayableContent, projectSchema, SCHEMA_VERSION } from '../src/index.js';
+import { channelSpecSchema, contentPresentation, contentSchema, createPageFromTemplate, isPlayableContent, projectSchema, SCHEMA_VERSION } from '../src/index.js';
+
+test('page templates validate, keep stable unique IDs, and contain no assumed content rights', () => {
+  const id = `page_${'a'.repeat(32)}`;
+  for (const [choice, kinds] of [['hero', ['hero', 'rail']], ['grid', ['grid']], ['rows', ['rail', 'rail']]] as const) {
+    const page = createPageFromTemplate(id, 'Films', choice);
+    assert.deepEqual(page.modules.map(module => module.kind), kinds);
+    assert.deepEqual(createPageFromTemplate(id, 'Films', choice), page);
+    assert.equal(new Set(page.modules.map(module => module.id)).size, page.modules.length);
+    assert.ok(page.modules.every(module => module.kind !== 'text' && module.contentIds.length === 0));
+  }
+  assert.throws(() => createPageFromTemplate('bad', 'Films', 'rows'));
+  assert.throws(() => createPageFromTemplate(id, '', 'rows'));
+});
 import { fixtureChannel } from '../../channel-engine/test/fixtures.js';
 
 test('strict versioned ChannelSpec accepts starter fixture', () => {
