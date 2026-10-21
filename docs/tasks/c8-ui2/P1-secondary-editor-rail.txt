@@ -1,0 +1,26 @@
+TASK: Correction 8 / P1 — Secondary left editor rail and right TV
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.10`.
+
+GOAL
+Replace only c8-ui's normal Channel BOTTOM editing dock with a SECONDARY LEFT editor rail adjacent to the existing main Studio sidebar. The remaining RIGHT workspace shows the actual fitted interactive 16:9 TV and a Virtual remote BELOW its frame. Preserve every existing page/editor feature and the same TV/player/rail DOM instances.
+
+PREFLIGHT
+Read docs/tasks/c8-ui2/{README.md,implementation-plan.md}, docs/design/channel-secondary-rail.md, latest c8-ui/closeout.md. Confirm real local HEAD/dirty state and that root package and both top-level lock versions all equal 0.8.10. Reconcile local pending c8-ui P4 CSS/tests safely; no reset/force-pull/stash. Inspect apps/studio/src/App.tsx channel-fullscreen-root and Preview mount, apps/studio/src/style.css channel-presentation/dock/stage/remote and current Studio layout tests. Avoid historical full P8B investigation.
+
+IMPLEMENT
+1. NORMAL Channel: keep the global far-left sidebar/topbar untouched. Within the workspace use a two-COLUMN arrangement (secondary editor LEFT, TV stage RIGHT), not top/bottom rows. The existing channel-dock component becomes the vertical editor rail and still owns Pages & Layout and Appearance tabs, page/template/section controls and save/dirty state. Move no controls to a duplicate editor. Approx 36–43% of remaining workspace width to rail, rest TV; adapt min/max by viewport. Correct DOM/CSS order or explicit grid areas for screen reader/focus behavior.
+2. Right TV stage: one actual Preview, true 16:9 frame scaled/letterboxed to fit right panel width and height. Keep the View full screen action top right. Place the existing Virtual remote in the LOWER free area beneath the TV frame, toward bottom-right, never over video or the editor; preserve Back/arrow/select/player functionality. Prefer CSS positioning within the same Preview instance.
+3. Editor rail: tabs at top, own constrained vertical scroll for many Pages/Sections/Appearance controls, no third permanent properties rail cutting into TV. Existing selected inspector is contained INSIDE editor rail; pages, six static/media sections, friendly actions, existing rights and save/error guards stay working. Do not change TV nav or page type models.
+4. Tablet/phone may use compact/collapsible secondary rail/drawer rather than unreadably thin permanent columns. Prevent whole Channel overflow at common 1440x900 / 1280x720; keep buttons/forms reachable and TV ratio accurate. P2 styles buttons; P3 adapts fullscreen left overlay, not now.
+
+VALIDATION
+Run discovered affected Studio layout tests (not broad full suite) for secondary rail/right Preview structure, single mounts, existing page selection/save, virtual remote within stage but below TV, responsive/focus semantics; Studio package typecheck once. Static DOM tests cannot establish rendered exact pixel geometry; leave real viewport proof to P4. Do not run root build/check/test, new Vega worker/ZIP, browser host or deployment.
+
+HANDOFF / SAFETY
+Root and both top-level lock version fields must remain 0.8.10. Runner owns git diff/version/commit; no self-commit, /activate, media/publication/security/migration changes. <=8 minutes target, 15 minute stop. Report exact layout seams and P2 styling targets.
