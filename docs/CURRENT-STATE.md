@@ -1,5 +1,11 @@
 # FireLaunch Current State
 
+## Current owner-approved c8-ui2 left-editor correction (2026-10-21)
+
+The prior [c8-ui P4 closeout](tasks/c8-ui/closeout.md) is **UI GREEN / STAGING DEPLOYED** for its tested top-TV/bottom-dock presentation at root/lock **0.8.10**. At its dated host readback, protected staging release was `20261021T193117Z-850e9d93523c` with schema 14 and approved FREE release #1 unchanged. [P8B Wave 2](tasks/p8b/wave2-follow-on-2026-10-21.md) remains NOT GREEN for unproved native static-layout screen evidence. These are dated observations, not fresh host checks.
+
+The owner approved a NEW [c8-ui2 correction](tasks/c8-ui2/README.md) and [secondary editor rail contract](design/channel-secondary-rail.md): normal Channel becomes main global sidebar + a SECOND LEFT VERTICAL EDITOR RAIL + right fitted 16:9 TV Preview with Virtual remote BELOW it. All Channel buttons/tabs use consistent restrained Desert Heat styling. In fullscreen, the SAME rail is a LEFT-EDGE slideout overlay (pointer/touch/keyboard), replacing the old BOTTOM dock reveal; Preview/editor state remains mounted. Root/lock stays 0.8.10. **Assessment, plan and P1–P4 prompts are authored, NOT RUN**; no new staging deployment or version bump yet. Run only after safe local status/version check and `npm run codex:stack:validate -- c8-ui2`. Phase 8 OPEN.
+
 Last documentation reconciliation: 2026-10-21 UTC (P8 Wave 1 staging GREEN and Wave 2 human-first layout design approved for planning; earlier sections are dated evidence).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
 
