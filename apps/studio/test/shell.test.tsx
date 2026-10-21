@@ -68,9 +68,8 @@ test('contextual appearance inspector dismisses safely and restores focus across
     fireEvent.change(screen.getByRole('combobox', { name: 'Switch project' }), { target: { value: second.id } });
     await screen.findByRole('heading', { name: 'Second channel', level: 1 });
     assert.equal(screen.queryByRole('complementary', { name: 'Appearance inspector' }), null);
-    fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
     assert.ok(screen.getByRole('region', { name: 'Interactive TV Preview' }));
-    assert.equal(screen.getByRole('button', { name: 'Close TV Preview' }).getAttribute('aria-expanded'), 'true');
+    assert.equal(screen.queryByRole('button', { name: 'Close TV Preview' }), null);
     fireEvent.click(screen.getByRole('button', { name: 'Export' }));
     assert.equal(document.querySelector('.workspace')?.classList.contains('has-inspector'), false);
     assert.equal(screen.queryByRole('complementary', { name: /inspector/i }), null);
@@ -117,7 +116,6 @@ test('full-screen fallback retains the live Preview, TV playback and focus on ex
     render(createElement(App));
     await screen.findByRole('heading', { name: first.spec.title, level: 1 });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
     const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
     fireEvent.click(screen.getByRole('button', { name: 'Down' }));
     fireEvent.click(screen.getByRole('button', { name: 'Select' }));
@@ -161,7 +159,6 @@ test('native fullscreen success and rejection keep one Preview and return focus'
     render(createElement(App));
     await screen.findByRole('heading', { name: first.spec.title, level: 1 });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
     const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
     const trigger = screen.getByRole('button', { name: 'View full screen' });
     fireEvent.click(trigger);
@@ -192,7 +189,6 @@ test('an external project switch closes fallback before showing the next channel
     render(createElement(App));
     await screen.findByRole('heading', { name: first.spec.title, level: 1 });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
     fireEvent.click(screen.getByRole('button', { name: 'View full screen' }));
     assert.ok(screen.getByRole('dialog', { name: 'Full-screen TV Preview' }));
     fireEvent.change(document.querySelector<HTMLSelectElement>('.project-select')!, { target: { value: second.id } });

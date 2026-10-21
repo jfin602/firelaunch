@@ -31,7 +31,8 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }));
     fireEvent.click(screen.getByRole('button', { name: /Create channel/ }));
     await waitFor(() => assert.ok(screen.getByText('REV 8 · LOCAL')), { timeout: 5000 });
-    fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
+    assert.equal(screen.getByRole('button', { name: 'Pages & Layout' }).getAttribute('aria-pressed'), 'true');
+    assert.equal(screen.getAllByRole('region', { name: 'Interactive TV Preview' }).length, 1);
     await waitFor(() => assert.ok(screen.getByRole('region', { name: 'rail section 2' })));
     const projectId = new URLSearchParams(window.location.search).get('project');
     assert.match(projectId ?? '', /^ch_[a-f0-9]{32}$/);
@@ -49,11 +50,9 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     fireEvent.click(within(inspector).getByRole('button', { name: 'Save changes' }));
     await waitFor(() => assert.ok(screen.getByText('REV 10 · LOCAL')));
     fireEvent.click(within(inspector).getByRole('button', { name: 'Close layout inspector' }));
-    fireEvent.click(screen.getByRole('button', { name: 'AI Assistant' }));
-    await screen.findByText(/MOCK · Deterministic mock/);
-    fireEvent.change(screen.getByPlaceholderText('e.g. Add page Explore'), { target: { value: 'primary color to #224466' } });
-    fireEvent.click(screen.getByRole('button', { name: /Send request/ }));
-    await waitFor(() => assert.ok(screen.getByText('REV 11 · LOCAL')));
+    assert.equal(screen.queryByRole('button', { name: 'AI Assistant' }), null);
+    assert.equal(screen.queryByRole('button', { name: 'Close TV Preview' }), null);
+    assert.equal(screen.getAllByRole('region', { name: 'Interactive TV Preview' }).length, 1);
     fireEvent.click(screen.getByRole('button', { name: 'Export' }));
     fireEvent.click(screen.getByRole('button', { name: 'Advanced Source' }));
     await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Generate source' }) as HTMLButtonElement).disabled, false));
@@ -74,7 +73,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     await waitFor(() => assert.ok(screen.getByText(/not submitted/)));
     cleanup();
     render(createElement(App));
-    await waitFor(() => assert.ok(screen.getByText('REV 11 · LOCAL')));
+    await waitFor(() => assert.ok(screen.getByText('REV 10 · LOCAL')));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     await waitFor(() => assert.ok(within(screen.getByRole('region', { name: 'rail section 2' })).getByText('Field Notes Picks')));
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
@@ -84,8 +83,8 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     activeServer = restarted;
     const response = await nativeFetch(`http://127.0.0.1:${address.port}/api/projects/${projectId}`);
     const saved = await response.json();
-    assert.equal(saved.revision, 11);
-    assert.equal(saved.spec.brand.primaryColor, '#224466');
+    assert.equal(saved.revision, 10);
+    assert.equal(saved.spec.brand.primaryColor, '#aabbcc');
     assert.equal(saved.spec.pages[0].modules[1].title, 'Field Notes Picks');
     assert.deepEqual(generated, televisionFromSpec(saved.spec));
     assert.equal((await nativeFetch(`http://127.0.0.1:${address.port}/api/projects/${projectId}/readiness`).then(result => result.json())).submitted, false);

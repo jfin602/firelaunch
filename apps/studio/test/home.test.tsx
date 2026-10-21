@@ -56,7 +56,7 @@ test('empty account keeps clear onboarding; one project opens real Home and navi
     assert.ok(screen.getByRole('button', { name: /First films.*Current channel/ }));
     fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
     assert.ok(screen.getByRole('region', { name: 'Interactive TV Preview' }));
-    assert.equal(screen.getByRole('button', { name: 'Appearance' }).getAttribute('aria-pressed'), 'true');
+    assert.equal(screen.getByRole('button', { name: 'Pages & Layout' }).getAttribute('aria-pressed'), 'true');
     fireEvent.click(screen.getByRole('navigation', { name: 'Studio surfaces' }).querySelector('button')!);
     fireEvent.click(screen.getByRole('button', { name: 'Edit channel' }));
     assert.equal(screen.getByRole('button', { name: 'Appearance' }).getAttribute('aria-pressed'), 'true');

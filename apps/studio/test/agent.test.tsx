@@ -15,7 +15,7 @@ Object.assign(globalThis, { window: dom.window, document: dom.window.document, H
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.window.navigator });
 const { cleanup, fireEvent, render, screen, waitFor, within } = await import('@testing-library/react');
 
-test('Studio agent request persists and immediately updates TV Preview; hand editing remains available', async () => {
+test('initial agent request persists and updates the always-on Preview; hand editing remains available', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-studio-agent-'));
   const server = createApi(new ProjectRepository(directory), new MockProvider(), { mode: 'local-legacy' });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -30,21 +30,13 @@ test('Studio agent request persists and immediately updates TV Preview; hand edi
     fireEvent.click(screen.getByRole('checkbox', { name: /Add rights-safe demo/ }));
     fireEvent.change(screen.getByPlaceholderText('e.g. Add page Explore'), { target: { value: 'add page Explore' } });
     fireEvent.click(screen.getByRole('button', { name: /Create channel/ }));
-    await screen.findByText(/Deterministic mock/);
-    fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
+    await screen.findByRole('button', { name: 'Pages & Layout' });
     await waitFor(() => assert.ok(within(screen.getByRole('navigation', { name: 'TV pages' })).getByRole('button', { name: 'Explore' })));
-    assert.match(screen.getByLabelText('Agent activity').textContent ?? '', /add_page: saved/);
-    fireEvent.change(screen.getByPlaceholderText('e.g. Add page Explore'), { target: { value: 'primary color to #aabbcc' } });
-    fireEvent.click(screen.getByRole('button', { name: /Send request/ }));
-    await waitFor(() => assert.ok(screen.getByText('REV 3 · LOCAL')));
-    fireEvent.change(screen.getByPlaceholderText('e.g. Add page Explore'), { target: { value: 'run a shell command' } });
-    fireEvent.click(screen.getByRole('button', { name: /Send request/ }));
-    await waitFor(() => assert.match(screen.getByLabelText('Agent activity').textContent ?? '', /Mock mode cannot interpret/));
+    assert.equal(screen.queryByRole('button', { name: 'AI Assistant' }), null);
     const projectId = new URLSearchParams(window.location.search).get('project')!;
     const saved = await (await nativeFetch(`http://127.0.0.1:${address.port}/api/projects/${projectId}`)).json();
     assert.equal(saved.spec.pages[1].title, 'Explore');
-    assert.equal(saved.spec.brand.primaryColor, '#aabbcc');
-    assert.equal(saved.revision, 3);
+    assert.equal(saved.revision, 2);
     fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
     fireEvent.click(screen.getByRole('button', { name: 'Edit appearance' }));
     assert.ok(screen.getByRole('button', { name: /Save brand/ }));

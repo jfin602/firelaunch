@@ -63,9 +63,12 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     render(createElement(App));
     await screen.findByRole('heading', { name: 'Wild Earth', level: 1 });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
+    assert.equal(screen.getByRole('button', { name: 'Pages & Layout' }).getAttribute('aria-pressed'), 'true');
+    assert.deepEqual(within(screen.getByRole('group', { name: 'Channel views' })).getAllByRole('button').map(button => button.textContent), ['Pages & Layout', 'Appearance']);
+    const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
+    assert.equal(screen.getAllByRole('region', { name: 'Interactive TV Preview' }).length, 1);
     assert.equal(screen.queryByRole('complementary', { name: 'Layout inspector' }), null);
-    const rail = screen.getByRole('navigation', { name: 'Channel pages' });
+    let rail = screen.getByRole('navigation', { name: 'Channel pages' });
     assert.equal(within(rail).getByRole('button', { name: 'Home' }).getAttribute('aria-current'), 'page');
     const homeSection = screen.getByRole('region', { name: 'hero section 1' });
     assert.ok(within(homeSection).getByText('Oceans'));
@@ -78,10 +81,15 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     await waitFor(() => assert.equal(document.activeElement, editSection));
     fireEvent.click(within(rail).getByRole('button', { name: 'Explore' }));
     assert.ok(screen.getByText('Choose content for Films.'));
-    fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
-    const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
     await waitFor(() => assert.ok(within(preview).getByRole('heading', { name: 'Films' })));
-    fireEvent.click(screen.getByRole('button', { name: 'Close TV Preview' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+    assert.equal(screen.getByRole('region', { name: 'Interactive TV Preview' }), preview);
+    assert.ok(screen.getByRole('button', { name: 'Edit appearance' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
+    rail = screen.getByRole('navigation', { name: 'Channel pages' });
+    assert.equal(screen.getByRole('region', { name: 'Interactive TV Preview' }), preview);
+    assert.equal(screen.queryByRole('button', { name: 'Close TV Preview' }), null);
+    assert.equal(screen.queryByRole('button', { name: 'AI Assistant' }), null);
     fireEvent.click(screen.getByRole('button', { name: 'Edit page' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'PAGE NAME' }), { target: { value: 'Home' } });
     fireEvent.click(screen.getByRole('button', { name: 'Rename page' }));
@@ -101,6 +109,8 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     assert.equal((screen.getByRole('button', { name: 'Delete page' }) as HTMLButtonElement).disabled, true);
     fireEvent.change(screen.getByRole('combobox', { name: 'Switch project' }), { target: { value: second.id } });
     await screen.findByRole('heading', { name: 'Other channel', level: 1 });
+    assert.equal(screen.getAllByRole('region', { name: 'Interactive TV Preview' }).length, 1);
+    assert.notEqual(screen.getByRole('region', { name: 'Interactive TV Preview' }), preview);
     assert.equal(screen.queryByRole('complementary', { name: 'Layout inspector' }), null);
     assert.equal(screen.queryByText('Discover'), null);
   } finally { cleanup(); globalThis.fetch = previous; window.confirm = originalConfirm; dom.window.history.replaceState(null, '', '/'); }
