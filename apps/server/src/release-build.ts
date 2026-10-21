@@ -12,6 +12,11 @@ import { isTrustedVegaAsset, isTrustedVegaAssetPath, TRUSTED_VEGA_ASSET_MAX_BYTE
 export const DEPENDENCY_LOCK_COMMAND = Object.freeze(['npm', 'install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund']);
 export const DEPENDENCY_INSTALL_COMMAND = Object.freeze(['npm', 'ci', '--no-audit', '--no-fund']);
 export const RELEASE_BUILD_COMMAND = Object.freeze(['./node_modules/.bin/react-native', 'build-vega', '--target', 'x86_64', '--build-type', 'Release']);
+export function releaseBuildCommand(input: ReleaseBuildInput): readonly string[] {
+  if (!Number.isSafeInteger(input.publishedRelease.sequence) || input.publishedRelease.sequence < 1)
+    invalid('Invalid native build number');
+  return Object.freeze([...RELEASE_BUILD_COMMAND, '--build-number', String(input.publishedRelease.sequence)]);
+}
 export const VPT_INFO_COMMAND = Object.freeze(['vpt', 'info', '--json']);
 export const VPT_VALIDATE_COMMAND = Object.freeze(['vpt', 'validate', '--no-color']);
 const sha256 = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
@@ -161,7 +166,35 @@ export type NativeBuildEvidence = Readonly<{ inputFingerprint: string; sourceHas
   deploymentId: string; packageId: string; publishedRelease: ReleaseIdentity; inspectedPackageId: string }>;
 export type NativeToolchain = Readonly<{ node: string; npm: string; vegaCli: string; vegaSdk: string }>;
 
-async function verifyMaterializedSource(input: ReleaseBuildInput, destination: string, rejectUnknown: boolean): Promise<void> {
+/** SDK 0.24 autolinking adds only these pinned Kepler modules before [wants]. */
+function sdkManifestOnlyAddedModules(original: string, built: string): boolean {
+  const marker = '[wants]\n';
+  const originalAt = original.indexOf(marker);
+  const builtAt = built.indexOf(marker);
+  if (originalAt < 0 || builtAt < 0 || original.indexOf(marker, originalAt + 1) >= 0 ||
+    built.indexOf(marker, builtAt + 1) >= 0 || built.slice(builtAt) !== original.slice(originalAt)) return false;
+  const prefix = original.slice(0, originalAt).trimEnd();
+  if (!built.startsWith(prefix)) return false;
+  const inserted = built.slice(prefix.length, builtAt);
+  const modules = new Set([
+    '/com.amazon.kepler.kepler_media_controls_1@IKeplerMediaControls_0',
+    '/com.amazon.kepler.keplermediadescriptor_1@IKeplermediadescriptor_1',
+    '/com.amazon.kepler.keplerscript_4@IKeplerScript_0',
+    '/com.amazon.kepler.w3cmedia_2@IW3cmedia_3',
+    '/com.amazon.kepler.async_storage__async_storage_2@IAsyncStorage__AsyncStorage_1',
+    '/com.amazon.kepler.runtime.react_native_kepler_4@IReactNativeKepler_0'
+  ]);
+  const seen = new Set<string>();
+  const remainder = inserted.replace(/\[\[needs\.module\]\]\n(id = "([^"\n]+)"\n)/g, (_block, _line, id: string) => {
+    if (!modules.has(id) || seen.has(id)) return '!INVALID!';
+    seen.add(id);
+    return '';
+  });
+  return seen.size > 0 && /^\s*$/.test(remainder);
+}
+
+async function verifyMaterializedSource(input: ReleaseBuildInput, destination: string, rejectUnknown: boolean,
+  allowSdkManifest = false): Promise<void> {
   const expected = new Set(Object.keys(input.files));
   async function visit(directory: string, prefix: string): Promise<void> {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -183,9 +216,10 @@ async function verifyMaterializedSource(input: ReleaseBuildInput, destination: s
     }
     const file = join(destination, name);
     const info = await lstat(file);
-    if (!info.isFile() || info.isSymbolicLink() ||
-      info.size > (isTrustedVegaAssetPath(name) ? TRUSTED_VEGA_ASSET_MAX_BYTES : 256_000) ||
-      sha256(await readFile(file)) !== expectedHash)
+    const body = info.isFile() && !info.isSymbolicLink() ? await readFile(file) : null;
+    if (!body || info.size > (isTrustedVegaAssetPath(name) ? TRUSTED_VEGA_ASSET_MAX_BYTES : 256_000) ||
+      (sha256(body) !== expectedHash && !(allowSdkManifest && name === 'manifest.toml' &&
+        sdkManifestOnlyAddedModules(input.files[name]!, body.toString('utf8')))))
       conflict(`Worker source changed after dependency or native build: ${name}`);
   }
 }
@@ -212,9 +246,10 @@ export async function produceIsolatedRelease(input: ReleaseBuildInput, destinati
     conflict('Installed dependency lock differs from source');
   const dependencyLockSha256 = sha256(lock);
   await verifyMaterializedSource(input, destination, true);
-  const result = await invoke(RELEASE_BUILD_COMMAND, destination);
+  const command = releaseBuildCommand(input);
+  const result = await invoke(command, destination);
   if (result.exitCode !== 0) conflict('Native release build failed');
-  await verifyMaterializedSource(input, destination, false);
+  await verifyMaterializedSource(input, destination, false, true);
   const build = join(destination, 'build');
   const found: string[] = [];
   async function visit(dir: string, depth: number): Promise<void> {
@@ -237,10 +272,11 @@ export async function produceIsolatedRelease(input: ReleaseBuildInput, destinati
     conflict('Native artifact is empty, stale or oversized');
   const packageResult = await invoke([...VPT_INFO_COMMAND, file], destination);
   const validation = await invoke([...VPT_VALIDATE_COMMAND, file], destination);
-  let packageInfo: { id?: unknown; os_version_registry?: { os_versions?: unknown } };
+  let packageInfo: { id?: unknown; build_number?: unknown; os_version_registry?: { os_versions?: unknown } };
   try { packageInfo = JSON.parse(packageResult.stdout ?? ''); }
   catch { return conflict('Native package inspection failed'); }
   if (packageResult.exitCode !== 0 || validation.exitCode !== 0 || packageInfo.id !== input.packageId ||
+    packageInfo.build_number !== input.publishedRelease.sequence ||
     !Array.isArray(packageInfo.os_version_registry?.os_versions) ||
     !packageInfo.os_version_registry.os_versions.includes('1.2'))
     conflict('Native package identity, validation or OS differs from build input');
@@ -256,7 +292,7 @@ export async function produceIsolatedRelease(input: ReleaseBuildInput, destinati
     if (copyDigest.digest('hex') !== artifactHash) conflict('Native output copy differs');
   }
   return Object.freeze({ inputFingerprint: input.fingerprint, sourceHash: input.sourceHash,
-    command: RELEASE_BUILD_COMMAND, target: 'x86_64', buildType: 'Release', toolchain, dependencyLockSha256,
+    command, target: 'x86_64', buildType: 'Release', toolchain, dependencyLockSha256,
     artifactPath: relative(destination, file).split(sep).join('/'), bytes: info.size,
     sha256: artifactHash, deploymentId: input.deploymentId, packageId: input.packageId,
     publishedRelease: input.publishedRelease, inspectedPackageId: input.packageId });

@@ -7,6 +7,7 @@ import type { HostedProjectRepository } from '../src/hosted-repository.js';
 import type { ServerMode } from '../src/auth/config.js';
 import { HostedWorkspaceService } from '../src/hosted-workspace.js';
 import { NativeBuildQueue } from '../src/native-build-queue.js';
+import { PublicReleaseResolver } from '../src/public-resolver.js';
 import type { ReleaseBuildInput } from '../src/release-build.js';
 
 test('hosted export submits only the session owner snapshot and reports owned queue state', async t => {
@@ -20,7 +21,10 @@ test('hosted export submits only the session owner snapshot and reports owned qu
   let state: 'queued' | 'running' | 'ready' | 'failed' | 'expired' = 'queued';
   const jobId = `job_${'d'.repeat(32)}`;
   const input = { format: 'firelaunch-vega-build-input-v1', creatorAccountId: owner,
-    projectId: project, fingerprint: 'e'.repeat(64) } as ReleaseBuildInput;
+    projectId: project, fingerprint: 'e'.repeat(64), deploymentId: `dep_${'f'.repeat(32)}`,
+    publishedRelease: { releaseId: `rel_${'1'.repeat(32)}`, sequence: 1 } } as ReleaseBuildInput;
+  t.mock.method(PublicReleaseResolver.prototype, 'current', async () => ({ id: input.publishedRelease.releaseId,
+    sequence: 1, creator_account_id: owner, project_id: project, sha256: 'a'.repeat(64), manifest_bytes: '{}' }));
   t.mock.method(HostedWorkspaceService.prototype, 'releaseBuildInput', async (caller, id) => {
     assert.equal(caller.accountId, owner); assert.equal(id, project); snapshotCalls++; return input;
   });
@@ -67,7 +71,7 @@ test('hosted export submits only the session owner snapshot and reports owned qu
     assert.equal((await create.json() as { job: { id: string } }).job.id, jobId);
     assert.equal(enqueued, input);
     assert.equal(snapshotCalls, 1);
-    for (const [next, shown] of [['queued','queued'],['running','running'],['ready','ready'],
+    for (const [next, shown] of [['queued','queued'],['running','running'],
       ['failed','failed'],['expired','expired']] as const) {
       state = next;
       const result = await fetch(url);
@@ -78,6 +82,8 @@ test('hosted export submits only the session owner snapshot and reports owned qu
       assert.equal(current.downloadReady, false);
       assert.equal(current.job.errorCode, next === 'failed' ? 'SANDBOX_BUILD_FAILED' : null);
     }
+    state = 'ready';
+    assert.equal((await fetch(url)).status, 404); // A queue label without a private verified artifact never enables download.
     assert.equal((await fetch(`${url}/job_deadbeef/download`)).status, 404);
     principal = foreign;
     assert.equal((await fetch(url)).status, 404);

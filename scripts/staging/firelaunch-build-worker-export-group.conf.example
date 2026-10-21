@@ -1,0 +1,3 @@
+[Service]
+# Dedicated group can read only /var/lib/firelaunch-build/artifacts, not jobs.
+Group=firelaunch-export

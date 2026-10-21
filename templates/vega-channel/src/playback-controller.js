@@ -6,15 +6,18 @@ export function createPlaybackController({ createVideo, createHls, installPolyfi
   let closed = false;
   let initialized = false;
   let generation = 0;
+  let startupTimer;
+  const clearStartupTimer = () => { if (startupTimer) clearTimeout(startupTimer); startupTimer = undefined; };
   const report = (status, message) => { if (!closed) onState({ status, message }); };
-  const onPlaying = () => report('playing', 'Playing');
+  const onPlaying = () => { clearStartupTimer(); report('playing', 'Playing'); };
   const onPause = () => report('paused', 'Paused');
   const onWaiting = () => report('loading', 'Buffering');
-  const onError = () => report('error', 'Playback failed. Check the public stream and try again.');
+  const onError = () => { clearStartupTimer(); report('error', 'Playback failed. Check the public stream and try again.'); };
 
   async function stop() {
     generation++;
     closed = true;
+    clearStartupTimer();
     const oldVideo = video;
     const oldHls = hls;
     const oldSurface = surface;
@@ -56,17 +59,30 @@ export function createPlaybackController({ createVideo, createHls, installPolyfi
           installPolyfills(instance);
           const adaptive = createHls();
           hls = adaptive;
-          adaptive.on(adaptive.Events.ERROR, (_, detail) => { if (detail?.fatal) onError(); });
+          adaptive.on(adaptive.Events.ERROR, (_, detail) => {
+            console.warn('FireLaunch HLS error', detail?.type, detail?.details, detail?.fatal === true);
+            if (detail?.fatal) onError();
+          });
+          adaptive.on(adaptive.Events.MANIFEST_LOADING, () => report('loading', 'Requesting stream'));
+          adaptive.on(adaptive.Events.MANIFEST_LOADED, () => report('loading', 'Preparing video'));
+          adaptive.on(adaptive.Events.FRAG_LOADING, () => report('loading', 'Requesting video segment'));
+          adaptive.on(adaptive.Events.FRAG_LOADED, () => report('loading', 'Video segment received'));
+          adaptive.on(adaptive.Events.BUFFER_APPENDED, () => report('loading', 'Preparing video frames'));
           // MSE has no playable source until Hls.js has parsed the manifest.
           // Calling play immediately after attachMedia can reject before a
           // MediaSource exists, leaving the surface permanently idle.
           adaptive.on(adaptive.Events.MANIFEST_PARSED, () => {
             if (!closed && generation === mine) void (async () => {
+              report('loading', 'Starting video');
               try { await instance.play(); } catch { onError(); }
             })();
           });
-          adaptive.attachMedia(instance);
+          startupTimer = setTimeout(() => {
+            console.warn('FireLaunch HLS startup timed out');
+            onError();
+          }, 30_000);
           adaptive.loadSource(item.mediaUrl);
+          adaptive.attachMedia(instance);
         } else {
           instance.src = item.mediaUrl;
           instance.load();

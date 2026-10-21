@@ -28,12 +28,15 @@ export class NativeBuildQueue {
     return this.transaction(async client => {
       await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
         [`native-build:${input.creatorAccountId}:${input.projectId}`]);
-      const current = await client.query<{ id: string; input_fingerprint: string }>(
-        `SELECT id,input_fingerprint FROM firelaunch_build.jobs WHERE creator_account_id=$1 AND project_id=$2
+      const current = await client.query<{ id: string; input_fingerprint: string; state: State }>(
+        `SELECT id,input_fingerprint,state FROM firelaunch_build.jobs WHERE creator_account_id=$1 AND project_id=$2
          AND state IN ('queued','running','ready') FOR UPDATE`, [input.creatorAccountId, input.projectId]);
       if (current.rows[0]) {
-        if (current.rows[0].input_fingerprint !== input.fingerprint) fail('Existing native build has a different source');
-        return current.rows[0].id;
+        if (current.rows[0].input_fingerprint === input.fingerprint) return current.rows[0].id;
+        if (current.rows[0].state !== 'ready') fail('Existing native build has a different source');
+        await client.query(`UPDATE firelaunch_build.jobs SET state='canceled',updated_at=now()
+          WHERE id=$1 AND creator_account_id=$2 AND project_id=$3 AND state='ready'`,
+          [current.rows[0].id,input.creatorAccountId,input.projectId]);
       }
       const jobId = id();
       const result = await client.query<{ id: string }>(
@@ -125,11 +128,11 @@ export class NativeBuildQueue {
 
   async status(ownerId: string, projectId: string, jobId: string): Promise<{
     id: string; state: State; attempt: number; errorCode: string | null;
-    artifactSha256: string | null; artifactBytes: number | null; expiresAt: string;
+    artifactSha256: string | null; artifactBytes: number | null; expiresAt: string; createdAt: string; completedAt: string | null;
   } | null> {
     const result = await this.pool.query<{ id:string;state:State;attempt:number;error_code:string|null;
-      artifact_sha256:string|null;artifact_bytes:string|null;expires_at:Date }>(
-      `SELECT id,state,attempt,error_code,artifact_sha256,artifact_bytes,expires_at
+      artifact_sha256:string|null;artifact_bytes:string|null;expires_at:Date;created_at:Date;updated_at:Date }>(
+      `SELECT id,state,attempt,error_code,artifact_sha256,artifact_bytes,expires_at,created_at,updated_at
        FROM firelaunch_build.jobs WHERE id=$3 AND creator_account_id=$1 AND project_id=$2`,
       [ownerId,projectId,jobId]);
     const row = result.rows[0];
@@ -137,7 +140,32 @@ export class NativeBuildQueue {
       attempt:row.attempt,errorCode:row.error_code,
       artifactSha256:row.state === 'ready' && row.expires_at.getTime() > Date.now() ? row.artifact_sha256 : null,
       artifactBytes:row.state === 'ready' && row.expires_at.getTime() > Date.now() ? Number(row.artifact_bytes) : null,
-      expiresAt:row.expires_at.toISOString() } : null;
+      expiresAt:row.expires_at.toISOString(), createdAt:row.created_at.toISOString(),
+      completedAt:row.state === 'ready' ? row.updated_at.toISOString() : null } : null;
+  }
+
+  async readyArtifact(ownerId: string, projectId: string, jobId: string): Promise<{
+    input: ReleaseBuildInput; evidence: NativeBuildEvidence; name: string; sha256: string; bytes: number;
+  } | null> {
+    if (!/^job_[a-f0-9]{32}$/.test(jobId)) return null;
+    const result = await this.pool.query<{ input:string; evidence:NativeBuildEvidence;
+      artifact_name:string;artifact_sha256:string;artifact_bytes:string;
+      input_fingerprint:string;source_hash:string;deployment_id:string;package_id:string;
+      release_id:string;release_sequence:number }>(
+      `SELECT input,evidence,artifact_name,artifact_sha256,artifact_bytes,input_fingerprint,source_hash,
+        deployment_id,package_id,release_id,release_sequence FROM firelaunch_build.jobs
+       WHERE id=$3 AND creator_account_id=$1 AND project_id=$2 AND state='ready' AND expires_at>now()`,
+      [ownerId,projectId,jobId]);
+    const row = result.rows[0];
+    if (!row) return null;
+    const input = JSON.parse(row.input) as ReleaseBuildInput;
+    if (row.artifact_name !== `${jobId}.vpkg` || input.creatorAccountId !== ownerId || input.projectId !== projectId ||
+      input.fingerprint !== row.input_fingerprint || input.sourceHash !== row.source_hash ||
+      input.deploymentId !== row.deployment_id || input.packageId !== row.package_id ||
+      input.publishedRelease.releaseId !== row.release_id || input.publishedRelease.sequence !== row.release_sequence)
+      fail('Native job binding differs');
+    return { input, evidence: row.evidence, name: row.artifact_name,
+      sha256: row.artifact_sha256, bytes: Number(row.artifact_bytes) };
   }
 
   /** The export route has one active job per owned project; expose its most recent receipt. */

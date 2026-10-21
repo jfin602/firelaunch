@@ -123,14 +123,20 @@ test('real PostgreSQL queue serializes claims, reclaims leases and enforces owne
         assert.equal(await worker.complete(secondOwner.jobId,secondOwner.leaseToken,evidence),true);
         assert.equal((await queue.status(input('2').creatorAccountId,input('2').projectId,secondOwner.jobId))?.artifactSha256,evidence.sha256);
         assert.equal(await queue.cancel(input('1').creatorAccountId,input('1').projectId,secondOwner.jobId),false);
-        assert.equal(await queue.cancel(input('2').creatorAccountId,input('2').projectId,secondOwner.jobId),true);
+        const changed = { ...input('2'),fingerprint:'e'.repeat(64) };
+        const replacementId = await queue.enqueue(changed);
+        assert.notEqual(replacementId,secondOwner.jobId);
+        assert.equal(await queue.enqueue(changed),replacementId,'matching source is idempotent');
+        assert.equal((await queue.status(input('2').creatorAccountId,input('2').projectId,secondOwner.jobId))?.state,'canceled');
+        assert.equal((await queue.status(input('2').creatorAccountId,input('2').projectId,replacementId))?.state,'queued');
+        assert.equal(await queue.cancel(input('2').creatorAccountId,input('2').projectId,replacementId),true);
         assert.deepEqual(await worker.expiredArtifacts(),[{ jobId:secondOwner.jobId,name:`${secondOwner.jobId}.vpkg` }]);
         assert.equal(await worker.retainArtifact(secondOwner.jobId,`${secondOwner.jobId}.vpkg`),false);
         await worker.acknowledgeArtifactRemoval(secondOwner.jobId,`${secondOwner.jobId}.vpkg`);
         assert.deepEqual(await worker.expiredArtifacts(),[]);
         await pool.query(`UPDATE firelaunch_build.jobs SET created_at=now()-interval '2 days',
-          expires_at=now()-interval '1 day' WHERE id=$1`,[secondOwner.jobId]);
-        assert.equal((await queue.latestStatus(input('2').creatorAccountId,input('2').projectId))?.state,'expired');
+          expires_at=now()-interval '1 day' WHERE id=$1`,[replacementId]);
+        assert.equal((await queue.status(input('2').creatorAccountId,input('2').projectId,replacementId))?.state,'expired');
         const migration = await pool.query("SELECT to_regclass('public.firelaunch_schema_migrations') AS core");
         assert.equal(migration.rows[0].core,null,'queue never creates or bumps core migration');
         } finally { await apiPool.end(); await workerPool.end(); }

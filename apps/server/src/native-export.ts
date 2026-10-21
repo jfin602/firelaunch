@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { RELEASE_BUILD_COMMAND, type NativeBuildEvidence, type ReleaseBuildInput } from './release-build.js';
+import { releaseBuildCommand, type NativeBuildEvidence, type ReleaseBuildInput } from './release-build.js';
 import { RepositoryError } from './repository.js';
 
 const MAX_VPKG_BYTES = 500_000_000;
@@ -66,7 +66,7 @@ export function createNativeExport(input: ReleaseBuildInput, evidence: NativeBui
     evidence.inspectedPackageId !== input.packageId || evidence.target !== 'x86_64' || evidence.buildType !== 'Release' ||
     evidence.publishedRelease.releaseId !== input.publishedRelease.releaseId ||
     evidence.publishedRelease.sequence !== input.publishedRelease.sequence ||
-    JSON.stringify(evidence.command) !== JSON.stringify(RELEASE_BUILD_COMMAND) ||
+    JSON.stringify(evidence.command) !== JSON.stringify(releaseBuildCommand(input)) ||
     !/^[a-f0-9]{64}$/.test(evidence.dependencyLockSha256) ||
     !/^v24\.\d+\.\d+$/.test(evidence.toolchain.node) || !/^12\.\d+\.\d+$/.test(evidence.toolchain.npm) ||
     !/^\d+\.\d+\.\d+$/.test(evidence.toolchain.vegaCli) || !/^\d+\.\d+\.\d+$/.test(evidence.toolchain.vegaSdk) ||

@@ -57,14 +57,15 @@ test('Studio Code edit, blocked Build and Publish bundle remain truthful', async
   }
 });
 
-test('hosted Build shows blocked native export, no download, and clears project-scoped status on switch', async () => {
+test('hosted Build opens the export popup and clears project-scoped status on switch', async () => {
   const nativeFetch = globalThis.fetch;
-  const project = (id: string) => ({ id, revision: 1 }) as Parameters<typeof Delivery>[0]['project'];
+  const project = (id: string) => ({ id, revision: 1, spec: { title: id } }) as Parameters<typeof Delivery>[0]['project'];
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const url = String(input);
     if (url.endsWith('/code')) return Response.json({ generated: true, files: [], changed: [], stale: false, path: null });
     if (url.endsWith('/build')) return Response.json({ status: 'blocked', reason: 'No isolated worker' });
     if (url.endsWith('/readiness')) return Response.json({ checks: [], copy: {}, assets: {}, submitted: false });
+    if (url.endsWith('/deployment')) return new Response('{}', { status: 404 });
     if (url.endsWith('/export-app')) return url.includes('/ch_first/')
       ? Response.json({ status: 'failed', reason: 'Native build failed', job: { id: 'job_failed' }, downloadReady: false })
       : Response.json({ status: 'blocked', reason: 'No isolated worker for second', job: null, downloadReady: false });
@@ -72,12 +73,15 @@ test('hosted Build shows blocked native export, no download, and clears project-
   }) as typeof fetch;
   try {
     const view = render(createElement(Delivery, { project: project('ch_first'), surface: 'Build', hosted: true }));
-    await waitFor(() => assert.ok(screen.getByText(/Native build failed/)));
-    assert.equal((screen.getByRole('button', { name: 'Request Vega build' }) as HTMLButtonElement).disabled, false);
-    assert.equal((screen.getByRole('button', { name: 'Download Vega ZIP' }) as HTMLButtonElement).disabled, true);
+    await waitFor(() => assert.ok(screen.getByText(/job job_failed/)));
+    fireEvent.click(screen.getByRole('button', { name: 'Build & Export App' }));
+    assert.ok(await screen.findByRole('dialog', { name: 'Build & Export App' }));
+    await waitFor(() => assert.ok(screen.getByText(/The build failed/)));
+    assert.equal(screen.queryByRole('button', { name: 'Download ZIP' }), null);
+    fireEvent.click(screen.getByRole('button', { name: 'Close app export' }));
     view.rerender(createElement(Delivery, { project: project('ch_second'), surface: 'Build', hosted: true }));
-    await waitFor(() => assert.ok(screen.getByText(/No isolated worker for second/)));
-    assert.equal(screen.queryByText(/Native build failed/), null);
+    await waitFor(() => assert.match(screen.getByRole('status').textContent ?? '', /blocked/));
+    assert.equal(screen.queryByText(/job job_failed/), null);
     assert.equal((screen.getByRole('button', { name: 'Run Vega release build' }) as HTMLButtonElement).disabled, true);
   } finally { cleanup(); globalThis.fetch = nativeFetch; }
 });

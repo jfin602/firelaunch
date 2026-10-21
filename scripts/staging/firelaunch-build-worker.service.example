@@ -6,7 +6,7 @@ RequiresMountsFor=/var/lib/firelaunch-build
 [Service]
 Type=simple
 User=firelaunch-build
-Group=firelaunch-build
+Group=firelaunch-export
 EnvironmentFile=/etc/firelaunch-build/worker.env
 ExecStart=/usr/bin/flock -n /var/lib/firelaunch-build/worker.lock /opt/firelaunch-build-app/node/bin/node /opt/firelaunch-build-app/apps/server/dist/native-build-worker.js
 Restart=on-failure

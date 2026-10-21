@@ -98,4 +98,24 @@ async function main(): Promise<void> {
   await writeFile('/job/evidence.json', JSON.stringify(evidence), { flag: 'wx', mode: 0o600 });
 }
 
-main().catch(error => { process.stderr.write(`Native sandbox failed: ${error instanceof Error ? error.message : 'unknown'}\n`); process.exitCode = 1; });
+main().catch(async error => {
+  if (error instanceof Error && error.message.endsWith('manifest.toml')) {
+    try {
+      const input = JSON.parse(await readFile('/job/input.json','utf8')) as ReleaseBuildInput;
+      const before = input.files['manifest.toml'] ?? '';
+      const after = await readFile('/job/source/manifest.toml','utf8');
+      const marker = '[wants]\n';
+      const beforeAt = before.indexOf(marker); const afterAt = after.indexOf(marker);
+      const prefix = beforeAt >= 0 ? before.slice(0,beforeAt).trimEnd() : '';
+      const moduleIds = [...after.matchAll(/^id = "(\/com\.amazon\.[A-Za-z0-9_.@-]+)"$/gm)]
+        .map(match => match[1]).slice(0,20);
+      process.stderr.write(`Native manifest shape ${JSON.stringify({
+        prefixMatches: !!prefix && after.startsWith(prefix),
+        suffixMatches: beforeAt >= 0 && afterAt >= 0 && after.slice(afterAt) === before.slice(beforeAt),
+        beforeBytes: Buffer.byteLength(before), afterBytes: Buffer.byteLength(after), moduleIds
+      })}\n`);
+    } catch { process.stderr.write('Native manifest shape unavailable\n'); }
+  }
+  process.stderr.write(`Native sandbox failed: ${error instanceof Error ? error.message : 'unknown'}\n`);
+  process.exitCode = 1;
+});

@@ -1,4 +1,4 @@
-import { Hls, Events } from './hls.mjs';
+import { Hls, Events, XhrLoader } from './hls.mjs';
 import Document from './polyfills/DocumentPolyfill';
 import Element from './polyfills/ElementPolyfill';
 import TextDecoderPolyfill from './polyfills/TextDecoderPolyfill';
@@ -20,6 +20,9 @@ export function createHlsPlayer() {
     enableWorker: false,
     emeEnabled: false,
     progressive: false,
+    // Vega's FetchLoader parses text playlists but can stall on binary TS segments.
+    // Keep playlist fetch behavior and use the vendored XHR loader for fragments.
+    fLoader: XhrLoader,
     lowLatencyMode: false,
     backBufferLength: 30
   });

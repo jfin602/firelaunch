@@ -1,9 +1,15 @@
 # FireLaunch Current State
 
-Last documentation reconciliation: 2026-10-20 22:02 UTC (protected R2 staging rollout and real owner queue/build attempt; no new AWS inspection).
+Last documentation reconciliation: 2026-10-20 23:39 UTC (C7 export/device closeout; no new AWS inspection).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
 
-## October 20 one-VPS native export continuation
+## October 20 23:39 UTC — C7 final export recovery
+
+**[C7 PARTIAL / NOT GREEN](tasks/c7-export-recovery/closeout.md).** R1 Studio startup remains SCOPED GREEN. R2's separate same-VPS restricted worker produced real creator/deployment/release-bound x86_64 VPKGs; R3's authenticated Chrome owner flow downloaded a verified four-file ZIP. The final owner ZIP is `/home/jfin/Downloads/com.jfin.snabbletv_vega_release.zip` (SHA-256 `cf44993d3b29c686990eb17dd7326f444420a2a448e8033f0609c09296bab16b`), containing VPT-valid package `com.jfin.snabbletv` (SHA-256 `70aff4d57f9a92af9d34024263b5ab7971f2af668e58fa6c3d0e9cae215b1333`). The exact package installed on Vega VirtualDevice and displayed approved creator title, artwork and release #1 after restart; Back returned to detail. Native HLS parsed master/variant playlists but stalled at the first TS segment request and failed after 30 seconds. Moving video, audio, pause and seek are unqualified. Ten focused repair cycles were used. Historical P7 P4, Q2 F7, P5/c5 and Q3 statuses remain unchanged.
+
+Protected staging `/srv/firelaunch/releases/20261020T233126Z-d375ee6f1709` and separate worker were active at closeout, with previous release and verified encrypted backup retained. Core schema and root/lock version remained 14 and 0.7.3. Public approved release #1 pointer and HLS master hashes were unchanged; no new AWS/publication, second VPS, runner or commit. The 22:02 and earlier sections below are dated historical snapshots, superseded for current C7 status by the [closeout](tasks/c7-export-recovery/closeout.md).
+
+## Earlier October 20 22:02 UTC one-VPS native export snapshot — superseded
 
 **[R2 NOT GREEN](tasks/c7-export-recovery/R2-evidence.md#final-live-qualification-2026-10-20-2202-utc).** R1 Studio startup remains **SCOPED GREEN** and must not be rerun. The owner selected one existing VPS, a separate `firelaunch-build-worker.service`, and an additive `firelaunch_build.jobs` queue in the existing PostgreSQL instance. The optional queue schema, dedicated role, 12 GB private job filesystem, pinned Node/npm/Vega runtime, scoped AppArmor allowance and separate worker are installed. The protected API/Studio bridge was deployed at root `0.7.3` as `/srv/firelaunch/releases/20261020T214246Z-2fff21a4835b`, with core schema **14 → 14** and verified encrypted backup. Signed-out and authenticated owner Studio smoke passed; the single application service and worker were active at final readback. The earlier external-host-only [P2-evidence](tasks/c7-export-recovery/P2-evidence.md) is historical.
 

@@ -10,7 +10,7 @@ import { HostedWorkspaceService } from '../src/hosted-workspace.js';
 import type { HostedProjectRepository } from '../src/hosted-repository.js';
 import type { PublicationRepository } from '../src/publication-repository.js';
 import { createReleaseBuildInput, materializeReleaseBuildInput, produceIsolatedRelease,
-  RELEASE_BUILD_COMMAND, DEPENDENCY_LOCK_COMMAND, DEPENDENCY_INSTALL_COMMAND, type StoredSource } from '../src/release-build.js';
+  RELEASE_BUILD_COMMAND, releaseBuildCommand, DEPENDENCY_LOCK_COMMAND, DEPENDENCY_INSTALL_COMMAND, type StoredSource } from '../src/release-build.js';
 
 const spec = fixtureChannel();
 const owner = { accountId: `cr_${'b'.repeat(32)}`, issuer: 'https://issuer.test', subject: 'owner', email: 'owner@test.invalid' };
@@ -57,6 +57,7 @@ test('creator build input pins published deployment and preserves safe edited so
   assert.equal(originBound.fingerprint, input.fingerprint);
   assert.equal(input.packageId, deployment.packageId);
   assert.deepEqual(RELEASE_BUILD_COMMAND, ['./node_modules/.bin/react-native', 'build-vega', '--target', 'x86_64', '--build-type', 'Release']);
+  assert.deepEqual(releaseBuildCommand(input), [...RELEASE_BUILD_COMMAND, '--build-number', '1']);
   const dir = await mkdtemp(join(tmpdir(), 'firelaunch-release-input-'));
   try {
     await materializeReleaseBuildInput(input, dir);
@@ -105,7 +106,7 @@ test('worker verifies fresh x86_64 output and source fingerprint without running
       if (command[0] === 'vpt') {
         assert.match(command.at(-1)!, /\.vpkg$/);
         return { exitCode: 0, startedAt: Date.now(), stdout: command[1] === 'info' ? JSON.stringify({
-          id: deployment.packageId, os_version_registry: { os_versions: ['1.2'] }
+          id: deployment.packageId, build_number: 1, os_version_registry: { os_versions: ['1.2'] }
         }) : '' };
       }
       if (command[0] === 'npm') {
@@ -118,7 +119,7 @@ test('worker verifies fresh x86_64 output and source fingerprint without running
         }
         return { exitCode: 0, startedAt: Date.now() };
       }
-      assert.deepEqual(command, RELEASE_BUILD_COMMAND);
+      assert.deepEqual(command, releaseBuildCommand(input));
       const target = join(cwd, 'build/private/kepler/test/vega/x86_64/Release');
       await mkdir(target, { recursive: true });
       await writeFile(join(target, 'test_x86_64.vpkg'), Buffer.alloc(2048, 1));
@@ -143,6 +144,39 @@ test('worker verifies fresh x86_64 output and source fingerprint without running
   finally { await rm(link, { force: true }); await rm(linkDir, { recursive: true, force: true }); }
 });
 
+test('worker accepts pinned SDK manifest autolinks but rejects other manifest edits', async () => {
+  const input = await createReleaseBuildInput(project, await stored(), deployment, release, owner.accountId);
+  const moduleBlock = '[[needs.module]]\nid = "/com.amazon.kepler.w3cmedia_2@IW3cmedia_3"\n\n';
+  for (const change of ['sdk', 'package', 'extra-module', 'source'] as const) {
+    const dir = await mkdtemp(join(tmpdir(), 'firelaunch-release-manifest-'));
+    try {
+      const run = produceIsolatedRelease(input, dir,
+        { node: 'v24.21.0', npm: '12.2.0', vegaCli: '1.4.4', vegaSdk: '0.24.12112' }, async (command, cwd) => {
+          if (command[0] === 'npm' && command[1] === 'install') {
+            const pkg = JSON.parse(input.files['package.json']!);
+            await writeFile(join(cwd, 'package-lock.json'), JSON.stringify({ packages: { '': {
+              dependencies: pkg.dependencies, devDependencies: pkg.devDependencies
+            } }, padding: 'x'.repeat(100) }));
+          }
+          if (command[0] === './node_modules/.bin/react-native') {
+            const manifest = input.files['manifest.toml']!.replace('[wants]\n',
+              change === 'extra-module' ? '[[needs.module]]\nid = "/com.attacker.module@IUnsafe_1"\n\n[wants]\n' : `${moduleBlock}[wants]\n`);
+            await writeFile(join(cwd, 'manifest.toml'), change === 'package' ? manifest.replace(deployment.packageId, 'com.foreign.channel') : manifest);
+            if (change === 'source') await writeFile(join(cwd, 'src/App.js'), 'unexpected change');
+            const target = join(cwd, 'build/private/kepler/test/vega/x86_64/Release');
+            await mkdir(target, { recursive: true });
+            await writeFile(join(target, 'test_x86_64.vpkg'), Buffer.alloc(2048, 1));
+          }
+          return { exitCode: 0, startedAt: Date.now(), stdout: command[1] === 'info' ? JSON.stringify({
+            id: deployment.packageId, build_number: 1, os_version_registry: { os_versions: ['1.2'] }
+          }) : '' };
+        });
+      if (change === 'sdk') assert.equal((await run).packageId, deployment.packageId);
+      else await assert.rejects(run, { code: 'CONFLICT' });
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  }
+});
+
 test('worker rejects a VPT-validated package with a different application identity', async () => {
   const input = await createReleaseBuildInput(project, await stored(), deployment, release, owner.accountId);
   const dir = await mkdtemp(join(tmpdir(), 'firelaunch-release-wrong-id-'));
@@ -161,7 +195,7 @@ test('worker rejects a VPT-validated package with a different application identi
           await writeFile(join(target, 'test_x86_64.vpkg'), Buffer.alloc(2048, 1));
         }
         return { exitCode: 0, startedAt: Date.now(), stdout: command[1] === 'info' ? JSON.stringify({
-          id: 'com.foreign.channel', os_version_registry: { os_versions: ['1.2'] }
+          id: 'com.foreign.channel', build_number: 1, os_version_registry: { os_versions: ['1.2'] }
         }) : '' };
       }), { code: 'CONFLICT' });
   } finally { await rm(dir, { recursive: true, force: true }); }

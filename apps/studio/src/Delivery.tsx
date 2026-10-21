@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import type { ChannelProject } from '@firelaunch/contracts';
-import { buildStatus, codeOverview, createBundle, generateCode, nativeExportStatus, readSource, readiness, requestNativeBuild, runBuild, saveSource, type BuildEvidence, type CodeOverview, type NativeExportStatus, type Readiness, type SourceFile } from './api.js';
+import { buildStatus, codeOverview, createBundle, generateCode, nativeExportStatus, readSource, readiness, runBuild, saveSource, type BuildEvidence, type CodeOverview, type NativeExportStatus, type Readiness, type SourceFile } from './api.js';
 import { LivePublication } from './LivePublication.js';
+import { NativeExportWorkspace } from './NativeExportWorkspace.js';
 
 export function Delivery({ project, surface, hosted = false }: { project: ChannelProject; surface: 'Code' | 'Build' | 'Publish'; hosted?: boolean }) {
   const [code, setCode] = useState<CodeOverview | null>(null);
@@ -9,6 +10,7 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
   const [draft, setDraft] = useState('');
   const [build, setBuild] = useState<BuildEvidence | null>(null);
   const [nativeExport, setNativeExport] = useState<NativeExportStatus | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const [publish, setPublish] = useState<Readiness | null>(null);
   const [bundle, setBundle] = useState('');
   const [error, setError] = useState('');
@@ -38,7 +40,7 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
     </>}
     {surface === 'Build' && <><h2>Release build evidence</h2><p className="muted">Local legacy builds use a verified Vega CLI. Hosted native builds use the approved published release.</p>{!hosted && code && !code.generated && <p className="delivery-warning">Generate source in Code before building.</p>}{!hosted && code?.stale && <p className="delivery-warning">Source is stale. Regenerate in Code before building.</p>}<button disabled={busy || hosted || !code?.generated || code.stale || build?.status === 'blocked'} onClick={() => void action(async () => { setBuild(await runBuild(project.id)); setPublish(await readiness(project.id)); })}>Run Vega release build</button>
       <p>Status: <strong>{build?.status ?? 'Loading'}</strong>{build?.reason && ` — ${build.reason}`}</p>
-      {hosted && <section aria-label="Export App"><h3>Export App</h3><p role="status">{nativeExport ? <><strong>{nativeExport.status}</strong>{nativeExport.reason && ` — ${nativeExport.reason}`}{nativeExport.job && ` · job ${nativeExport.job.id}`}</> : 'Loading export availability…'}</p><button disabled={busy || !nativeExport || !['blocked', 'failed'].includes(nativeExport.status)} onClick={() => void action(async () => setNativeExport(await requestNativeBuild(project.id)))}>Request Vega build</button><button disabled>Download Vega ZIP</button><p className="muted">A source JSON export or submission bundle is not an installable Vega package. The ZIP download follows artifact qualification.</p></section>}
+      {hosted && <section aria-label="Export App"><h3>Export App</h3><p role="status">{nativeExport ? <><strong>{nativeExport.status}</strong>{nativeExport.job && ` · job ${nativeExport.job.id}`}</> : 'Loading export availability…'}</p><button className="primary" onClick={() => setExportOpen(true)}>Build &amp; Export App</button><p className="muted">Build the approved published release and download its verified Vega ZIP.</p></section>}
       {build?.command && <p>Command: <code>{build.command.join(' ')}</code> · exit {build.exitCode ?? 'signal'} · {build.durationMs} ms</p>}
       {build?.artifact && <p>Verified VPKG: <code>{build.artifact.path}</code> ({build.artifact.bytes} bytes)<br/>SHA-256: <code>{build.artifact.sha256}</code></p>}
       {build?.output && <pre tabIndex={0} aria-label="Build command output">{build.output}</pre>}
@@ -49,5 +51,6 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
       {publish && <div><h3>Draft store copy</h3><p><strong>{publish.copy.appName}</strong> — {publish.copy.shortDescription}</p><p>{publish.copy.longDescription}</p><p>Release notes: {publish.copy.releaseNotes}</p><p>Artwork references: {publish.assets.artwork.join(', ') || 'None'}; screenshots: none recorded.</p></div>}
       <button disabled={busy || hosted || !publish} onClick={() => void action(async () => { const result = await createBundle(project.id); if (result.status === 'blocked') setError(result.reason ?? 'Bundle unavailable'); else setBundle(result.path ?? ''); })}>Create local submission bundle</button>{bundle && <p>Bundle: <code>{bundle}</code> (readiness, copy, assets, checklist; not submitted)</p>}
     </>}
+    {hosted && exportOpen && <NativeExportWorkspace project={project} initial={nativeExport} onStatus={setNativeExport} onClose={() => setExportOpen(false)}/>}
   </div>;
 }

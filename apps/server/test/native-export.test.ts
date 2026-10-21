@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { createNativeExport, verifyNativeExport } from '../src/native-export.js';
-import { RELEASE_BUILD_COMMAND, type NativeBuildEvidence, type ReleaseBuildInput } from '../src/release-build.js';
+import { releaseBuildCommand, type NativeBuildEvidence, type ReleaseBuildInput } from '../src/release-build.js';
 
 const sha = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const input = {
@@ -16,7 +16,7 @@ const evidence = {
   inputFingerprint: input.fingerprint, sourceHash: input.sourceHash, deploymentId: input.deploymentId,
   packageId: input.packageId, inspectedPackageId: input.packageId, target: 'x86_64', buildType: 'Release',
   publishedRelease: input.publishedRelease, artifactPath: 'build/x86_64/Release/creator_x86_64.vpkg',
-  bytes: vpkg.length, sha256: sha(vpkg), command: RELEASE_BUILD_COMMAND,
+  bytes: vpkg.length, sha256: sha(vpkg), command: releaseBuildCommand(input),
   toolchain: { node: 'v24.21.0', npm: '12.2.0', vegaCli: '1.4.4', vegaSdk: '0.24.12112' },
   dependencyLockSha256: 'c'.repeat(64)
 } as NativeBuildEvidence;

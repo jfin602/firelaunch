@@ -6,7 +6,7 @@ import { isAbsolute, join, resolve } from 'node:path';
 import { Pool } from 'pg';
 import { NativeBuildQueue } from './native-build-queue.js';
 import { assertNativeBuildLimits } from './native-build-limits.js';
-import { RELEASE_BUILD_COMMAND, type NativeBuildEvidence, type ReleaseBuildInput } from './release-build.js';
+import { releaseBuildCommand, type NativeBuildEvidence, type ReleaseBuildInput } from './release-build.js';
 
 type Job = NonNullable<Awaited<ReturnType<NativeBuildQueue['claim']>>>;
 const MAX_VPKG = 500_000_000;
@@ -47,7 +47,8 @@ async function runSandbox(image: string, jobDir: string, signal: AbortSignal): P
 }
 
 /** Independent readback after all creator build processes have exited. */
-async function inspectPackage(image: string, file: string, expectedPackageId: string, root: string): Promise<void> {
+async function inspectPackage(image: string, file: string, expectedPackageId: string,
+  expectedBuildNumber: number, root: string): Promise<void> {
   const inspection = await mkdtemp(join(root,'jobs','inspect-'));
   try {
   await cp(join(image,SDK_WORKSPACE.slice(1)),join(inspection,'sdk-workspace'),{ recursive:true });
@@ -71,8 +72,10 @@ async function inspectPackage(image: string, file: string, expectedPackageId: st
         else reject(new Error('Independent VPT inspection failed')); });
     });
   }
-  const info = JSON.parse(await command(['info','--json'])) as { id?: unknown; os_version_registry?: { os_versions?: unknown } };
-  if (info.id !== expectedPackageId || !Array.isArray(info.os_version_registry?.os_versions) ||
+  const info = JSON.parse(await command(['info','--json'])) as { id?: unknown; build_number?: unknown;
+    os_version_registry?: { os_versions?: unknown } };
+  if (info.id !== expectedPackageId || info.build_number !== expectedBuildNumber ||
+    !Array.isArray(info.os_version_registry?.os_versions) ||
     !info.os_version_registry.os_versions.includes('1.2')) throw new Error('Foreign VPKG package or OS');
   await command(['validate','--no-color']);
   } finally { await rm(inspection,{ recursive:true,force:true }); }
@@ -98,14 +101,15 @@ async function processJob(queue: NativeBuildQueue, job: Job, root: string, image
       evidence.publishedRelease.sequence !== input.publishedRelease.sequence ||
       evidence.inspectedPackageId !== input.packageId ||
       evidence.target !== 'x86_64' || evidence.buildType !== 'Release' ||
-      JSON.stringify(evidence.command) !== JSON.stringify(RELEASE_BUILD_COMMAND) ||
+      JSON.stringify(evidence.command) !== JSON.stringify(releaseBuildCommand(input)) ||
       JSON.stringify(evidence.toolchain) !== JSON.stringify({ node:'v24.21.0',npm:'12.2.0',vegaCli:'1.4.4',vegaSdk:'0.24.12112' }) ||
       !/^[a-f0-9]{64}$/.test(evidence.dependencyLockSha256) ||
       evidence.bytes !== info.size || evidence.sha256 !== await digest(source)) throw new Error('Artifact differs from claim');
-    await inspectPackage(image,source,input.packageId,root);
+    await inspectPackage(image,source,input.packageId,input.publishedRelease.sequence,root);
     const target = join(root,'artifacts',`${job.jobId}.vpkg`);
     await rename(source,target);
-    await chmod(target,0o600);
+    // The worker service's dedicated export group may read only artifacts, never jobs or source.
+    await chmod(target,0o640);
     if ((await stat(target)).size !== evidence.bytes || await digest(target) !== evidence.sha256 ||
       !await queue.complete(job.jobId,job.leaseToken,evidence)) {
       await rm(target,{ force:true }); throw new Error('Artifact changed or lease lost');
@@ -155,7 +159,8 @@ async function main(): Promise<void> {
   const [rootInfo,imageInfo,disk] = await Promise.all([lstat(root),lstat(image),statfs(root)]);
   if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink() || !imageInfo.isDirectory() || imageInfo.isSymbolicLink() ||
     await realpath(root) !== root || await realpath(image) !== image ||
-    rootInfo.uid !== process.getuid?.() || (rootInfo.mode & 0o077) !== 0 ||
+    rootInfo.uid !== process.getuid?.() || rootInfo.gid !== process.getgid?.() ||
+    (rootInfo.mode & 0o077) !== 0o050 ||
     imageInfo.uid !== 0 || (imageInfo.mode & 0o022) !== 0 ||
     disk.bsize * disk.blocks > 20_000_000_000 || disk.bsize * disk.blocks < 1_000_000_000 ||
     !image.startsWith('/opt/firelaunch-build-runtime')) throw new Error('Qualified bounded storage/runtime image absent');
@@ -175,7 +180,9 @@ async function main(): Promise<void> {
   await mkdir(join(root,'artifacts'),{ recursive:true,mode:0o700 });
   for (const name of ['jobs','artifacts']) {
     const info = await lstat(join(root,name));
-    if (!info.isDirectory() || info.isSymbolicLink() || info.uid !== process.getuid?.() || (info.mode & 0o077) !== 0)
+    if (!info.isDirectory() || info.isSymbolicLink() || info.uid !== process.getuid?.() ||
+      (name === 'jobs' ? (info.mode & 0o077) !== 0 :
+        info.gid !== process.getgid?.() || (info.mode & 0o077) !== 0o050))
       throw new Error('Unsafe worker storage directory');
   }
   const pool = new Pool({ connectionString: required('FIRELAUNCH_BUILD_DATABASE_URL'), max: 2 });

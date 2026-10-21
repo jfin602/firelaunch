@@ -19,7 +19,7 @@ test('adaptive HLS uses MSE, plays with sound, seeks, pauses and cleans up on Ba
     pause: () => { video.paused = true; calls.push('pause'); listeners.get('pause')?.(); }
   };
   const hlsListeners = new Map<string, () => void>();
-  const hls = { Events: { ERROR: 'error', MANIFEST_PARSED: 'manifestParsed' },
+  const hls = { Events: { ERROR: 'error', MANIFEST_LOADING: 'manifestLoading', MANIFEST_LOADED: 'manifestLoaded', MANIFEST_PARSED: 'manifestParsed' },
     on: (name: string, fn: () => void) => { hlsListeners.set(name, fn); },
     attachMedia: (instance: unknown) => { assert.equal(instance, video); calls.push('attach'); },
     loadSource: (url: string) => calls.push(`load:${url}`), destroy: async () => calls.push('destroy') };
@@ -28,8 +28,8 @@ test('adaptive HLS uses MSE, plays with sound, seeks, pauses and cleans up on Ba
     installPolyfills: () => calls.push('polyfills'), onState: ({ status }: { status: string }) => states.push(status) });
   await controller.start('surface-1', { mediaUrl: 'https://cdn.example.org/release/master.m3u8' }, false);
   assert.equal(video.muted, false);
-  assert.deepEqual(calls, ['initialize', 'surface:surface-1', 'polyfills', 'attach',
-    'load:https://cdn.example.org/release/master.m3u8']);
+  assert.deepEqual(calls, ['initialize', 'surface:surface-1', 'polyfills',
+    'load:https://cdn.example.org/release/master.m3u8', 'attach']);
   hlsListeners.get('manifestParsed')?.();
   assert.equal(calls.at(-1), 'play');
   controller.seek(10);
@@ -59,6 +59,7 @@ test('generated source carries patched HLS player and public artwork rendering',
   assert.match(app, /dispatch\('back'\)/);
   assert.ok(generated.files.get('src/hlsjs/hls.mjs')!.length > 100_000);
   assert.match(generated.files.get('src/hlsjs/adapter.js')!, /enableWorker: false/);
+  assert.match(generated.files.get('src/hlsjs/adapter.js')!, /fLoader: XhrLoader/);
   const dependencies = JSON.parse(generated.files.get('package.json')!).dependencies;
   assert.equal(dependencies['@xmldom/xmldom'], '0.8.15');
 });

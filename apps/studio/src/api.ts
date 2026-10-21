@@ -75,9 +75,27 @@ export const saveSource = (id: string, file: SourceFile, content: string) => req
 export const buildStatus = (id: string) => request(`/${id}/build`) as Promise<BuildEvidence>;
 export const runBuild = (id: string) => request(`/${id}/build`, json({})) as Promise<BuildEvidence>;
 export type NativeExportStatus = { status: 'blocked' | 'queued' | 'running' | 'ready' | 'failed' | 'canceled' | 'expired'; reason?: string;
-  job: { id: string; attempt?: number; errorCode?: string | null; expiresAt?: string } | null; downloadReady: boolean };
+  job: { id: string; attempt?: number; errorCode?: string | null; expiresAt?: string; createdAt?: string;
+    completedAt?: string | null; artifactBytes?: number | null; packageId?: string | null;
+    deploymentId?: string | null; release?: { releaseId: string; sequence: number } | null } | null; downloadReady: boolean };
 export const nativeExportStatus = (id: string) => request(`/${encodeURIComponent(id)}/export-app`) as Promise<NativeExportStatus>;
 export const requestNativeBuild = (id: string) => request(`/${encodeURIComponent(id)}/export-app`, json({})) as Promise<NativeExportStatus>;
+export async function downloadNativeExport(projectId: string, jobId: string): Promise<void> {
+  const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/export-app/${encodeURIComponent(jobId)}/download`,
+    { credentials: 'same-origin', cache: 'no-store' });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null) as { error?: { message?: string } } | null;
+    throw new ApiError(data?.error?.message ?? 'ZIP download is unavailable. Refresh the build status.', response.status);
+  }
+  if (response.headers.get('content-type')?.split(';')[0] !== 'application/zip')
+    throw new ApiError('The server did not return a Vega ZIP.', 502);
+  const filename = response.headers.get('content-disposition')?.match(/filename="([a-zA-Z0-9._-]+\.zip)"/)?.[1] ?? 'firelaunch-vega-release.zip';
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a'); link.href = url; link.download = filename;
+  document.body.append(link); link.click(); link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
 export const readiness = (id: string) => request(`/${id}/readiness`) as Promise<Readiness>;
 export const createBundle = (id: string) => request(`/${id}/bundle`, json({})) as Promise<{ path?: string; files?: string[]; status?: 'blocked'; reason?: string; submitted: false }>;
 

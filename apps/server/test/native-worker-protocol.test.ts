@@ -3,7 +3,7 @@ import test from 'node:test';
 import { createHash, generateKeyPairSync } from 'node:crypto';
 import { signWorkerClaim, verifyWorkerClaim, signWorkerReceipt, acceptWorkerReceipt } from '../src/native-worker-protocol.js';
 import { runQualifiedWorkerClaim } from '../src/native-worker-runner.js';
-import { RELEASE_BUILD_COMMAND, type NativeBuildEvidence, type ReleaseBuildInput } from '../src/release-build.js';
+import { releaseBuildCommand, type NativeBuildEvidence, type ReleaseBuildInput } from '../src/release-build.js';
 
 const sha = (value: Buffer) => createHash('sha256').update(value).digest('hex');
 const api = generateKeyPairSync('ed25519');
@@ -21,7 +21,7 @@ const input = {
 } as ReleaseBuildInput;
 const evidence = {
   inputFingerprint: input.fingerprint, sourceHash: input.sourceHash,
-  command: RELEASE_BUILD_COMMAND, target: 'x86_64', buildType: 'Release',
+  command: releaseBuildCommand(input), target: 'x86_64', buildType: 'Release',
   toolchain: { node: 'v24.21.0', npm: '12.2.0', vegaCli: '1.4.4', vegaSdk: '0.24.12112' },
   dependencyLockSha256: '8'.repeat(64), artifactPath: 'build/x86_64/Release/channel_x86_64.vpkg',
   bytes: vpkg.length, sha256: sha(vpkg), deploymentId: input.deploymentId,

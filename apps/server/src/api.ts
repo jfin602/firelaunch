@@ -24,6 +24,8 @@ import type { S3MediaStorage } from './media-storage.js';
 import { PrivateVideoPreview } from './private-video-preview.js';
 import { VideoSubtitles } from './video-subtitles.js';
 import { NativeBuildQueue } from './native-build-queue.js';
+import { nativeExportForOwner } from './native-export-delivery.js';
+import type { ReleaseBuildInput } from './release-build.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
 const saveSourceSchema = z.strictObject({ path: z.string().max(240), content: z.string().max(256_000), expectedHash: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -82,11 +84,16 @@ function respond(response: ServerResponse, status: number, value: unknown): void
   response.end(JSON.stringify(value));
 }
 
-function nativeExportJobStatus(job: NonNullable<Awaited<ReturnType<NativeBuildQueue['status']>>>) {
+function nativeExportJobStatus(job: NonNullable<Awaited<ReturnType<NativeBuildQueue['status']>>>,
+  verified?: Awaited<ReturnType<typeof nativeExportForOwner>>) {
   return { status: job.state,
     reason: job.state === 'failed' ? 'Native build failed; operator review is required' : undefined,
-    job: { id: job.id, attempt: job.attempt, errorCode: job.errorCode, expiresAt: job.expiresAt },
-    downloadReady: false as const };
+    job: { id: job.id, attempt: job.attempt, errorCode: job.errorCode, expiresAt: job.expiresAt,
+      createdAt: job.createdAt,
+      completedAt: job.completedAt, artifactBytes: verified?.bytes ?? null,
+      packageId: verified?.packageId ?? null, deploymentId: verified?.deploymentId ?? null,
+      release: verified?.release ?? null },
+    downloadReady: !!verified };
 }
 
 export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository, privateObjects?: PrivateObjectService, mediaUploads?: MediaUploadService, mediaPublisher?: S3MediaStorage, managedArtwork?: ManagedArtworkDelivery) {
@@ -99,6 +106,13 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
   const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog, mediaPublisher) : null;
   const publication = hostedRepository ? new PublicationRepository(hostedRepository, mediaPublisher, managedArtwork) : null;
   const publicResolver = mode?.mode === 'hosted' && hostedRepository ? new PublicReleaseResolver(hostedRepository, managedArtwork) : null;
+  const assertNativeRights = async (input: ReleaseBuildInput) => {
+    if (!publicResolver) throw new RepositoryError('CONFLICT', 'Public release resolver unavailable');
+    const current = await publicResolver.current(input.deploymentId);
+    if (current.id !== input.publishedRelease.releaseId || current.sequence !== input.publishedRelease.sequence ||
+      current.creator_account_id !== input.creatorAccountId || current.project_id !== input.projectId)
+      throw new RepositoryError('CONFLICT', 'Published release or delivery rights changed');
+  };
   const privatePreview = hostedRepository && catalog && mediaPublisher
     ? new PrivateVideoPreview(hostedRepository, catalog, mediaPublisher) : null;
   const subtitles = hostedRepository && privateObjects ? new VideoSubtitles(hostedRepository, privateObjects) : null;
@@ -137,19 +151,33 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             if (segments.length === 4 && request.method === 'GET') {
               await hostedRepository.read(principal, projectId);
               const job = await nativeBuildQueue!.latestStatus(principal.accountId, projectId);
-              respond(response, 200, job ? nativeExportJobStatus(job) : { status: 'blocked', reason: 'No native build has been submitted for this project',
+              const verified = job?.state === 'ready' ? await nativeExportForOwner(nativeBuildQueue!, hostedWorkspace,
+                principal, projectId, job.id, process.env.FIRELAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights) : undefined;
+              respond(response, 200, job ? nativeExportJobStatus(job, verified) : { status: 'blocked', reason: 'No native build has been submitted for this project',
                 job: null, downloadReady: false }); return;
             }
             if (segments.length === 4 && request.method === 'POST') {
               await hostedRepository.read(principal, projectId);
               z.strictObject({}).parse(await body(request));
               const input = await hostedWorkspace.releaseBuildInput(principal, projectId);
+              await assertNativeRights(input);
               const jobId = await nativeBuildQueue!.enqueue(input);
               const job = await nativeBuildQueue!.status(principal.accountId, projectId, jobId);
               if (!job) throw new RepositoryError('STORAGE_ERROR', 'Build job receipt unavailable');
-              respond(response, 202, nativeExportJobStatus(job)); return;
+              const verified = job.state === 'ready' ? await nativeExportForOwner(nativeBuildQueue!, hostedWorkspace,
+                principal, projectId, job.id, process.env.FIRELAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights) : undefined;
+              respond(response, job.state === 'ready' ? 200 : 202, nativeExportJobStatus(job, verified)); return;
             }
-            // Artifact retrieval stays closed until R3 verifies the private VPKG and ZIP for this owner.
+            if (segments.length === 6 && segments[5] === 'download' && request.method === 'GET') {
+              await hostedRepository.read(principal, projectId);
+              const exported = await nativeExportForOwner(nativeBuildQueue!, hostedWorkspace, principal,
+                projectId, segments[4]!, process.env.FIRELAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights);
+              response.writeHead(200, { 'content-type': 'application/zip',
+                'content-length': exported.zip.length, 'content-disposition': `attachment; filename="${exported.packageId}_vega_release.zip"`,
+                'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff',
+                'x-artifact-sha256': exported.zipSha256 });
+              response.end(exported.zip); return;
+            }
             await hostedRepository.read(principal, projectId);
             throw new RepositoryError('NOT_FOUND', 'Native export not found');
           }
