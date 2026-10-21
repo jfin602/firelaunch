@@ -1,7 +1,13 @@
 # FireLaunch Current State
 
-Last documentation reconciliation: 2026-10-21 UTC (P8 Wave 1 protected staging closeout; earlier sections remain dated observations).
+Last documentation reconciliation: 2026-10-21 UTC (P8 Wave 1 staging GREEN and Wave 2 human-first layout design approved for planning; earlier sections are dated evidence).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
+
+## Approved Phase 8 Wave 2 design handoff (2026-10-21; docs only)
+
+**Wave 1 remains GREEN / DEPLOYED; overall Phase 8 remains OPEN.** Owner-approved Wave 2 direction is [`p8b` human-first Page Layout & full-screen Preview](tasks/p8b/README.md) using the [design contract](design/page-layout-human-first.md). Channel's **Pages & Shelves** is to become **Pages & Layout** with an accessible name + Hero/Grid/Rows template selector, Home -> Hero default, additional pages -> Rows suggestion, section-based editing and contextual-only inspector. Six bounded sections include image/text compositions; the SAME interactive Preview gets a View full screen control with safe Exit/Back distinction and state preservation. No freeform pixel editor or new preview system.
+
+**Planning only:** No Wave 2 code, prompt files, committed `0.8.5` version, device parity or staging deployment has been performed. Current known owner-approved Wave 1 release at readback is still root/lock `0.8.4` and schema 14; verify local source/host before actions. Wave 1 P5 and its protected evidence are unchanged. New section types require compatibility-safe shared contracts + Studio/native rendering and must not be published to older installed runtimes that do not support them. Prepare `/prompt-ass + /prompt-plan + /prompt-write p8b` only on request and from the actual accepted Wave 1 baseline; do not start Phase 9.
 
 ## Current Phase 8 Wave 1 staging result — 2026-10-21
 
