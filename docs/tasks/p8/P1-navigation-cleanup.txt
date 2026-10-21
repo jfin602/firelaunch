@@ -1,0 +1,26 @@
+TASK: Phase 8 / P1 — Creator navigation cleanup
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.1`.
+
+GOAL
+Replace eight phase-era visible menu destinations with five creator-friendly destinations and preserve all functional flows. This checkpoint changes information architecture/navigation, NOT the permanent inspector layout (P2 owns it).
+
+PREFLIGHT
+Read BOOT.md, AGENTS.md, docs/CURRENT-STATE.md, docs/workflow.md, docs/tasks/p8/{README.md,prompt-assessment.md,implementation-plan.md} and docs/tasks/c7-export-recovery/README.md. Inspect actual checkout branch/HEAD/status and ongoing manual P7 recovery. Confirm coherent approved root and both top-level lockfile entry version 0.8.0. If still 0.7.3, if conflicting dirty P7 work, or no explicit Phase 8 entry approval: STOP and report exact safe handoff; do not bump/reset/clean/stash, run prompt runner or overwrite c7 edits. Inspect apps/studio/src/{App,Home,Catalog,AgentPanel,Delivery,LivePublication,VideoWorkspace}.tsx, style.css and UI tests before touching source.
+
+IMPLEMENT
+1. Single source of truth for primary navigation: Home, Library, Channel, Publish, Export. Map old Catalog -> Library, Create -> Channel/AI Assistant, Design -> Channel/Appearance, Content -> Channel/Pages & Shelves; Code -> Export/Advanced/Source; Build -> Export/Build & Download; Publish -> Publish. Preserve real functional component implementations and API contracts, including creator-owned source and custom-edit protection.
+2. Keep Channel subviews visible, usable and accessible as AI Assistant, Appearance, Pages & Shelves. Reuse the existing AgentPanel and ChannelSpec editor; do not implement a second assistant, second content engine, extra workspaces or new permissions. Existing old navigation shortcuts/Home actions (Add Video, Open Catalog, Edit channel, preview, project switch) must resolve to correct updated destinations. Preserve project/revision state and selection on navigation where reasonable.
+3. Audit visible menu buttons and duplicates: remove dead/placeholder entries or redundant quick action duplicates when safe; distinguish intentionally disabled states (e.g. unsafe hosted build / worker not available) from dead buttons; do not hide genuine supported functionality or silently enable bypassed build. Keep truthful labeling: Publish changes approved live CONTENT, Export creates/downloads native APP package. Advanced Source stays reachable for creator ownership.
+4. Preserve aria-current, labeled controls, focus/keyboard navigation, browser history/deep entry where applicable, responsive left rail, and Desert Heat styles. No broad CSS inspector/grid redesign now.
+
+VALIDATION
+Focused Studio navigation tests for five destinations, every Channel subview, Export Advanced Source, selected state, project switching, Home video shortcuts, publish/export distinction and intentionally blocked actions; affected typecheck/build; git diff --check. Check old Code and Build logic remains reachable without disabled misleading click path. Do not claim live staging, hosted ZIP or VirtualDevice GREEN from local tests.
+
+HANDOFF / GIT / SAFETY
+When P1 legitimately runs under the sequential Prompt Stack runner after 0.8.0 entry, only runner owns commit; set root package.json and the two top-level lockfile version fields to 0.8.1 together, workspace versions unchanged. Do not self-commit, deploy, mutate AWS/database, publish creator media, execute native builds under shared server identity, or disturb current c7 recovery/schema 14/protected free release #1. Target <=8 minutes, hard stop 15 minutes. Report changed routes, test counts, exact HEAD/dirty state and P2 inspector handoff.
