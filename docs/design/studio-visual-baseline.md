@@ -31,9 +31,9 @@ These hexes are a proposed starting palette, *not* exact sampled screenshot valu
 - **Left vertical nav:** FireLaunch identity, real project switcher, supported route navigation, clear selected state and accessible account/help controls. Starting desktop width around 240–270px; size responsively.
 - **Topbar:** Persistent project/workspace title, current task/breadcrumb, truthful save/processing status, real creator account/actions. Do not invent screenshot search, notification or profile capabilities that are not implemented.
 - **Central content:** Flexible primary work area. An atmospheric canyon-backed hero is appropriate for dashboard/onboarding; data-dense catalog import, upload and editing should prioritize actual forms/content rather than a permanently tall decorative hero.
-- **Right contextual rail:** Real actions, task status, selected item, editing controls or rights/publish readiness. Its content must derive from actual product state, not “3/5” decorative focus scores. Preserve a discoverable/usable **TV Preview + inspector** layout during editing.
+- **Right inspector — contextual only (Phase 8 owner approval, 2026-10-21):** Hidden and taking **zero reserved width** by default. Open on a real selected page/shelf/tile/appearance property that has applicable editing controls; clear selection or dismiss to restore full workspace width. No fake status widgets, permanently docked empty rail or full workflow squeezed into the inspector. Preserve a discoverable 16:9 **TV Preview** toolbar action and usable Preview alongside selected Channel editing.
 - **Content rows:** Work cards and recent media items in readable responsive grids/rails; sensible minimum card width, consistent gutters, overflow and scroll boundaries. Avoid fixed screenshot-width positioning.
-- **Desktop through phone:** Wide layout shows sidebar/main/right rail. Intermediate tablet can move right rail into a section or keyboard-accessible drawer. Mobile collapses/reorganizes navigation while retaining accessible upload/rights/Preview, full-width forms, wrapped cards or horizontally scrollable media rails. Adapt based on measured content; old ~1200px/~690px CSS breakpoints are inspection points, not fixed law.
+- **Desktop through phone:** Wide layout defaults to sidebar + flexible main, with a third contextual inspector **only when a real editing selection exists**. Library, Publish and Export have spacious main workspaces; the existing Add Video modal/sheet is unchanged. Intermediate tablet can stack contextual controls or use an accessible drawer; mobile retains full-width forms and accessible upload, rights and TV Preview. Selection/dismiss and keyboard focus return must work. Adapt from actual content; historic ~1200px/~690px CSS breakpoints are inspection points, not fixed law.
 
 ## 3. Canyon background asset and layering
 
@@ -56,6 +56,10 @@ These hexes are a proposed starting palette, *not* exact sampled screenshot valu
 - Use actual **owner-authorized creator** covers/art when accessible, with rights-safe fictional or repository-owned fixtures for demos. Do not scrape unlicensed material or treat the screenshot's imaginary movies as creator catalog data.
 - Preserve genre-specific color grading: blue icy science fiction, teal detective thriller, violet fantasy, natural documentary, saturated animation, etc. **Do not recolor thumbnails or gradient-wash their art into FireLaunch orange/red.**
 - Keep 16:9 film tiles where appropriate, native poster/square album ratios for other content, stable `object-fit: cover` crops, consistent thumbnail height, text backdrop/overlay, accessible alt/labels, skeleton and fallback for missing artwork. Show truthful title/type/rights/status; artwork never implies TV playback rights or publication approval.
+
+## Owner-approved Phase 8 navigation (2026-10-21; target only)
+
+Five creator-facing primary destinations: **Home, Library, Channel, Publish, Export**. Channel subviews reuse **AI Assistant, Appearance, Pages & Shelves**. Export preserves **Advanced > Source** plus actual Build & Download. Publish is content approval and remote immutable release, not native binary/Appstore submission. The existing eight-surface navigation is historical source behavior until the new Phase 8 prompts execute. Preserve Desert Heat palette, full-bleed layout, creator artwork's independent colors, and rights/state truth.
 
 ## 6. Product alignment and strict separation
 
