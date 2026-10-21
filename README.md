@@ -1,6 +1,10 @@
 # FireLaunch
 
-## Current October 21 C7 status
+## Owner-approved phase handoff — October 21, 2026
+
+[Phase 7 owner closeout](docs/tasks/p7/owner-closeout-2026-10-21.md): **OWNER-CLOSED / ACCEPTED PARTIAL, NOT GREEN**. The measured C7 source/worker/owner ZIP and independently installed creator-bound VPKG (branding/artwork/Back/restart) are accepted; native HLS first-fragment moving video/audio/pause/seek remain unqualified and carry to Phase 9. The **Phase 8 source/runner entry is now `0.8.0`** (root package plus two root lockfile fields only); no new staging deployment, AWS job, schema, public release or native media evidence is implied. [P8 prompt stack](docs/tasks/p8/README.md) is authored and runnable from a safely reconciled clean local 0.8.0 checkout: `npm run codex:stack:validate -- p8` then `npm run codex:stack -- p8`. The runner executes P1–P4 sequentially and stops at P5 manual browser closeout; no `/activate`.
+
+## Historical October 21 C7 status (superseded by owner handoff)
 
 **C7 PARTIAL / NOT GREEN.** Later C7 closeout proves R1 Studio startup SCOPED GREEN, R2 isolated same-VPS worker and real creator-bound native VPKG GREEN, R3 authenticated four-file Studio ZIP SCOPED GREEN. R4 independently installed the exact downloaded VPKG on a stable Vega VirtualDevice, displaying the approved channel, artwork, Back navigation and restart. **Remaining:** Hls.js parsed approved master and variant playlists but stalled at the first TS fragment (no FRAG_LOADED); moving video, independently verified sound, pause and seek remain unqualified. Run only the manual [R4 playback recovery](docs/tasks/c7-export-recovery/R4-playback-recovery.txt) with at most three focused repair cycles. Reuse existing GREEN work. Root 0.7.3 and core schema 14 unchanged; preserve approved public release #1.
 
