@@ -1,5 +1,9 @@
 # FireLaunch Boot Context
 
+## Current execution handoff — c8-ui2 secondary editor and fullscreen left drawer (2026-10-21)
+
+Previous [c8-ui P4](docs/tasks/c8-ui/closeout.md) qualified the top-TV/bottom dock in real staging at `0.8.10` (UI GREEN / DEPLOYED), and P8B Wave 2 remains NOT GREEN for native static-section device evidence. The owner now approves [c8-ui2](docs/tasks/c8-ui2/README.md): default Channel as **global sidebar + secondary LEFT editor rail + RIGHT interactive 16:9 TV** with Virtual remote below, styled controls matching Desert Heat, and fullscreen SAME editor sliding out from LEFT edge instead of bottom. Assessment/plan/P1–P4 are authored, not implemented. Check exact local HEAD/dirty work/root+both locks at `0.8.10`, then `npm run codex:stack:validate -- c8-ui2`, `npm run codex:stack -- c8-ui2` for P1–P3; P4 is independent protected staging/owner browser qualification. No `/activate`, no new version, source replacement, cloud rights or publication. Phase 8 OPEN.
+
 Read this file before substantial repository-aware work.
 
 **Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) first for dated source/staging/AWS facts, current gates and next execution.** This boot file includes historical P0-P6 decisions; older activation instructions are preserved as history and MUST NOT override that current ledger, ADR 0011/0013, or p6-live-vod Q1-Q3. Last current-state reconciliation: 2026-10-20 UTC.
