@@ -1,5 +1,9 @@
 # FireLaunch Architecture
 
+## Current owner-approved phase handoff — October 21
+
+[P7 owner closeout](tasks/p7/owner-closeout-2026-10-21.md) closes Phase 7/C7 as **accepted partial**, not GREEN, and approves the `0.8.0` root/lock **source baseline** for [Phase 8](tasks/p8/README.md). Existing C7 restricted build worker, authenticated owner ZIP, and installed Vega package's branding/artwork/Back/restart are evidenced; first-TS-fragment native moving video/audio/pause/seek remain NOT GREEN and carry into Phase 9 final acceptance. The version transition itself does not alter any native worker, generated source, media, database schema, deploy or public release. Historical plans below are superseded for Phase 8 entry ordering.
+
 ## Current forward architecture (owner decision October 20)
 
 The active roadmap is [P7 native Vega export and C7 R4-only HLS repair](tasks/c7-export-recovery/README.md), [P8 Creative Studio UX & Pipeline Confirmation](tasks/p8/README.md), then [P9 final MVP qualification](tasks/p9/README.md). Older future phase numbering and FFmpeg guidance below is dated background, not a current implementation request. **C7 R1–R3 succeeded at their tested boundaries; exact installed VPKG displayed branding/artwork/Back/restart, but first TS-fragment HLS playback, visible video, audio and pause/seek are NOT GREEN.**
