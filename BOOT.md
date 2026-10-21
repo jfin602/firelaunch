@@ -4,7 +4,13 @@ Read this file before substantial repository-aware work.
 
 **Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) first for dated source/staging/AWS facts, current gates and next execution.** This boot file includes historical P0-P6 decisions; older activation instructions are preserved as history and MUST NOT override that current ledger, ADR 0011/0013, or p6-live-vod Q1-Q3. Last current-state reconciliation: 2026-10-20 UTC.
 
-## Current owner-directed work — c8-ui repairs completed P8B Channel (2026-10-21)
+## Current execution — optimized c8-ui after pushed P8B (2026-10-21)
+
+**P8B P1–P6 is on GitHub main at `0.8.10`; P7 is NOT GREEN / NOT DEPLOYED** (native static-layout, signed-in candidate and protected staging open). The owner wants **c8-ui TV-first Channel layout correction**, not edits to P8B. Read [c8-ui](docs/tasks/c8-ui/README.md) and [TV-first design](docs/design/tv-first-channel-workspace.md). Prompt stack P1–P3 stays `0.8.10` and has exact source seams; manual P4 checks UI and staged delivery independently. Normal Channel defaults to real 16:9 TV stage above an attached horizontal Pages & Layout / Appearance dock; no AI Assistant/Close Preview. Fullscreen reuses P8B API/state to reveal same dock from bottom via pointer/touch/keyboard.
+
+Before running validate actual local git status/version/dirty changes; safely sync/resolve and use `npm run codex:stack:validate -- c8-ui` then `npm run codex:stack -- c8-ui` without `/activate`. No source bump, no unrelated native requalification or unauthorized staging. Phase 8 remains OPEN.
+
+## Historical pre-push c8-ui handoff (superseded)
 
 The owner reports that **P8B already ran locally**. Don't run, edit or reorder those prompts: the current issue is their resulting page/Preview layout. Read [TV-first Channel design](docs/design/tv-first-channel-workspace.md) and [`c8-ui` correction stack](docs/tasks/c8-ui/README.md). Normal Channel: always-visible 16:9 TV fills upper stage, horizontally arranged Pages & Layout and Appearance editor dock touches its lower edge; AI Assistant and Close TV Preview creator UI removed. Fullscreen uses same TV and dock; editing dock rises from screen bottom on pointer hover, focus, touch or keyboard reveal. Preserve existing P8B templates, sections, native Vega support, fullscreen player and saved edits.
 
