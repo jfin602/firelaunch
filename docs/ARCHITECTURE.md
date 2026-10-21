@@ -1,5 +1,15 @@
 # FireLaunch Architecture
 
+## Phase 8 Wave 2 design contract — approved direction, not implemented
+
+[Wave 1 P5](tasks/p8/wave1-closeout.md) is GREEN/DEPLOYED within its staging UI/export scope (root `0.8.4` at tested release); Phase 8 remains OPEN. [Wave 2 `p8b`](tasks/p8b/README.md) is an owner-approved design continuation, not a started runner. [Human-first Page Layout design](design/page-layout-human-first.md) governs default templates, section controls, layout accessibility, Preview and native parity.
+
+**Canonical data path:** `packages/contracts/src/index.ts` `Page.modules` currently supports `hero|rail|grid|text`; `packages/channel-engine` validates mutations and stable IDs; `packages/tv` projects modules/navigation/focus; `apps/studio/src/Preview.tsx` renders interactive TV; `templates/vega-channel/src/App.js` renders native output. Page templates **Hero/Grid/Rows** seed valid ordered modules from this existing model. They are NOT a parallel HTML/page-layout state that can drift. Existing project/channel versions remain compatible and creator-specific content/rights must be preserved.
+
+**New sections and publishing:** Image Banner and Image + Text require narrowly bounded validated module variants, projection/Studio renderer and native Vega renderer support, old-spec preservation and rights-safe static artwork handling. Static informational art/text is non-focusable on TV; remote D-pad navigation stays on true interactive content. When Phase 9 supports compatibility classification, unknown/new module types are **Requires App Update / Blocked** for installed clients without that renderer, not automatically Publish Now. New native capability needs a qualified same-ID VPKG update; no arbitrary executable OTA or invisible approval.
+
+**UI path:** Channel → **Pages & Layout** presents pages and central page composition with the existing contextual-only inspector; defaults need only name + template, optional Customize presets. **Full-screen Preview** reuses the same Preview and TV state, not a second runtime or arbitrary screenshot; handle browser Fullscreen API/fallback, focus restore and distinct Exit/TV Back actions without remounting playback. Test semantic Studio/Vega parity for new layouts and reuse prior C7 and Wave 1 evidence for unchanged paths.
+
 ## Current owner-approved phase handoff — October 21
 
 [P7 owner closeout](tasks/p7/owner-closeout-2026-10-21.md) closes Phase 7/C7 as **accepted partial**, not GREEN, and approves the `0.8.0` root/lock **source baseline** for [Phase 8](tasks/p8/README.md). Existing C7 restricted build worker, authenticated owner ZIP, and installed Vega package's branding/artwork/Back/restart are evidenced; first-TS-fragment native moving video/audio/pause/seek remain NOT GREEN and carry into Phase 9 final acceptance. The version transition itself does not alter any native worker, generated source, media, database schema, deploy or public release. Historical plans below are superseded for Phase 8 entry ordering.
