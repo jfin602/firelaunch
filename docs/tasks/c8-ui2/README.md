@@ -1,5 +1,9 @@
 # C8-UI2 — Secondary Channel Editor Rail & Fullscreen Left Overlay
 
+## Handoff to c8-ui3 final visual/staging acceptance (2026-10-21)
+
+[c8-ui2 P1–P3] are committed at unchanged `0.8.10`. No c8-ui2 P4 closeout exists at this documentation checkpoint. The owner accepted the final maximized, borderless TV mockup and requested [c8-ui3](../c8-ui3/README.md). **The outstanding c8-ui2 P4 is superseded for visual/staging closeout by c8-ui3 P3 and should NOT be run as a second staged acceptance.** Preserve historical c8-ui2 P1–P4 prompt files and their results; P4 was authored but is not claimed executed. P8B native static-layout proof and overall Phase 8 remain open.
+
 **Owner-approved 2026-10-21.** /docs-apply + /prompt-ass + /prompt-plan + /prompt-write **COMPLETE; NOT IMPLEMENTED/QUALIFIED**. This is a **fixed root/lock `0.8.10` correction** following [c8-ui](../c8-ui/closeout.md), whose tested UI was GREEN and protected staging DEPLOYED. The broader [P8B Wave 2 follow-on](../p8b/wave2-follow-on-2026-10-21.md) remains NOT GREEN for native static-section screen evidence. Phase 8 stays OPEN.
 
 ## New owner design
