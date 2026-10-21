@@ -1,10 +1,13 @@
 # C8-UI — TV-First Channel Workspace Correction AFTER P8B
 
-**Owner correction 2026-10-21: P8B ALREADY RAN LOCALLY.** This fixed-version correction repairs the **completed P8B Channel UI**, rather than modifying, restarting, or inserting work before P8B. [TV-first design](../../design/tv-first-channel-workspace.md) is the new target; [assessment](prompt-assessment.md) and [implementation plan](implementation-plan.md) bind execution. **AUTHORED ONLY / NOT IMPLEMENTED OR QUALIFIED.** Overall Phase 8 remains OPEN.
+**Owner correction 2026-10-21: P8B ALREADY RAN LOCALLY.** This fixed-version correction repairs the **completed P8B Channel UI**, rather than modifying, restarting, or inserting work before P8B. [TV-first design](../../design/tv-first-channel-workspace.md) is the new target; [assessment](prompt-assessment.md) and [implementation plan](implementation-plan.md) bind execution. **OPTIMIZED AGAINST THE PUSHED SOURCE; NOT YET IMPLEMENTED OR QUALIFIED.** Overall Phase 8 remains OPEN.
 
-## Source/version reality
+## Verified source/version and P8B disposition
 
-At documentation review, GitHub `main` still reported root/lock `0.8.4` and P8B prompts *authored*. **The owner explicitly states P8B has already executed on their local checkout.** The authored P8B P6 implementation targets `0.8.10`; therefore every c8-ui prompt declares **Required unchanged project version: `0.8.10`** as the **expected** post-P8B source version, not a claim verified against the laptop. Check actual `git status --short`, HEAD, P8B P1–P6 commit history, any P7 manual closeout, and root + two lockfile versions BEFORE RUNNING. If P8B actually ended at `0.8.11` or otherwise differs, **STOP, reconcile c8-ui fixed-version metadata with exact proven local state before starting**; don't downgrade, reset or overwrite any P8B work. Never make a separate version-entry bump for this correction.
+**GitHub main at assessment: `be91bb8`, root and both top-level lockfile versions `0.8.10` — VERIFIED.** P8B P1–P6 commits are present. [P8B P7 Wave 2 closeout](../p8b/wave2-closeout.md) is **NOT GREEN / NOT DEPLOYED**: disposable local UI tests and full aggregate passed, but the owner-authenticated candidate, new static-layout Vega device proof and protected staging rollout remain unqualified. **Staging still ran Wave 1 `0.8.4` at that dated inspection**, not 0.8.10.
+
+**c8-ui is a correction of the pushed 0.8.10 UI**, not a rewrite of P8B or a new version. Inspect the current local git status and reconcile any later dirty source safely before running; don't reset/stash/force-pull or overwrite P8B. All c8-ui prompts require unchanged 0.8.10. Do not rerun P8B P7's old native parity/authenticated workflow as a prerequisite for UI corrections.
+
 
 ## What the owner wants fixed
 
@@ -15,7 +18,7 @@ The owner's actual screenshot shows a small TV beside a long right editing form,
 - **True Full Screen:** The SAME P8B Preview and dock instance go into the fullscreen element. Dock overlays the TV when pointer nears the bottom edge and slides up, stays visible while hovered/focused/editing, hides when idle, and works with touch handle/swipe plus keyboard control. Esc = Exit; TV Back is separate. No duplicated page editor/player, no P8B functional regression.
 - **Preservation:** Keep already-implemented P8B Hero/Grid/Rows templates, human-first page creation and section editing, Image Banner/Image + Text, validated rights, native Vega/static compatibility and current fullscreen behavior. This correction is a **layout/interface repair**, not a new Page Layout feature stack or runtime rewrite.
 
-## Four sequential prompts — unchanged expected `0.8.10`
+## Four sequential prompts — verified source version `0.8.10`
 
 | Prompt | Mode | Responsibility |
 | --- | --- | --- |
@@ -28,9 +31,10 @@ P1–P3 are runner-owned implementation commits. P4 is the **exactly one final c
 
 ## Safe execution
 
-1. Start from **owner's actual completed P8B source** and ensure pending P7/P8B edits are safe. GitHub's stale 0.8.4 HEAD cannot be pulled over completed local implementation without an explicit conflict-free sync. No resetting, forced pull, deleting, stashing without consent, reordering completed prompts or editing existing P8B files.
-2. Verify root package and both lockfile version fields exactly equal **0.8.10** with completed P8B P6 commit prefix. If not, STOP; retarget this correction's required unchanged version to the actual proven baseline and revalidate. Do not use c8-ui to jump versions.
-3. Run `npm run codex:stack:validate -- c8-ui`, then `npm run codex:stack -- c8-ui`. Runner handles P1–P3 and stops at browser P4. No `/activate`; P1–P3 run focused Studio tests/typecheck, P4 owns one aggregate and real browser.
-4. Any protected staging deployment requires exact approved source archive, existing operator permissions, backup, retained hashed assets and rollback. No AWS/MediaConvert/public release changes for this UI correction. Reuse prior Wave 1 and C7 GREEN evidence for unchanged systems.
+1. Fetch current GitHub main or safely reconcile the local checkout. Verify `git status --short`, HEAD and all three root/lock version fields **0.8.10**, with P8B implementation history intact. A dirty local tree needs explicit reconciliation; it is never reset, force-pulled or silently overwritten.
+2. Run `npm run codex:stack:validate -- c8-ui` then `npm run codex:stack -- c8-ui`. The runner executes **P1–P3**, all keeping 0.8.10, and stops before P4 for independent browser acceptance. No `/activate`. Focused Studio tests/typecheck only in P1–P3, one aggregate and real browser in P4.
+3. **Keep qualifications distinct.** c8-ui fixes Channel shell and fullscreen dock. P8B P7 remains NOT GREEN / NOT DEPLOYED for authenticated candidate, native new-section device and operator grant; do not conceal or repeat those gates merely to fix the UI. P4 reports UI result and protected staging result separately. No staging action without a reviewed exact-hash operator grant, backup and rollback.
+4. P8B Hero/Grid/Rows, static sections, selected-page synchronization, draft persistence, owner rights, native renderer/compatibility guard and already-tested Preview fullscreen behavior remain protected. No changes to P8B prompt files or original Wave 1 P5.
+
 
 **Owner deadline:** October 23, 2026 noon America/Chicago; preserve already implemented functionality above speculative redesign.
