@@ -1,0 +1,26 @@
+TASK: Phase 8 / P4 — Static image and text section contracts
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.8`.
+
+GOAL
+Add safe, expressive Image Banner and Image + Text sections plus bounded presentation presets to the CANONICAL ChannelSpec, TV projection and Studio Preview. Preserve old saved channels and media/rights boundaries. Native Vega parity and publication acceptance guards are P5; do not publish new modules in this step.
+
+PREFLIGHT
+Read P8B assessment/plan and P3 handoff; inspect 0.8.7 HEAD/root+lock/status. Read packages/contracts/src/index.ts moduleSchema/pageSchema, channel-engine mutations/removeContent logic, packages/tv/src/runtime.ts, Studio Preview and OwnedArtwork, selected module editor and affected tests. Inspect current publication/rights contract only where needed. Prioritize exact touched files; don't replay old C7 evidence or broad tests.
+
+IMPLEMENT
+1. Extend strict module validation with image-banner and image-text variants having stable module ID, owned/rights-safe artwork reference, bounded headline/body, image side and small enum-based alignment/crop/spacing/background presets. Where essential, add optional safe presentation fields to hero/rail/grid/text using defaults so historic ChannelSpec schemaVersion=1 parses unchanged. Avoid arbitrary CSS, HTML, JS or unchecked external private original media URLs. Do not conflate image display right and video playback right.
+2. Fix assumptions that every non-text module has contentIds: channel-engine removeContent, content resolution and TV projection must switch on typed module kind. Static informational artwork/text must not enter selectable D-pad focus rows. Keep empty module/legacy content valid; no migration that overwrites existing projects or approved release.
+3. Add honest, content-first Image Banner and Image + Text edit controls in Pages & Layout with owner-eligible image selection, text input, small optional Customize preset controls and saved/error feedback. Reuse the existing owner media selection/permissions and avoid duplicating upload/rights workflows.
+4. Update Studio Preview for new static modules, crop/text/preset display and order without inventing a separate source of truth. Do not add a fake generic web layout parser. Explicitly state that native Vega/publication are incomplete until P5, and keep incompatible live Publish disabled/blocked in tests as required.
+
+VALIDATION
+Focused schema/old-record roundtrip, invalid/private artwork, owner/foreign rights negatives for changed path, module mutation/removeContent, non-focusable static projection, Studio Preview and persistence tests. Typecheck only touched contracts/channel-engine/tv/studio packages. Do not run root full build/test, native CLI/worker, staging or broad browser qualification. If a cross-package schema/rights failure is found fix with narrow tests, never weaken protection for speed.
+
+HANDOFF / BOUNDARIES
+Runner commits root+two top-level lock versions to 0.8.8 from 0.8.7, workspace versions unchanged. No self-commit, /activate, public approval, new media job, AWS or schema14 changes. Aim <=8 minutes, 15-minute limit; if contract crosses an unexpectedly large boundary, leave fail-closed and report exact focused P5 handoff.
