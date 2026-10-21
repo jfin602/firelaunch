@@ -1,0 +1,31 @@
+TASK: Correction 8 / P4 — TV-first Channel UI closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- Required unchanged project version: `0.8.4`.
+
+TYPE
+Independent MANUAL real-browser correction closeout, not an implementation prompt or global Phase 8 closure. Write docs/tasks/c8-ui/closeout.md after direct evidence. P8 Wave 1 accepted milestone remains historical; P8B is still the future follow-on.
+
+MISSION
+Qualify the precise TV-first Channel UI on a real creator browser, including always-on TV, usable attached horizontal bottom dock, two creator-facing tabs, and actual fullscreen TV with edge-reveal editing overlay. Preserve the 0.8.4 source version and hand off a clean baseline to P8B.
+
+PREFLIGHT
+Read c8-ui assessment/plan/design and P1–P3 handoffs, actual local git HEAD/status, `0.8.4` root+both lock, current state, Wave 1 staging source/rollback, browser availability. Check local Git isn't already on newer P8B implementation or dirty conflicting source. Need real authenticated browser for owner workflow. If no browser or operator grant, record blocker, don't fabricate.
+
+MANUAL ACCEPTANCE
+1. Normal Channel opens with actual TV Preview immediately in top stage, 16:9 undistorted, with dock butted to bottom; no Close TV Preview or AI Assistant creator UI. Pages & Layout and Appearance are readable styled dock tabs. Saved page/brand controls functional and real owner project; no public release changes.
+2. Inspect ordinary viewport ~1440x900, ~1280x720, tablet and ~375px phone when actually supported. Dock uses width and contained scroll, TV remains meaningful, no unnecessary whole-page desktop scroll, Save/forms reachable. Screenreader/tab focus/remote controls distinguish TV interaction from editing; no permanent empty rail.
+3. Activate FULL SCREEN and confirm actual browser fullscreen if supported; TV retains page/playback/focus, Studio nav absent. Pointer bottom-edge reveals dock, idle hides it, focus/input keeps open; touch handle and keyboard reveal accessible. Exit via Escape, TV Back via separate control, return to editor context and scroll without remount/reset. Test fallback on unsupported fullscreen where feasible; do not claim untested API.
+4. Reuse unchanged Wave 1 private draft/rights/one-click export and latest C7 qualified media evidence; only short regression smoke. Do not create new native worker/ZIP, MediaConvert, publish creator media, touch AWS or test unsupported Appstore. Keep P8B template/static features outside this correction.
+5. At most two directly observed bounded repairs and focused retest; then one npm run test on exact final source (build-backed full suite), npm run codex:stack:validate -- c8-ui and git diff --check. Don't duplicate root typecheck/build. Mark correction GREEN or NOT GREEN with exact evidence, never fake a qualified Stage from jsdom.
+6. If qualified and explicit scoped operator permission available, use existing protected exact-hash staging scripts: current source/active release/old assets hash, assembled production-bundle root smoke, schema14 and backup/rollback, deploy, short signed-out plus owner fresh-tab browser smoke. If permission or access unavailable report NOT DEPLOYED. On severe break use only authorized rollback and mark NOT GREEN. No host grant assumed by prompt.
+
+CLOSEOUT
+Write docs/tasks/c8-ui/closeout.md: commit IDs/source version, tests, real screenshots/viewport and focus/fullscreen evidence, stage/dock proportions, mouse/touch/keyboard reveal, safe retries/unsaved work, staging deploy/rollback/hash if done, public release #1 unchanged, GREEN/NOT GREEN and next P8B handoff. The correction does not close P8 Wave 2 or overall Phase 8.
+
+VERSION / GIT / SAFETY
+Root package and two lock version fields must REMAIN 0.8.4; manual closeout does not automatically bump/commit/push. Preserve protected release #1, rights, schema14, worker/ZIP, owner custom source and historical status. No privilege bypass, /activate or Amazon submission.
