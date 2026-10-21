@@ -1,39 +1,51 @@
-# C8-UI3 — Seamless Channel Shell & Borderless Maximal TV
+# C8-UI3 — Final Channel Composition & True Fullscreen
 
-**Owner approved 2026-10-21. /docs-apply + /prompt-ass + /prompt-plan + /prompt-write COMPLETE; IMPLEMENTATION NOT STARTED.** This is the final approved screenshot-driven visual refinement after c8-ui2 P1–P3, targeting **unchanged version 0.8.10**. Phase 8 stays OPEN. [Visual design contract](../../design/channel-preview-final-composition.md) · [Assessment](prompt-assessment.md) · [Implementation plan](implementation-plan.md).
+**Owner-approved 2026-10-21. Correction plan and prompt stack updated; IMPLEMENTATION NOT QUALIFIED.** Root and both root lock fields: **0.8.10 unchanged** at latest GitHub readback. Phase 8 remains OPEN. This is a continuation after c8-ui2 P1–P3, not a reset or rerun of those completed corrections.
 
-## Owner's definitive mockup
+[Final visual and fullscreen design contract](../../design/channel-preview-final-composition.md) · [Prompt assessment](prompt-assessment.md) · [Implementation plan](implementation-plan.md)
 
-The **last approved image in the conversation** is the visual reference, intended for the user to attach to Codex. **It is not in this GitHub repository.** Attach the image to **P2 implementation** and especially **P3 manual staged visual acceptance**. If the image is missing, work from the written spec but never claim a direct visual match to an unseen artifact.
+## Canonical standard Channel mode
 
-The final Channel composition is:
+The user's last approved Channel mockup is the visual reference for the normal editor and must be attached to Codex P2 and P4 (the image is not stored inside this repository). It establishes:
 
-1. Left permanent Studio global navigation + immediately touching secondary LEFT editor rail. No awkward padding/seam; topbar aligns with the adjoining surfaces.
-2. Channel tools, page rows, sections, tabs and forms use the neutral charcoal-gray **New Page popup** palette, selected/primary actions retain restrained warm orange.
-3. A continuous dark near-black backdrop like the Preview stage covers the entire Channel area and suppresses the canyon image there. Other Studio pages may retain scenic treatment.
-4. **Real 16:9 TV Preview maximized** in upper-right available region, without decorative bezel/border/shadow. Fit to actual remaining width AND height without TV crop/stretch. The TV is the dominant element.
-5. **Under the TV**, a compact Draft TV Preview + 16:9 Interactive indicator + View full screen row; **below/right**, the Virtual remote in remaining space, not over the image.
-6. Existing c8-ui2 Fullscreen LEFT pop-out drawer, same TV/player/editor state, focus and touch/keyboard access remain unchanged. No bottom dock, duplicate renderer or editor.
+- Flush global sidebar + secondary LEFT editor seam, aligned topbar and no odd gutters; neutral New Page charcoal-gray tool/section/card palette with restrained orange actions.
+- Continuous very-dark Channel-wide background hiding the scenic canyon there (other Studio destinations keep their backgrounds).
+- RIGHT interactive TV occupying the largest safe borderless 16:9 upper region, undistorted and without a decorative bezel/shadow.
+- **Below the normal TV**: Draft TV Preview, 16:9 Interactive, View full screen and the Virtual remote in lower-right free space, not over the picture.
+- Preserve existing P8B Hero/Grid/Rows, static sections, selected-only editing, rights/CSRF, same mounted TV/VideoPlayer and c8-ui2 left drawer.
 
-## Correction prompts
+## Fullscreen must be a genuine app-only experience
+
+Normal mode's under-TV controls DO NOT remain as permanent fullscreen layout. Use maximum available screen for actual TV (edge-to-edge when the display itself is 16:9, otherwise undistorted dark letterbox), with overlay controls rather than reserved space:
+
+- **Fullscreen controls shown:** Virtual remote at BOTTOM LEFT; **Exit fullscreen** and **Hide controls** at TOP RIGHT; existing LEFT editor pop-out drawer available when deliberately revealed.
+- **Fullscreen editor open:** SAME page/section editor slides from LEFT edge, preserves pending edits, focus and playback. No new editor or Preview mount.
+- **Fullscreen Clean View:** Hide controls leaves ONLY the creator TV app visible—no remote, Exit button, editor/handle, metadata or Studio chrome. Recover with **H** (outside text fields), a small top-right corner hover/touch recovery zone, **Alt+E** (also opens editor), or **Escape** (always exits fullscreen). Do not reveal overlays from casual pointer movement elsewhere or intercept TV controls with invisible UI layers. Fallback when native Fullscreen API is denied must be truthful and equally recoverable.
+
+The closeout must check all three modes in a real Codex browser against staging, not only simulated DOM tests. The approved normal-mode image is still the visual comparison; fullscreen behavior is the additional written contract.
+
+## Sequential correction stack
 
 | Step | Model | Browser | Responsibility |
 | --- | --- | --- | --- |
-| [P1 — Seamless gray Channel shell](P1-seamless-gray-channel-shell.txt) | GPT-6 Sol Medium | no | Global/editor sidebar seam, header alignment, Channel-only solid dark background and New Page gray tool palette |
-| [P2 — Borderless maximized Preview](P2-borderless-maximized-preview.txt) | GPT-6 Sol High | no | Largest fitted 16:9 real TV, remove frame, move status and Full Screen BELOW; remote below/right |
-| [P3 — Staging visual closeout](P3-staging-visual-closeout.txt) | GPT-6 Sol High | **yes** | One aggregate, exact-hash protected deployment **FIRST**, then final signed-in staged screenshot comparison in Codex browser |
+| [P1 — Seamless gray Channel shell](P1-seamless-gray-channel-shell.txt) | GPT-6 Sol Medium | no | Connect panels/topbar, gray tool palette, solid Channel backdrop |
+| [P2 — Borderless maximized Preview](P2-borderless-maximized-preview.txt) | GPT-6 Sol High | no | Normal-mode largest 16:9 TV, status/Full Screen below, remote below-right |
+| [P3 — True fullscreen and Clean View](P3-true-fullscreen-clean-view.txt) | GPT-6 Sol High | no | Maximal viewport TV; bottom-left remote/top-right controls; reversible all-overlays-hidden mode; preserve left drawer |
+| [P4 — Staging visual + fullscreen closeout](P4-staging-visual-closeout.txt) | GPT-6 Sol High | **yes** | One aggregate, protected exact-hash deployment FIRST, then authenticated Codex browser checks of normal and fullscreen modes |
 
-**P1–P2** are runner-owned implementation commits; **P3** is the only final unambiguous browser-required manual closeout. Runner stops before P3. No `/activate`. All prompts require `- Required unchanged project version: `0.8.10`.` and no root/lock bump. Target <=8 minutes per implementation, 15 minute stop. Focused Studio tests/typecheck P1/P2, one aggregate P3; no broad native/MediaConvert/worker work.
+P1–P3 are runner-owned implementation checkpoints, each requiring **unchanged project version 0.8.10**. **P4 is the exactly one final closeout-type prompt**, manual/browser-required; runner stops before P4. No `/activate`, no package/lock bump. P1/P2 authoring files were left unchanged by this extension to protect any local completed sequential work. If local P1/P2 already ran, preserve their commits and begin from the real prefix instead of rerunning or rewriting them.
 
-## Why c8-ui3 and not c8-ui2 P4?
+## Supersession and execution
 
-GitHub `main` at authoring `8c49aae` already contains **c8-ui2 P1–P3** and their committed work, but `docs/tasks/c8-ui2/closeout.md` is not present. **Do not edit or rerun P1–P3.** The unrun c8-ui2 P4 remains a historical authored prompt and is **superseded for the final visual/staging acceptance by c8-ui3 P3**. It must not be invoked as a second redundant staging closeout. This supersession is a workflow decision, not a claim that c8-ui2 P4 executed or achieved GREEN. Preserve [c8-ui's prior UI GREEN / staged report](../c8-ui/closeout.md) and [P8B Wave 2's still-open static-layout native device gate](../p8b/wave2-follow-on-2026-10-21.md).
+Committed c8-ui2 P1–P3 remains preserved; its older **unrun** P4 is superseded by c8-ui3 P4 for final visual/staging acceptance. Historical c8-ui UI GREEN/staging and P8B Wave 2 NOT GREEN remain evidence-bound. Do not silently close the P8B native static-layout device gap or Phase 8.
 
-## Safe execution
+On actual local checkout inspect `git status --short`, HEAD and all 3 root/lock version fields; reconcile dirty/pending changes without resetting or force-pulling. Then:
 
-1. Check actual local `git status --short`, HEAD, staged/draft P4 changes and package/root-lock versions (expected `0.8.10`). Do not force sync/reset/stash/lose uncommitted work. The GitHub docs baseline is not a substitute for an inspected local checkout.
-2. On clean compatible source run `npm run codex:stack:validate -- c8-ui3` then `npm run codex:stack -- c8-ui3`; P1–P2 commit sequentially and P3 is manual/browser-required.
-3. P3 requires a real owner Codex browser, image attachment, protected exact-source archive, verified backup/rollback/schema14, current hashed Studio assets and a valid operator grant for **this** candidate. Deploy first, then test at `https://firelaunch.jfin.dev/` in Codex browser; if blocked report NOT DEPLOYED / NOT GREEN rather than fabricate. Repairs require new reviewed archive + redeploy and retest.
-4. Do not activate Phase 9, alter public FREE release #1, private media rights, native Vega runtime or cloud infrastructure. The c8-ui3 closeout is **UI/staging only**, not final Phase 8 closure.
+```bash
+npm run codex:stack:validate -- c8-ui3
+npm run codex:stack -- c8-ui3
+```
 
-**Deadline context:** owner October 23, 2026 noon America/Chicago; prioritize useful tested results without bypassing safety/evidence.
+Runner executes next incomplete P1/P2/P3 checkpoint in order and stops at manual P4. P1–P3 target <=8 minutes each, hard cap 15; only changed Studio tests/typecheck, no full builds. P4 deploys the LATEST tested source to protected staging FIRST, requiring exact archive hash, current operator grant, encrypted backup, schema14 compatibility and rollback. Then use a real owner-authenticated Codex browser at `https://firelaunch.jfin.dev/` for visual+fullscreen/Clean View acceptance; no localhost substitute or fabricated browser evidence. If blocked, report NOT DEPLOYED/NOT GREEN precisely.
+
+**Owner deadline:** October 23, 2026 noon America/Chicago; Phase 8 stays OPEN. No new creator publication, AWS/MediaConvert, native worker or installed-app change is authorized by this correction.
