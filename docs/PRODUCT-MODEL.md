@@ -1,5 +1,9 @@
 # FireLaunch Product Model
 
+## Final Channel composition target — c8-ui3 (2026-10-21)
+
+A visual-only follow-up correction [c8-ui3](tasks/c8-ui3/README.md) now supersedes c8-ui2's normal Preview geometry: preserve main sidebar + secondary left editor and fullscreen LEFT drawer, but align sidebar/topbar flush, use New Page-like charcoal-gray editor surfaces and solid near-black Channel background (no canyon), and maximize the real borderless 16:9 TV in upper-right. Move Draft/Interactive status and View Full Screen below TV, remote further down/right. No ChannelSpec, rights, live content or native renderer changes. P3 is deployment-first then Codex-browser staging visual closeout against user's attached mockup. Root version stays 0.8.10 and Phase 8 OPEN.
+
 ## Latest Channel editing experience — c8-ui2 (owner approved 2026-10-21)
 
 **Planned next correction, not implemented:** following c8-ui's measured UI GREEN/staging deployment, Channel's normal presentation should use the existing persistent global sidebar, an immediately adjacent SECONDARY LEFT VERTICAL EDITOR RAIL, and the true interactive 16:9 TV Preview to the right. Place the Virtual remote in lower-right empty space beneath TV, not over content. The rail's Pages & Layout and Appearance tabs and action buttons use coherent Desert Heat neutral/selected/danger/focus styling, not browser-default white. Fullscreen leaves the SAME Preview/editor mounted, hiding the editor as a LEFT-edge overlay that slides out on hover/touch/keyboard and stays visible while editing. No bottom editing dock. This does not change ChannelSpec, P8B layout templates/static sections, publication/rights, Vega or one-click Export. See [c8-ui2 design](design/channel-secondary-rail.md), [correction stack](tasks/c8-ui2/README.md). Root remains 0.8.10; Phase 8 OPEN.
