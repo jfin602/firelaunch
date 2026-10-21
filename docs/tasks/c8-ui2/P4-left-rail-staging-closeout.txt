@@ -1,0 +1,34 @@
+TASK: Correction 8 / P4 — Left rail fullscreen staging closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- Required unchanged project version: `0.8.10`.
+
+TYPE
+One independent MANUAL browser + protected staging correction closeout; NOT a runner-owned implementation prompt and NOT full Phase 8 closure. Write docs/tasks/c8-ui2/closeout.md after actual verification. Prior c8-ui P4 is UI GREEN/DEPLOYED at its tested 0.8.10 scope; P8B Wave 2 remains NOT GREEN for its separate native static-layout device gate. Preserve those historical records.
+
+MISSION
+Qualify the corrected normal Channel presentation with SECOND LEFT editor rail, right 16:9 TV and virtual remote beneath TV; confirm styled controls and fullscreen LEFT-edge reveal drawer; deploy the exact qualified source using protected staging scripts and run final authenticated UI acceptance on the deployed release. Treat UI and deployment as separate truthful statuses.
+
+PREFLIGHT
+Read docs/tasks/c8-ui2/{README.md,prompt-assessment.md,implementation-plan.md}, docs/design/channel-secondary-rail.md, P1–P3 handoffs, c8-ui/closeout.md and scripts/staging/README.md plus current protected archive/deploy/rollback code. Verify local HEAD/dirty status, all three 0.8.10 version fields, current host source/schema/service, old release and encrypted backup availability. Existing c8-ui staging release `20261021T193117Z-850e9d93523c` is a DATED observation, not a live claim. Need real signed-in owner browser and command-scoped operator authorization for the NEW archive/hash; old short-lived grants may not apply. If unavailable, do not invent results or bypass.
+
+PREDEPLOY VALIDATION
+1. Brief candidate browser UI smoke, then narrow repairs for up to TWO actually observed regressions, with affected Studio tests/typecheck. After source settles run ONE `npm run test` on exact final candidate (includes checked builds and all suites), `npm run codex:stack:validate -- c8-ui2` and `git diff --check`; do not duplicate root build/check/typecheck or entire old P8B/C7 matrices.
+2. Confirm normal Channel default: global main sidebar on far left; secondary vertical Channel editor immediately beside it and beneath topbar, with Pages & Layout/Appearance tabs; right interactive 16:9 Preview and Virtual remote BELOW its frame in lower dead space. No bottom editor dock. All existing Hero/Grid/Rows and six section-type page tools, save/error/rights and Publish/Export remain intact.
+3. Confirm button hierarchy: none of the Channel editor controls render stark browser-default white or unreadable disabled/focus states. Test New page, Edit page/section, Move, Remove, Save, appearance controls and Full screen with representative keyboard/touch semantics. Avoid global theme regressions.
+
+PROTECTED STAGING AND FINAL REAL-BROWSER ACCEPTANCE
+4. **Protected rollout is the intended release acceptance**, not an optional cosmetic check. Using the exact qualified source, build one immutable archive with retained hashed Studio assets, production-bundle signed-out/fixture-signed-in/fresh-entry root smoke, independent SHA-256, verified schema14 compatibility, approved encrypted backup, rollback path and exact command-scoped grant. Deploy only using the reviewed operator script and permitted identity; no ad hoc sudo/forced deployment. If authorization/backup mismatch, report **NOT DEPLOYED / NOT GREEN** for staged acceptance and do not bypass.
+5. On ACTUAL deployed HTTPS staging release, do fresh signed-out React-root/JS-CSP-MIME smoke, then authenticated existing owner Chrome project and version readback. One full desktop UI journey at ~1440x900 plus ~1280x720 layout measurements: left editor next to main sidebar, TV right at 16:9, remote below, sections/appearance controls reachable with rail-contained scroll and no avoidable whole-document overflow. Switch page and Appearance, save/reload one safe private change, verify original state and public release #1 unchanged. Brief tablet/phone spot checks (not duplicate journeys).
+6. On deployed fullscreen, verify native Fullscreen API when supported (label fallback distinctly if denied), no Studio sidebar, TV fills at 16:9, LEFT drawer reveals by edge hover/click and touch/keyboard, remains visible during focus/edit/dirty form, safely hides on idle; no BOTTOM dock overlay. TV Back and Escape exit are distinct. After exit confirm same page/media playback/remote focus, editor scroll and unsaved field without remount. Check reduced motion and visibility/focus accessibility.
+7. If deployed UI is broken, use authorized protected rollback, verify restored release/schema/authenticated UI and public release #1; mark ROLLED BACK / NOT GREEN. Do not change AWS/IAM/CloudFront, media, payment, native package, worker configuration or public creator publication merely for UI testing. Native new static-section Vega device parity remains separate P8B requirement: this correction does not silently claim it GREEN.
+
+CLOSEOUT
+Record docs/tasks/c8-ui2/closeout.md: exact git HEAD/source version, P1–P3 commits, tests, screenshots/viewport measurements, button/focus assessment, fullscreen native/fallback+left reveal/Back/Exit, page/draft state, archive SHA, activated staging symlink/service/schema/backup/rollback, owner HTTPS testing, unchanged public release #1 and any blockers. Separate **UI GREEN / NOT GREEN** and **STAGING DEPLOYED / NOT DEPLOYED / ROLLED BACK**, retain P8B Wave 2 historical native parity limitation and keep Phase 8 OPEN. Do not write global docs/tasks/p8/closeout.md or activate Phase 9.
+
+VERSION / GIT / SAFETY
+Root and both lock fields must remain 0.8.10. Manual closeout does not self-bump/version/commit/push, bypass privileges or rewrite earlier evidence. Preserve authorizations, private artwork/media, project revision/CSRF, custom source, schema14 and backup.
