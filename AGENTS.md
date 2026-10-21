@@ -13,7 +13,11 @@ Before implementation:
 8. the active docs/tasks/<stack>/ README, prompt-assessment and implementation-plan
 9. the current prompt
 
-## Current owner priority: c8-ui correction AFTER completed P8B (2026-10-21)
+## Current c8-ui correction after pushed P8B — verified 2026-10-21
+
+GitHub main now includes **P8B P1–P6 at root/lock `0.8.10`**, and the committed P8B P7 outcome is **NOT GREEN / NOT DEPLOYED** for signed-in candidate, native static-layout device and protected staging gates. Do not rerun P8B or overwrite its completed templates/static section/editor/native compatibility. The [optimized `c8-ui`](docs/tasks/c8-ui/README.md) is a **fixed `0.8.10` correction**: P1 always-on TV and remove UI AI/Close Preview; P2 true height-first 16:9 top stage + horizontal bottom dock; P3 reuse existing fullscreen state with shared TV+dock root and bottom-edge hover/touch/keyboard overlay; P4 real browser UI closeout and staging result separately. See [design](docs/design/tv-first-channel-workspace.md). Local dirty changes still require safe reconciliation before `npm run codex:stack:validate -- c8-ui` and `npm run codex:stack -- c8-ui`. No `/activate`; Phase 8 OPEN.
+
+## Historical pre-push c8-ui priority (superseded)
 
 **Owner reports P8B already ran locally. Do NOT change/restart/reorder P8B prompts or roll its source back to GitHub's older 0.8.4 baseline.** [TV-first Channel contract](docs/design/tv-first-channel-workspace.md) and [`c8-ui` correction](docs/tasks/c8-ui/README.md) supersede the old Channel visual layout: always-on full-width 16:9 TV above a touching horizontal editing dock with **Pages & Layout / Appearance only**, no visible AI Assistant or Close TV Preview, fullscreen TV with same dock sliding up at bottom edge for hover/touch/keyboard. Preserve all finished P8B templates, image/text modules, preview, native parity and rights checks.
 
