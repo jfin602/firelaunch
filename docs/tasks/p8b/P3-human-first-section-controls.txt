@@ -1,0 +1,26 @@
+TASK: Phase 8 / P3 — Creator section controls and safe ordering
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.7`.
+
+GOAL
+Make existing Hero, Content Row, Content Grid and Text Area editing intuitive: Choose content, Edit text, Move up/down, Customize (collapsed) and Remove, while retaining bounded ChannelSpec mutations and saved-state truth.
+
+PREFLIGHT
+Read p8b implementation-plan.md and P2 handoff, current App/Pages & Layout component, shared mutations, existing Studio editor tests. Confirm exact 0.8.6 root/lock candidate and clean Git prefix. Do not repeat P1 template or P2 layout implementation/validation.
+
+IMPLEMENT
+1. Replace visible raw Hero/Rail/Grid/Text jargon and low-level module forms on the normal path with clear actions. Support Add Section, select owner-held content (reuse Library; no private publication implied), update heading/body/section selection, reorder with accessible Move up/down controls (drag enhancement optional), remove with safe confirmation if authored text/settings would be lost. Preserve stable IDs and shared library items.
+2. A selected section opens the SAME contextual inspector showing only applicable Content settings and collapsed Customize. Start with safe existing supported controls; do not invent unsynchronized CSS-only presets or arbitrary pixel editor. P4/P5 own new static types and cross-renderer presets.
+3. Save/reopen revisions with clear Saving/Saved/Failed status, no fake autosave, no silently losing unsaved form drafts on page/project switch; provide cancel/confirmation. Respect revision/ownership, last page, limits and focus restoration. A template swap must preview/preserve authored sections or require destructive confirmation; prefer Add Section over destructive transforms.
+4. Keep user-visible default path short and keyboard/touch labels accurate. Do not duplicate catalog/media workflow inside page editor.
+
+VALIDATION
+Focused Channel module mutation tests and Studio section edit tests for reorder, save errors, edits, remove, keyboard focus, owner-safe content selection and preserved media references. Typecheck changed package(s) only. Do not run npm run test/check/build globally, repeat P2 navigation tests, live hosted flows, native device or staging.
+
+HANDOFF / BOUNDARIES
+Runner owns the only commit/version transition 0.8.6 → 0.8.7 in root package and two lock fields; no self-commit or /activate. Rights/draft-versus-live and existing static-text behavior must remain intact. <=8 minutes goal, 15 cap; record passing tests, unresolved UX friction and P4 contract handoff.
