@@ -40,7 +40,7 @@ test('new-page dialog keeps input on conflict, retries once, saves composition a
     render(createElement(App));
     await screen.findByRole('heading', { name: 'Films', level: 1 });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Pages & Shelves' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     const opener = screen.getByRole('button', { name: 'New page' });
     opener.focus(); fireEvent.click(opener);
     const dialog = screen.getByRole('dialog', { name: 'Create a page' });

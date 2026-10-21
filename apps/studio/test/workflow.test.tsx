@@ -31,7 +31,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }));
     fireEvent.click(screen.getByRole('button', { name: /Create channel/ }));
     await waitFor(() => assert.ok(screen.getByText('REV 8 · LOCAL')), { timeout: 5000 });
-    fireEvent.click(screen.getByRole('button', { name: 'Pages & Shelves' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Field Notes' })));
     const projectId = new URLSearchParams(window.location.search).get('project');
     assert.match(projectId ?? '', /^ch_[a-f0-9]{32}$/);
@@ -42,8 +42,9 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     fireEvent.click(screen.getByRole('button', { name: /Save brand/ }));
     await waitFor(() => assert.ok(screen.getByText('REV 9 · LOCAL')));
     fireEvent.click(screen.getByRole('button', { name: 'Close appearance inspector' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Pages & Shelves' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     fireEvent.click(screen.getByRole('button', { name: 'Field Notes' }));
+    fireEvent.click(screen.getByText('Advanced content and section controls'));
     fireEvent.change(screen.getByLabelText('DESCRIPTION'), { target: { value: 'Edited in Studio' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save film' }));
     await waitFor(() => assert.ok(screen.getByText('REV 10 · LOCAL')));
@@ -73,7 +74,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     cleanup();
     render(createElement(App));
     await waitFor(() => assert.ok(screen.getByText('REV 11 · LOCAL')));
-    fireEvent.click(screen.getByRole('button', { name: 'Pages & Shelves' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Field Notes' })));
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     const restarted = createApi(new ProjectRepository(directory), new MockProvider(), { mode: 'local-legacy' });

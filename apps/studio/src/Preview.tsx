@@ -76,7 +76,7 @@ export function Preview({ spec, hosted = false, accountId, libraryRevision = 0 }
   const style = { '--tv-accent': tv.brand.primaryColor, '--tv-bg': tv.brand.backgroundColor, '--tv-text': tv.brand.textColor, fontFamily: tv.brand.typography === 'serif' ? 'Georgia, serif' : 'inherit' } as React.CSSProperties;
 
   return <section className="preview-wrap" aria-label="Interactive TV Preview">
-    <div className="preview-heading"><span className="eyebrow">LIVE CHANNEL PREVIEW</span><span className="live-dot">● &nbsp;16:9 · INTERACTIVE</span></div>
+    <div className="preview-heading"><span className="eyebrow">DRAFT TV PREVIEW</span><span className="live-dot">● &nbsp;16:9 · INTERACTIVE</span></div>
     <div className="tv-frame" ref={frameRef} tabIndex={0} style={style} aria-label="TV screen, use arrow keys, Enter and Escape">
       <div className="tv-screen" ref={screenRef}>
         {current.screen === 'page' ? <>
