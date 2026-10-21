@@ -120,6 +120,12 @@ Relevant official references:
 
 At least one creator-owned Appstore **approval**, verified physical Fire TV package/navigation/playback and installed-app remote catalog refresh; plus source export, tenant isolation, backup and support qualification. A submitted app or draft bundle alone does not satisfy launch Green.
 
+## Phase 9 — updates after initial app deployment (approved plan 2026-10-21)
+
+**Publish** creates an explicit owner/rights/revision-approved, immutable compatible PublishedManifest. The installed native client validates pinned HTTPS, deployment/schema/digest/sequence and persists last-known-good; compatible videos/artwork/collections/shelves/brand and already-supported layout options update **without another binary**. An unknown/unsupported component, new native UI/player/runtime/permissions/dependencies or incompatible schema **Requires App Update**: a new verified VPKG retaining the existing app/package identity, incremented native version/build and manual creator Amazon Developer Console existing-listing submission/review. Updating FireLaunch Studio's website is separate.
+
+Draft edits never publish automatically; private S3 originals/staged media, foreign/revoked rights and executable JS/code never belong in public manifests. Rollback is a rights-rechecked **new higher-sequence** manifest and offline clients can retain old content. FireLaunch does not remotely replace native React Native code, automatically submit apps, guarantee Amazon approval or claim physical Fire TV testing. Historical installed-app update proof remains NOT GREEN until [P9 manual device qualification](tasks/p9/README.md); see [ADR 0009](decisions/0009-live-channel-delivery.md).
+
 ## Initial free-video and future paid-video publication policy (ADR 0013, 2026-10-17)
 
 The initial Phase 6 creator-uploaded VOD publishing path supports rights-cleared **free-to-view** media only. Publishing is a distinct explicit creator action after private original verification, managed HLS READY, artwork and playback rights, catalog/ChannelSpec binding, and P5 immutable release approval. Only the approved HLS delivery graph can be read through CloudFront; its stable public master URL is not a paywall or proof of an entitlement. S3 originals and staged output remain private, and failed/unapproved/revoked assets are not newly published. Live CloudFront enablement requires a separately approved operator change set and access testing; accepting this design does not enable it.

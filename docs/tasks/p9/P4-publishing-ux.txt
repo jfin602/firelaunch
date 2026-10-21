@@ -1,0 +1,12 @@
+TASK: Phase 9 P4-publishing-ux
+
+MODEL / ENTRY
+GPT-6 Sol Medium. Planned 0.9.4 after explicit coherent 0.9.0 entry and previous accepted checkpoint. Sequential runner-owned checkpoint, no device qualification. No /activate; verify current HEAD/worktree, P8 handoff and C7 R4. <=8 min target, 15 min hard stop.
+
+WORK
+Preserve P8 Home/Library/Channel/Publish/Export, contextual inspector, TV Preview, Advanced Source. Publish shows actual saved draft vs immutable live release, compatible change diff, rights/ready blockers, explicit approval, status/history/rollback and Requires App Update reason. Export distinguishes initial app vs existing-app update, current ID/version/build, true worker and ZIP states, release notes and manual Amazon handoff. No fake live/device/Console claims; accessible responsive keyboard UX.
+
+VALIDATE / DISPOSITION
+Focused UI/API tests for compatibility, approval/rights/CSRF, status, version/identity and expired owner ZIP; affected typecheck/build/diff.
+
+Never perform unapproved live creator publication, paid encoding, cloud/IAM/CDN changes, remote executable JS OTA, Amazon login/submission, unsafe worker execution or historic P5/Q2/C7 relabeling. Report exact source, results and remaining blocker.

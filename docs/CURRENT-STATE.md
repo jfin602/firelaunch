@@ -3,6 +3,10 @@
 Last documentation reconciliation: 2026-10-21 UTC (documentation aligned to committed C7 closeout c5a4421; staging and AWS status remain dated observations, not fresh inspections).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
 
+## Phase 9 approved direction (October 21; documentation only)
+
+[Phase 9 Live Channel Publishing & App Updates](tasks/p9/README.md) replaces the old qualification-only Phase 9 plan, retaining original final MVP walkthrough as P9 P5. Explicit rights-approved compatible manifest updates to an **already-installed** creator-owned Vega app should not need another VPKG. New native functionality needs a **higher-version same-ID VPKG**, verified export and human Amazon review; no unrestricted OTA native code. P8 five destinations and contextual inspector unchanged. **P9 PLAN/PROMPTS ONLY / NOT QUALIFIED**; no root/lock/schema, deployment, AWS, public release or app changes. Historical P5/c5 installed refresh gates remain NOT GREEN. **C7 R4 first HLS TS fragment** moving video/audio/pause/seek remains first technical blocker, then safe P8 handoff and separate Phase 9 0.9.0 entry. Deadline Oct 23 noon Central.
+
 ## Phase 8 creator UX approval (2026-10-21; documentation/prompts only)
 
 The owner approved **[P8 Creative Studio UX & Pipeline Confirmation](tasks/p8/README.md)**, beginning with navigation cleanup before broader creative editing. Five primary destinations: **Home, Library, Channel, Publish, Export**. Channel unifies AI Assistant/Appearance/Pages & Shelves; Export retains Advanced Source and actual native Build & Download. TV Preview remains accessible, and the desktop right inspector is **contextual-only**, opening for selected editing context with no empty permanent column. Library/Publish/Export use full workspaces and existing VideoWorkspace remains the modal. P1 navigation, P2 layout, P3 media/draft correctness, P4 publication/export consistency and P5 independent creator UX closeout are now documented with assessment, plan and executable prompts.

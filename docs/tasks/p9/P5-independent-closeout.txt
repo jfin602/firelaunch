@@ -1,0 +1,12 @@
+TASK: Phase 9 P5-independent-closeout
+
+MODEL / ENTRY
+GPT-6 Sol High MANUAL. Planned 0.9.5 proposed after explicit coherent 0.9.0 entry and previous accepted checkpoint. MANUAL browser and external Vega; NOT runner-automated. No /activate; verify current HEAD/worktree, P8 handoff and C7 R4. Respect October 23 noon Central deadline.
+
+WORK
+Use actual authenticated owner browser and external graphical x86_64 Vega VirtualDevice. Reuse proven C7 worker/ZIP evidence, but resolve first-HLS-TS-fragment blocker. Owner edits/reopens rights-cleared content and explicitly approves FREE v1; inspect public/private/foreign boundaries, download SHA-verified creator ZIP, install real VPKG ONCE, prove branded TV + moving HLS video, independently verified sound, remote focus/detail/pause/seek/Back/restart. Publish approved visibly different v2; prove SAME installed package receives HTTPS update with no reinstall; offline LKG, isolated corrupt/schema/wrong-deployment/error denial and new rights-approved higher-sequence v3 rollback. Build/download/install second real same-ID higher-build native VPKG, verify creator binding, explain manual existing-listing Amazon submission. Capture SHA, release IDs/digests, device info, install count, logs/screens; one final npm check, P9 validator and diff.
+
+VALIDATE / DISPOSITION
+Write closeout.md only after manual proof. Overall P9 GREEN requires all three: installed v1→v2/LKG/rollback, same-ID actual native successor and full video/audio/remote creator walkthrough; otherwise NOT GREEN with exact blocker. Not physical Fire TV/Appstore approval.
+
+Never perform unapproved live creator publication, paid encoding, cloud/IAM/CDN changes, remote executable JS OTA, Amazon login/submission, unsafe worker execution or historic P5/Q2/C7 relabeling. Report exact source, results and remaining blocker.

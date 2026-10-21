@@ -3,6 +3,10 @@
 Bootstrap date: 2026-10-08.
 Hackathon deadline: 2026-10-23 12:00 PM PDT.
 
+## Approved Phase 9 — Live Channel Publishing & App Updates (October 21; docs only)
+
+[Phase 9](../tasks/p9/README.md) now owns first-class post-deployment publishing: rights-approved compatible manifest video/artwork/shelves/brand/layout updates reach already-installed Vega apps without VPKG reinstall; new native UI/runtime/schema requires a **same-package-ID higher-version VPKG** and creator-managed Amazon review. Former Phase 9 *Final MVP Launch Qualification* is retained as **manual P9 P5**. Five prompts: P1 compatibility, P2 same-installed v1→v2/LKG/rollback, P3 native successor upgrade, P4 Publish/Export UI, P5 independent final video/audio/remote + both update paths. [Plan](../tasks/p9/implementation-plan.md) and [assessment](../tasks/p9/prompt-assessment.md). **Plan/prompts only**, no 0.9.0/0.9.x entry, app/stage/cloud/release changes. P8 five destinations unchanged; no native OTA code or WebView migration. Critical order remains C7 R4 first HLS TS repair → safe P8 handoff → separately approved P9 entry. Deadline Oct 23 noon America/Chicago, internal 11:30; Thu Oct 22 5 PM freeze.
+
 ## Active October 21–23 delivery override — native HLS only
 
 **C7 PARTIAL / NOT GREEN.** Later C7 closeout proves R1 Studio startup SCOPED GREEN, R2 isolated same-VPS worker and real creator-bound native VPKG GREEN, R3 authenticated four-file Studio ZIP SCOPED GREEN. R4 independently installed the exact downloaded VPKG on a stable Vega VirtualDevice, displaying the approved channel, artwork, Back navigation and restart. **Remaining:** Hls.js parsed approved master and variant playlists but stalled at the first TS fragment (no FRAG_LOADED); moving video, independently verified sound, pause and seek remain unqualified. Run only the manual [R4 playback recovery](docs/tasks/c7-export-recovery/R4-playback-recovery.txt) with at most three focused repair cycles. Reuse existing GREEN work. Root 0.7.3 and core schema 14 unchanged; preserve approved public release #1.

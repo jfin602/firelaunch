@@ -1,0 +1,11 @@
+# P9 implementation plan
+
+Documentation-only approval 2026-10-21. Proposed 0.9.0 entry; P1–P5 0.9.1–0.9.5. Read [README](README.md), [assessment](prompt-assessment.md), latest C7 R4 and P8 closeout. Confirm clean coherent local source, active manual changes and explicit entry authority. No docs-only version bump.
+
+1. **P1 compatibility:** Inspect real PublishedManifest/ChannelDeployment, owner rights, native client capabilities/identity/version and generator. Minimal contract extension; classify supported data vs unsupported native code/schema, unknown fail closed, keep manifest release and native binary versions separate. Focused owner/CSRF/rights/stale/foreign tests.
+2. **P2 live remote:** Reuse approved immutable release, atomic pointer and pinned HTTPS client loader for v1→v2. Validate schema/deployment/digest/sequence; persistent LKG offline/timeout/error; owner-authorized rights-rechecked higher-sequence rollback. No automatic publish or new release storage.
+3. **P3 native upgrade:** Verify current official Amazon existing-app update/version rules. Same canonical package ID, higher build/version, safe reuse of C7 isolated worker and owner ZIP, release notes and manual Console handoff; preserve source overrides/live pointer. Reject new identity masquerading as upgrade.
+4. **P4 UX:** Preserve P8 five destinations, TV Preview, contextual inspector and Advanced Source. Publish: draft/live change review, eligibility/rights, explicit approval, history/rollback. Export: first app or update existing, same ID/build history, verified job/ZIP and human submission guidance. No dead controls.
+5. **P5 MANUAL:** Real signed-in creator edit/save/rights/free publish, independent verified ZIP/VPKG and native HLS moving video/sound/remote/restart; v2 on same installed binary with offline/fault/new-sequence rollback; separate higher-build same-ID native upgrade. One aggregate/stack validation/diff, hashes, browser/device screenshots/logs and exact GREEN/NOT GREEN closeout.
+
+P1–P4 sequential runner checkpoint commits <=8 min target/15 min stop; P5 independently manual. No /activate, parallel repo source conflict, auto AWS/publication/Amazon action, paid processing, native OTA executable code, device-fiction or historical relabeling.

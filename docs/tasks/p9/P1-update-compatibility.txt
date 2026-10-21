@@ -1,0 +1,12 @@
+TASK: Phase 9 P1-update-compatibility
+
+MODEL / ENTRY
+GPT-6 Sol High. Planned 0.9.1 after explicit coherent 0.9.0 entry and previous accepted checkpoint. Sequential runner-owned checkpoint, no device qualification. No /activate; verify current HEAD/worktree, P8 handoff and C7 R4. <=8 min target, 15 min hard stop.
+
+WORK
+Inspect existing contracts, installed native renderer features/schema, deployment/owner and package identity/version. Build safe Publish Now / Requires App Update / Blocked reasons. Known supported rights-approved videos/artwork/shelves/colors/layouts may publish; unknown or unsupported UI/player/runtime/deps/permissions/schema needs native upgrade; missing rights/READY, revoked, stale or foreign ownership blocks. Keep content revision separate from native build/version and public manifest free of executable code.
+
+VALIDATE / DISPOSITION
+Focused compatible/incompatible/unknown, revision, owner/CSRF/rights/privacy tests; affected typecheck/build, diff. No device claim.
+
+Never perform unapproved live creator publication, paid encoding, cloud/IAM/CDN changes, remote executable JS OTA, Amazon login/submission, unsafe worker execution or historic P5/Q2/C7 relabeling. Report exact source, results and remaining blocker.
