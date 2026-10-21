@@ -1,5 +1,9 @@
 # Page Layout & Full-Screen Preview — Human-First Design Contract
 
+## Current layout presentation — secondary left editor rail
+
+The human-first page templates, six bounded TV sections and canonical data/rights contracts below remain unchanged. The owner-approved [c8-ui2 design](channel-secondary-rail.md) now specifies the presentation: left secondary Pages & Layout / Appearance editor rail beside global Studio navigation, interactive 16:9 Preview on the right, and the same editor as a LEFT fullscreen overlay drawer. Earlier illustrations that place editing controls in a bottom dock or right-side inspector refer to historical composition, not the current target. This is a visual shell correction only, not new template implementation.
+
 **Decision:** Owner-approved design direction, 2026-10-21, **Phase 8 Wave 2 (proposed continuation `p8b`)**. **Design specification only: NOT IMPLEMENTED / NOT QUALIFIED.** Wave 1 [P5](../tasks/p8/wave1-closeout.md) is GREEN/DEPLOYED at its tested 0.8.4 milestone; overall Phase 8 stays OPEN. See [Desert Heat baseline](studio-visual-baseline.md), [product model](../PRODUCT-MODEL.md), [architecture](../ARCHITECTURE.md), and [Wave 2 README](../tasks/p8b/README.md).
 
 ## What a creator is trying to do
