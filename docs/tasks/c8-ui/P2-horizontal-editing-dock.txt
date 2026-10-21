@@ -5,22 +5,25 @@ MODEL / REASONING / USAGE
 - Browser required: no.
 
 VERSIONING
-- Required unchanged project version: `0.8.4`.
+- Required unchanged project version: `0.8.10`.
 
 GOAL
-Replace the screenshot's small split Preview + endless right editor with the approved **TV stage above an attached full-width bottom dock**. Channel's real TV stays visible, the dock contains Pages & Layout/Appearance tabs, and forms use horizontal space with limited, contained scrolling.
+Correct the completed P8B layout that still resembles the screenshot's small split Preview + endless side editor with the approved **TV stage above an attached full-width bottom dock**. Channel's real TV stays visible, the dock contains Pages & Layout/Appearance tabs, and forms use horizontal space with limited, contained scrolling.
+
+P8B COMPLETED-SOURCE REQUIREMENT (OWNER CORRECTION)
+P8B already ran locally. Implement against the real completed P8B Channel editor, template/static sections and fullscreen behavior—not stale GitHub 0.8.4 App.tsx. Expected post-P8B P6 root/lock is 0.8.10; verify actual local HEAD, all P8B prompt commits, any P7 manual work, version fields and dirty files before editing. If version is not 0.8.10 or local work conflicts, STOP and reconcile this correction to the actual proven baseline without resetting, overwriting or rerunning P8B. Preserve all completed template/layout/native compatibility functionality.
 
 PREFLIGHT
-Read C8-UI design+plan, P1 handoff and inspect actual App.tsx, style.css, Content/Design controls, inspector save/dirty handlers, responsive CSS and focused Studio tests. Verify unchanged root+lock 0.8.4 and coherent runner prefix; no accidental P8B local implementation conflicts.
+Read C8-UI design+plan, P1 handoff and inspect actual App.tsx, style.css, Content/Design controls, inspector save/dirty handlers, responsive CSS and focused Studio tests. Verify unchanged root+lock 0.8.10 and coherent runner prefix; no accidental P8B local implementation conflicts.
 
 IMPLEMENT
 1. Channel composition under existing topbar: upper TV stage (real 16:9 frame, centered/letterboxed, no stretching/cropping), lower editing dock butted directly to stage with subtle divider and zero gap. Use viewport-height budget rather than naive width 100% TV: initial TV stage roughly 60–65% and dock 35–40% of available area; dock min ~240–280px desktop or safe responsive constraint. No ordinary whole-Channel vertical scroll at 1440x900/1280x720; allow limited INNER panel scrolling for long catalogs/lists/forms, never hide Save.
-2. Put the two REAL styled accessible tabs inside dock header. Dock uses horizontal layout: Pages column, Sections column and selected editor/context region for Pages & Layout; Appearance grouped compact controls spanning dock width. Until p8b template work, reuse functional old Content and Design editing controls with human labels and accessible compact presentation; do not fake advanced sections or throw away film/page CRUD. If no section selected fill space with useful actions not empty inspector. Eliminate permanent side inspector/third rail for Channel.
-3. Keep TV interactive for TV functions; editing selection via dock, not by clicking playable cards. Preserve panel field values on tab changes, dirty-edit confirm/focus and accessible keyboard tabs/arrow semantics. Respect Desert Heat restrained dark/orange and independent creator/media art colors, with clear focus.
+2. Put the two REAL styled accessible tabs inside dock header. Dock uses horizontal layout: Pages column, Sections column and selected editor/context region for Pages & Layout; Appearance grouped compact controls spanning dock width. P8B Page Layout templates, bounded static image/text sections and section edit controls are ALREADY IMPLEMENTED LOCALLY: preserve them and place their actual controls within the horizontal dock. Reuse Appearance/Design, owner-scoped mutations and accessible actions, not a stripped-down old Content form. Do not reset page state or remove modules. If no section selected fill space with useful actions not empty inspector. Eliminate permanent side inspector/third rail for Channel.
+3. Keep the P8B TV interactive for TV functions; editing selection via dock, not by clicking playable cards. Preserve panel field values on tab changes, dirty-edit confirm/focus and accessible keyboard tabs/arrow semantics. Respect Desert Heat restrained dark/orange and independent creator/media art colors, with clear focus.
 4. Tablet/narrow desktop dock transitions to contained compact tabs or stacked subpanels; phone has usable touch bottom sheet/focused dock panels with TV still 16:9. Avoid overflow and impossible 3 tiny columns. No unrelated Home/Export restructure.
 
 VALIDATION
 Focused Studio component/CSS tests for default stage/dock, adjacent layout, tabs and panel selection, short-height overflow containment, functional page and brand forms, saving/dirty-state, 375/768/1280/1440 simulated layouts where available, focus order. Studio typecheck once and changed tests, no global builds or screenshots claimed as real browser. P4 owns live viewport acceptance.
 
 HANDOFF / SAFETY
-Correction root+lock stays exactly 0.8.4, no self-commit, /activate, native build, migration, publication or staging. Runner owns commit. <=8m goal/15m cap. Provide P3 parent element and dock component/state handoff; don't implement a new second Preview.
+Correction root+lock stays exactly 0.8.10, no self-commit, /activate, native build, migration, publication or staging. Runner owns commit. <=8m goal/15m cap. Provide P3 parent element and dock component/state handoff; don't implement a new second Preview.
