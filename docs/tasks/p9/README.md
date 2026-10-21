@@ -2,6 +2,10 @@
 
 **Owner-approved documentation plan, 2026-10-21. NOT IMPLEMENTED OR QUALIFIED.** Planned 0.9.x; no version bump. Deadline Fri October 23 noon America/Chicago; internal 11:30 AM, freeze Thu 5 PM.
 
+## Inherited Phase 7 technical exception / final acceptance
+
+The [owner-accepted Phase 7 closeout](../p7/owner-closeout-2026-10-21.md) authorizes beginning P8 from committed `0.8.0` without rerunning C7 native worker/ZIP/device installation. It does **not** qualify HLS moving video, audible sound, pause or seek in the installed Vega app. Phase 9's final installed-client qualification must explicitly test/fix or clearly record this unqualified native playback boundary; historical C7 R4 remains NOT GREEN. Do not treat owner approval as evidence of successful native media playback or Appstore acceptance.
+
 ## Main feature
 
 **Publish a creator's app once; update its compatible content and supported design from Studio without rebuilding. When native functionality changes, export a new version of that SAME app.**
