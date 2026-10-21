@@ -1,0 +1,26 @@
+TASK: Correction 8 / P3 — Fullscreen left edge editor drawer
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.10`.
+
+GOAL
+Convert the existing c8-ui fullscreen BOTTOM editing dock into a LEFT-side slide-out overlay, reusing P1's secondary editor rail and the existing fullscreen/Preview state machine. The TV remains immersive in fullscreen; the editor is on-demand. Do not create another Preview or editor.
+
+PREFLIGHT
+Read c8-ui2 design/plan and P2 handoff; verify unchanged 0.8.10 and clean compatible local source. Inspect App.tsx previewFullscreen, fullscreenRoot, dockVisible/dockHover/dockHideTimer, pointer distance and Alt+E/fallback inert logic; style.css .preview-fullscreen .channel-dock, .dock-revealed and .channel-dock-handle; Preview.tsx remote/TV Back. Reuse proven fullscreen API/fallback/cleanup tests, and inspect only changed paths.
+
+IMPLEMENT
+1. Normal mode stays P1's left editor rail + right 16:9 TV. In fullscreen, fullscreenRoot still encloses the SAME TV Preview and SAME editor component. Change editor to a LEFT overlay: width bounded (comfortable ~340–480px depending viewport), height fills usable fullscreen, visually translucent/dimmed charcoal, subtle shadow. Closed state translates X-left offscreen; open state slides right over the TV. Remove old translateY/bottom dock fullscreen CSS, preserve page/section/Appearance forms and section selection without remount.
+2. Edge activation uses distance from LEFT viewport edge (~32–40px) rather than bottom. Keep a visible slim left-edge focusable handle; opening on hover/handle click, keeping open on pointer within drawer, active focus, modal picker, unsaved field/dirty state and touch interaction. Hide only after a safe cancellable idle delay. Maintain Alt+E (or existing keyboard action) and touch tap/swipe; do not require hover.
+3. Browser Fullscreen API only on real user gesture and clear fallback when rejected; shared fullscreen root includes editor rail; fallback inert must affect only Studio UI OUTSIDE that root. Escape exits fullscreen, virtual remote/Backspace TV Back outside input; restore editor scroll/form value and focus to Full Screen trigger on exit. Handle fullscreenchange, resize, project switch, unmount cleanup, reduced motion and focus accessibility. No duplicate editor mount, Preview/player or independent fullscreen state.
+4. Keep the Virtual remote available on the right/low-impact corner in fullscreen and not behind the left drawer; avoid covering TV details and do not steal arrow keys from form fields. Preserve existing P8B static section/video playback and ChannelSpec.
+
+VALIDATION
+Focused current fullscreen/state tests: left-edge pointer activation (not bottom), idle hide, hover/focus/unsaved/modal hold, touch+keyboard reveal, one Preview and editor across transitions, fallback inert, TV Back vs Exit, focus restore, projector switch cleanup and reduced motion; plus Studio typecheck once. No root full build/tests/browser host/native worker/new encoding. Manual P4 owns actual hover animation and native API geometry verification.
+
+HANDOFF / SAFETY
+Keep root+two lock version fields 0.8.10, no self-commit, /activate, public release/rights/schema/worker change. <=8 minutes target, hard stop at 15; state unresolved browser-specific caveats for P4.
