@@ -25,7 +25,7 @@ The owner's actual screenshot shows a small TV beside a long right editing form,
 | [P1 — Always-on Preview](P1-always-on-channel-preview.txt) | Sol Medium, runner | Correct actual post-P8B Channel mount/tabs; remove AI/Close Preview |
 | [P2 — Horizontal dock](P2-horizontal-editing-dock.txt) | Sol Medium, runner | Compose actual finished P8B editor into attached bottom dock with usable scrolling |
 | [P3 — Fullscreen edge dock](P3-fullscreen-edge-dock.txt) | Sol High, runner | Repair/extend existing P8B fullscreen, bottom-edge reveal, keyboard/touch |
-| [P4 — Independent closeout](P4-tv-first-closeout.txt) | Sol High, **manual browser** | Real creator testing, one final aggregate, protected staged deployment if authorized |
+| [P4 — Staging + combined Wave 2 closeout](P4-tv-first-closeout.txt) | Sol High, **manual browser** | One final aggregate, required protected staging rollout, final signed-in UI tests on staging, close outstanding P8B Wave 2 gates |
 
 P1–P3 are runner-owned implementation commits. P4 is the **exactly one final closeout-type prompt**, browser-required/manual; evidence file `docs/tasks/c8-ui/closeout.md` only after observation. Correcting this UI does not close Phase 8.
 
@@ -33,7 +33,7 @@ P1–P3 are runner-owned implementation commits. P4 is the **exactly one final c
 
 1. Fetch current GitHub main or safely reconcile the local checkout. Verify `git status --short`, HEAD and all three root/lock version fields **0.8.10**, with P8B implementation history intact. A dirty local tree needs explicit reconciliation; it is never reset, force-pulled or silently overwritten.
 2. Run `npm run codex:stack:validate -- c8-ui` then `npm run codex:stack -- c8-ui`. The runner executes **P1–P3**, all keeping 0.8.10, and stops before P4 for independent browser acceptance. No `/activate`. Focused Studio tests/typecheck only in P1–P3, one aggregate and real browser in P4.
-3. **Keep qualifications distinct.** c8-ui fixes Channel shell and fullscreen dock. P8B P7 remains NOT GREEN / NOT DEPLOYED for authenticated candidate, native new-section device and operator grant; do not conceal or repeat those gates merely to fix the UI. P4 reports UI result and protected staging result separately. No staging action without a reviewed exact-hash operator grant, backup and rollback.
+3. **Keep qualifications distinct.** c8-ui fixes Channel shell and fullscreen dock. P8B P7 remains NOT GREEN / NOT DEPLOYED for authenticated candidate, native new-section device and operator grant; do not conceal or repeat those gates merely to fix the UI. P4 reports UI result, staging result and combined P8B Wave 2 status separately. The old P8B P7 NOT GREEN stays historical; a new dated follow-on can supersede it only with real staged owner and native static-layout evidence. No staging action without a reviewed exact-hash operator grant, backup and rollback.
 4. P8B Hero/Grid/Rows, static sections, selected-page synchronization, draft persistence, owner rights, native renderer/compatibility guard and already-tested Preview fullscreen behavior remain protected. No changes to P8B prompt files or original Wave 1 P5.
 
 
