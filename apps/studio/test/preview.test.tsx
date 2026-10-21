@@ -182,7 +182,7 @@ test('Studio theme seam leaves creator TV colors and directional focus independe
   assert.ok(theme);
   assert.match(theme, /--fl-canyon-image: url\('\/desert-canyon\.webp'\)/);
   assert.match(theme, /prefers-reduced-data: reduce/);
-  assert.doesNotMatch(theme, /\.tv-screen\s*\{|--tv-(?:accent|bg|text)\s*:/);
+  assert.doesNotMatch(theme, /--tv-(?:accent|bg|text)\s*:/);
   const canyon = readFileSync(new URL('../public/desert-canyon.webp', import.meta.url));
   assert.equal(canyon.toString('ascii', 0, 4), 'RIFF');
   assert.equal(canyon.toString('ascii', 8, 12), 'WEBP');

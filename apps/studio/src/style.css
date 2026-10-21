@@ -674,17 +674,17 @@ body { min-width: 0; }
 @media(max-width:760px){.layout-workspace,.layout-workspace.layout-has-inspector{display:block}.layout-page-rail{position:static;flex-direction:row;overflow:auto;margin-bottom:20px}.layout-page-rail .eyebrow{align-self:center}.layout-page-rail button{flex:none}.layout-inspector{margin-top:20px}.layout-section{padding:14px}}
 @media(min-width:1440px){.channel-preview-split:has(.layout-workspace){grid-template-columns:minmax(0,1fr)}}
 
-/* P8B: the existing Preview container becomes the full-screen surface. */
+/* The shared TV and editor shell is the fullscreen surface. */
 .preview-actions{display:flex;gap:8px;flex-wrap:wrap}
-#tv-preview.preview-fullscreen{position:fixed;inset:0;z-index:100;background:#090c0d;color:#e8e7e3;padding:clamp(8px,1.5vh,20px);overflow:auto}
-#tv-preview:fullscreen{width:100%;height:100%;background:#090c0d}
-.preview-fullscreen .preview-wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.preview-fullscreen .preview-heading,.preview-fullscreen .remote-bar{width:min(100%,calc((100dvh - 160px)*16/9));margin:0 0 10px}
-.preview-fullscreen .preview-heading{align-items:center;flex-wrap:wrap}
-.preview-fullscreen .tv-frame{width:min(100%,calc((100dvh - 160px)*16/9));max-height:calc(100dvh - 160px);flex:none;border-width:clamp(2px,.7vmin,9px)}
-.preview-fullscreen .remote-bar{margin:10px 0 0}
+.channel-presentation.preview-fullscreen{position:fixed;inset:0;z-index:100;width:100%;height:100dvh;display:block;background:#090c0d;color:#e8e7e3;overflow:hidden}
+.channel-presentation:fullscreen{width:100%;height:100%;background:#090c0d}
+.preview-fullscreen .channel-tv-stage{width:100%;height:100%;padding:clamp(8px,1.5vh,20px)}
+.preview-fullscreen .channel-tv-stage .preview-wrap{height:100%;min-height:0;justify-content:center}
+.preview-fullscreen .channel-tv-stage .preview-heading{width:100%;align-items:center;flex-wrap:wrap}
+.preview-fullscreen .channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 48px)*16/9));max-height:calc(100cqh - 48px);flex:none;border-width:clamp(2px,.7vmin,9px)}
+.preview-fullscreen .channel-tv-stage .remote-bar{position:absolute;right:12px;bottom:10px}
 .preview-exit{border:1px solid #d87951;border-radius:7px;background:#a84c2e;color:white;padding:9px 14px;font-weight:700}
-@media(max-height:540px){.preview-fullscreen .preview-heading,.preview-fullscreen .remote-bar{margin:3px 0}.preview-fullscreen .tv-frame{max-height:calc(100dvh - 115px);width:min(100%,calc((100dvh - 115px)*16/9))}}
+@media(max-height:540px){.preview-fullscreen .channel-tv-stage .tv-frame{max-height:calc(100cqh - 42px);width:min(100%,calc((100cqh - 42px)*16/9))}}
 .preview-fullscreen-notice{position:absolute;top:4px;left:12px;margin:0;color:#ffd3bf;font-size:12px}
 
 /* C8 P2: the stage and editor are adjacent children of the P3 fullscreen root. */
@@ -701,10 +701,13 @@ body { min-width: 0; }
 .channel-tv-stage .remote-bar{position:absolute;right:10px;bottom:4px;display:grid;gap:2px;margin:0;padding:4px 6px;background:#181d1dcc;border-radius:7px}
 .channel-tv-stage .remote-bar>div:first-child{display:grid;gap:1px}.channel-tv-stage .remote-bar span{font-size:10px;max-width:160px}
 .channel-tv-stage .remote{gap:0}.channel-tv-stage .remote button{height:23px;min-height:23px}.channel-tv-stage .remote>div{margin:1px}
-/* P3 will retarget fullscreen to the common root; keep P8B's TV-only mode usable meanwhile. */
-.channel-tv-stage #tv-preview.preview-fullscreen .preview-wrap{min-height:100%;height:100%;justify-content:center}
-.channel-tv-stage #tv-preview.preview-fullscreen .tv-frame{width:min(100%,calc((100dvh - 160px)*16/9));max-height:calc(100dvh - 160px)}
-.channel-tv-stage #tv-preview.preview-fullscreen .remote-bar{position:static;width:min(100%,calc((100dvh - 160px)*16/9));display:flex;margin:8px 0 0}
+.preview-fullscreen .channel-stage-action{display:none}
+.channel-dock-handle{display:none}
+.preview-fullscreen .channel-dock-handle{display:block;position:absolute;z-index:4;bottom:0;left:50%;transform:translateX(-50%);height:36px;min-width:140px;border:1px solid #d87951;border-radius:8px 8px 0 0;background:#392b25;color:#fff;padding:4px 12px;font-weight:700;touch-action:manipulation}
+.preview-fullscreen.dock-revealed .channel-dock-handle{bottom:max(min(46dvh,420px),min(240px,70dvh))}
+.preview-fullscreen .channel-dock{position:absolute;z-index:3;left:0;right:0;bottom:0;height:min(46dvh,420px);min-height:min(240px,70dvh);box-shadow:0 -8px 28px #000b;transform:translateY(100%);visibility:hidden;pointer-events:none;transition:transform .18s ease,visibility .18s}
+.preview-fullscreen.dock-revealed .channel-dock{transform:translateY(0);visibility:visible;pointer-events:auto}
+@media(prefers-reduced-motion:reduce){.preview-fullscreen .channel-dock{transition:none}}
 .channel-dock{min-height:0;min-width:0;display:flex;flex-direction:column;border-top:1px solid var(--fl-border);background:var(--fl-surface);overflow:hidden}
 .channel-dock-header{flex:none;padding:6px 12px;border-bottom:1px solid var(--fl-border-soft)}
 .channel-dock-header .studio-subviews{margin:0;gap:6px}.channel-dock-header .studio-subviews button{min-height:38px;padding:8px 14px;border:1px solid var(--fl-border-soft);border-radius:7px;background:var(--fl-nav);color:var(--fl-text);font-weight:700}

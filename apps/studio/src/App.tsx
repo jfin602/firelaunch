@@ -242,19 +242,35 @@ export default function App() {
   const [inspectorProject, setInspectorProject] = useState<string | null>(null);
   const [previewFullscreen, setPreviewFullscreen] = useState<'native' | 'fallback' | null>(null);
   const [fullscreenNotice, setFullscreenNotice] = useState('');
-  const previewContainer = useRef<HTMLDivElement>(null);
+  const [dockVisible, setDockVisible] = useState(false);
+  const [appearanceDraftPending, setAppearanceDraftPending] = useState(false);
+  const fullscreenRoot = useRef<HTMLDivElement>(null);
+  const dock = useRef<HTMLElement>(null);
+  const dockHover = useRef(false);
+  const dockHideTimer = useRef<number | null>(null);
   const fullscreenTrigger = useRef<HTMLButtonElement>(null);
   const fullscreenExit = useRef<HTMLButtonElement>(null);
   const fullscreenRequest = useRef(0);
+  const cancelDockHide = () => { if (dockHideTimer.current !== null) { window.clearTimeout(dockHideTimer.current); dockHideTimer.current = null; } };
+  const dockMustStayOpen = () => dockHover.current || sectionDraftDirty.current || inspectorDirty.current || Boolean(fullscreenRoot.current?.querySelector('[role="dialog"]')) || Boolean(dock.current?.contains(document.activeElement));
+  const scheduleDockHide = () => {
+    cancelDockHide();
+    if (dockMustStayOpen()) return;
+    dockHideTimer.current = window.setTimeout(() => { dockHideTimer.current = null; if (!dockMustStayOpen()) setDockVisible(false); }, 1200);
+  };
+  const revealDock = () => { cancelDockHide(); setDockVisible(true); };
   const exitPreviewFullscreen = useCallback(() => {
     fullscreenRequest.current++;
+    cancelDockHide();
+    dockHover.current = false;
     setFullscreenNotice('');
-    if (document.fullscreenElement === previewContainer.current) void document.exitFullscreen?.().catch(() => undefined);
+    if (document.fullscreenElement === fullscreenRoot.current) void document.exitFullscreen?.().catch(() => undefined);
     setPreviewFullscreen(null);
+    setDockVisible(false);
     window.setTimeout(() => fullscreenTrigger.current?.isConnected && fullscreenTrigger.current.focus(), 0);
   }, []);
   const enterPreviewFullscreen = () => {
-    const target = previewContainer.current;
+    const target = fullscreenRoot.current;
     if (!target) return;
     const request = ++fullscreenRequest.current;
     const fallback = (reason: string) => { if (request === fullscreenRequest.current && target.isConnected) { setFullscreenNotice(reason); setPreviewFullscreen('fallback'); } };
@@ -269,13 +285,15 @@ export default function App() {
   useEffect(() => {
     if (!previewFullscreen) return;
     fullscreenExit.current?.focus();
-    const target = previewContainer.current;
-    const background = previewFullscreen === 'fallback' ? Array.from(document.querySelectorAll<HTMLElement>('.app-shell > .sidebar, .studio-main > :not(.workspace), .channel-toolbar, .channel-editor, .workspace > .inspector')) : [];
+    const target = fullscreenRoot.current;
+    const background = previewFullscreen === 'fallback' ? Array.from(document.querySelectorAll<HTMLElement>('.app-shell > .sidebar, .studio-main > :not(.workspace), .workspace > .inspector')).filter(element => !target?.contains(element)) : [];
+    const previousInert = background.map(element => element.inert);
     background.forEach(element => { element.inert = true; });
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); exitPreviewFullscreen(); }
+      else if (event.altKey && event.key.toLowerCase() === 'e' && !event.repeat) { event.preventDefault(); revealDock(); dock.current?.querySelector<HTMLElement>('.studio-subviews button')?.focus(); }
       else if (event.key === 'Tab' && previewFullscreen === 'fallback' && target) {
-        const focusable = Array.from(target.querySelectorAll<HTMLElement>('button, [tabindex="0"], video[controls], audio[controls]')).filter(element => !element.hasAttribute('disabled'));
+        const focusable = Array.from(target.querySelectorAll<HTMLElement>('button, input, select, textarea, [tabindex="0"], video[controls], audio[controls]')).filter(element => !element.hasAttribute('disabled') && !element.closest('[inert], .channel-stage-action'));
         if (!focusable.length) return;
         const first = focusable[0]!, last = focusable[focusable.length - 1]!;
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
@@ -283,10 +301,10 @@ export default function App() {
       }
     };
     window.addEventListener('keydown', onKey, true);
-    return () => { background.forEach(element => { element.inert = false; }); window.removeEventListener('keydown', onKey, true); };
+    return () => { background.forEach((element, index) => { element.inert = previousInert[index]!; }); window.removeEventListener('keydown', onKey, true); };
   }, [previewFullscreen, exitPreviewFullscreen]);
   useEffect(() => {
-    const onChange = () => { if (previewFullscreen === 'native' && document.fullscreenElement !== previewContainer.current) exitPreviewFullscreen(); };
+    const onChange = () => { if (previewFullscreen === 'native' && document.fullscreenElement !== fullscreenRoot.current) exitPreviewFullscreen(); };
     document.addEventListener('fullscreenchange', onChange);
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, [previewFullscreen, exitPreviewFullscreen]);
@@ -296,13 +314,14 @@ export default function App() {
     if (fullscreenProject.current !== project?.id && previewFullscreen) exitPreviewFullscreen();
     fullscreenProject.current = project?.id;
   }, [project?.id, previewFullscreen, exitPreviewFullscreen]);
-  useEffect(() => () => { fullscreenRequest.current++; if (document.fullscreenElement === previewContainer.current) void document.exitFullscreen?.().catch(() => undefined); }, []);
+  useEffect(() => () => { fullscreenRequest.current++; if (dockHideTimer.current !== null) window.clearTimeout(dockHideTimer.current); if (document.fullscreenElement === fullscreenRoot.current) void document.exitFullscreen?.().catch(() => undefined); }, []);
   const inspectorDirty = useRef(false);
   const sectionDraftDirty = useRef(false);
   const [sectionDraftPending, setSectionDraftPending] = useState(false);
   const leaveSectionDraft = () => !sectionDraftDirty.current || window.confirm('Discard unsaved section edits?');
   const reportSectionDraft = useCallback((dirty: boolean) => { sectionDraftDirty.current = dirty; setSectionDraftPending(dirty); }, []);
-  const setInspectorDirty = (dirty: boolean) => { inspectorDirty.current = dirty; };
+  const setInspectorDirty = (dirty: boolean) => { inspectorDirty.current = dirty; setAppearanceDraftPending(dirty); };
+  useEffect(() => { if (previewFullscreen && dockVisible) scheduleDockHide(); }, [previewFullscreen, dockVisible, sectionDraftPending, appearanceDraftPending]);
   const closeInspector = () => {
     if (inspectorDirty.current && !window.confirm('Discard unsaved appearance changes?')) return false;
     inspectorDirty.current = false;
@@ -407,9 +426,10 @@ export default function App() {
       {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : surface === 'Home' ? <Home key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} projects={projects} accountId={session?.accountId ?? null} hosted={!!session} libraryRevision={libraryRevision} onSelectProject={id => void switchProject(id)} onSurface={navigate} onEditChannel={() => openChannel('Appearance')} onOpenVideo={openVideo} onPreview={() => openChannel('Pages & Layout')}/> : <div className={`workspace ${surface === 'Channel' ? 'channel-workspace' : ''}`}>
         <div className="workspace-main" id="studio-controls">
           {surface === 'Export' && <div className="chips studio-subviews" role="group" aria-label="Export views">{exportViews.map(view => <button key={view} type="button" className={exportView === view ? 'active' : ''} aria-pressed={exportView === view} onClick={() => setExportView(view)}>{view}</button>)}</div>}
-          {surface === 'Channel' ? <div id="channel-fullscreen-root" className="channel-presentation">
-            <div className="channel-tv-stage"><div className="channel-stage-action"><button ref={fullscreenTrigger} type="button" className="preview-toggle" onClick={enterPreviewFullscreen}>View full screen</button></div><div id="tv-preview" ref={previewContainer} className={previewFullscreen ? 'preview-fullscreen' : undefined} role={previewFullscreen === 'fallback' ? 'dialog' : undefined} aria-modal={previewFullscreen === 'fallback' ? true : undefined} aria-label={previewFullscreen === 'fallback' ? 'Full-screen TV Preview' : undefined}>{fullscreenNotice && <p className="preview-fullscreen-notice" role="status">{fullscreenNotice}</p>}<Preview key={`${session?.accountId ?? 'local'}:${project.id}`} spec={project.spec} selectedPageId={editorPageId} hosted={!!session} accountId={session?.accountId} libraryRevision={libraryRevision} fullscreen={!!previewFullscreen} onExitFullscreen={exitPreviewFullscreen} exitButtonRef={fullscreenExit}/></div></div>
-            <section className="channel-dock" aria-label="Channel editing dock"><div className="channel-dock-header"><div className="chips studio-subviews" role="group" aria-label="Channel views">{channelViews.map(view => <button key={view} type="button" className={channelView === view ? 'active' : ''} aria-pressed={channelView === view} onClick={() => { if (channelView === view || !leaveSectionDraft()) return; if (inspectorProject && !closeInspector()) return; setInspectorProject(view === 'Appearance' ? project.id : null); setChannelView(view); }}>{view}</button>)}</div></div>
+          {surface === 'Channel' ? <div id="channel-fullscreen-root" ref={fullscreenRoot} className={`channel-presentation${previewFullscreen ? ' preview-fullscreen' : ''}${dockVisible ? ' dock-revealed' : ''}`} role={previewFullscreen === 'fallback' ? 'dialog' : undefined} aria-modal={previewFullscreen === 'fallback' ? true : undefined} aria-label={previewFullscreen === 'fallback' ? 'Full-screen TV Preview' : undefined} onPointerMove={event => { if (!previewFullscreen || event.pointerType === 'touch') return; if (event.currentTarget.getBoundingClientRect().bottom - event.clientY <= 38) revealDock(); }} onPointerLeave={() => { if (previewFullscreen) scheduleDockHide(); }} onTouchStart={event => { if (previewFullscreen && event.currentTarget.getBoundingClientRect().bottom - event.touches[0]!.clientY <= 48) revealDock(); }}>
+            <div className="channel-tv-stage"><div className="channel-stage-action"><button ref={fullscreenTrigger} type="button" className="preview-toggle" onClick={enterPreviewFullscreen}>View full screen</button></div><div id="tv-preview">{fullscreenNotice && <p className="preview-fullscreen-notice" role="status">{fullscreenNotice}</p>}<Preview key={`${session?.accountId ?? 'local'}:${project.id}`} spec={project.spec} selectedPageId={editorPageId} hosted={!!session} accountId={session?.accountId} libraryRevision={libraryRevision} fullscreen={!!previewFullscreen} onExitFullscreen={exitPreviewFullscreen} exitButtonRef={fullscreenExit}/></div></div>
+            {previewFullscreen && <button type="button" className="channel-dock-handle" aria-label="Show editing dock (Alt+E)" aria-expanded={dockVisible} onClick={() => { if (dockVisible && !dockMustStayOpen()) { cancelDockHide(); setDockVisible(false); } else revealDock(); }}>Edit channel <span aria-hidden="true">⌃</span></button>}
+            <section ref={dock} className="channel-dock" aria-label="Channel editing dock" inert={!!previewFullscreen && !dockVisible} onPointerEnter={() => { dockHover.current = true; if (previewFullscreen) revealDock(); }} onPointerLeave={() => { dockHover.current = false; if (previewFullscreen) scheduleDockHide(); }} onFocusCapture={() => { if (previewFullscreen) revealDock(); }} onBlurCapture={() => { if (previewFullscreen) window.setTimeout(scheduleDockHide, 0); }}><div className="channel-dock-header"><div className="chips studio-subviews" role="group" aria-label="Channel views">{channelViews.map(view => <button key={view} type="button" className={channelView === view ? 'active' : ''} aria-pressed={channelView === view} onClick={() => { if (channelView === view || !leaveSectionDraft()) return; if (inspectorProject && !closeInspector()) return; setInspectorProject(view === 'Appearance' ? project.id : null); setChannelView(view); }}>{view}</button>)}</div></div>
               <div className="channel-dock-body"><div className="channel-editor" hidden={channelView !== 'Pages & Layout'}><Content key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} commit={commit} onDirtyChange={reportSectionDraft} accountId={session?.accountId} libraryRevision={libraryRevision} pageId={editorPageId!} onPageSelect={pageId => setEditorPageSelection({ projectId: project.id, pageId })}/></div>
               {channelView === 'Appearance' && <aside className="channel-appearance" id="appearance-inspector" aria-label="Appearance editor"><Design key={project.id} project={project} commit={commit} onDirtyChange={setInspectorDirty}/></aside>}</div>
             </section>
