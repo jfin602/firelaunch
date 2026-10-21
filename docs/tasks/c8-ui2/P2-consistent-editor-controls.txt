@@ -1,0 +1,26 @@
+TASK: Correction 8 / P2 — Consistent Desert Heat editor buttons
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.10`.
+
+GOAL
+Fix the current pale/white/default-looking buttons in the new secondary editor rail. Make the control hierarchy match existing FireLaunch Desert Heat surfaces while keeping editing actions unmistakable, accessible and functional. No global theme rewrite.
+
+PREFLIGHT
+Read c8-ui2 plan/design and P1 handoff; require coherent local P1 commit and unchanged 0.8.10 root/lock with no conflicting dirt. Inspect actual App.tsx Content/ModuleEditor/Design/button and class markup plus apps/studio/src/style.css semantic variables, existing focus/disabled styles and Studio tests. Keep Preview's TV-focus visuals and player buttons independent of Studio chrome.
+
+IMPLEMENT
+1. Style Channel tabs (Pages & Layout, Appearance), New page, Edit page, Edit section, Add section, Move up/down, Remove section, Close/Cancel/Save, Full screen and Virtual remote using existing Studio semantic palette. Neutral secondary: dark charcoal, warm subtle border and consistent radius/type/padding; primary/selected: restrained warm orange; destructive: clear muted danger; disabled: intentional dimming but legible; strong focus-visible and hover cues.
+2. Replace any residual browser-default white buttons with scoped Channel editor selectors/classes, not broad global 'button' CSS. Do not accidentally recolor the creator-owned TV Preview brand, native Vega UI, movie artwork, Library/Publish/Export, or private status labels. Use semantic type=button and accurate accessible names.
+3. On the rail, make page rows and section actions visibly grouped with balanced spacing and touch targets where practical; preserve compactness, self-contained scrolling and no unneeded decorative panel. Avoid duplicate class APIs/new component design system if small CSS patch suffices.
+4. Keep editor Save/Saved/Failed and unsaved warning genuinely tied to current mutations. Page/template/section selection remains keyboard-operable; no CSS that visually hides focus or destructive confirmation.
+
+VALIDATION
+Run only targeted Studio shell/layout/page editor tests plus Studio package typecheck, checking semantic classes, disabled/focus, save/error/section operations and untouched TV focus selectors. Real visual color/spacing confirmation belongs to P4. Do not run root build/test/check, native/media/browser/staging, or P1 entire suite unless failing integration demands it.
+
+HANDOFF / SAFETY
+Keep version 0.8.10 (package and both lock fields) unchanged. Runner owns commit. Preserve c8-ui and P8B working code, owner/rights/CSRF and public release. No /activate or self-commit. <=8 min target, 15 min hard cap. Hand off styled rail to P3 fullscreen overlay.
