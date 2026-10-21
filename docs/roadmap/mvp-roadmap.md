@@ -1,5 +1,9 @@
 # FireLaunch MVP Roadmap
 
+## Current Phase 8 final Channel mockup correction — c8-ui3 (October 21)
+
+The latest approved owner mockup is the final Channel visual target. [c8-ui3](../tasks/c8-ui3/README.md) follows already committed c8-ui2 P1–P3 at unchanged `0.8.10`: P1 closes sidebar/topbar seam, sets gray New Page editor palette and solid dark Channel-only background; P2 maximizes **borderless** 16:9 TV and moves Draft/Interactive + View Full Screen BELOW TV, Virtual remote below/right; P3 deploys latest tested code to staging via protected exact-hash workflow **FIRST** and then uses the authenticated Codex browser on that staged release to compare against the user-attached final image. The older authored c8-ui2 P4 is superseded as staging/visual closeout and is not to be run twice. P8B native static-layout device gate remains open. No c8-ui3 implementation has yet run; Phase 8 OPEN.
+
 ## Current Phase 8 c8-ui2 owner-approved follow-up (2026-10-21)
 
 The [c8-ui correction](../tasks/c8-ui/closeout.md) is **UI GREEN / DEPLOYED** to protected staging at root/lock `0.8.10`, but P8B Wave 2 still has its own native static-layout device qualification gap. The owner approves [c8-ui2](../tasks/c8-ui2/README.md) as the next **fixed-version 0.8.10 correction**, defined by the [secondary-left-rail design](../design/channel-secondary-rail.md). Default Channel is a vertical secondary editor rail immediately right of the main Studio sidebar and the actual interactive 16:9 TV on the right with Virtual remote underneath. Restyle Channel buttons to match Desert Heat. Fullscreen preserves the TV state and uses a LEFT slide-out editing overlay, replacing bottom reveal. P1 rail, P2 buttons, P3 fullscreen and P4 independent protected staging/owner browser closeout are authored, NOT implemented. No rerun of c8-ui or P8B, no native module/rights changes, Phase 8 stays OPEN.
