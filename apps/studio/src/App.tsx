@@ -100,7 +100,7 @@ function StaticModuleEditor({ module, pageId, imageItems, commit, onDirtyChange 
       <label className="field"><span>Background</span><select aria-label="Section background" value={draft.background ?? 'theme'} onChange={event => change({ ...draft, background: event.target.value as 'theme' | 'surface' })}><option value="theme">Channel</option><option value="surface">Raised</option></select></label>
       {draft.kind === 'image-text' && <label className="field"><span>Image side</span><select aria-label="Image side" value={draft.imageSide ?? 'left'} onChange={event => change({ ...draft, imageSide: event.target.value as 'left' | 'right' })}><option value="left">Left</option><option value="right">Right</option></select></label>}
     </details><div className="button-row"><button type="button" disabled={!dirty || !draft.title.trim() || status === 'saving'} onClick={() => void save()}>Save changes</button><button type="button" disabled={!dirty || status === 'saving'} onClick={() => { setDraft(module); setStatus('idle'); }}>Cancel edits</button></div>
-    <p role="status">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved privately' : status === 'failed' ? 'Failed to save. Your edits are still here.' : dirty ? 'Unsaved changes' : ''}</p><small>Native app and live publication support for this section await the next checkpoint.</small>
+    <p role="status">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved privately' : status === 'failed' ? 'Failed to save. Your edits are still here.' : dirty ? 'Unsaved changes' : ''}</p><small>New static layouts require an updated native app before live publication.</small>
   </div>;
 }
 
@@ -123,7 +123,7 @@ function ModuleEditor({ module, pageId, items, imageItems, commit, onDirtyChange
 }
 
 
-function Content({ project, commit, onDirtyChange, accountId, libraryRevision }: { project: ChannelProject; commit: (mutation: ChannelMutation) => Promise<boolean>; onDirtyChange: (dirty: boolean) => void; accountId: string | undefined; libraryRevision: number }) {
+function Content({ project, commit, onDirtyChange, accountId, libraryRevision, pageId, onPageSelect }: { project: ChannelProject; commit: (mutation: ChannelMutation) => Promise<boolean>; onDirtyChange: (dirty: boolean) => void; accountId: string | undefined; libraryRevision: number; pageId: string; onPageSelect: (pageId: string) => void }) {
   const { spec } = project;
   const [inventory, setInventory] = useState<CatalogSnapshot | null>(null);
   useEffect(() => {
@@ -134,7 +134,6 @@ function Content({ project, commit, onDirtyChange, accountId, libraryRevision }:
     return () => { active = false; };
   }, [project.id, accountId, libraryRevision]);
   const imageItems = eligibleStaticImageContent(spec, inventory, accountId);
-  const [pageId, setPageId] = useState(spec.navigation[0]!);
   const [selection, setSelection] = useState<'page' | string | null>(null);
   const selectionOpener = useRef<HTMLButtonElement | null>(null);
   const selectionClose = useRef<HTMLButtonElement | null>(null);
@@ -171,7 +170,7 @@ function Content({ project, commit, onDirtyChange, accountId, libraryRevision }:
     document.addEventListener('keydown', onEscape);
     return () => document.removeEventListener('keydown', onEscape);
   }, [selection]);
-  const selectPage = (id: string) => { if (!canLeaveSection()) return; setSectionDirty(false); setModuleTitle(''); setPageId(id); setSelection(null); setName(''); setRenameError(''); };
+  const selectPage = (id: string) => { if (!canLeaveSection()) return; setSectionDirty(false); setModuleTitle(''); onPageSelect(id); setSelection(null); setName(''); setRenameError(''); };
   const addModule = async () => {
     const id = newId('mod');
     const module: Module = kind === 'text' ? { id, kind, title: moduleTitle.trim() || 'About', body: '' }
@@ -228,6 +227,7 @@ function Content({ project, commit, onDirtyChange, accountId, libraryRevision }:
 export default function App() {
   const [projects, setProjects] = useState<ChannelProject[]>([]);
   const [project, setProject] = useState<ChannelProject | null>(null);
+  const [editorPageSelection, setEditorPageSelection] = useState<{ projectId: string; pageId: string } | null>(null);
   const projectRef = useRef<ChannelProject | null>(null);
   const [surface, setSurface] = useState<Surface>('Library');
   const [channelView, setChannelView] = useState<ChannelView>('AI Assistant');
@@ -399,6 +399,8 @@ export default function App() {
     finally { setBusy(false); }
   };
   const draftSelection = project ? catalogSelections[project.id] : undefined;
+  const editorPageId = project && editorPageSelection?.projectId === project.id && project.spec.navigation.includes(editorPageSelection.pageId)
+    ? editorPageSelection.pageId : project?.spec.navigation[0];
   const openChannel = (view: ChannelView) => { if (!leaveSectionDraft()) return; if (inspectorProject && !closeInspector()) return; setChannelView(view); setSurface('Channel'); setNewChannel(false); };
   useEffect(() => {
     if (!inspectorProject) return;
@@ -421,9 +423,9 @@ export default function App() {
           {surface === 'Channel' && <div className="channel-toolbar"><div className="chips studio-subviews" role="group" aria-label="Channel views">{channelViews.map(view => <button key={view} type="button" className={channelView === view ? 'active' : ''} aria-pressed={channelView === view} onClick={() => { if (!leaveSectionDraft()) return; if (inspectorProject && !closeInspector()) return; setChannelView(view); }}>{view}</button>)}</div><div className="preview-actions"><button type="button" className="preview-toggle" aria-expanded={previewOpen} aria-controls="tv-preview" onClick={() => { if (previewFullscreen) exitPreviewFullscreen(); setPreviewOpen(open => !open); }}>{previewOpen ? 'Close TV Preview' : 'TV Preview'}</button>{previewOpen && <button ref={fullscreenTrigger} type="button" className="preview-toggle" onClick={enterPreviewFullscreen}>View full screen</button>}</div></div>}
           {surface === 'Export' && <div className="chips studio-subviews" role="group" aria-label="Export views">{exportViews.map(view => <button key={view} type="button" className={exportView === view ? 'active' : ''} aria-pressed={exportView === view} onClick={() => setExportView(view)}>{view}</button>)}</div>}
           <div className={previewOpen && surface === 'Channel' ? 'channel-preview-split' : ''}>
-            {surface === 'Channel' && previewOpen && <div id="tv-preview" ref={previewContainer} className={previewFullscreen ? 'preview-fullscreen' : undefined} role={previewFullscreen === 'fallback' ? 'dialog' : undefined} aria-modal={previewFullscreen === 'fallback' ? true : undefined} aria-label={previewFullscreen === 'fallback' ? 'Full-screen TV Preview' : undefined}>{fullscreenNotice && <p className="preview-fullscreen-notice" role="status">{fullscreenNotice}</p>}<Preview key={`${session?.accountId ?? 'local'}:${project.id}`} spec={project.spec} hosted={!!session} accountId={session?.accountId} libraryRevision={libraryRevision} fullscreen={!!previewFullscreen} onExitFullscreen={exitPreviewFullscreen} exitButtonRef={fullscreenExit}/></div>}
+            {surface === 'Channel' && previewOpen && <div id="tv-preview" ref={previewContainer} className={previewFullscreen ? 'preview-fullscreen' : undefined} role={previewFullscreen === 'fallback' ? 'dialog' : undefined} aria-modal={previewFullscreen === 'fallback' ? true : undefined} aria-label={previewFullscreen === 'fallback' ? 'Full-screen TV Preview' : undefined}>{fullscreenNotice && <p className="preview-fullscreen-notice" role="status">{fullscreenNotice}</p>}<Preview key={`${session?.accountId ?? 'local'}:${project.id}`} spec={project.spec} selectedPageId={editorPageId} hosted={!!session} accountId={session?.accountId} libraryRevision={libraryRevision} fullscreen={!!previewFullscreen} onExitFullscreen={exitPreviewFullscreen} exitButtonRef={fullscreenExit}/></div>}
             <div className="channel-editor">
-              {surface === 'Library' ? <Catalog project={project} hosted={!!session} {...(session ? { accountId: session.accountId } : {})} libraryRevision={libraryRevision} onOpenVideo={openVideo} onCatalogChange={() => setLibraryRevision(value => value + 1)} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => openChannel('AI Assistant')}/> : surface === 'Channel' && channelView === 'Appearance' ? <div className="panel-content"><span className="eyebrow">CHANNEL IDENTITY</span><h2>Appearance</h2><p>Choose your channel name, colors and artwork for the TV experience.</p><button type="button" ref={inspectorOpener} aria-expanded={inspectorProject === project.id} aria-controls={inspectorProject === project.id ? 'appearance-inspector' : undefined} onClick={() => { if (inspectorProject) closeInspector(); else setInspectorProject(project.id); }}>Edit appearance</button></div> : surface === 'Channel' && channelView === 'Pages & Layout' ? <Content key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} commit={commit} onDirtyChange={reportSectionDraft} accountId={session?.accountId} libraryRevision={libraryRevision}/> : surface === 'Channel' ? <AgentPanel key={project.id} project={project} {...(draftSelection ? { catalogSelection: draftSelection.selection } : {})} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery key={`${project.id}:${surface}:${exportView}`} project={project} surface={surface === 'Publish' ? 'Publish' : exportView === 'Advanced Source' ? 'Code' : 'Build'} hosted={!!session} />}
+              {surface === 'Library' ? <Catalog project={project} hosted={!!session} {...(session ? { accountId: session.accountId } : {})} libraryRevision={libraryRevision} onOpenVideo={openVideo} onCatalogChange={() => setLibraryRevision(value => value + 1)} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => openChannel('AI Assistant')}/> : surface === 'Channel' && channelView === 'Appearance' ? <div className="panel-content"><span className="eyebrow">CHANNEL IDENTITY</span><h2>Appearance</h2><p>Choose your channel name, colors and artwork for the TV experience.</p><button type="button" ref={inspectorOpener} aria-expanded={inspectorProject === project.id} aria-controls={inspectorProject === project.id ? 'appearance-inspector' : undefined} onClick={() => { if (inspectorProject) closeInspector(); else setInspectorProject(project.id); }}>Edit appearance</button></div> : surface === 'Channel' && channelView === 'Pages & Layout' ? <Content key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} commit={commit} onDirtyChange={reportSectionDraft} accountId={session?.accountId} libraryRevision={libraryRevision} pageId={editorPageId!} onPageSelect={pageId => setEditorPageSelection({ projectId: project.id, pageId })}/> : surface === 'Channel' ? <AgentPanel key={project.id} project={project} {...(draftSelection ? { catalogSelection: draftSelection.selection } : {})} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery key={`${project.id}:${surface}:${exportView}`} project={project} surface={surface === 'Publish' ? 'Publish' : exportView === 'Advanced Source' ? 'Code' : 'Build'} hosted={!!session} />}
             </div>
           </div>
         </div>

@@ -14,7 +14,7 @@ import App from '../src/App.js';
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://127.0.0.1:4173/' });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement });
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.window.navigator });
-const { cleanup, fireEvent, render, screen, waitFor } = await import('@testing-library/react');
+const { cleanup, fireEvent, render, screen, waitFor, within } = await import('@testing-library/react');
 
 test('Studio golden path creates, edits, refines, generates, blocks build, hands off and reloads', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-studio-'));
@@ -32,7 +32,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     fireEvent.click(screen.getByRole('button', { name: /Create channel/ }));
     await waitFor(() => assert.ok(screen.getByText('REV 8 · LOCAL')), { timeout: 5000 });
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
-    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Field Notes' })));
+    await waitFor(() => assert.ok(screen.getByRole('region', { name: 'rail section 2' })));
     const projectId = new URLSearchParams(window.location.search).get('project');
     assert.match(projectId ?? '', /^ch_[a-f0-9]{32}$/);
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
@@ -43,11 +43,12 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     await waitFor(() => assert.ok(screen.getByText('REV 9 · LOCAL')));
     fireEvent.click(screen.getByRole('button', { name: 'Close appearance inspector' }));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Field Notes' }));
-    fireEvent.click(screen.getByText('Advanced content and section controls'));
-    fireEvent.change(screen.getByLabelText('DESCRIPTION'), { target: { value: 'Edited in Studio' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save film' }));
+    fireEvent.click(within(screen.getByRole('region', { name: 'rail section 2' })).getByRole('button', { name: 'Edit section' }));
+    const inspector = screen.getByRole('complementary', { name: 'Layout inspector' });
+    fireEvent.change(within(inspector).getByRole('textbox', { name: 'Section heading' }), { target: { value: 'Field Notes Picks' } });
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Save changes' }));
     await waitFor(() => assert.ok(screen.getByText('REV 10 · LOCAL')));
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Close layout inspector' }));
     fireEvent.click(screen.getByRole('button', { name: 'AI Assistant' }));
     await screen.findByText(/MOCK · Deterministic mock/);
     fireEvent.change(screen.getByPlaceholderText('e.g. Add page Explore'), { target: { value: 'primary color to #224466' } });
@@ -75,7 +76,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     render(createElement(App));
     await waitFor(() => assert.ok(screen.getByText('REV 11 · LOCAL')));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
-    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Field Notes' })));
+    await waitFor(() => assert.ok(within(screen.getByRole('region', { name: 'rail section 2' })).getByText('Field Notes Picks')));
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     const restarted = createApi(new ProjectRepository(directory), new MockProvider(), { mode: 'local-legacy' });
     restarted.listen(address.port, '127.0.0.1');
@@ -85,7 +86,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     const saved = await response.json();
     assert.equal(saved.revision, 11);
     assert.equal(saved.spec.brand.primaryColor, '#224466');
-    assert.equal(saved.spec.content[0].description, 'Edited in Studio');
+    assert.equal(saved.spec.pages[0].modules[1].title, 'Field Notes Picks');
     assert.deepEqual(generated, televisionFromSpec(saved.spec));
     assert.equal((await nativeFetch(`http://127.0.0.1:${address.port}/api/projects/${projectId}/readiness`).then(result => result.json())).submitted, false);
   } finally {

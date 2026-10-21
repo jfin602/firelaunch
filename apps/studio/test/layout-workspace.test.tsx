@@ -78,6 +78,10 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     await waitFor(() => assert.equal(document.activeElement, editSection));
     fireEvent.click(within(rail).getByRole('button', { name: 'Explore' }));
     assert.ok(screen.getByText('Choose content for Films.'));
+    fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
+    const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
+    await waitFor(() => assert.ok(within(preview).getByRole('heading', { name: 'Films' })));
+    fireEvent.click(screen.getByRole('button', { name: 'Close TV Preview' }));
     fireEvent.click(screen.getByRole('button', { name: 'Edit page' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'PAGE NAME' }), { target: { value: 'Home' } });
     fireEvent.click(screen.getByRole('button', { name: 'Rename page' }));

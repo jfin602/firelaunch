@@ -39,7 +39,7 @@ export function PreviewArtwork({ contentId, source, inventory, projectId, accoun
   return <img src={url} alt="" onError={() => setFailed(url)}/>;
 }
 
-export function Preview({ spec, hosted = false, accountId, libraryRevision = 0, fullscreen = false, onExitFullscreen, exitButtonRef }: { spec: ChannelSpec; hosted?: boolean; accountId?: string | null | undefined; libraryRevision?: number; fullscreen?: boolean; onExitFullscreen?: () => void; exitButtonRef?: React.Ref<HTMLButtonElement> }) {
+export function Preview({ spec, selectedPageId, hosted = false, accountId, libraryRevision = 0, fullscreen = false, onExitFullscreen, exitButtonRef }: { spec: ChannelSpec; selectedPageId?: string | undefined; hosted?: boolean; accountId?: string | null | undefined; libraryRevision?: number; fullscreen?: boolean; onExitFullscreen?: () => void; exitButtonRef?: React.Ref<HTMLButtonElement> }) {
   const tv = televisionFromSpec(spec);
   const [inventory, setInventory] = useState<CatalogSnapshot | null>(null);
   useEffect(() => {
@@ -59,6 +59,14 @@ export function Preview({ spec, hosted = false, accountId, libraryRevision = 0, 
   tvRef.current = tv;
   stateRef.current = current;
   const dispatch = (command: TvCommand) => setState(previous => navigate(tvRef.current, previous, command));
+
+  useEffect(() => {
+    if (!selectedPageId || !tvRef.current.pages.some(page => page.id === selectedPageId)) return;
+    setState(previous => {
+      if (reconcile(tvRef.current, previous).pageId === selectedPageId) return previous;
+      return { screen: 'page', pageId: selectedPageId, focusId: navFocusId(selectedPageId) };
+    });
+  }, [selectedPageId]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
