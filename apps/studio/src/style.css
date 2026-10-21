@@ -778,3 +778,60 @@ body { min-width: 0; }
 }
 @media(max-width:760px){.channel-editor .layout-page-rail{overflow-x:auto;overflow-y:hidden;max-height:68px}}
 @media(max-width:690px){.channel-presentation{height:auto}.channel-tv-stage{height:370px}.channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 155px)*16/9));max-height:calc(100cqh - 155px)}}
+
+/* C8-UI2 P2: Channel chrome only. TV focus and creator brand remain independent. */
+.channel-dock button,
+.channel-stage-action .preview-toggle,
+.page-dialog .button-row button {
+  min-height:40px;
+  border:1px solid var(--fl-border);
+  border-radius:var(--fl-radius-sm);
+  background:var(--fl-nav);
+  color:var(--fl-text);
+  padding:8px 12px;
+  font-size:12px;
+  font-weight:700;
+  line-height:1.3;
+}
+.channel-dock button:hover:not(:disabled),
+.channel-stage-action .preview-toggle:hover,
+.page-dialog .button-row button:hover:not(:disabled){background:var(--fl-surface-raised);border-color:var(--fl-amber)}
+.channel-dock button:focus-visible,
+.channel-stage-action .preview-toggle:focus-visible,
+.page-dialog button:focus-visible,
+.page-template-option:focus-within,
+.channel-tv-stage .remote button:focus-visible {
+  outline:3px solid var(--fl-focus);
+  outline-offset:2px;
+}
+.channel-dock button:disabled,.page-dialog button:disabled{opacity:.62;color:var(--fl-muted);cursor:not-allowed}
+.channel-dock button.primary,
+.channel-stage-action .preview-toggle,
+.page-dialog .button-row button.primary {
+  background:#9b4827;
+  border-color:var(--fl-orange);
+  color:#fff6ee;
+}
+.channel-dock button.primary:hover:not(:disabled),
+.channel-stage-action .preview-toggle:hover,
+.page-dialog .button-row button.primary:hover:not(:disabled){background:#b3532b;border-color:var(--fl-amber)}
+.channel-dock-header .studio-subviews button.active{background:#593323!important;color:#fff0e8!important;border-color:var(--fl-orange)}
+.channel-dock button.danger{background:#3b2223;border-color:#9c5650;color:#ffd0ca!important}
+.channel-dock button.danger:hover:not(:disabled){background:#56302d;border-color:#de8c81}
+.channel-editor .layout-page-rail{gap:8px}
+.channel-editor .layout-page-rail button{width:100%;text-align:left}
+.channel-editor .layout-page-rail button.active{background:#493029;border-color:var(--fl-orange);box-shadow:inset 3px 0 var(--fl-orange)}
+.channel-editor .layout-section-heading{flex-wrap:wrap;gap:8px}
+.channel-editor .layout-section .button-row{display:flex;flex-wrap:wrap;gap:8px;padding-top:10px;border-top:1px solid var(--fl-border-soft)}
+.channel-editor .layout-section .button-row button{flex:1 1 90px}
+.channel-editor .section-add{display:grid;gap:8px;padding:12px;border-top:1px solid var(--fl-border-soft)}
+.channel-editor .section-add h3,.channel-editor .section-add p{margin:0}
+.channel-editor .layout-inspector .button-row{flex-wrap:wrap}
+.channel-tv-stage .remote button{height:32px;min-height:32px;background:var(--fl-nav);border-color:var(--fl-border);color:var(--fl-text)}
+.channel-tv-stage .remote button:hover{background:var(--fl-surface-raised);border-color:var(--fl-amber)}
+.channel-tv-stage .remote>div button:nth-child(2){background:#9b4827;border-color:var(--fl-orange);color:#fff6ee}
+.channel-tv-stage .remote>div button:nth-child(2):hover{background:#b3532b}
+.page-dialog{background:var(--fl-surface);border-color:var(--fl-border)}
+.page-template-option{background:var(--fl-nav);border-color:var(--fl-border)}
+.page-template-option.selected{background:#493029;border-color:var(--fl-orange)}
+@media(max-width:760px){.channel-editor .layout-page-rail button{width:auto}}
