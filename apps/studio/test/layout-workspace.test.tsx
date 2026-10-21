@@ -149,8 +149,12 @@ test('layout controls remain accessible in narrow flow', () => {
   assert.match(css, /\.channel-dock-body\{overflow-y:auto;overscroll-behavior:contain\}/);
   const composition = css.split('/* C8-UI3 P2:')[1];
   assert.ok(composition);
+  assert.match(composition, /\.channel-presentation\{grid-template-columns:clamp\(360px,32%,440px\) minmax\(0,1fr\)\}/);
   assert.match(composition, /\.channel-tv-stage \.tv-frame\{width:min\(100%,calc\(\(100cqh - 220px\)\*16\/9\)\);max-height:calc\(100cqh - 220px\);aspect-ratio:16\/9;flex:none;border:0;border-radius:0;box-shadow:none\}/);
   assert.match(composition, /\.channel-tv-stage \.remote-bar\{order:2;position:static/);
+  assert.match(composition, /\.channel-tv-stage \.remote-bar\{[^}]*width:194px;[^}]*background:#1b1e20/);
+  assert.match(composition, /\.channel-tv-stage \.remote button\{min-width:34px;height:34px;min-height:34px\}/);
+  assert.match(composition, /@media\(max-height:760px\)\{\.channel-presentation:not\(\.preview-fullscreen\) \.channel-tv-stage \.remote-bar span\{display:none\}\}/);
   assert.match(composition, /\.preview-fullscreen \.channel-tv-stage \.preview-heading\{position:absolute/);
   assert.match(css, /@media\(max-width:1000px\)[\s\S]*\.channel-presentation\{height:auto;min-height:0;display:flex;flex-direction:column\}/);
 });

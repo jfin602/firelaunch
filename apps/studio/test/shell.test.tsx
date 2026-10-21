@@ -218,7 +218,7 @@ test('fullscreen geometry and overlay placement override normal mode at every br
   const fullscreen = css.split('/* C8-UI3 P3:')[1];
   assert.ok(fullscreen);
   assert.match(fullscreen, /\.preview-fullscreen \.channel-tv-stage \.tv-frame\{width:min\(100%,177\.777778dvh\);height:auto;max-height:100dvh;aspect-ratio:16\/9;flex:none;border:0;border-radius:0;box-shadow:none\}/);
-  assert.match(fullscreen, /\.preview-fullscreen \.channel-tv-stage \.remote-bar\{[^}]*left:12px;right:auto;bottom:12px/);
+  assert.match(fullscreen, /\.preview-fullscreen \.channel-tv-stage \.remote-bar\{[^}]*left:auto;right:12px;bottom:12px/);
   assert.match(fullscreen, /\.preview-fullscreen \.channel-tv-stage \.preview-heading\{[^}]*top:12px;right:12px/);
   assert.match(fullscreen, /\.preview-fullscreen \.preview-heading\[hidden\],\.preview-fullscreen \.remote-bar\[hidden\]/);
 });
