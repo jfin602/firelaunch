@@ -1,5 +1,11 @@
 # FireLaunch Product Model
 
+## Active Creator Studio information architecture — Phase 8 decision (2026-10-21)
+
+**Documentation-only target, not implemented/qualified.** The current source still uses the historical eight-surface Studio until P8 work is performed. Owner-approved five primary destinations are **Home**, **Library** (Catalog and media rights), **Channel** (existing Create/Agent as AI Assistant, Design as Appearance, Content as Pages & Shelves), **Publish** (explicit rights-reviewed immutable live content) and **Export** (creator-bound native Vega build/download, **Advanced > Source** for protected editable generated code). Interactive TV Preview is a prominent toolbar/editor companion, not a redundant top-level route. The existing VideoWorkspace remains the reusable creator-owned modal/sheet rather than a duplicate video editor.
+
+The desktop right inspector is **contextual-only**: open only for meaningful selected editing context and dismiss/deselect without reserving an empty grid column. Library, Publish and Export are full-width workspaces. No new agent, catalog, editor, publication engine or native worker is implied by the navigation change. Preserve accessible keyboard/remote preview and mobile UI, owner/security/rights boundaries, and Desert Heat shell distinct from creator ChannelSpec branding. See [P8](tasks/p8/README.md) and [Studio visual baseline](design/studio-visual-baseline.md). Historical P0 surface names below are retained as historical design, not current navigation authority.
+
 ## Primary user
 
 A creator, brand or small media organization that has video content and wants a branded TV destination without hiring a dedicated TV application team.
