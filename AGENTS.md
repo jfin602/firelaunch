@@ -13,7 +13,13 @@ Before implementation:
 8. the active docs/tasks/<stack>/ README, prompt-assessment and implementation-plan
 9. the current prompt
 
-## Approved P8 authoring outcome (2026-10-21)
+## Current owner-approved Phase 8 entry (2026-10-21; supersedes older C7 handoffs)
+
+Read [owner Phase 7 closeout](docs/tasks/p7/owner-closeout-2026-10-21.md). **P7/C7 is OWNER-CLOSED / ACCEPTED PARTIAL, not GREEN**: R1–R3 and exact native install/branding/artwork/Back/restart were evidenced; installed HLS first-fragment moving picture/audio/pause/seek remain NOT GREEN and carry to Phase 9 final-launch acceptance. Do not run C7 R4 as an automatic prerequisite or repeat working native worker/ZIP gates for P8 UI. Preserve historical P7/C7 NOT GREEN evidence.
+
+**P8 `0.8.0` source entry is now owner approved.** Root+two top-level lockfile fields only (no workspace/schema change). Implementation P1–P4 `0.8.1`–`0.8.4` via the runner, browser P5 manual. Before running in a **local checkout**, inspect `git status --short`, recent commits, root/lock versions and any uncommitted C7 changes; reconcile without force/reset/delete. Once safely on coherent `0.8.0`, use `npm run codex:stack:validate -- p8` and `npm run codex:stack -- p8`. No `/activate`. Do not claim a deployed or qualified 0.8.x release.
+
+## Historical P8 authoring outcome (superseded by approved entry) (2026-10-21)
 
 The owner approved and requested documentation+prompt authoring for [P8 Creative Studio UX & Pipeline Confirmation](docs/tasks/p8/README.md); see its [assessment](docs/tasks/p8/prompt-assessment.md), [plan](docs/tasks/p8/implementation-plan.md), and P1–P5 prompt files. **Five primary destinations:** Home / Library / Channel / Publish / Export. Channel reuses existing AI Assistant/Appearance/Pages & Shelves, Export retains Advanced Source, Publish owns creator-approved immutable live *content*, and Export owns native app build/download. Desktop right inspector is **contextual-only** for actual selected editing state, not an always-mounted third column; Library/Publish/Export remain wide, TV Preview visible/discoverable, Add Video modal retained. Protect Desert Heat and mobile/accessibility.
 
