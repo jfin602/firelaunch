@@ -3,7 +3,13 @@
 Last documentation reconciliation: 2026-10-21 UTC (P8 Wave 1 staging GREEN and Wave 2 human-first layout design approved for planning; earlier sections are dated evidence).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
 
-## Approved Phase 8 Wave 2 design handoff (2026-10-21; docs only)
+## Phase 8 Wave 2 prompt stack authored — 2026-10-21
+
+**Wave 1 P5 remains GREEN / DEPLOYED at root/lock 0.8.4; Phase 8 remains OPEN.** The owner authorized `/prompt-ass + /prompt-plan + /prompt-write p8b`; [P8B README](tasks/p8b/README.md), [assessment](tasks/p8b/prompt-assessment.md), [implementation plan](tasks/p8b/implementation-plan.md) and **P1–P7 executable prompts are now authored, NOT RUN**. This is the human-first Page Layout / full-screen Preview continuation. No source version bump, schema changes, native Vega app build or staging deployment accompanies prompt authoring.
+
+**Next runner action after safe local sync:** check actual `git status --short`, root `0.8.4` plus both root lock fields, committed Wave 1 source/P5 changes and no independent dirty work. Then run `npm run codex:stack:validate -- p8b` and `npm run codex:stack -- p8b`. P1–P6 target versions `0.8.5`–`0.8.10`; P7 `0.8.11` is a separately invoked **manual Wave 2 staging closeout**, not automatic version bump or complete Phase 8 closure. Static Image Banner / Image + Text compatibility is fail-closed for installed native apps that cannot render them. The latest C7 R4 evidence remains tested device GREEN for unchanged playback.
+
+## Historical Wave 2 design-only handoff (superseded by prompt authoring)
 
 **Wave 1 remains GREEN / DEPLOYED; overall Phase 8 remains OPEN.** Owner-approved Wave 2 direction is [`p8b` human-first Page Layout & full-screen Preview](tasks/p8b/README.md) using the [design contract](design/page-layout-human-first.md). Channel's **Pages & Shelves** is to become **Pages & Layout** with an accessible name + Hero/Grid/Rows template selector, Home -> Hero default, additional pages -> Rows suggestion, section-based editing and contextual-only inspector. Six bounded sections include image/text compositions; the SAME interactive Preview gets a View full screen control with safe Exit/Back distinction and state preservation. No freeform pixel editor or new preview system.
 
