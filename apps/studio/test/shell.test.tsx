@@ -86,6 +86,9 @@ test('responsive shell declares edge-to-edge canvas and inline tablet inspector'
   assert.match(css, /@media \(max-width: 600px\)\s*\{\s*\.sidebar\s*\{\s*position:\s*relative/s);
   assert.match(css, /\.sidebar-nav\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/s);
   assert.match(css, /\.remote button\s*\{\s*min-width:\s*44px;\s*min-height:\s*44px/s);
+  assert.match(css, /\.preview-fullscreen \.channel-dock\{[^}]*left:0;[^}]*height:100%;[^}]*transform:translateX\(-100%\)/s);
+  assert.match(css, /\.preview-fullscreen\.dock-revealed \.channel-dock\{transform:translateX\(0\)/);
+  assert.match(css, /prefers-reduced-motion:reduce\)\{\.preview-fullscreen \.channel-dock,\.preview-fullscreen \.channel-dock-handle\{transition:none/);
 });
 
 test('local project switch keeps the creator in Studio', async () => {
@@ -129,6 +132,9 @@ test('full-screen fallback retains the live Preview, TV playback and focus on ex
     fireEvent.keyDown(player, { key: 'Backspace' });
     assert.equal(dialog.querySelector('video'), null);
     assert.ok(screen.getByRole('button', { name: /Play film/ }));
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Exit full screen' }), { key: 'Backspace' });
+    assert.equal(screen.queryByRole('button', { name: /Play film/ }), null);
+    assert.ok(dialog.classList.contains('preview-fullscreen'));
     fireEvent.keyDown(dialog, { key: 'Escape' });
     await waitFor(() => assert.equal(screen.queryByRole('dialog', { name: 'Full-screen TV Preview' }), null));
     await waitFor(() => assert.equal(document.activeElement, trigger));
@@ -181,7 +187,7 @@ test('native fullscreen success and rejection keep one Preview and return focus'
   }
 });
 
-test('fullscreen dock reveals at the edge, stays open for focus and edits, and has touch and keyboard access', async () => {
+test('fullscreen left drawer reveals at the edge, stays open for focus and edits, and has touch and keyboard access', async () => {
   const restore = mockApi([first]);
   const original = HTMLElement.prototype.requestFullscreen;
   Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: undefined });
@@ -193,20 +199,28 @@ test('fullscreen dock reveals at the edge, stays open for focus and edits, and h
     const editor = document.querySelector('.channel-editor');
     fireEvent.click(screen.getByRole('button', { name: 'View full screen' }));
     const root = document.getElementById('channel-fullscreen-root')!;
-    Object.defineProperty(root, 'getBoundingClientRect', { configurable: true, value: () => ({ bottom: 1000 }) });
+    Object.defineProperty(root, 'getBoundingClientRect', { configurable: true, value: () => ({ left: 0, bottom: 1000 }) });
     assert.equal(preview, root.querySelector('.preview-wrap'));
     assert.equal(editor, root.querySelector('.channel-editor'));
     assert.equal(root.classList.contains('dock-revealed'), false);
-    const pointerAt = (y: number) => fireEvent(root, Object.assign(new dom.window.Event('pointermove', { bubbles: true }), { clientY: y, pointerType: 'mouse' }));
-    pointerAt(950);
+    const pointerAt = (x: number, y = 500) => fireEvent(root, Object.assign(new dom.window.Event('pointermove', { bubbles: true }), { clientX: x, clientY: y, pointerType: 'mouse' }));
+    pointerAt(200, 990);
     assert.equal(root.classList.contains('dock-revealed'), false);
-    pointerAt(980);
+    pointerAt(25);
     assert.equal(root.classList.contains('dock-revealed'), true);
     const dock = root.querySelector<HTMLElement>('.channel-dock')!;
+    const editorBody = dock.querySelector<HTMLElement>('.channel-dock-body')!;
+    editorBody.scrollTop = 125;
     assert.equal(dock.hasAttribute('inert'), false);
     await waitFor(() => assert.equal(root.classList.contains('dock-revealed'), false), { timeout: 1700 });
     assert.equal(dock.hasAttribute('inert'), true);
-    fireEvent.click(screen.getByRole('button', { name: 'Show editing dock (Alt+E)' }));
+    fireEvent.touchStart(root, { touches: [{ clientX: 200, clientY: 990 }] });
+    assert.equal(root.classList.contains('dock-revealed'), false);
+    fireEvent.touchStart(root, { touches: [{ clientX: 18, clientY: 500 }] });
+    assert.equal(root.classList.contains('dock-revealed'), true);
+    fireEvent.click(screen.getByRole('button', { name: 'Hide editing drawer (Alt+E)' }));
+    assert.equal(root.classList.contains('dock-revealed'), false);
+    fireEvent.click(screen.getByRole('button', { name: 'Show editing drawer (Alt+E)' }));
     assert.equal(root.classList.contains('dock-revealed'), true);
     const pages = dock.querySelector<HTMLButtonElement>('.studio-subviews button')!;
     pages.focus();
@@ -223,17 +237,28 @@ test('fullscreen dock reveals at the edge, stays open for focus and edits, and h
     fireEvent.click(dock.querySelector<HTMLButtonElement>('.page-dialog button[type="button"]')!);
     fireEvent.keyDown(root, { key: 'Escape' });
     await waitFor(() => assert.equal(root.classList.contains('preview-fullscreen'), false));
+    assert.equal(editorBody.scrollTop, 125);
     fireEvent.click(screen.getByRole('button', { name: 'View full screen' }));
-    const handle = screen.getByRole('button', { name: 'Show editing dock (Alt+E)' });
+    const handle = screen.getByRole('button', { name: 'Show editing drawer (Alt+E)' });
+    fireEvent.pointerEnter(handle, { pointerType: 'mouse' });
+    assert.equal(root.classList.contains('dock-revealed'), true);
+    fireEvent.click(handle);
+    assert.equal(root.classList.contains('dock-revealed'), false);
     fireEvent.click(handle);
     assert.equal(root.classList.contains('dock-revealed'), true);
+    assert.equal(handle.getAttribute('aria-controls'), 'channel-editor-drawer');
     fireEvent.keyDown(window, { key: 'e', altKey: true });
     assert.equal(document.activeElement, pages);
     fireEvent.click(dock.querySelectorAll<HTMLButtonElement>('.studio-subviews button')[1]!);
-    fireEvent.change(dock.querySelector<HTMLInputElement>('.channel-appearance input')!, { target: { value: 'Unsaved fullscreen title' } });
+    const title = dock.querySelector<HTMLInputElement>('.channel-appearance input')!;
+    fireEvent.change(title, { target: { value: 'Unsaved fullscreen title' } });
     root.querySelector<HTMLButtonElement>('.preview-exit')!.focus();
     await new Promise(resolve => setTimeout(resolve, 1300));
     assert.equal(root.classList.contains('dock-revealed'), true);
+    fireEvent.keyDown(root, { key: 'Escape' });
+    await waitFor(() => assert.equal(root.classList.contains('preview-fullscreen'), false));
+    assert.equal(title.value, 'Unsaved fullscreen title');
+    await waitFor(() => assert.equal(document.activeElement, screen.getByRole('button', { name: 'View full screen' })));
   } finally {
     Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: original });
     restore();

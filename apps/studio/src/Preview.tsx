@@ -71,7 +71,11 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       const target = event.target;
-      if (!(target instanceof HTMLElement) || !frameRef.current?.contains(target)) return;
+      if (!(target instanceof HTMLElement)) return;
+      const inFrame = frameRef.current?.contains(target);
+      // In fullscreen, Backspace is TV Back even when the Exit button or editor chrome has focus.
+      if (!inFrame && !(fullscreen && event.key === 'Backspace' && frameRef.current?.closest('.channel-presentation')?.contains(target))) return;
+      if (!inFrame && event.key !== 'Backspace') return;
       if (fullscreen && event.key === 'Escape') return;
       if (target.closest('audio, video')) {
         // Keep native media keys, but let Back leave playback even when the player has focus.
