@@ -1,0 +1,27 @@
+TASK: Correction 8 / P2 — Borderless maximized TV and controls below
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.10`.
+
+GOAL
+Match the OWNER-APPROVED c8-ui3 mockup: the real interactive TV fills the largest safe 16:9 area of the upper-right region with NO decorative frame; move Draft TV Preview + Interactive status and View full screen underneath it, keeping Virtual remote further down on the lower right. Preserve ONE Preview/player and existing c8-ui2 fullscreen LEFT drawer.
+
+VISUAL INPUT / PREFLIGHT
+Ask the invocation to ATTACH the approved final mockup image from the FireLaunch conversation to this Codex prompt. If unavailable, implement the written design contract without inventing visual comparison; mark attached-reference visual qualification pending P3. Read c8-ui3 plan/spec and P1 handoff. Confirm coherent 0.8.10 root/locks, P1 commit, safe local status. Inspect actual apps/studio/src/Preview.tsx .preview-heading/.tv-frame/.remote-bar, App.tsx .channel-stage-action/#tv-preview/Preview props, current apps/studio/src/style.css preview-wrap/frame/remote and responsive + .preview-fullscreen overrides, focused Preview and shell tests. Do not revisit native Vega layout implementation.
+
+IMPLEMENT
+1. In NORMAL mode, fit the one existing .tv-frame to the LARGEST fully visible 16:9 rectangle allowed by RIGHT workspace width and usable height above the utilities. Minimize wasted padding; remove its decorative outer border, rounded bezel and card shadow, never the app's own content nav/dividers/focus borders. Do not stretch/crop the Channel TV or overflow the viewer at ~1440x900/~1280x720.
+2. Create a compact UNDER-TV utility/control row within the right stage: Draft TV Preview label, green 16:9 · Interactive status, styled View full screen action. Remove their original normal-mode locations ABOVE the frame. Prefer stable CSS/markup reflow and SAME Preview component; no duplicate hidden heading or fullscreen button, no new TV state/store.
+3. Keep Virtual remote BELOW the TV at the LOWER RIGHT in remaining dead space, not overlaying video/image. Ensure D-pad/Back/keyboard help and touch targets remain functional, no ref/player recreation. Separate metadata row from remote to use available space efficiently.
+4. Preserve existing FULLSCREEN LEFT slide-out editor, Fullscreen API + fallback, focus/dirty-state and Escape vs TV Back. Fullscreen may retain its dedicated accessible Exit control while normal-mode metadata and entry are below TV; don't let new flex/grid positioning break full-screen screen fit or overlay.
+5. Respect P1 Channel dark background/gray tools, responsive tablet/phone and no whole-page overflow. No Canvas/second Preview/Vega renderer changes.
+
+VALIDATION
+Only affected Studio Preview, shell/fullscreen and layout tests with one Studio package typecheck. Assert no duplicate Preview/control/remote mounts, 16:9 fit contract, normal control row ordering, remote below and retained fullscreen state; measured pixels/visual image equality require P3's real staging browser. No full root build/test/browser/native/worker/deploy inside P2.
+
+HANDOFF / SAFETY
+All three root/lock version fields remain 0.8.10; runner owns commit. No /activate, self-commit, changes to live publication, media rights, AWS, native Vega, app schema or service. <=8m goal; 15m stop with exact visual/geometry issues. P3 will use the same owner-approved attached mockup in Codex browser after deploying latest code.
