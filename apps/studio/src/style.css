@@ -837,3 +837,31 @@ body { min-width: 0; }
 .page-template-option{background:var(--fl-nav);border-color:var(--fl-border)}
 .page-template-option.selected{background:#493029;border-color:var(--fl-orange)}
 @media(max-width:760px){.channel-editor .layout-page-rail button{width:auto}}
+
+/* C8-UI3 P1: a continuous Channel canvas and neutral editor, scoped away from other Studio pages. */
+.studio-main:has(>.channel-workspace){background:#101313}
+.studio-main:has(>.channel-workspace)>.topbar{padding:12px 16px;background:#1b1c1e;border-bottom-color:#393c3f}
+.channel-workspace{background:#101313}
+.channel-workspace>.workspace-main{padding:0;background:#101313;background-image:none}
+.channel-presentation{background:#101313}
+.channel-dock{
+  --fl-nav:#1b1d1f;
+  --fl-surface:#222426;
+  --fl-surface-raised:#2d3033;
+  --fl-field:#17191b;
+  --fl-border:#494c50;
+  --fl-border-soft:#393c3f;
+  background:#222426;
+  border-right-color:var(--fl-border-soft);
+}
+.channel-dock-header{background:#222426}
+.channel-dock-body,.channel-editor,.channel-appearance,.channel-editor .layout-workspace{background:#222426}
+.channel-editor .layout-page-rail,.channel-editor .layout-composition,.channel-editor .layout-inspector{border-bottom-color:var(--fl-border-soft)}
+.channel-editor .layout-page-rail button,.channel-editor .layout-section,.channel-editor .module-editor{background:var(--fl-surface);border-color:var(--fl-border-soft);box-shadow:none}
+.channel-editor .layout-hero{background:linear-gradient(135deg,#303236,var(--fl-surface) 75%)}
+.channel-editor .layout-tile img{background:#303236}
+.channel-dock :is(.field input,.field textarea,.field select,.inline-form input,.inline-form select,.color-input,.module-editor textarea){background:var(--fl-field);border-color:var(--fl-border);color:var(--fl-text)}
+.channel-dock-header .studio-subviews button.active{background:#3a2b25!important}
+.channel-editor .layout-page-rail button.active{background:#3a2b25}
+.preview-fullscreen .channel-dock-header,.preview-fullscreen .channel-dock-body,.preview-fullscreen .channel-editor,.preview-fullscreen .channel-appearance,.preview-fullscreen .channel-editor .layout-workspace{background:transparent}
+@media(max-width:1000px){.channel-workspace>.workspace-main{padding:0}}
