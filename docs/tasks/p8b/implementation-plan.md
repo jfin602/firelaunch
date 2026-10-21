@@ -16,12 +16,6 @@
 
 **Why seven:** P4 schema/Studio projection and P5 native runtime/compatibility are separate so a single prompt does not try to implement every renderer plus security and install it. P2/P3 split workspace restructuring from detailed behavior. P6 standalone fullscreen avoids a dual-renderer accident. Implementation goal <=8 minutes each, 15-minute hard handoff; P7 manual includes external steps and may need separate operator approvals.
 
-## Required UI-shell correction handoff (2026-10-21 owner decision)
-
-Before starting P8B from `0.8.4`, complete [`c8-ui`](../c8-ui/README.md) **if the local P8B runner has not started**. That unchanged-version correction makes Channel's real 16:9 Preview always visible above a full-width, immediately attached horizontal dock, gives the dock Pages & Layout and Appearance tabs, removes UI AI Assistant/Close TV Preview, and provides the same-dock full-screen bottom-edge overlay. **If P8B already has completed commits locally, DO NOT overwrite/reorder them to run this fixed-version correction; prepare a bounded later correction instead.** `c8-ui` adds no phase version bump or P8B checkpoint.
-
-**Plan reassignment, same P1–P7 versions:** P1 templates appear within dock; P2 builds Pages/Sections/selected-context as horizontal dock regions under the TV rather than a left/center/right full-height editor; P3 puts friendly section controls in that same dock; P4/P5 model/native compatibility remain; P6 validates/enhances existing same Preview/fullscreen edge overlay and must not create a second fullscreen implementation; P7 real browser acceptance explicitly checks dock adjacency, no whole-page scroll and pointer/touch/keyboard reveal. The canonical specification is [TV-first workspace](../../design/tv-first-channel-workspace.md) together with [human-first section UX](../../design/page-layout-human-first.md).
-
 ## Entry and runner contract
 
 - The **accepted Wave 1 P5 was a manual milestone at unchanged 0.8.4**, not a 0.8.5 runner commit. GitHub main showed root `package.json` and two top-level lockfile version fields as `0.8.4` when the stack was authored. Do not add a second entry-only version bump.
