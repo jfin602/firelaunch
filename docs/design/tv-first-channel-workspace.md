@@ -1,6 +1,6 @@
 # TV-First Channel Workspace — Phase 8 UI Contract
 
-**Owner-approved /docs-review, 2026-10-21; DESIGN TARGET ONLY, NOT IMPLEMENTED OR QUALIFIED.** This contract supersedes the earlier Phase 8/P8B proposal to display a narrow TV Preview beside a tall right-side page editor. Implement first as unchanged-version [c8-ui](../tasks/c8-ui/README.md) from the accepted Wave 1 `0.8.4` baseline; then [p8b](../tasks/p8b/README.md) builds template creation and advanced page editing INTO this dock. See [Desert Heat baseline](studio-visual-baseline.md) and [human-first layout design](page-layout-human-first.md).
+**Owner-approved /docs-review, 2026-10-21; DESIGN TARGET ONLY, NOT IMPLEMENTED OR QUALIFIED.** This contract supersedes the earlier Phase 8/P8B proposal to display a narrow TV Preview beside a tall right-side page editor. Implement as [c8-ui](../tasks/c8-ui/README.md) **AFTER the already-executed local P8B work**, preserving existing Hero/Grid/Rows templates, section editing, native Vega compatibility and fullscreen behavior. The authored P8B implementation sequence ends at `0.8.10` after P6; this correction targets unchanged `0.8.10` subject to verification of the actual local root and two lockfile versions. GitHub `main` still showed `0.8.4` at review and must not be mistaken for the local completed checkout. See [Desert Heat baseline](studio-visual-baseline.md) and [human-first layout design](page-layout-human-first.md).
 
 ## The immediate failure to fix
 
@@ -41,11 +41,11 @@ Within the existing authenticated Studio shell/sidebar/topbar:
 
 ## Source integration / ordering
 
-0.8.4 currently uses `apps/studio/src/App.tsx` `ChannelView = 'AI Assistant' | 'Appearance' | 'Pages & Shelves'`, `previewOpen` false by default, `Close TV Preview` control, conditional `Preview` mount, and `.channel-preview-split` side-by-side at wide widths. The correction changes shell/tabs/dock/fullscreen behavior in targeted stages, **without** rewriting `ChannelSpec`, backend agent infrastructure, private media, Publish/Export or the Vega app.
+The **older GitHub Wave 1 screenshot/source** used `apps/studio/src/App.tsx` `ChannelView = 'AI Assistant' | 'Appearance' | 'Pages & Shelves'`, conditional `Preview` and `.channel-preview-split`. **P8B has since run locally according to the owner**, so inspect the real later App/Preview/editor/source before editing: some old labels, sections or fullscreen behavior may already have changed. The correction adapts the actual completed P8B Channel shell into a TV-first stage+dock **without replacing existing Page Layout, templates, module/rights logic, full-screen functionality or Vega parity**.
 
-**Before running `p8b`**: finish/qualify `c8-ui` from unchanged 0.8.4, or if `p8b` already has runner implementation commits locally, **do not run c8-ui at an older version or overwrite completed stacks**—plan a scoped later correction against actual HEAD. Current GitHub main at review showed 0.8.4 with p8b authored only; real local status needs inspection.
+**Execution order is P8B already ran → c8-ui correction.** Preserve P8B P1–P6 runner commits and P7 evidence (if any). Do not modify or rerun P8B prompts. Check actual local HEAD/version/dirty work; if the completed P8B source is at `0.8.10`, use c8-ui's unchanged `0.8.10` runner. If P8B closed at `0.8.11` or the local version differs, do not run stale fixed-version prompts; retarget the correction version to that proven baseline through a docs-only reconciliation without changing historical implementation.
 
-`p8b` P1 template UI appears inside the dock. P2 lays out its page/section tools horizontally. P3 editing works in the same dock. P4/P5 shared schema/native parity remain unchanged. P6 enhances or verifies the existing same-instance fullscreen dock rather than creating a competing fullscreen feature. P7 measures horizontal dock, reveal, accessibility, new sections and protected staging together.
+The correction must retain P8B templates, static image/text sections, page saving, rendering, native compatibility and fullscreen state while replacing the surrounding presentation with **top TV + bottom horizontal dock**. Existing fullscreen code is a repair seam, not a greenfield request. After completion, independently qualify c8-ui and deploy only through existing authorized staging rollout. No version reordering or baseline downgrade.
 
 ## Acceptance / fail-closed conditions
 
