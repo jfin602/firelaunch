@@ -1,5 +1,9 @@
 # FireLaunch Product Model
 
+## Fullscreen Clean View — c8-ui3 approved addendum (2026-10-21)
+
+In NORMAL Channel the approved borderless 16:9 TV remains at right with Draft/Interactive, Full Screen and remote controls BELOW. In true fullscreen the actual TV fills the maximum possible 16:9 viewport; the Virtual remote overlays BOTTOM LEFT and Exit Full Screen + Hide controls TOP RIGHT, while the same secondary editor remains a LEFT drawer. **Clean View** hides EVERY Studio overlay/handle/status/control to show only the TV app, recoverable via H (outside editable inputs), top-right pointer/touch reveal zone, Alt+E left editor or Escape exit. There is no second TV or editor; focus/playback/unsaved state remain. This is new c8-ui3 P3 implementation and P4 staged qualification, not a change to ChannelSpec, native Vega or rights. Version 0.8.10 and Phase 8 OPEN.
+
 ## Final Channel composition target — c8-ui3 (2026-10-21)
 
 A visual-only follow-up correction [c8-ui3](tasks/c8-ui3/README.md) now supersedes c8-ui2's normal Preview geometry: preserve main sidebar + secondary left editor and fullscreen LEFT drawer, but align sidebar/topbar flush, use New Page-like charcoal-gray editor surfaces and solid near-black Channel background (no canyon), and maximize the real borderless 16:9 TV in upper-right. Move Draft/Interactive status and View Full Screen below TV, remote further down/right. No ChannelSpec, rights, live content or native renderer changes. P3 is deployment-first then Codex-browser staging visual closeout against user's attached mockup. Root version stays 0.8.10 and Phase 8 OPEN.
