@@ -38,11 +38,11 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     assert.match(projectId ?? '', /^ch_[a-f0-9]{32}$/);
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Edit appearance' }));
+    assert.ok(within(screen.getByRole('region', { name: 'Channel editing dock' })).getByRole('complementary', { name: 'Appearance editor' }));
     fireEvent.change(screen.getByLabelText(/PRIMARY/), { target: { value: '#aabbcc' } });
     fireEvent.click(screen.getByRole('button', { name: /Save brand/ }));
     await waitFor(() => assert.ok(screen.getByText('REV 9 · LOCAL')));
-    fireEvent.click(screen.getByRole('button', { name: 'Close appearance inspector' }));
+    await waitFor(() => assert.equal((screen.getByRole('button', { name: /Save brand/ }) as HTMLButtonElement).disabled, true));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     fireEvent.click(within(screen.getByRole('region', { name: 'rail section 2' })).getByRole('button', { name: 'Edit section' }));
     const inspector = screen.getByRole('complementary', { name: 'Layout inspector' });

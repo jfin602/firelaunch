@@ -67,6 +67,11 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     assert.deepEqual(within(screen.getByRole('group', { name: 'Channel views' })).getAllByRole('button').map(button => button.textContent), ['Pages & Layout', 'Appearance']);
     const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
     assert.equal(screen.getAllByRole('region', { name: 'Interactive TV Preview' }).length, 1);
+    const root = document.getElementById('channel-fullscreen-root')!;
+    assert.deepEqual(Array.from(root.children).map(child => child.className), ['channel-tv-stage', 'channel-dock']);
+    const dock = screen.getByRole('region', { name: 'Channel editing dock' });
+    assert.ok(dock.contains(screen.getByRole('group', { name: 'Channel views' })));
+    const editor = dock.querySelector('.channel-editor')!;
     assert.equal(screen.queryByRole('complementary', { name: 'Layout inspector' }), null);
     let rail = screen.getByRole('navigation', { name: 'Channel pages' });
     assert.equal(within(rail).getByRole('button', { name: 'Home' }).getAttribute('aria-current'), 'page');
@@ -84,10 +89,23 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     await waitFor(() => assert.ok(within(preview).getByRole('heading', { name: 'Films' })));
     fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
     assert.equal(screen.getByRole('region', { name: 'Interactive TV Preview' }), preview);
-    assert.ok(screen.getByRole('button', { name: 'Edit appearance' }));
+    assert.equal(dock.querySelector('.channel-editor'), editor);
+    const appearance = within(dock).getByRole('complementary', { name: 'Appearance editor' });
+    fireEvent.change(within(appearance).getByRole('textbox', { name: 'DISPLAY NAME' }), { target: { value: 'Wild Earth TV' } });
+    const saveName = within(appearance).getByRole('button', { name: 'Save name' });
+    fireEvent.click(saveName);
+    await waitFor(() => assert.equal(current.spec.title, 'Wild Earth TV'));
+    await waitFor(() => assert.equal((saveName as HTMLButtonElement).disabled, true));
+    fireEvent.change(within(appearance).getByRole('textbox', { name: 'DISPLAY NAME' }), { target: { value: 'Unsaved name' } });
+    window.confirm = () => false;
+    fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
+    assert.equal(screen.getByRole('button', { name: 'Appearance' }).getAttribute('aria-pressed'), 'true');
+    window.confirm = () => true;
+    writes.length = 0;
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     rail = screen.getByRole('navigation', { name: 'Channel pages' });
     assert.equal(screen.getByRole('region', { name: 'Interactive TV Preview' }), preview);
+    assert.equal(dock.querySelector('.channel-editor'), editor);
     assert.equal(screen.queryByRole('button', { name: 'Close TV Preview' }), null);
     assert.equal(screen.queryByRole('button', { name: 'AI Assistant' }), null);
     fireEvent.click(screen.getByRole('button', { name: 'Edit page' }));
@@ -118,8 +136,10 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
 
 test('layout controls remain accessible in narrow flow', () => {
   const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
-  assert.match(css, /@media\(max-width:760px\).*\.layout-workspace.*display:block/s);
-  assert.match(css, /\.layout-page-rail\{position:static;flex-direction:row;overflow:auto/s);
+  assert.match(css, /\.channel-presentation\{height:100%;min-height:0;min-width:0;display:grid;grid-template-rows:/);
+  assert.match(css, /\.channel-tv-stage \.tv-frame\{width:min\(100%,calc\(\(100cqh - 42px\)\*16\/9\)\)/);
+  assert.match(css, /\.channel-editor \.layout-page-rail,\.channel-editor \.layout-composition,\.channel-editor \.layout-inspector\{[^}]*overflow:auto/);
+  assert.match(css, /@media\(max-width:760px\)[\s\S]*\.channel-editor \.layout-workspace[^}]*flex-direction:column/);
 });
 
 test('Image + Text section saves bounded text and preset through the normal mutation path', async () => {

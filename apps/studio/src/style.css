@@ -686,3 +686,55 @@ body { min-width: 0; }
 .preview-exit{border:1px solid #d87951;border-radius:7px;background:#a84c2e;color:white;padding:9px 14px;font-weight:700}
 @media(max-height:540px){.preview-fullscreen .preview-heading,.preview-fullscreen .remote-bar{margin:3px 0}.preview-fullscreen .tv-frame{max-height:calc(100dvh - 115px);width:min(100%,calc((100dvh - 115px)*16/9))}}
 .preview-fullscreen-notice{position:absolute;top:4px;left:12px;margin:0;color:#ffd3bf;font-size:12px}
+
+/* C8 P2: the stage and editor are adjacent children of the P3 fullscreen root. */
+.channel-workspace{min-height:0}
+.channel-workspace>.workspace-main{height:calc(100dvh - 82px);min-height:0;padding:10px clamp(12px,1.5vw,22px) 0}
+.channel-presentation{height:100%;min-height:0;min-width:0;display:grid;grid-template-rows:minmax(0,3fr) minmax(260px,2fr);background:var(--fl-surface)}
+.channel-tv-stage{position:relative;min-height:0;min-width:0;display:flex;background:#101313;overflow:hidden}
+.channel-stage-action{position:absolute;right:12px;top:7px;z-index:2}
+.channel-stage-action .preview-toggle{padding:7px 11px}
+.channel-tv-stage #tv-preview{flex:1;min-height:0;min-width:0;container-type:size}
+.channel-tv-stage .preview-wrap{position:relative;height:100%;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 12px}
+.channel-tv-stage .preview-heading{width:100%;align-self:stretch;margin:0 0 5px;padding-right:145px;justify-content:flex-start;gap:14px}
+.channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 42px)*16/9));max-height:calc(100cqh - 42px);flex:none;border-width:clamp(3px,.5vw,7px);box-shadow:0 5px 20px #0009}
+.channel-tv-stage .remote-bar{position:absolute;right:10px;bottom:4px;display:grid;gap:2px;margin:0;padding:4px 6px;background:#181d1dcc;border-radius:7px}
+.channel-tv-stage .remote-bar>div:first-child{display:grid;gap:1px}.channel-tv-stage .remote-bar span{font-size:10px;max-width:160px}
+.channel-tv-stage .remote{gap:0}.channel-tv-stage .remote button{height:23px;min-height:23px}.channel-tv-stage .remote>div{margin:1px}
+/* P3 will retarget fullscreen to the common root; keep P8B's TV-only mode usable meanwhile. */
+.channel-tv-stage #tv-preview.preview-fullscreen .preview-wrap{min-height:100%;height:100%;justify-content:center}
+.channel-tv-stage #tv-preview.preview-fullscreen .tv-frame{width:min(100%,calc((100dvh - 160px)*16/9));max-height:calc(100dvh - 160px)}
+.channel-tv-stage #tv-preview.preview-fullscreen .remote-bar{position:static;width:min(100%,calc((100dvh - 160px)*16/9));display:flex;margin:8px 0 0}
+.channel-dock{min-height:0;min-width:0;display:flex;flex-direction:column;border-top:1px solid var(--fl-border);background:var(--fl-surface);overflow:hidden}
+.channel-dock-header{flex:none;padding:6px 12px;border-bottom:1px solid var(--fl-border-soft)}
+.channel-dock-header .studio-subviews{margin:0;gap:6px}.channel-dock-header .studio-subviews button{min-height:38px;padding:8px 14px;border:1px solid var(--fl-border-soft);border-radius:7px;background:var(--fl-nav);color:var(--fl-text);font-weight:700}
+.channel-dock-header .studio-subviews button.active{background:#593323!important;color:#fff0e8!important;border-color:var(--fl-orange)}
+.channel-dock-body,.channel-editor,.channel-appearance{min-height:0;min-width:0;flex:1;overflow:hidden}
+.channel-editor[hidden]{display:none}.channel-appearance{overflow:auto}.channel-appearance .panel-content{padding:12px 16px;max-width:none}
+.channel-appearance .panel-content h2{margin:3px 0}.channel-appearance .panel-content .muted{margin:0}.channel-appearance .panel-content form{display:inline-block;vertical-align:top;width:min(49%,450px);margin:6px .5% 12px 0}
+.channel-appearance .panel-content form:first-of-type{width:min(30%,320px)}
+.channel-editor .layout-workspace,.channel-editor .layout-workspace.layout-has-inspector{height:100%;min-height:0;min-width:0;display:grid;grid-template-columns:minmax(150px,18%) minmax(0,1fr);gap:0;align-items:stretch}
+.channel-editor .layout-workspace.layout-has-inspector{grid-template-columns:minmax(140px,16%) minmax(0,1fr) minmax(260px,30%)}
+.channel-editor .layout-page-rail,.channel-editor .layout-composition,.channel-editor .layout-inspector{position:static;min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain;padding:12px;border-right:1px solid var(--fl-border-soft)}
+.channel-editor .layout-page-rail{margin:0;align-content:start}.channel-editor .layout-composition h2{font-size:20px}
+.channel-editor .layout-composition>.muted{margin:3px 0;font-size:11px}.channel-editor .layout-sections{margin:8px 0;gap:8px}
+.channel-editor .layout-section{min-height:0;padding:10px}.channel-editor .layout-hero{min-height:0}.channel-editor .layout-tiles{display:flex;overflow:auto}.channel-editor .layout-tile{min-width:90px;max-width:130px}.channel-editor .layout-tile img,.channel-editor .layout-hero .layout-tile img{height:55px}
+.channel-editor .layout-inspector{grid-column:auto;border-left:0}.channel-editor .layout-inspector .panel-content{padding:10px 0}
+@media(max-width:1050px){
+  .channel-editor .layout-workspace.layout-has-inspector{grid-template-columns:minmax(140px,23%) minmax(0,1fr)}
+  .channel-editor .layout-inspector{grid-column:2;border-top:1px solid var(--fl-border-soft)}
+  .channel-editor .layout-composition,.channel-editor .layout-inspector{grid-row:auto}
+  .channel-editor .layout-workspace.layout-has-inspector{grid-template-rows:minmax(110px,1fr) minmax(120px,1fr)}
+  .channel-editor .layout-workspace.layout-has-inspector .layout-page-rail{grid-row:1/3}
+}
+@media(max-width:760px){
+  .channel-workspace>.workspace-main{height:auto;min-height:calc(100dvh - 82px);padding:0}
+  .channel-presentation{height:calc(100dvh - 82px);min-height:480px;grid-template-rows:minmax(170px,38%) minmax(280px,1fr)}
+  .channel-tv-stage .preview-heading{padding-right:120px}.channel-tv-stage .remote-bar{right:3px;bottom:2px}.channel-tv-stage .remote-bar>div:first-child{display:none}
+  .channel-editor .layout-workspace,.channel-editor .layout-workspace.layout-has-inspector{display:flex;flex-direction:column;overflow:auto}
+  .channel-editor .layout-page-rail{flex:none;flex-direction:row;overflow:auto;min-height:58px;max-height:68px;padding:7px;margin:0;border-bottom:1px solid var(--fl-border-soft)}
+  .channel-editor .layout-page-rail button{flex:none;min-height:42px}.channel-editor .layout-page-rail .eyebrow{align-self:center}
+  .channel-editor .layout-composition{flex:none;min-height:180px;max-height:50%;overflow:auto}.channel-editor .layout-inspector{flex:1;min-height:180px;margin:0;overflow:auto}
+  .channel-appearance .panel-content form,.channel-appearance .panel-content form:first-of-type{display:block;width:100%}
+}
+@media(max-width:690px){.channel-presentation{height:calc(100dvh - 160px)}.channel-tv-stage .tv-screen{font-size:clamp(8px,1.5vw,12px)}}
