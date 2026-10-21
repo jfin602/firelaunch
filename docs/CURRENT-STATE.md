@@ -1,5 +1,9 @@
 # FireLaunch Current State
 
+## Current approved c8-ui3 final Channel visual correction — October 21
+
+[c8-ui3](tasks/c8-ui3/README.md) is now the active owner-approved final UI correction after **completed c8-ui2 P1–P3** at root/lock `0.8.10` (GitHub main source at authoring `8c49aae`). c8-ui2 P4 remains unrun and its visual/staging closeout is **superseded by c8-ui3 P3**, without rewriting historical prompts. Owner-approved [final mockup design](design/channel-preview-final-composition.md): seamless global/editor sidebar and topbar, gray New Page-like editor, continuous Channel-only near-black background covering canyon, largest borderless 16:9 right Preview, Draft/Interactive + Full Screen controls UNDER TV and Virtual remote below/right. Preserve existing fullscreen LEFT drawer and P8B native safety. **c8-ui3 P1/P2 implement; P3 performs protected deployment FIRST then real Codex browser tests ON STAGING**, with owner's approved image attached. P1–P3 docs authored, NOT RUN; no code/version/deploy change from docs apply. Historical c8-ui UI GREEN/staging evidence and P8B native static device gap remain separately recorded; Phase 8 OPEN.
+
 ## Current owner-approved c8-ui2 left-editor correction (2026-10-21)
 
 The prior [c8-ui P4 closeout](tasks/c8-ui/closeout.md) is **UI GREEN / STAGING DEPLOYED** for its tested top-TV/bottom-dock presentation at root/lock **0.8.10**. At its dated host readback, protected staging release was `20261021T193117Z-850e9d93523c` with schema 14 and approved FREE release #1 unchanged. [P8B Wave 2](tasks/p8b/wave2-follow-on-2026-10-21.md) remains NOT GREEN for unproved native static-layout screen evidence. These are dated observations, not fresh host checks.
