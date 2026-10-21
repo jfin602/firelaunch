@@ -1,0 +1,30 @@
+TASK: Phase 8 / P5 — Independent creative UX closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.5`.
+
+TYPE
+One independent MANUAL real-browser closeout prompt, not a runner-owned implementation or automatic commit. Write docs/tasks/p8/closeout.md after evidence exists.
+
+MISSION
+Review the exact Phase 8 candidate as a creator, not a developer: intuitive navigation, contextual-only editor, saved real content and safe Publish versus native Export. Record GREEN/NOT GREEN with accurate external dependencies and preserve prior evidence.
+
+PREFLIGHT
+Read P8 README/assessment/plan and P1–P4 handoffs, current state, c7 R2/R3/R4 results, p7 status, prior Phase 6 media closeouts and P9 delivery requirements. Inspect actual local HEAD/status and root/lock 0.8.4 after implementation, validated stack and tested staging source/version. Require an actual authenticated owner Studio browser plus appropriate mobile/wide viewport capability. For Vega/public release comparison, use the actual separately installed Phase 7 VPKG/ZIP hashes and accessible VirtualDevice only if genuinely available. Never claim old reported output is a fresh browser/device run. If a Chrome attachment is required, report the exact requirement.
+
+MANUAL ACCEPTANCE
+1. Real authenticated Studio: Home and project switch; new/existing channel; navigate exactly Home, Library, Channel, Publish, Export without dead links or missing legacy features. Advanced Source and existing code edit protection remain reachable. Verify browser reload/switch/account/session handling.
+2. Inspect 1440px desktop, tablet and ~375px phone where supported: default full-width, right inspector truly absent unless contextual selection; select an actual editable page/shelf/media tile/appearance item to open it, dismiss/recover focus, no empty rail, scrolling/forms and reduced-motion/focus behavior. Interact with functional 16:9 TV Preview (keyboard/virtual remote, D-pad, detail/Back). No made-up screenshots.
+3. Owner video: reopen an already saved video; inspect title/cover chosen artwork, status, rights, optional subtitles, Channel shelf and private owner-only playback; do not unnecessarily upload/encode a new video. Confirm persisted edits and accurate draft/ready/live distinction; never expose original private media. Check appropriate foreign/private negative evidence when available.
+4. Publish: show draft vs live release, explicit approval only; never actually activate new release or rollback without separately scoped owner permission. Export: view real status/verified ZIP/download from c7 only when ready. If Phase 7 external installed VVD evidence exists, verify same release metadata/artwork/HLS; else mark missing P7 prerequisite, not synthetic success. No Appstore/native physical Fire TV claims.
+5. Run focused tests for actual fixes plus one appropriate aggregate check and npm run codex:stack:validate -- p8, git diff --check. Use at most two small repairs if directly observed and within scope; otherwise NOT GREEN and concise correction proposal. Reuse unaffected green evidence, avoid full Q2/Q3 history.
+
+CLOSEOUT
+Write docs/tasks/p8/closeout.md: exact source SHA and dirty status, version/root lock state, browser URLs/viewport/results, screenshots/logs when actually captured, real video/artwork and publication binding, test pass/fail/skip counts, exporter ZIP/VPKG/SDK/VirtualDevice hashes and proof if available, blockers, permissions, GREEN/NOT GREEN. Explicitly separate Phase 8 UX/creative GREEN from Phase 7 ZIP/Vega external gaps and broader historical Q2 F7/P5/c5 states; do not call whole phase qualified without all mandatory P8 acceptance.
+
+VERSION / GIT / SAFETY
+0.8.5 is only a proposed manual closeout target, not an automatic bump. Do not self-commit, push, change root version/deploy without separately approved phase closeout transition. No new creator public release, paid encoding, AWS/CDN/IAM change, installable fixture claims, Amazon Developer Console actions, host sudo or schema migration. Preserve release #1 and rollback.
