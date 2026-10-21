@@ -3,11 +3,17 @@
 Bootstrap date: 2026-10-08.
 Hackathon deadline: 2026-10-23 12:00 PM PDT.
 
+## Active October 21 phase handoff — P7 owner-closed, P8 baseline 0.8.0
+
+**Owner disposition:** [Phase 7 owner closeout](../tasks/p7/owner-closeout-2026-10-21.md) closes P7/C7 as **OWNER-ACCEPTED PARTIAL / NOT GREEN**. Independent native build/ZIP, creator-bound x86_64 VPKG installation, approved artwork/branding, Back and restart had direct evidence. HLS TS fragment `FRAG_LOADED`, visible moving picture, confirmed sound and pause/seek remained unqualified. Do not rewrite history or imply an installed app now streams successfully.
+
+The owner authorizes **source root + two top-level package-lock fields `0.7.3` -> `0.8.0`**, with application schema 14, workspace package versions, VPS and public FREE release #1 unchanged. This is a **Phase 8 runner entry, not a deployed/staging release**. The active implementation sequence is [P8 Creative Studio UX P1–P4](../tasks/p8/README.md) followed by a separate P5 manual browser closeout; Phase 9 later owns final native video and post-install app update acceptance. Old C7 R4 "before P8" instructions below are retained as dated historical sequencing and no longer block P8 entry. On every developer machine inspect/secure any uncommitted C7 work and sync safely to the committed 0.8.0 baseline before running `npm run codex:stack:validate -- p8` / `npm run codex:stack -- p8`. Deadline Friday Oct 23 noon America/Chicago, internal 11:30.
+
 ## Approved Phase 9 — Live Channel Publishing & App Updates (October 21; docs only)
 
 [Phase 9](../tasks/p9/README.md) now owns first-class post-deployment publishing: rights-approved compatible manifest video/artwork/shelves/brand/layout updates reach already-installed Vega apps without VPKG reinstall; new native UI/runtime/schema requires a **same-package-ID higher-version VPKG** and creator-managed Amazon review. Former Phase 9 *Final MVP Launch Qualification* is retained as **manual P9 P5**. Five prompts: P1 compatibility, P2 same-installed v1→v2/LKG/rollback, P3 native successor upgrade, P4 Publish/Export UI, P5 independent final video/audio/remote + both update paths. [Plan](../tasks/p9/implementation-plan.md) and [assessment](../tasks/p9/prompt-assessment.md). **Plan/prompts only**, no 0.9.0/0.9.x entry, app/stage/cloud/release changes. P8 five destinations unchanged; no native OTA code or WebView migration. Critical order remains C7 R4 first HLS TS repair → safe P8 handoff → separately approved P9 entry. Deadline Oct 23 noon America/Chicago, internal 11:30; Thu Oct 22 5 PM freeze.
 
-## Active October 21–23 delivery override — native HLS only
+## Historical October 21 C7-first delivery snapshot (superseded by owner Phase 8 entry)
 
 **C7 PARTIAL / NOT GREEN.** Later C7 closeout proves R1 Studio startup SCOPED GREEN, R2 isolated same-VPS worker and real creator-bound native VPKG GREEN, R3 authenticated four-file Studio ZIP SCOPED GREEN. R4 independently installed the exact downloaded VPKG on a stable Vega VirtualDevice, displaying the approved channel, artwork, Back navigation and restart. **Remaining:** Hls.js parsed approved master and variant playlists but stalled at the first TS fragment (no FRAG_LOADED); moving video, independently verified sound, pause and seek remain unqualified. Run only the manual [R4 playback recovery](docs/tasks/c7-export-recovery/R4-playback-recovery.txt) with at most three focused repair cycles. Reuse existing GREEN work. Root 0.7.3 and core schema 14 unchanged; preserve approved public release #1.
 
