@@ -1,5 +1,9 @@
 # FireLaunch Creator Studio: Desert Heat Visual Baseline
 
+## Latest Channel rail and control styling authority — c8-ui2
+
+The new [secondary Channel rail design](channel-secondary-rail.md) supersedes the old Channel bottom-dock placement, **not** the overall Desert Heat palette or full-bleed Studio shell. The editor sits as a second LEFT vertical rail beside the existing global navigation; real 16:9 TV Preview sits on the RIGHT with virtual remote below. In fullscreen the editing panel slides from the LEFT edge, not from bottom. Every Channel button/tab/action must match calm charcoal/warm neutral surfaces and restrained orange-selected/primary hierarchy: no plain browser-default white action buttons, no widespread orange media art. Keep high-contrast focus/disabled/danger states and keyboard/touch accessibility. Target only; source correction [c8-ui2](../tasks/c8-ui2/README.md) not yet qualified.
+
 **Status:** Owner-approved visual direction (2026-10-17 UTC); **NOT IMPLEMENTED OR QUALIFIED**.
 **Scope:** Authenticated FireLaunch creator Studio, application shell, project dashboard, catalog and editor. Not creator-owned Vega channel brand/theme.
 **Visual authority:** The user-approved screenshot named `trailers.png` (1672 x 941 px; SHA-256 `cc664b2e717ca69368d7807644332f213a7ab115fb9b7ea06d04cfb8ba1ef590`), discussed and accepted in the FireLaunch project conversation on 2026-10-17. It contains a darkened sandstone slot canyon, charcoal dashboard, orange/red CTAs, left/top/right application rails, and three genre-diverse film thumbnails. See [reference provenance](references/README.md). Its fake names, metrics, navigation labels and images are **illustrative**, not live product evidence.
