@@ -55,9 +55,10 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
       {build?.output && <pre tabIndex={0} aria-label="Build command output">{build.output}</pre>}
       {build?.toolchain && <div><h3>Toolchain doctor</h3>{(['node', 'npm', 'vegaSdk', 'vegaCli', 'device'] as const).map(key => <p key={key}>{key}: {build.toolchain[key].detail}</p>)}</div>}
     </>}
-    {surface === 'Publish' && <><LivePublication project={project} hosted={hosted}/><h2>Submission handoff</h2><p className="muted">Live content publication above is not a native package build or Amazon Developer Console submission. No Amazon Developer Console action has occurred. Review each item and submit through your own Amazon account.</p>
+    {surface === 'Publish' && <LivePublication project={project} hosted={hosted}/>}
+    {surface === 'Build' && <><h2>Submission handoff</h2><p className="muted">Export prepares the native app package and creator-owned submission materials. Submit through your own Amazon account.</p>
       {publish?.checks.map(check => <p key={check.group}><strong>{check.ready ? '✓' : '○'} {check.group}</strong><br/>{check.detail}</p>)}
-      {publish && <div><h3>Draft store copy</h3><p><strong>{publish.copy.appName}</strong> — {publish.copy.shortDescription}</p><p>{publish.copy.longDescription}</p><p>Release notes: {publish.copy.releaseNotes}</p><p>Artwork references: {publish.assets.artwork.join(', ') || 'None'}; screenshots: none recorded.</p></div>}
+      {publish && <div><h3>Draft store copy</h3><p><strong>{publish.copy.appName}</strong> — {publish.copy.shortDescription}</p><p>{publish.copy.longDescription}</p><p>Release notes: {publish.copy.releaseNotes}</p><p>Artwork references: {publish.assets.artwork?.join(', ') || 'None'}; screenshots: none recorded.</p></div>}
       <button disabled={busy || hosted || !publish} onClick={() => void action(async () => { const result = await createBundle(project.id); if (result.status === 'blocked') setError(result.reason ?? 'Bundle unavailable'); else setBundle(result.path ?? ''); })}>Create local submission bundle</button>{bundle && <p>Bundle: <code>{bundle}</code> (readiness, copy, assets, checklist; not submitted)</p>}
     </>}
     {hosted && exportOpen && <NativeExportWorkspace project={project} initial={nativeExport} onStatus={setNativeExport} onClose={() => setExportOpen(false)}/>}

@@ -16,9 +16,13 @@ function newId(kind: 'page' | 'mod' | 'item'): string {
   return `${kind}_${crypto.randomUUID().replaceAll('-', '')}`;
 }
 
-type Surface = 'Home' | 'Catalog' | 'Create' | 'Design' | 'Content' | 'Code' | 'Build' | 'Publish';
-const surfaces: Surface[] = ['Home', 'Catalog', 'Create', 'Design', 'Content', 'Code', 'Build', 'Publish'];
-const icons: Record<Surface, string> = { Home: '⌂', Catalog: '▤', Create: '✳', Design: '◈', Content: '▦', Code: '⌘', Build: '⬡', Publish: '↗' };
+type Surface = 'Home' | 'Library' | 'Channel' | 'Publish' | 'Export';
+type ChannelView = 'AI Assistant' | 'Appearance' | 'Pages & Shelves';
+type ExportView = 'Build & Download' | 'Advanced Source';
+const surfaces: Surface[] = ['Home', 'Library', 'Channel', 'Publish', 'Export'];
+const channelViews: ChannelView[] = ['AI Assistant', 'Appearance', 'Pages & Shelves'];
+const exportViews: ExportView[] = ['Build & Download', 'Advanced Source'];
+const icons: Record<Surface, string> = { Home: '⌂', Library: '▤', Channel: '◈', Publish: '↗', Export: '⬡' };
 
 function VideoTransferNotice({ accountId, projectId, onOpen }: { accountId: string; projectId: string; onOpen: (itemId: string) => void }) {
   const [tasks, setTasks] = useState<VideoTransfer[]>([]);
@@ -129,7 +133,9 @@ export default function App() {
   const [projects, setProjects] = useState<ChannelProject[]>([]);
   const [project, setProject] = useState<ChannelProject | null>(null);
   const projectRef = useRef<ChannelProject | null>(null);
-  const [surface, setSurface] = useState<Surface>('Catalog');
+  const [surface, setSurface] = useState<Surface>('Library');
+  const [channelView, setChannelView] = useState<ChannelView>('AI Assistant');
+  const [exportView, setExportView] = useState<ExportView>('Build & Download');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -155,7 +161,7 @@ export default function App() {
     window.addEventListener('focus', checkSession);
     const interval = window.setInterval(checkSession, 60_000);
     const generation = identityGeneration.current;
-    void getSession().then(active => { if (generation !== identityGeneration.current) return null; accountRef.current = active?.accountId ?? null; setSession(active); setSurface(active ? 'Home' : 'Create'); return listProjects(); }).then(items => {
+    void getSession().then(active => { if (generation !== identityGeneration.current) return null; accountRef.current = active?.accountId ?? null; setSession(active); setSurface(active ? 'Home' : 'Channel'); return listProjects(); }).then(items => {
       if (!items || generation !== identityGeneration.current) return;
       setProjects(items);
       const requested = new URLSearchParams(window.location.search).get('project');
@@ -203,7 +209,7 @@ export default function App() {
     setBusy(true); setError('');
     try {
       const created = await createProject(title);
-      select(created); setVideoSelection(null); setProjects(previous => [...previous, created]); setNewChannel(false); setSurface(catalog ? 'Catalog' : 'Create');
+      select(created); setVideoSelection(null); setProjects(previous => [...previous, created]); setNewChannel(false); setSurface(catalog ? 'Library' : 'Channel'); if (!catalog) setChannelView('AI Assistant');
       if (sample && !session) for (const mutation of sampleMutations(created, [newId('item'), newId('item'), newId('item')], [newId('mod'), newId('mod'), newId('mod'), newId('mod')])) if (!(await commit(mutation))) break;
       if (request && projectRef.current?.id === created.id) {
         const result = await askAgent(projectRef.current, request);
@@ -214,6 +220,7 @@ export default function App() {
     finally { setBusy(false); }
   };
   const draftSelection = project ? catalogSelections[project.id] : undefined;
+  const openChannel = (view: ChannelView) => { setChannelView(view); setSurface('Channel'); setNewChannel(false); };
   const openVideo = (itemId?: string) => {
     if (!project || !session) return;
     setVideoSelection({ projectId: project.id, accountId: session.accountId, ...(itemId ? { itemId } : {}) });
@@ -224,8 +231,10 @@ export default function App() {
     <main className="studio-main"><header className="topbar"><div className="topbar-title"><span className="eyebrow">STUDIO / {newChannel || !project ? 'NEW CHANNEL' : surface.toUpperCase()}</span><h1>{newChannel ? 'Your next channel' : project?.spec.title ?? 'Your next channel'}</h1></div><div className="topbar-right"><span className="status" role="status"><i aria-hidden="true"/> {busy ? 'SAVING' : project ? session ? 'SAVED PRIVATELY' : 'SAVED LOCALLY' : 'READY'}</span><button onClick={() => setNewChannel(previous => !previous)}>{newChannel && project ? '← Current channel' : '＋ New channel'}</button></div></header>
       {session && project && <VideoTransferNotice accountId={session.accountId} projectId={project.id} onOpen={openVideo}/>}
       {error && <div className="error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></div>}
-      {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : surface === 'Home' ? <Home key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} projects={projects} accountId={session?.accountId ?? null} hosted={!!session} libraryRevision={libraryRevision} onSelectProject={id => void switchProject(id)} onNewChannel={() => setNewChannel(true)} onSurface={setSurface} onOpenVideo={openVideo} onPreview={() => { setSurface('Design'); window.setTimeout(() => document.getElementById('tv-preview')?.scrollIntoView?.(), 0); }}/> : <div className="workspace"><div className="workspace-jump"><a href="#tv-preview">TV Preview</a><a href="#studio-controls">{surface} controls</a></div><div className="workspace-main" id="tv-preview"><Preview key={`${session?.accountId ?? 'local'}:${project.id}`} spec={project.spec} hosted={!!session} accountId={session?.accountId} libraryRevision={libraryRevision}/><div className="under-preview"><div><span className="eyebrow">TV-FIRST INTERACTION</span><h2>From idea to living room.</h2><p>Navigate every tile with the remote. Changes you save on the right appear here immediately. Device playback still needs separate qualification.</p></div><span className="signal">◉ &nbsp; SHARED TV SEMANTICS</span></div></div><aside className="inspector" id="studio-controls" aria-label={`${surface} controls`} key={`${project.id}:${surface}`}>
-        {surface === 'Catalog' ? <Catalog project={project} hosted={!!session} {...(session ? { accountId: session.accountId } : {})} libraryRevision={libraryRevision} onOpenVideo={openVideo} onCatalogChange={() => setLibraryRevision(value => value + 1)} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => setSurface('Create')}/> : surface === 'Design' ? <Design project={project} commit={commit}/> : surface === 'Content' ? <Content project={project} commit={commit} hosted={!!session}/> : surface === 'Create' ? <AgentPanel key={project.id} project={project} {...(draftSelection ? { catalogSelection: draftSelection.selection } : {})} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery project={project} surface={surface} hosted={!!session} />}
+      {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : surface === 'Home' ? <Home key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} projects={projects} accountId={session?.accountId ?? null} hosted={!!session} libraryRevision={libraryRevision} onSelectProject={id => void switchProject(id)} onSurface={setSurface} onEditChannel={() => openChannel('Appearance')} onOpenVideo={openVideo} onPreview={() => { openChannel('Appearance'); window.setTimeout(() => document.getElementById('tv-preview')?.scrollIntoView?.(), 0); }}/> : <div className="workspace"><div className="workspace-jump"><a href="#tv-preview">TV Preview</a><a href="#studio-controls">{surface} controls</a></div><div className="workspace-main" id="tv-preview"><Preview key={`${session?.accountId ?? 'local'}:${project.id}`} spec={project.spec} hosted={!!session} accountId={session?.accountId} libraryRevision={libraryRevision}/><div className="under-preview"><div><span className="eyebrow">TV-FIRST INTERACTION</span><h2>From idea to living room.</h2><p>Navigate every tile with the remote. Changes you save on the right appear here immediately. Device playback still needs separate qualification.</p></div><span className="signal">◉ &nbsp; SHARED TV SEMANTICS</span></div></div><aside className="inspector" id="studio-controls" aria-label={`${surface} controls`} key={`${project.id}:${surface}`}>
+        {surface === 'Channel' && <div className="chips studio-subviews" role="group" aria-label="Channel views">{channelViews.map(view => <button key={view} type="button" className={channelView === view ? 'active' : ''} aria-pressed={channelView === view} onClick={() => setChannelView(view)}>{view}</button>)}</div>}
+        {surface === 'Export' && <div className="chips studio-subviews" role="group" aria-label="Export views">{exportViews.map(view => <button key={view} type="button" className={exportView === view ? 'active' : ''} aria-pressed={exportView === view} onClick={() => setExportView(view)}>{view}</button>)}</div>}
+        {surface === 'Library' ? <Catalog project={project} hosted={!!session} {...(session ? { accountId: session.accountId } : {})} libraryRevision={libraryRevision} onOpenVideo={openVideo} onCatalogChange={() => setLibraryRevision(value => value + 1)} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => openChannel('AI Assistant')}/> : surface === 'Channel' && channelView === 'Appearance' ? <Design project={project} commit={commit}/> : surface === 'Channel' && channelView === 'Pages & Shelves' ? <Content project={project} commit={commit} hosted={!!session}/> : surface === 'Channel' ? <AgentPanel key={project.id} project={project} {...(draftSelection ? { catalogSelection: draftSelection.selection } : {})} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery key={`${project.id}:${surface}:${exportView}`} project={project} surface={surface === 'Publish' ? 'Publish' : exportView === 'Advanced Source' ? 'Code' : 'Build'} hosted={!!session} />}
       </aside></div>}
     </main>{videoSelection && project?.id === videoSelection.projectId && session?.accountId === videoSelection.accountId && !newChannel && <VideoWorkspace key={`${videoSelection.accountId}:${videoSelection.projectId}`} selection={videoSelection} project={project} onProjectUpdate={acceptProject} onIdentity={itemId => setVideoSelection(previous => previous && previous.projectId === project.id && previous.accountId === session.accountId ? { ...previous, itemId } : previous)} onClose={() => { setVideoSelection(null); setLibraryRevision(value => value + 1); }}/>}</div>;
 }

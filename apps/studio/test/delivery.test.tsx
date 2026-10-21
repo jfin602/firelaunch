@@ -15,7 +15,7 @@ Object.assign(globalThis, { window: dom.window, document: dom.window.document, H
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.window.navigator });
 const { cleanup, fireEvent, render, screen, waitFor } = await import('@testing-library/react');
 
-test('Studio Code edit, blocked Build and Publish bundle remain truthful', async () => {
+test('Export Advanced Source edit, blocked build and local bundle remain truthful', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-delivery-'));
   const repository = new ProjectRepository(directory);
   const project = await repository.create({ title: 'Wild Earth' });
@@ -27,7 +27,8 @@ test('Studio Code edit, blocked Build and Publish bundle remain truthful', async
   try {
     render(createElement(App));
     await screen.findByText('REV 1 · LOCAL');
-    fireEvent.click(screen.getByRole('button', { name: /Code/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Advanced Source' }));
     await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Generate source' }) as HTMLButtonElement).disabled, false));
     fireEvent.click(screen.getByRole('button', { name: 'Generate source' }));
     await waitFor(() => assert.ok(screen.getByRole('button', { name: 'src/App.js' })));
@@ -36,13 +37,12 @@ test('Studio Code edit, blocked Build and Publish bundle remain truthful', async
     fireEvent.change(editor, { target: { value: `${editor.value}\n// creator-owned\n` } });
     fireEvent.click(screen.getByRole('button', { name: 'Save text edit' }));
     await waitFor(() => assert.ok(screen.getByText(/Custom changes:/)));
-    fireEvent.click(screen.getByRole('button', { name: /Build/ }));
-    await waitFor(() => assert.ok(screen.getByText(/No build has run/)));
+    fireEvent.click(screen.getByRole('button', { name: 'Build & Download' }));
+    await waitFor(() => assert.ok(screen.getAllByText(/No build has run/).length > 0));
     fireEvent.click(screen.getByRole('button', { name: 'Run Vega release build' }));
     await waitFor(() => assert.ok(screen.getByText(/VEGA_SDK_PATH not set/)));
-    fireEvent.click(screen.getByRole('button', { name: /Publish/ }));
     await waitFor(() => assert.ok(screen.getByText('Submission handoff')));
-    assert.ok(screen.getByText(/No Amazon Developer Console action has occurred/));
+    assert.ok(screen.getByText(/Submit through your own Amazon account/));
     await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Create local submission bundle' }) as HTMLButtonElement).disabled, false));
     fireEvent.click(screen.getByRole('button', { name: 'Create local submission bundle' }));
     await waitFor(() => assert.ok(screen.getByText(/readiness, copy, assets, checklist; not submitted/)));
@@ -57,7 +57,7 @@ test('Studio Code edit, blocked Build and Publish bundle remain truthful', async
   }
 });
 
-test('hosted Build opens the export popup and clears project-scoped status on switch', async () => {
+test('hosted Export opens the app popup and clears project-scoped status on switch', async () => {
   const nativeFetch = globalThis.fetch;
   const project = (id: string) => ({ id, revision: 1, spec: { title: id } }) as Parameters<typeof Delivery>[0]['project'];
   globalThis.fetch = (async (input: RequestInfo | URL) => {

@@ -56,12 +56,18 @@ test('empty account keeps clear onboarding; one project opens real Home and navi
     assert.ok(screen.getByRole('button', { name: /First films.*Current channel/ }));
     fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
     assert.ok(screen.getByRole('region', { name: 'Interactive TV Preview' }));
+    assert.equal(screen.getByRole('button', { name: 'Appearance' }).getAttribute('aria-pressed'), 'true');
+    fireEvent.click(screen.getByRole('navigation', { name: 'Studio surfaces' }).querySelector('button')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit channel' }));
+    assert.equal(screen.getByRole('button', { name: 'Appearance' }).getAttribute('aria-pressed'), 'true');
     fireEvent.click(screen.getByRole('navigation', { name: 'Studio surfaces' }).querySelector('button')!);
     fireEvent.click(screen.getByRole('button', { name: 'Add Video' }));
     await screen.findByRole('dialog', { name: 'Add Video' });
     fireEvent.click(screen.getByRole('button', { name: 'Close video workspace' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Go to Library →' }));
+    assert.equal(screen.getByRole('button', { name: 'Library' }).getAttribute('aria-current'), 'page');
     fireEvent.click(screen.getByRole('navigation', { name: 'Studio surfaces' }).querySelector('button')!);
-    fireEvent.click(document.querySelector('.home-hero .button-row button:last-child')!);
+    fireEvent.click(document.querySelector('.topbar-right button')!);
     assert.ok(screen.getByPlaceholderText('e.g. Wild Earth'));
   } finally { one.restore(); }
 });
@@ -85,7 +91,7 @@ test('many projects and creator artwork are scoped; broken artwork falls back', 
   } finally { mock.restore(); }
 });
 
-test('video workspace opens directly from Home and Catalog, traps focus, and restores its opener', async () => {
+test('video workspace opens directly from Home and Library, traps focus, and restores its opener', async () => {
   const mock = setup([first], () => json({ ...empty(firstId), sources: [source], items: [film(firstId)] }));
   try {
     render(createElement(App));
@@ -102,7 +108,7 @@ test('video workspace opens directly from Home and Catalog, traps focus, and res
     fireEvent.keyDown(dialog, { key: 'Escape' });
     await waitFor(() => assert.equal(screen.queryByRole('dialog'), null));
     assert.equal(document.activeElement, card);
-    fireEvent.click(screen.getByRole('button', { name: 'Catalog' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Library' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Select Director Cut · video' }));
     await screen.findByRole('dialog', { name: 'Director Cut' });
     fireEvent.click(screen.getByRole('button', { name: 'Close video workspace' }));

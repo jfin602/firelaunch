@@ -34,7 +34,7 @@ test('empty hosted account keeps onboarding, status and real navigation visible'
     render(createElement(App));
     await screen.findByPlaceholderText('e.g. Wild Earth');
     assert.ok(screen.getByRole('navigation', { name: 'Studio surfaces' }));
-    assert.equal(screen.getByRole('button', { name: 'Catalog' }).hasAttribute('disabled'), true);
+    assert.equal(screen.getByRole('button', { name: 'Library' }).hasAttribute('disabled'), true);
     assert.ok(screen.getByRole('button', { name: 'Sign out' }));
     assert.ok(screen.getByRole('heading', { level: 1, name: 'Your next channel' }));
   } finally { restore(); }
@@ -47,27 +47,37 @@ test('shell preserves project switch, selected surfaces, inspector and Preview k
     await screen.findByRole('heading', { name: first.spec.title, level: 1 });
     assert.equal(screen.getByRole('button', { name: 'Home' }).getAttribute('aria-current'), 'page');
     for (const invented of ['Templates', 'Analytics', 'Community']) assert.equal(screen.queryByRole('button', { name: invented }), null);
-    fireEvent.click(screen.getByRole('button', { name: 'Catalog' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Library' }));
     assert.ok(screen.getByRole('region', { name: 'Interactive TV Preview' }));
-    assert.equal(screen.getByRole('button', { name: 'Catalog' }).getAttribute('aria-current'), 'page');
-    fireEvent.click(screen.getByRole('button', { name: 'Design' }));
-    assert.equal(screen.getByRole('button', { name: 'Design' }).getAttribute('aria-current'), 'page');
-    assert.ok(screen.getByRole('complementary', { name: 'Design controls' }));
+    assert.equal(screen.getByRole('button', { name: 'Library' }).getAttribute('aria-current'), 'page');
+    fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
+    assert.equal(screen.getByRole('button', { name: 'Channel' }).getAttribute('aria-current'), 'page');
+    assert.ok(screen.getByRole('complementary', { name: 'Channel controls' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
     const color = screen.getByLabelText(/PRIMARY/);
     const focused = document.querySelector('.tv-screen .focused')?.getAttribute('data-tv-focus');
     fireEvent.keyDown(color, { key: 'ArrowDown' });
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Design' }), { key: 'Enter' });
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Channel' }), { key: 'Enter' });
     assert.equal(document.querySelector('.tv-screen .focused')?.getAttribute('data-tv-focus'), focused);
     fireEvent.click(screen.getByRole('button', { name: '＋ New channel' }));
     assert.ok(screen.getByRole('heading', { level: 1, name: 'Your next channel' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Switch project' }), { target: { value: second.id } });
     await screen.findByRole('heading', { name: 'Second channel', level: 1 });
-    assert.equal(screen.getByRole('button', { name: 'Design' }).getAttribute('aria-current'), 'page');
-    assert.ok(screen.getByRole('complementary', { name: 'Design controls' }));
+    assert.equal(screen.getByRole('button', { name: 'Channel' }).getAttribute('aria-current'), 'page');
+    assert.ok(screen.getByRole('complementary', { name: 'Channel controls' }));
     assert.equal(dom.window.location.search, `?project=${second.id}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Pages & Shelves' }));
+    assert.ok(screen.getByRole('button', { name: 'Add page' }));
+    fireEvent.click(screen.getByRole('button', { name: 'AI Assistant' }));
+    assert.ok(screen.getByRole('complementary', { name: 'Channel controls' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    assert.ok(screen.getByRole('group', { name: 'Export views' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Advanced Source' }));
+    assert.ok(screen.getByRole('heading', { name: 'Vega source' }));
     fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
     await waitFor(() => assert.equal(screen.getByRole('button', { name: 'Publish' }).getAttribute('aria-current'), 'page'));
     assert.ok(screen.getByRole('complementary', { name: 'Publish controls' }));
+    assert.deepEqual([...screen.getByRole('navigation', { name: 'Studio surfaces' }).querySelectorAll('button')].map(button => button.textContent?.trim()), ['⌂Home', '▤Library', '◈Channel', '↗Publish', '⬡Export']);
   } finally { restore(); }
 });
 
