@@ -1,5 +1,10 @@
 # FireLaunch
 
+## Current creative UX direction — Phase 8 Wave 2 (2026-10-21)
+
+[Wave 1](docs/tasks/p8/wave1-closeout.md) is **GREEN / DEPLOYED** for the tested navigation, contextual editor and native Export workflow at root/lock `0.8.4`; Phase 8 is **still OPEN**. Owner-approved Wave 2 is the [human-first Page Layout and Full-Screen Preview design](docs/design/page-layout-human-first.md), with [`p8b` planning README](docs/tasks/p8b/README.md): Hero/Grid/Rows starting layouts, Pages & Layout editing, six constrained TV sections and an expandable same-state interactive Preview. **Design only:** no Wave 2 executable prompts, version change, runtime code or staging deploy yet. See [current state](docs/CURRENT-STATE.md) for latest dated operational evidence.
+
+
 ## Owner-approved phase handoff — October 21, 2026
 
 [Phase 7 owner closeout](docs/tasks/p7/owner-closeout-2026-10-21.md): **OWNER-CLOSED / ACCEPTED PARTIAL, NOT GREEN**. The measured C7 source/worker/owner ZIP and independently installed creator-bound VPKG (branding/artwork/Back/restart) are accepted; native HLS first-fragment moving video/audio/pause/seek remain unqualified and carry to Phase 9. The **Phase 8 source/runner entry is now `0.8.0`** (root package plus two root lockfile fields only); no new staging deployment, AWS job, schema, public release or native media evidence is implied. [P8 prompt stack](docs/tasks/p8/README.md) is authored and runnable from a safely reconciled clean local 0.8.0 checkout: `npm run codex:stack:validate -- p8` then `npm run codex:stack -- p8`. The runner executes P1–P4 sequentially and stops at P5 manual browser closeout; no `/activate`.
