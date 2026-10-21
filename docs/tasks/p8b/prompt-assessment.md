@@ -2,10 +2,6 @@
 
 **Date:** 2026-10-21. **Assessment and prompt authoring ONLY; no source implementation, schema/version bump, staging deployment or device qualification.** This continues Phase 8 after [Wave 1 GREEN / DEPLOYED](../p8/wave1-closeout.md), whose tested root/lock version was `0.8.4`. Phase 8 is still OPEN. Normative product/UI direction: [human-first Page Layout design](../../design/page-layout-human-first.md). Real local checkout/host may differ from GitHub main; inspect before implementation. Deadline 2026-10-23 noon America/Chicago, internal 11:30.
 
-## Owner-approved TV-first correction precedence
-
-This assessment's original page-list/center-canvas/right-inspector composition is superseded by [c8-ui](../c8-ui/README.md) and [TV-first design](../../design/tv-first-channel-workspace.md): **TV stage above a directly adjoining horizontal tabbed dock**, full screen with edge-hover/touch/keyboard dock overlay, no AI or Preview close. When `c8-ui` is complete, P8B must **reuse its single Preview/dock state**, not create another side-rail editor or fullscreen preview. P8B P1 creates templates inside the dock, P2/P3 build human-first dock panels, P6 only refines/tests fullscreen as needed; P4/P5 schema/native parity still own their original scopes. Do not run fixed-version correction on an already-advanced local P8B source; check local worktree first.
-
 ## Grounded state of implementation
 
 - `apps/studio/src/App.tsx` contains the Channel subview `Pages & Shelves` and an embedded `Content` editor mixing page creation, film/content editing and module controls. Add Page currently submits `{id,title,modules:[]}`; its module picker exposes low-level `hero/rail/grid/text` terms. P8 Wave 1 introduced five primary destinations and a contextual inspector, which Wave 2 must REUSE, not replace.
