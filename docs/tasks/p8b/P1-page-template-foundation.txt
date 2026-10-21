@@ -1,0 +1,25 @@
+TASK: Phase 8 / P1 — Page template foundation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.5`.
+
+GOAL
+Give creators a meaningful Home Hero page by default on NEW channels, and a two-decision (name + Hero/Grid/Rows) new-page flow that saves an ordered valid starter composition in ONE page mutation. Do not begin a second editor or introduce image/text schema variants here.
+
+PREFLIGHT
+Read docs/tasks/p8b/{README.md,prompt-assessment.md,implementation-plan.md}, docs/design/page-layout-human-first.md, docs/CURRENT-STATE.md and the immediate Wave 1 closeout/actual local changes. Inspect git HEAD/status/root+both lock versions and P8B runner prefix. Require coherent accepted 0.8.4 baseline with no conflicting uncommitted Wave 1 changes; reconcile without reset/forced pull/stash. Examine starterChannel and addPage in packages/channel-engine/src/index.ts, pageSchema/moduleSchema in packages/contracts/src/index.ts, App.tsx page creation and directly affected tests. Do not inspect host or repeat C7 qualification.
+
+IMPLEMENT
+1. Deterministic validated Hero / Grid / Rows starter builders using existing hero/rail/grid/text modules and stable unique IDs. New channels start Home with an unpopulated Hero + Row; existing persisted channels remain EXACTLY as saved (no migration on read). Additional pages suggest Rows, with Hero and Grid choices.
+2. New Page dialog/sheet in existing Channel workspace: accessible name field and 3 visually distinct labeled 16:9 template previews with clear description; default Rows and keyboard/focus/escape/cancel; one Create page action. Use single addPage(page including modules) revision-guarded transaction. Never add fictional video or privately owned artwork as published content. Honest "Choose content" placeholders in editing.
+3. On failed/duplicate submission preserve input and show actionable error; navigate/focus to saved new page only on actual success. Do not implement major editor restructuring (P2) or rich controls (P3).
+
+VALIDATION
+Focused contracts/channel-engine and Studio page-dialog tests: new Home only, all template shapes, stable IDs, empty content rights, retries, cancel/focus, revision denial, persisted/reopened page, existing project's Home untouched. Run only directly affected test files + package typechecks for changed packages, no full root build/test, staging/browser/device or repetitive loops. Runner owns git diff/version/commit checks.
+
+HANDOFF / BOUNDARIES
+With runner-owned checkpoint commit only, update root package.json and two root package-lock version fields to 0.8.5; workspace versions unchanged. Do not self-commit, deploy, publish, change schema14, run AWS/native builds or invoke /activate. <=8 min goal/15 min hard stop. Report test numbers and exact P2 UI seam.
