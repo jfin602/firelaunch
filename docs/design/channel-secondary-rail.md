@@ -1,5 +1,9 @@
 # Channel Secondary Editor Rail — c8-ui2 Visual and Interaction Contract
 
+## Final Channel visual authority — c8-ui3 supersession (2026-10-21)
+
+The owner has approved [c8-ui3 final Channel composition](channel-preview-final-composition.md) and its attached mockup. This **supersedes only** the normal-mode TV frame and its control placement described below: the editor/main sidebar seam must be flush, secondary rail gray like New Page, solid dark Channel-wide background obscures the canyon, TV is the largest fitting borderless 16:9 upper-right rectangle, and Draft/Interactive + View Full Screen are **BELOW the TV**, Virtual remote farther below/right. Preserve the normal second-left editor + right TV structure and the fullscreen LEFT drawer. The rest of this file documents the preceding c8-ui2 target and implementation evidence; do not rerun its P1–P3.
+
 **Owner-approved review 2026-10-21; target only, not yet implemented.** This supersedes the former [TV-first bottom dock design](tv-first-channel-workspace.md) for the Channel workspace, without rewriting that correction's historical qualification. Reference: owner-approved mockup after the 2026-10-21 Channel screenshot; use existing [Desert Heat](studio-visual-baseline.md), [human-first page layout](page-layout-human-first.md) and actual working [c8-ui closeout](../tasks/c8-ui/closeout.md). New [c8-ui2](../tasks/c8-ui2/README.md) repairs presentation, not ChannelSpec, native output, publication, video or permissions.
 
 ## Standard Channel: primary sidebar + secondary editor rail + right TV preview
