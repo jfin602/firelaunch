@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
 import { generateProject } from '@firelaunch/generator';
+import type { ChannelProject, ChannelDeployment } from '@firelaunch/contracts';
 import { RepositoryError } from './repository.js';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { assertExportableMedia } from './hosted-media-policy.js';
 import { PublicationRepository } from './publication-repository.js';
-import { createReleaseBuildInput, type ReleaseBuildInput } from './release-build.js';
+import { createReleaseBuildInput, type ReleaseBuildInput, type StoredSource } from './release-build.js';
 import { isTrustedVegaAsset, isTrustedVegaAssetPath, TRUSTED_VEGA_ASSET_MAX_BYTES } from './trusted-vega-assets.js';
 
 const textName = /\.(?:js|jsx|ts|tsx|json|toml|md|txt)$|^(?:README|LICENSE)$/i;
@@ -19,6 +20,19 @@ async function optionalDeployment(repository: HostedProjectRepository, principal
 }
 export const sourceMatchesBaseline = (content: string | undefined, baseline: string | undefined): boolean =>
   content !== undefined && baseline !== undefined && (/^sha256:[a-f0-9]{64}$/.test(baseline) ? hash(content) === baseline.slice(7) : content === baseline);
+async function releaseSourceForApproved(source: Awaited<ReturnType<HostedProjectRepository['source']>>,
+  approved: ChannelProject, deployment: ChannelDeployment): Promise<StoredSource> {
+  const generated = await generateProject(approved.spec, deployment);
+  if (source?.specRevision === approved.revision && source.fingerprint === generated.fingerprint) return source;
+  if (source && [...new Set([...Object.keys(source.files), ...Object.keys(source.baseline)])].some(name =>
+    !sourceMatchesBaseline(source.files[name], source.baseline[name])))
+    throw new RepositoryError('CONFLICT', 'Custom generated files exist. Preserve edits before building the approved release.');
+  // A newer private draft may have clean saved source. Build a separate,
+  // immutable source snapshot from the approved release without changing it.
+  const files = Object.fromEntries(generated.files);
+  return { specRevision: approved.revision, fingerprint: generated.fingerprint,
+    files, baseline: { ...files } };
+}
 function safeName(name: string): void {
   if (!name || name.length > 240 || name.includes('\\') || name.includes('\0') || name.startsWith('/') ||
     name.split('/').some(part => !part || part === '.' || part === '..' || part.startsWith('.')) ||
@@ -50,10 +64,7 @@ export class HostedWorkspaceService {
     assertExportableMedia(approved.channel);
     const approvedProject = { ...project, spec: approved.channel, revision: approved.revision };
     const source = await this.repository.source(principal, id);
-    const generated = !source ? await generateProject(approved.channel, deployment) : null;
-    const releaseSource = source ?? (generated ? { specRevision: approved.revision,
-      fingerprint: generated.fingerprint, files: Object.fromEntries(generated.files),
-      baseline: Object.fromEntries(generated.files) } : null);
+    const releaseSource = await releaseSourceForApproved(source, approvedProject, deployment);
     const input = await createReleaseBuildInput(approvedProject, releaseSource, deployment,
       { releaseId: release.releaseId, sequence: release.sequence }, principal.accountId);
     // Repeat after assembling the snapshot. P2 must call this again before artifact acceptance/download.
@@ -68,11 +79,9 @@ export class HostedWorkspaceService {
     const currentApproved = await this.publication.currentBuildSnapshot(principal, id, currentDeployment.id, currentRelease.releaseId);
     if (currentApproved.revision !== currentRelease.revisions.channel)
       throw new RepositoryError('CONFLICT', 'Approved channel changed during snapshot');
-    const currentGenerated = !currentSource ? await generateProject(currentApproved.channel, currentDeployment) : null;
+    const currentApprovedProject = { ...current, spec: currentApproved.channel, revision: currentApproved.revision };
     const confirmed = await createReleaseBuildInput({ ...current, spec: currentApproved.channel, revision: currentApproved.revision },
-      currentSource ?? (currentGenerated ? { specRevision: currentApproved.revision,
-        fingerprint: currentGenerated.fingerprint, files: Object.fromEntries(currentGenerated.files),
-        baseline: Object.fromEntries(currentGenerated.files) } : null), currentDeployment,
+      await releaseSourceForApproved(currentSource, currentApprovedProject, currentDeployment), currentDeployment,
       { releaseId: currentRelease.releaseId, sequence: currentRelease.sequence }, principal.accountId);
     if (confirmed.fingerprint !== input.fingerprint) throw new RepositoryError('CONFLICT', 'Build input changed during snapshot');
     return input;

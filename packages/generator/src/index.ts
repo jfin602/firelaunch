@@ -51,9 +51,10 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
   templateHash.update('src/tv-runtime.js').update('\0').update(runtime);
   const templateFingerprint = templateHash.digest('hex');
   const publicBinding = bound ? { deploymentId: bound.id, channelId: valid.id, packageId: bound.packageId, origin } : null;
+  const appName = bound?.appName ?? valid.title;
   const fingerprint = createHash('sha256').update(TEMPLATE_VERSION).update('\0')
-    .update(templateFingerprint).update('\0').update(JSON.stringify(valid)).update('\0').update(JSON.stringify(publicBinding)).digest('hex');
-  const appName = `FireLaunch ${valid.title}`;
+    .update(templateFingerprint).update('\0').update(JSON.stringify(valid)).update('\0')
+    .update(JSON.stringify(publicBinding)).update('\0').update(appName).digest('hex');
   const packageName = `firelaunch-${valid.slug}`;
   const applicationId = bound?.packageId ?? `com.firelaunch.channel.${valid.id}`;
   files.set('package.json', json({ name: packageName, version: TEMPLATE_VERSION, private: true, scripts: {

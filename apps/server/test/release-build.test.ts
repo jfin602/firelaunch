@@ -231,6 +231,15 @@ test('hosted snapshot denies foreign identity, preserves released revision, and 
   currentRelease = release;
   currentProject = { ...project, revision: 4 };
   assert.equal((await workspace.releaseBuildInput(owner, project.id)).fingerprint, first.fingerprint);
+  const draft = { ...spec, title: 'New private draft' };
+  const draftGenerated = await generateProject(draft, deployment);
+  const draftFiles = Object.fromEntries(draftGenerated.files);
+  source = { specRevision: 4, fingerprint: draftGenerated.fingerprint, files: draftFiles, baseline: { ...draftFiles } };
+  currentProject = { ...project, spec: draft, revision: 4 };
+  assert.equal((await workspace.releaseBuildInput(owner, project.id)).fingerprint, first.fingerprint);
+  assert.equal(source.files['app.json'], draftFiles['app.json']);
+  source = { ...source, files: { ...source.files, 'src/App.js': `${source.files['src/App.js']}\n// private edit` } };
+  await assert.rejects(workspace.releaseBuildInput(owner, project.id), /Preserve edits before building/);
   source = null as unknown as StoredSource;
   assert.equal((await workspace.releaseBuildInput(owner, project.id)).fingerprint, first.fingerprint);
 });

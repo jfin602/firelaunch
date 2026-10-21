@@ -18,11 +18,20 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
   useEffect(() => {
     let active = true;
     setCode(null); setFile(null); setBuild(null); setNativeExport(null); setPublish(null); setBundle(''); setError('');
-    void Promise.all([codeOverview(project.id), buildStatus(project.id), readiness(project.id), hosted ? nativeExportStatus(project.id) : Promise.resolve(null)])
-      .then(([source, evidence, checks, exportState]) => { if (active) { setCode(source); setBuild(evidence); setPublish(checks); setNativeExport(exportState); } })
-      .catch(reason => { if (active) setError(String(reason)); });
+    void Promise.allSettled([codeOverview(project.id), buildStatus(project.id), readiness(project.id), hosted ? nativeExportStatus(project.id) : Promise.resolve(null)])
+      .then(([source, evidence, checks, exportState]) => {
+        if (!active) return;
+        if (source.status === 'fulfilled') setCode(source.value);
+        else setError(String(source.reason));
+        if (evidence.status === 'fulfilled') setBuild(evidence.value);
+        if (checks.status === 'fulfilled') setPublish(checks.value);
+        if (exportState.status === 'fulfilled') setNativeExport(exportState.value);
+        // A stale native build can fail independently of source overview. Keep
+        // the Code controls available so clean source can be regenerated.
+        if (surface === 'Build' && exportState.status === 'rejected') setError(String(exportState.reason));
+      });
     return () => { active = false; };
-  }, [project.id, project.revision, hosted]);
+  }, [project.id, project.revision, hosted, surface]);
   async function action(work: () => Promise<void>) { setBusy(true); setError(''); try { await work(); } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); } finally { setBusy(false); } }
   async function open(name: string) {
     if (file && draft !== file.content && !window.confirm('Discard unsaved edits?')) return;

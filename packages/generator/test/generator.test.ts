@@ -33,7 +33,7 @@ test('deterministic tree contains true shared runtime, manifest and projected co
   assert.deepEqual(JSON.parse(first.files.get('firelaunch.json')!).unresolvedAssets, ['assets/ocean.jpg']);
   assert.notEqual((await generateProject({ ...spec, title: 'Another' })).fingerprint, first.fingerprint);
   const quoted = await generateProject({ ...spec, title: 'A "quoted" channel' });
-  assert.match(quoted.files.get('manifest.toml')!, /title = "FireLaunch A \\"quoted\\" channel"/);
+  assert.match(quoted.files.get('manifest.toml')!, /title = "A \\"quoted\\" channel"/);
 });
 
 test('writes source once and never overwrites customized files', async () => {
@@ -74,7 +74,7 @@ test('generated projection and bundled runtime keep informational and audio sema
   state = runtime.transition(projected, state, 'back');
   state = runtime.transition(projected, state, 'right');
   assert.equal(runtime.transition(projected, runtime.transition(projected, state, 'select'), 'select').screen, 'playback');
-  assert.match(generated.files.get('src/App.js')!, /Now listening/);
+  assert.match(generated.files.get('src/App.js')!, /playerBackButton/);
   assert.match(generated.files.get('src/App.js')!, /Back to channel/);
 });
 
@@ -91,6 +91,12 @@ test('bound deployments pin public identity while legacy generation remains stat
   });
   assert.equal(JSON.parse(generated.files.get('src/release-config.json')!).creatorAccountId, undefined);
   assert.equal(JSON.parse(generated.files.get('app.json')!).name, 'com.creator.channel.main');
+  assert.equal(JSON.parse(generated.files.get('app.json')!).displayName, deployment.appName);
+  assert.match(generated.files.get('manifest.toml')!, /title = "Creator channel"/);
+  const unbound = await generateProject(spec);
+  assert.equal(JSON.parse(unbound.files.get('app.json')!).displayName, spec.title);
+  assert.match(unbound.files.get('manifest.toml')!, new RegExp(`title = "${spec.title}"`));
+  assert.notEqual(generated.fingerprint, (await generateProject(spec, { ...deployment, appName: 'Renamed creator app' })).fingerprint);
   assert.match(generated.files.get('manifest.toml')!, /id = "com\.creator\.channel"/);
   const fallback = JSON.parse(generated.files.get('src/channel.json')!);
   assert.deepEqual(fallback.pages[0].modules[0].items, []);

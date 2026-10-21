@@ -1,5 +1,6 @@
 # FireLaunch Current State
 
+<<<<<<< HEAD
 Last documentation reconciliation: 2026-10-21 UTC (owner-approved Phase 7 partial closure and Phase 8 entry; staging and AWS remain dated observations, not fresh inspections).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
 
@@ -20,6 +21,18 @@ The owner approved **[P8 Creative Studio UX & Pipeline Confirmation](tasks/p8/RE
 **Status: NOT IMPLEMENTED / NOT QUALIFIED**; source root/package/lock remains 0.7.3 (no 0.8.0 or 0.8.x bump approved). This docs-only update did not deploy Studio, change AWS/publication, or modify Vega output. **Active C7 R4 playback repair remains first**: native worker, authenticated ZIP, exact VPKG install, branding/artwork/Back/restart have direct prior evidence, but HLS first-fragment transfer, visible video, audio and pause/seek remain unqualified. Start P8 implementation only from a clean coherent source handoff, with a separately approved 0.8.0 entry, not in parallel on the active manual C7 checkout. Deadline 2026-10-23 noon America/Chicago, internal 11:30.
 
 ## Active October 21: C7 R4 playback recovery only
+=======
+Last documentation reconciliation: 2026-10-21 05:45 UTC (post-GREEN player controls refinement and protected staging readback; older sections remain dated observations).
+Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
+
+## Current October 21: C7 R4 qualified on Vega VirtualDevice
+
+**[C7 GREEN / R4 GREEN](tasks/c7-export-recovery/closeout.md#2026-10-21-r4-continuation--c7-green) for the tested native Vega VirtualDevice scope.** Two focused R4 repair cycles fixed a vendored Hls.js timer exception and delivered the owner's modern full-screen player. The qualified VPKG played approved free HLS at 1920×1080 with independently captured loopback audio, pause/resume, forward/backward seek, creator title/artwork, D-pad/Back and playback after terminate/relaunch. A post-GREEN UI refinement tightened the top and bottom bars, removed the bottom back icon, followed creator typography and added a speaker indicator that changes on mute. The [R4 evidence](tasks/c7-export-recovery/R4-playback-evidence.md) records the original qualification and final UI screenshots. The latest ZIP is `/home/jfin/Downloads/com.jfin.snabbletv_vega_release (5).zip` (SHA-256 `7f105b9c2c4ab8d8616b2517797957476892b71f139c37650821f4220f93327c`); installed VPKG SHA-256 `3ba5d0da337898f961665aad988975a0f8bde09f12555f25e852bc64fbbf636b`, package `com.jfin.snabbletv`, visible name `snabble tv`. Earlier R1/R2/R3 scoped results and the historical P7 P4, Q2 F7, P5/c5 and Q3 statuses are not relabeled. Physical Fire TV and Appstore acceptance remain open outside C7.
+
+Latest protected staging release `/srv/firelaunch/releases/20261021T052901Z-52be5401dcf3` ran schema **14 → 14**; its previous release and verified encrypted backup were retained. Staging and separate worker were active at readback. Public release #1 was not republished. Root/lock version stayed **0.7.3**. Local `main` HEAD was `f83dde3` with R4 changes uncommitted; no runner, new creator publication, paid encode or AWS permission change occurred.
+
+## Historical October 21 R4 starting state — superseded by qualification above
+>>>>>>> f53a088 (p7 closeout green)
 
 **C7 PARTIAL / NOT GREEN.** Later C7 closeout proves R1 Studio startup SCOPED GREEN, R2 isolated same-VPS worker and real creator-bound native VPKG GREEN, R3 authenticated four-file Studio ZIP SCOPED GREEN. R4 independently installed the exact downloaded VPKG on a stable Vega VirtualDevice, displaying the approved channel, artwork, Back navigation and restart. **Remaining:** Hls.js parsed approved master and variant playlists but stalled at the first TS fragment (no FRAG_LOADED); moving video, independently verified sound, pause and seek remain unqualified. Run only the manual [R4 playback recovery](docs/tasks/c7-export-recovery/R4-playback-recovery.txt) with at most three focused repair cycles. Reuse existing GREEN work. Root 0.7.3 and core schema 14 unchanged; preserve approved public release #1.
 

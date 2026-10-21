@@ -8665,7 +8665,11 @@ class FragmentLoader {
   resetLoader(frag, loader) {
     frag.loader = null;
     if (this.loader === loader) {
-      self.clearTimeout(this.partLoadTimeout);
+      // -1 is Hls.js's "no part timer" sentinel; Kepler rejects that handle.
+      if (this.partLoadTimeout != null && this.partLoadTimeout !== -1) {
+        self.clearTimeout(this.partLoadTimeout);
+      }
+      this.partLoadTimeout = -1;
       this.loader = null;
     }
     loader.destroy();
@@ -24659,8 +24663,14 @@ class XhrLoader {
   }
   abortInternal() {
     const loader = this.loader;
-    self.clearTimeout(this.requestTimeout);
-    self.clearTimeout(this.retryTimeout);
+    if (this.requestTimeout != null) {
+      self.clearTimeout(this.requestTimeout);
+      this.requestTimeout = void 0;
+    }
+    if (this.retryTimeout != null) {
+      self.clearTimeout(this.retryTimeout);
+      this.retryTimeout = void 0;
+    }
     if (loader) {
       loader.onreadystatechange = null;
       loader.onprogress = null;
@@ -24780,6 +24790,7 @@ class XhrLoader {
       }
       if (readyState === 4) {
         self.clearTimeout(this.requestTimeout);
+        this.requestTimeout = void 0;
         xhr.onreadystatechange = null;
         xhr.onprogress = null;
         const status = xhr.status;

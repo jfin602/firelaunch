@@ -34,6 +34,7 @@ test('adaptive HLS uses MSE, plays with sound, seeks, pauses and cleans up on Ba
   assert.equal(calls.at(-1), 'play');
   controller.seek(10);
   assert.equal(video.currentTime, 15);
+  assert.deepEqual(controller.snapshot(), { currentTime: 15, duration: 20, paused: false, muted: false });
   controller.seek(10);
   assert.equal(video.currentTime, 20);
   await controller.toggle();
@@ -56,12 +57,42 @@ test('generated source carries patched HLS player and public artwork rendering',
   assert.match(app, /createHlsPlayer/);
   assert.match(app, /detailArtwork/);
   assert.match(app, /controls\.current\?\.seek/);
+  assert.match(app, /fullscreenVideo/);
+  assert.match(app, /playerTimeline/);
+  assert.match(app, /typography=\{brand\.typography\}/);
+  assert.match(app, /fontFamily: typography === 'serif' \? 'serif' : 'sans-serif'/);
+  assert.match(app, /<SoundIcon muted=\{position\.muted\} \/>/);
+  assert.match(app, /state\.screen === 'playback' && item\) return <Playback/);
   assert.match(app, /dispatch\('back'\)/);
   assert.ok(generated.files.get('src/hlsjs/hls.mjs')!.length > 100_000);
   assert.match(generated.files.get('src/hlsjs/adapter.js')!, /enableWorker: false/);
   assert.match(generated.files.get('src/hlsjs/adapter.js')!, /fLoader: XhrLoader/);
   const dependencies = JSON.parse(generated.files.get('package.json')!).dependencies;
   assert.equal(dependencies['@xmldom/xmldom'], '0.8.15');
+});
+
+test('completed video reports finished and Select replays from the beginning', async () => {
+  const listeners = new Map<string, () => void>();
+  const states: string[] = [];
+  const video = { paused: false, muted: false, currentTime: 11.9, duration: 12,
+    initialize: async () => {}, deinitialize: async () => {}, setSurfaceHandle: () => {}, clearSurfaceHandle: () => {},
+    addEventListener: (name: string, fn: () => void) => listeners.set(name, fn),
+    removeEventListener: (name: string) => listeners.delete(name),
+    play: async () => { video.paused = false; listeners.get('playing')?.(); },
+    pause: () => { video.paused = true; listeners.get('pause')?.(); } };
+  const hlsListeners = new Map<string, (_: unknown, detail?: { fatal: boolean; details: string }) => void>();
+  const hls = { Events: { ERROR: 'error', MANIFEST_PARSED: 'manifestParsed' },
+    on: (name: string, fn: (_: unknown, detail?: { fatal: boolean; details: string }) => void) => hlsListeners.set(name, fn),
+    attachMedia: () => {}, loadSource: () => {}, destroy: async () => {} };
+  const controller = createPlaybackController({ createVideo: () => video, createHls: () => hls,
+    installPolyfills: () => {}, onState: ({ status }: { status: string }) => states.push(status) });
+  await controller.start('surface', { mediaUrl: 'https://cdn.example.org/master.m3u8' }, false);
+  hlsListeners.get('error')?.(null, { fatal: true, details: 'bufferStalledError' });
+  assert.equal(states.at(-1), 'ended');
+  await controller.toggle();
+  assert.equal(video.currentTime, 0);
+  assert.equal(states.at(-1), 'playing');
+  await controller.stop();
 });
 
 test('Back during initialization does not attach or play a stale surface', async () => {

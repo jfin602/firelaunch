@@ -1,18 +1,22 @@
 # c7-export-recovery — P7 continuation: single-VPS native export
 
+<<<<<<< HEAD
 ## Owner closure — October 21 (overrides the execution handoff below)
 
 The owner has **closed C7 as accepted partial** to start Phase 8, recorded in [Phase 7 owner closeout](../p7/owner-closeout-2026-10-21.md). The original measured [C7 closeout](closeout.md) is still **PARTIAL / NOT GREEN**: successful isolated native build, authenticated ZIP, real VPKG installation/branding/artwork/Back/restart, but native first-TS HLS playback and sound/controls NOT GREEN. R4 playback recovery below is a **historical planned task, no longer an automatic entry gate for P8**. Do not fabricate a later successful device outcome. P8 starts at owner-approved `0.8.0` source baseline; this does not change recorded deployed `0.7.3` staging or schema 14.
 
 **Status:** [C7 final closeout PARTIAL / NOT GREEN](closeout.md) on 2026-10-20. [R1 Studio startup SCOPED GREEN](R1-closeout.md); R2 isolated native worker GREEN; R3 authenticated owner ZIP export SCOPED GREEN; R4 native Vega playback NOT GREEN because the installed app never completes its first approved HLS TS fragment and times out. P7 original [P4 closeout](../p7/closeout.md) remains NOT GREEN. Deadline Friday 2026-10-23 12:00 America/Chicago (CDT). Root package.json and both top-level lockfile version entries remain 0.7.3. Manual correction prompts only; no runner or agent commits.
+=======
+**Current status (2026-10-21): [C7 GREEN](closeout.md#2026-10-21-r4-continuation--c7-green), with [R4 native playback evidence](R4-playback-evidence.md).** R1 Studio startup SCOPED GREEN, R2 isolated native worker GREEN and R3 authenticated owner ZIP export SCOPED GREEN remain within their original scopes. The exact owner-downloaded x86_64 VPKG played approved HLS full screen with independently captured audio, pause/resume/seek, D-pad/Back and playback after restart. The original [P7 P4 closeout](../p7/closeout.md) remains NOT GREEN. Deadline Friday 2026-10-23 12:00 America/Chicago (CDT). Root and lockfile versions remain 0.7.3; no runner or agent commit occurred.
+>>>>>>> f53a088 (p7 closeout green)
 
-## Active October 21 R4 recovery
+## October 21 R4 qualification
 
-**C7 PARTIAL / NOT GREEN.** R1 startup SCOPED GREEN, R2 isolated worker/VPKG GREEN, R3 authenticated owner ZIP SCOPED GREEN. R4 stable Vega installation, creator artwork, Back and restart passed; Hls.js stalled on the first TS fragment, leaving moving video, sound, pause and seek NOT GREEN. Next: [manual R4 first-fragment playback recovery](R4-playback-recovery.txt), maximum three focused repair cycles. Do not redo R1–R3. Keep 0.7.3/schema 14, same-VPS architecture and approved free release #1.
+**R4 GREEN / C7 GREEN after two focused repair cycles.** The first repaired a native Hls.js strict timer exception that prevented XHR success from delivering the first TS fragment. The second fulfilled the owner's full-screen player request and handled the 12-second clip end as Replay. A later post-GREEN UI refinement condensed the player bars, removed the bottom back icon, followed creator typography and added an on/off speaker indicator. The latest owner ZIP SHA-256 is `7f105b9c2c4ab8d8616b2517797957476892b71f139c37650821f4220f93327c`, exact installed VPKG `3ba5d0da337898f961665aad988975a0f8bde09f12555f25e852bc64fbbf636b`. Protected staging archive `20261021T052901Z-52be5401dcf3` ran schema 14 with both services active, previous release and verified backup retained. Approved public free release #1 was not republished. See [R4 evidence](R4-playback-evidence.md) for actual device screenshots, audio loopback, controls and restart.
 
-The earlier VirtualDevice startup failure (running:false, qemu:-1) was resolved for the tested held graphical session; serial amazon-34bb27f8dce87e75 and installed x86_64 VPKG were observed. The first TS fragment remains the open boundary. Latest committed source c5a4421 differs from the tested 20261020T233126Z-d375ee6f1709 archive; preserve both identities.
+The earlier VirtualDevice startup failure (running:false, qemu:-1) was resolved for the tested held graphical session; serial `amazon-34bb27f8dce87e75` and installed x86_64 VPKG were observed. The original C7 failure below remains historical evidence. Final local `main` HEAD `f83dde3` and the uncommitted R4 working tree differ from the tested protected archive; preserve all identities.
 
-## Current deployment / trusted evidence
+## Historical October 20 deployment / trusted evidence
 
 At the 2026-10-20 23:39 UTC readback, protected 0.7.3 staging release `/srv/firelaunch/releases/20261020T233126Z-d375ee6f1709` and the separate worker were active with core schema 14. The approved release #1 pointer and HLS master retained their verified hashes. Owner job `job_ec7ec7a188b54a6095e214ecb9f20e30` produced a VPT-valid VPKG and downloadable four-file ZIP. The exact ZIP-extracted package installed on Vega VirtualDevice and showed creator branding/artwork after restart, but playback timed out at HLS segment request. See [final closeout](closeout.md) for current evidence; the earlier 22:02 R2 failure in [R2 evidence](R2-evidence.md) is preserved as historical.
 
