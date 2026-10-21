@@ -39,7 +39,7 @@ export function PreviewArtwork({ contentId, source, inventory, projectId, accoun
   return <img src={url} alt="" onError={() => setFailed(url)}/>;
 }
 
-export function Preview({ spec, selectedPageId, hosted = false, accountId, libraryRevision = 0, fullscreen = false, onExitFullscreen, exitButtonRef }: { spec: ChannelSpec; selectedPageId?: string | undefined; hosted?: boolean; accountId?: string | null | undefined; libraryRevision?: number; fullscreen?: boolean; onExitFullscreen?: () => void; exitButtonRef?: React.Ref<HTMLButtonElement> }) {
+export function Preview({ spec, selectedPageId, hosted = false, accountId, libraryRevision = 0, fullscreen = false, onEnterFullscreen, onExitFullscreen, enterButtonRef, exitButtonRef }: { spec: ChannelSpec; selectedPageId?: string | undefined; hosted?: boolean; accountId?: string | null | undefined; libraryRevision?: number; fullscreen?: boolean; onEnterFullscreen?: () => void; onExitFullscreen?: () => void; enterButtonRef?: React.Ref<HTMLButtonElement>; exitButtonRef?: React.Ref<HTMLButtonElement> }) {
   const tv = televisionFromSpec(spec);
   const [inventory, setInventory] = useState<CatalogSnapshot | null>(null);
   useEffect(() => {
@@ -104,7 +104,6 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
   const style = { '--tv-accent': tv.brand.primaryColor, '--tv-bg': tv.brand.backgroundColor, '--tv-text': tv.brand.textColor, fontFamily: tv.brand.typography === 'serif' ? 'Georgia, serif' : 'inherit' } as React.CSSProperties;
 
   return <section className="preview-wrap" aria-label="Interactive TV Preview">
-    <div className="preview-heading"><span className="eyebrow">DRAFT TV PREVIEW</span><span className="live-dot">● &nbsp;16:9 · INTERACTIVE</span>{fullscreen && <button ref={exitButtonRef} type="button" className="preview-exit" onClick={onExitFullscreen}>Exit full screen</button>}</div>
     <div className="tv-frame" ref={frameRef} tabIndex={0} style={style} aria-label={`TV screen, use arrow keys, Enter and ${fullscreen ? 'Backspace' : 'Escape'}`}>
       <div className="tv-screen" ref={screenRef}>
         {current.screen === 'page' ? <>
@@ -147,6 +146,7 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
         </div>}
       </div>
     </div>
+    <div className="preview-heading"><span className="eyebrow" hidden={fullscreen}>DRAFT TV PREVIEW</span><span className="live-dot" hidden={fullscreen}>● &nbsp;16:9 · INTERACTIVE</span>{onEnterFullscreen && <span className="channel-stage-action" hidden={fullscreen}><button ref={enterButtonRef} type="button" className="preview-toggle" onClick={onEnterFullscreen}>View full screen</button></span>}{fullscreen && <button ref={exitButtonRef} type="button" className="preview-exit" onClick={onExitFullscreen}>Exit full screen</button>}</div>
     <div className="remote-bar"><div><strong>Virtual remote</strong><span>Arrow keys · Enter select · {fullscreen ? 'Backspace TV Back · Escape Exit full screen' : 'Escape TV Back'}</span></div><div className="remote" aria-label="Virtual remote"><button type="button" aria-label="Up" onClick={() => dispatch('up')}>↑</button><div><button type="button" aria-label="Left" onClick={() => dispatch('left')}>←</button><button type="button" aria-label="Select" onClick={() => dispatch('select')}>OK</button><button type="button" aria-label="Right" onClick={() => dispatch('right')}>→</button></div><button type="button" aria-label="Down" onClick={() => dispatch('down')}>↓</button><button type="button" aria-label="Back" className="remote-back" onClick={() => dispatch('back')}>↩ Back</button></div></div>
   </section>;
 }

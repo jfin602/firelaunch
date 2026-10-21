@@ -125,6 +125,8 @@ test('full-screen fallback retains the live Preview, TV playback and focus on ex
     fireEvent.click(trigger);
     const dialog = screen.getByRole('dialog', { name: 'Full-screen TV Preview' });
     assert.equal(dialog.querySelectorAll('.preview-wrap').length, 1);
+    assert.equal(dialog.querySelectorAll('.remote-bar').length, 1);
+    assert.equal(screen.queryByRole('button', { name: 'View full screen' }), null);
     assert.equal(dialog.querySelector('video'), player);
     assert.ok(dialog.contains(document.querySelector('.channel-dock')));
     assert.equal(document.querySelector<HTMLElement>('.channel-editor')?.hasAttribute('inert'), false);

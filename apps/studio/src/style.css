@@ -865,3 +865,22 @@ body { min-width: 0; }
 .channel-editor .layout-page-rail button.active{background:#3a2b25}
 .preview-fullscreen .channel-dock-header,.preview-fullscreen .channel-dock-body,.preview-fullscreen .channel-editor,.preview-fullscreen .channel-appearance,.preview-fullscreen .channel-editor .layout-workspace{background:transparent}
 @media(max-width:1000px){.channel-workspace>.workspace-main{padding:0}}
+
+/* C8-UI3 P2: one borderless 16:9 TV, with utilities in normal document order below it. */
+.channel-tv-stage .preview-wrap{justify-content:flex-start;padding:4px 6px;overflow:hidden}
+.channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 220px)*16/9));max-height:calc(100cqh - 220px);aspect-ratio:16/9;flex:none;border:0;border-radius:0;box-shadow:none}
+.channel-tv-stage .preview-heading{order:1;width:100%;min-height:40px;align-self:stretch;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:6px 12px;margin:6px 0 0;padding:0}
+.channel-tv-stage .preview-heading .live-dot{color:#b7df66}
+.channel-tv-stage .channel-stage-action{position:static;z-index:auto;margin-left:auto}
+.channel-tv-stage .remote-bar{order:2;position:static;align-self:stretch;display:flex;justify-content:flex-end;align-items:flex-end;gap:12px;margin:auto 0 0;padding:0 4px 2px;background:none;border-radius:0}
+.channel-tv-stage .remote-bar>div:first-child{display:grid;gap:2px;text-align:right}
+.channel-tv-stage .remote-bar span{max-width:210px}
+.channel-tv-stage .remote{flex:none}
+.channel-tv-stage .remote button{min-width:40px;height:40px;min-height:40px}
+.preview-fullscreen .channel-tv-stage .preview-wrap{justify-content:center;padding:6px 12px;overflow:hidden}
+.preview-fullscreen .channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 48px)*16/9));max-height:calc(100cqh - 48px)}
+.preview-fullscreen .channel-tv-stage .preview-heading{position:absolute;z-index:2;top:8px;right:12px;width:auto;min-height:0;margin:0;padding:0}
+.preview-fullscreen .channel-tv-stage .remote-bar{position:absolute;z-index:4;right:12px;bottom:10px;display:grid;margin:0;padding:4px 6px;background:#181d1df0;border-radius:7px}
+@media(max-width:1000px){.channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 220px)*16/9));max-height:calc(100cqh - 220px)}}
+@media(max-width:760px){.channel-tv-stage .remote-bar>div:first-child{display:grid}}
+@media(max-width:690px){.channel-tv-stage{height:max(460px,calc(100vw*9/16 + 240px))}.channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 240px)*16/9));max-height:calc(100cqh - 240px)}.channel-tv-stage .preview-heading{justify-content:center}.channel-tv-stage .channel-stage-action{margin-left:0}.channel-tv-stage .remote-bar>div:first-child{display:none}}

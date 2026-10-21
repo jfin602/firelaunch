@@ -74,6 +74,11 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     assert.ok(root.querySelector('.channel-tv-stage')?.contains(preview));
     assert.ok(preview.contains(screen.getByLabelText('Virtual remote')));
     assert.equal(root.querySelectorAll('.tv-frame').length, 1);
+    assert.equal(root.querySelectorAll('.channel-stage-action').length, 1);
+    assert.equal(root.querySelectorAll('.remote-bar').length, 1);
+    const controls = preview.querySelector('.preview-heading')!;
+    assert.deepEqual(Array.from(preview.children).map(child => child.className), ['tv-frame', 'preview-heading', 'remote-bar']);
+    assert.ok(controls.contains(screen.getByRole('button', { name: 'View full screen' })));
     assert.equal(root.querySelectorAll('.channel-editor').length, 1);
     const editor = dock.querySelector('.channel-editor')!;
     assert.equal(screen.queryByRole('complementary', { name: 'Layout inspector' }), null);
@@ -142,8 +147,11 @@ test('layout controls remain accessible in narrow flow', () => {
   const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
   assert.match(css, /\.channel-presentation\{grid-template-columns:clamp\(340px,39%,520px\) minmax\(0,1fr\);grid-template-rows:minmax\(0,1fr\)\}/);
   assert.match(css, /\.channel-dock-body\{overflow-y:auto;overscroll-behavior:contain\}/);
-  assert.match(css, /\.channel-tv-stage \.tv-frame\{width:min\(100%,calc\(\(100cqh - 190px\)\*16\/9\)\)/);
-  assert.match(css, /\.channel-tv-stage \.remote-bar\{right:16px;bottom:12px/);
+  const composition = css.split('/* C8-UI3 P2:')[1];
+  assert.ok(composition);
+  assert.match(composition, /\.channel-tv-stage \.tv-frame\{width:min\(100%,calc\(\(100cqh - 220px\)\*16\/9\)\);max-height:calc\(100cqh - 220px\);aspect-ratio:16\/9;flex:none;border:0;border-radius:0;box-shadow:none\}/);
+  assert.match(composition, /\.channel-tv-stage \.remote-bar\{order:2;position:static/);
+  assert.match(composition, /\.preview-fullscreen \.channel-tv-stage \.preview-heading\{position:absolute/);
   assert.match(css, /@media\(max-width:1000px\)[\s\S]*\.channel-presentation\{height:auto;min-height:0;display:flex;flex-direction:column\}/);
 });
 
