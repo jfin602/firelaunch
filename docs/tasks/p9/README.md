@@ -6,6 +6,10 @@
 
 The [owner-accepted Phase 7 closeout](../p7/owner-closeout-2026-10-21.md) authorizes beginning P8 from committed `0.8.0` without rerunning C7 native worker/ZIP/device installation. It does **not** qualify HLS moving video, audible sound, pause or seek in the installed Vega app. Phase 9's final installed-client qualification must explicitly test/fix or clearly record this unqualified native playback boundary; historical C7 R4 remains NOT GREEN. Do not treat owner approval as evidence of successful native media playback or Appstore acceptance.
 
+## Phase 8 Wave 2 layout compatibility dependency (planned)
+
+[Wave 1 P5](../p8/wave1-closeout.md) is GREEN/DEPLOYED at tested `0.8.4`; Phase 8 remains open for [Wave 2 human-first Page Layout](../p8b/README.md). New Image Banner and Image + Text sections, visual presets and full-screen **Studio Preview** are not automatic permissions to update an already-installed native application. Phase 9 compatibility classification must recognize actual installed Vega renderer capabilities: existing supported approved layouts may be **Publish Now**; unknown/new section variants are **Requires App Update / Blocked** until a qualified compatible same-ID VPKG exists. Preserve existing public release approval, data ownership and old ChannelSpec handling. Phase 8 Wave 2 is planning only; this note does not authorize Phase 9 implementation or native publication.
+
 ## Main feature
 
 **Publish a creator's app once; update its compatible content and supported design from Studio without rebuilding. When native functionality changes, export a new version of that SAME app.**
