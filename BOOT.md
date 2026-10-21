@@ -4,6 +4,14 @@ Read this file before substantial repository-aware work.
 
 **Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) first for dated source/staging/AWS facts, current gates and next execution.** This boot file includes historical P0-P6 decisions; older activation instructions are preserved as history and MUST NOT override that current ledger, ADR 0011/0013, or p6-live-vod Q1-Q3. Last current-state reconciliation: 2026-10-20 UTC.
 
+## Current owner-directed work — c8-ui repairs completed P8B Channel (2026-10-21)
+
+The owner reports that **P8B already ran locally**. Don't run, edit or reorder those prompts: the current issue is their resulting page/Preview layout. Read [TV-first Channel design](docs/design/tv-first-channel-workspace.md) and [`c8-ui` correction stack](docs/tasks/c8-ui/README.md). Normal Channel: always-visible 16:9 TV fills upper stage, horizontally arranged Pages & Layout and Appearance editor dock touches its lower edge; AI Assistant and Close TV Preview creator UI removed. Fullscreen uses same TV and dock; editing dock rises from screen bottom on pointer hover, focus, touch or keyboard reveal. Preserve existing P8B templates, sections, native Vega support, fullscreen player and saved edits.
+
+The authored P8B P6 source version should be `0.8.10` but the actual local runner/closeout/version must be checked; GitHub main docs still show old 0.8.4. c8-ui prompts have unchanged-version `0.8.10` conditionally; if actual source differs, STOP/reconcile docs, not downgrade implementation. On safe match: `npm run codex:stack:validate -- c8-ui`, `npm run codex:stack -- c8-ui` P1–P3, then P4 independent browser. No `/activate`, no automatic stage/publish. Overall Phase 8 remains OPEN.
+
+## Historical P8B authoring handoff (superseded by c8-ui post-P8B correction)
+
 ## Current execution handoff — P8B authored (2026-10-21)
 
 [Phase 8 Wave 1 closeout](docs/tasks/p8/wave1-closeout.md) is **GREEN / DEPLOYED** at tested source `0.8.4`, and Phase 8 remains OPEN. [P8B human-first Page Layout continuation](docs/tasks/p8b/README.md) now has an assessment, plan and **seven executable prompts**; original P8 P1–P5 must not be rerun. Normal p8b runner owns P1–P6 (`0.8.5`–`0.8.10`) and stops before P7's manual browser/native-layout/staging closeout (proposed `0.8.11`). The runner does not require `/activate`.
