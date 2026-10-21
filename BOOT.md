@@ -4,7 +4,13 @@ Read this file before substantial repository-aware work.
 
 **Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) first for dated source/staging/AWS facts, current gates and next execution.** This boot file includes historical P0-P6 decisions; older activation instructions are preserved as history and MUST NOT override that current ledger, ADR 0011/0013, or p6-live-vod Q1-Q3. Last current-state reconciliation: 2026-10-20 UTC.
 
-## Current owner-approved execution — Phase 8 entry at 0.8.0 (2026-10-21)
+## Current planning handoff — Phase 8 Wave 2 (2026-10-21)
+
+[Wave 1 P5](docs/tasks/p8/wave1-closeout.md) was **GREEN / DEPLOYED** in protected staging at root/lock `0.8.4` with Phase 8 **still OPEN**. Do not rerun `p8` or present Wave 1 as final Phase 8 closure. The owner's next priority is [`p8b` Page Layout & Full-Screen Preview](docs/tasks/p8b/README.md), governed by [human-first design](docs/design/page-layout-human-first.md): Hero/Grid/Rows templates, Home Hero by default, first-class Pages & Layout workspace, simple image/text sections with contextual customization and same-state interactive fullscreen TV Preview.
+
+**This is documentation/planning only; no `p8b` implementation prompts, version bump or staging rollout have been created.** Next requested workflow is `/prompt-ass + /prompt-plan + /prompt-write p8b` after checking the actual local/staging baseline, not `npm run codex:stack -- p8b` yet. The latest C7 R4 evidence is GREEN for tested VirtualDevice video/audio/seek/Back/restart; preserve earlier historical P7/C7 records and do not conflate physical/Appstore acceptance. New static sections need native Vega parity and conservative installed-client compatibility before live publication.
+
+## Historical initial Phase 8 entry — 0.8.0 (superseded by Wave 1 GREEN)
 
 **READ FIRST:** [Phase 7 owner closeout](docs/tasks/p7/owner-closeout-2026-10-21.md) authorizes **owner-closed partial** P7/C7 and advancing to the Phase 8 source baseline `0.8.0`. This does not make C7 or the original P7 closeout GREEN: real VPKG/ZIP/VirtualDevice branding/artwork/Back/restart passed, but first TS HLS frame transfer, visible video, verified audio and pause/seek remained unqualified. Those are carried into Phase 9 final device acceptance, not P8 navigation/layout implementation blockers. The former C7 R4-only next-action sections below are historical.
 
