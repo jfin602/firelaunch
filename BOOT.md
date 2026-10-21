@@ -5,6 +5,8 @@ Read this file before substantial repository-aware work.
 **Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) first for dated source/staging/AWS facts, current gates and next execution.** This boot file includes historical P0-P6 decisions; older activation instructions are preserved as history and MUST NOT override that current ledger, ADR 0011/0013, or p6-live-vod Q1-Q3. Last current-state reconciliation: 2026-10-20 UTC.
 
 ## Current execution — optimized c8-ui after pushed P8B (2026-10-21)
+**P4 owner update:** c8-ui closes with protected staging rollout and final UI tests ON STAGING, and may serve as the P8B Wave 2 follow-on closeout if missing signed-in/native layout gates pass. If operator grant or device proof is unavailable, record the blocker and NOT GREEN. Original P8B P7 evidence remains intact.
+
 
 **P8B P1–P6 is on GitHub main at `0.8.10`; P7 is NOT GREEN / NOT DEPLOYED** (native static-layout, signed-in candidate and protected staging open). The owner wants **c8-ui TV-first Channel layout correction**, not edits to P8B. Read [c8-ui](docs/tasks/c8-ui/README.md) and [TV-first design](docs/design/tv-first-channel-workspace.md). Prompt stack P1–P3 stays `0.8.10` and has exact source seams; manual P4 checks UI and staged delivery independently. Normal Channel defaults to real 16:9 TV stage above an attached horizontal Pages & Layout / Appearance dock; no AI Assistant/Close Preview. Fullscreen reuses P8B API/state to reveal same dock from bottom via pointer/touch/keyboard.
 
