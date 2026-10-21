@@ -21,17 +21,25 @@ for app in server studio; do
 done
 cp -a "$repo/apps/server/dist" "$repo/apps/server/migrations" "$tmp/release/apps/server/"
 cp -a "$repo/apps/studio/dist" "$tmp/release/apps/studio/"
-# Carry only the active entrypoint's hashed JS/CSS into the new bundle. Browsers
-# may hold that HTML across the atomic release switch; Nginx currently returns
-# index.html (HTTP 200, text/html) for missing module paths.
-mapfile -t prior_assets < <(grep -oE '/assets/[A-Za-z0-9_-]+\.(js|css)' "$prior_index" | sort -u)
-[[ ${#prior_assets[@]} -ge 2 && ${#prior_assets[@]} -le 8 ]] || { echo 'Unexpected active Studio asset inventory' >&2; exit 1; }
-for asset in "${prior_assets[@]}"; do
-  source_asset="$(dirname "$prior_index")$asset"
-  target_asset="$tmp/release/apps/studio/dist$asset"
-  [[ -f "$source_asset" && ! -L "$source_asset" && "$(stat -c %s "$source_asset")" -le 5000000 ]] || { echo "Unsafe or missing prior Studio asset: $asset" >&2; exit 1; }
+# Carry the active release's bounded hashed JS/CSS inventory, including assets
+# retained from its own predecessor. A browser may keep either cached HTML
+# across consecutive atomic switches; Nginx serves HTML for missing modules.
+mapfile -t entry_assets < <(grep -oE '/assets/[A-Za-z0-9_-]+\.(js|css)' "$prior_index" | sort -u)
+[[ ${#entry_assets[@]} -ge 2 && ${#entry_assets[@]} -le 8 ]] || { echo 'Unexpected active Studio entrypoint assets' >&2; exit 1; }
+prior_assets_dir="$(dirname "$prior_index")/assets"
+[[ -d "$prior_assets_dir" && ! -L "$prior_assets_dir" ]] || { echo 'Active Studio assets directory is unsafe' >&2; exit 1; }
+mapfile -t prior_assets < <(find "$prior_assets_dir" -mindepth 1 -maxdepth 1 \( -name '*.js' -o -name '*.css' \) -printf '%f\n' | sort -u)
+[[ ${#prior_assets[@]} -ge ${#entry_assets[@]} && ${#prior_assets[@]} -le 8 ]] || { echo 'Unexpected retained Studio asset inventory' >&2; exit 1; }
+for asset in "${entry_assets[@]}"; do
+  [[ -f "$(dirname "$prior_index")$asset" ]] || { echo "Active Studio entrypoint asset missing: $asset" >&2; exit 1; }
+done
+for asset_name in "${prior_assets[@]}"; do
+  [[ "$asset_name" =~ ^[A-Za-z0-9_-]+\.(js|css)$ ]] || { echo "Unsafe retained Studio asset name: $asset_name" >&2; exit 1; }
+  source_asset="$prior_assets_dir/$asset_name"
+  target_asset="$tmp/release/apps/studio/dist/assets/$asset_name"
+  [[ -f "$source_asset" && ! -L "$source_asset" && "$(stat -c %s "$source_asset")" -le 5000000 ]] || { echo "Unsafe or missing prior Studio asset: $asset_name" >&2; exit 1; }
   if [[ -e "$target_asset" ]]; then
-    cmp -s "$source_asset" "$target_asset" || { echo "Studio asset hash-name collision: $asset" >&2; exit 1; }
+    cmp -s "$source_asset" "$target_asset" || { echo "Studio asset hash-name collision: $asset_name" >&2; exit 1; }
   else
     cp "$source_asset" "$target_asset"
   fi

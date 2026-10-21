@@ -31,6 +31,7 @@ test('Studio agent request persists and immediately updates TV Preview; hand edi
     fireEvent.change(screen.getByPlaceholderText('e.g. Add page Explore'), { target: { value: 'add page Explore' } });
     fireEvent.click(screen.getByRole('button', { name: /Create channel/ }));
     await screen.findByText(/Deterministic mock/);
+    fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
     await waitFor(() => assert.ok(within(screen.getByRole('navigation', { name: 'TV pages' })).getByRole('button', { name: 'Explore' })));
     assert.match(screen.getByLabelText('Agent activity').textContent ?? '', /add_page: saved/);
     fireEvent.change(screen.getByPlaceholderText('e.g. Add page Explore'), { target: { value: 'primary color to #aabbcc' } });
@@ -44,7 +45,8 @@ test('Studio agent request persists and immediately updates TV Preview; hand edi
     assert.equal(saved.spec.pages[1].title, 'Explore');
     assert.equal(saved.spec.brand.primaryColor, '#aabbcc');
     assert.equal(saved.revision, 3);
-    fireEvent.click(screen.getByRole('button', { name: /Design/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit appearance' }));
     assert.ok(screen.getByRole('button', { name: /Save brand/ }));
   } finally {
     cleanup(); globalThis.fetch = nativeFetch;

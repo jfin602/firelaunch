@@ -82,7 +82,7 @@ test('hosted Export opens the app popup and clears project-scoped status on swit
     view.rerender(createElement(Delivery, { project: project('ch_second'), surface: 'Build', hosted: true }));
     await waitFor(() => assert.match(screen.getByRole('status').textContent ?? '', /blocked/));
     assert.equal(screen.queryByText(/job job_failed/), null);
-    assert.equal((screen.getByRole('button', { name: 'Run Vega release build' }) as HTMLButtonElement).disabled, true);
+    assert.equal(screen.queryByRole('button', { name: 'Run Vega release build' }), null);
   } finally { cleanup(); globalThis.fetch = nativeFetch; }
 });
 
@@ -142,6 +142,8 @@ test('one Export click submits once, reopening only reads, and terminal retry is
     state = 'ready';
     fireEvent.click(screen.getByRole('button', { name: 'Build & Export App' }));
     assert.ok(await screen.findByRole('button', { name: 'Download ZIP' }));
+    assert.equal(screen.queryByText(/Hosted local build disabled/), null, 'hosted Export cannot show the legacy local-build block beside a ready ZIP');
+    assert.equal(screen.queryByRole('button', { name: 'Run Vega release build' }), null);
     assert.equal(posts, 2, 'verified ready ZIP needs no new build');
     fireEvent.click(screen.getByRole('button', { name: 'Close app export' }));
     stale = true;
