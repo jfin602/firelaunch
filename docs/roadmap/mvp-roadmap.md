@@ -1,5 +1,9 @@
 # FireLaunch MVP Roadmap
 
+## Current Phase 8 c8-ui2 owner-approved follow-up (2026-10-21)
+
+The [c8-ui correction](../tasks/c8-ui/closeout.md) is **UI GREEN / DEPLOYED** to protected staging at root/lock `0.8.10`, but P8B Wave 2 still has its own native static-layout device qualification gap. The owner approves [c8-ui2](../tasks/c8-ui2/README.md) as the next **fixed-version 0.8.10 correction**, defined by the [secondary-left-rail design](../design/channel-secondary-rail.md). Default Channel is a vertical secondary editor rail immediately right of the main Studio sidebar and the actual interactive 16:9 TV on the right with Virtual remote underneath. Restyle Channel buttons to match Desert Heat. Fullscreen preserves the TV state and uses a LEFT slide-out editing overlay, replacing bottom reveal. P1 rail, P2 buttons, P3 fullscreen and P4 independent protected staging/owner browser closeout are authored, NOT implemented. No rerun of c8-ui or P8B, no native module/rights changes, Phase 8 stays OPEN.
+
 Bootstrap date: 2026-10-08.
 Hackathon deadline: 2026-10-23 12:00 PM PDT.
 
