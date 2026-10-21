@@ -44,5 +44,5 @@ Write `docs/tasks/c8-ui/closeout.md` with independent **UI GREEN/NOT GREEN**, **
 ## Boundary and testing policy
 
 - P1–P3: directly affected Studio tests (not guessing filenames), one Studio package typecheck per changed checkpoint, runner handles `git diff --check` and commits. No whole-workspace builds, MediaConvert, native worker, ZIP, device, browser login or staging in implementation prompts.
-- P4: one final aggregate build-backed test plus actual browser/UI and optionally protected operator-scoped staging. Never claim DOM simulation proves visual dimensions/fullscreen hover.
+- P4: one final aggregate build-backed test, protected staging deployment as a required objective using a valid scoped grant, and final signed-in UI qualification ON THAT DEPLOYED RELEASE. Also check the previously missing native static-section device delta before marking P8B Wave 2 GREEN. Without proof or permission, record NOT DEPLOYED/NOT GREEN precisely; browser DOM simulation cannot prove real fullscreen and geometry.
 - Preserve owner media/artwork, CSRF/revision rights, public release #1, custom source, Vega native parity, P8B finished section models and schema14. No broad engineering rewrite.
