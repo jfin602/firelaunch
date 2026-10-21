@@ -1,5 +1,9 @@
 # FireLaunch Architecture
 
+## Current Channel workspace presentation correction — c8-ui2 (2026-10-21)
+
+The post-P8B [c8-ui](tasks/c8-ui/closeout.md) was UI GREEN and staging DEPLOYED for a top-stage/bottom dock at `0.8.10`. New approved [c8-ui2](tasks/c8-ui2/README.md) replaces **presentation geometry only**: editor as a secondary fixed LEFT rail next to persistent main sidebar, existing Preview on RIGHT at 16:9, remote below TV; fullscreen's existing shared `channel-fullscreen-root` retains one Preview/Channel editor and transitions rail into a LEFT-edge overlay instead of bottom. Scope: `apps/studio/src/App.tsx`, `Preview.tsx` only if needed for remote placement, Studio-scoped `style.css`, related tests. No duplicate `TvState`, no new Content/Design implementation, no changes to module contracts, native renderer, auth, publication or video. Preserve P8B native static compatibility gate and historical Wave 2 NOT GREEN. See [design](design/channel-secondary-rail.md). Authored only, no new deployment, Phase 8 OPEN.
+
 ## Phase 8 Wave 2 design contract — approved direction, not implemented
 
 [Wave 1 P5](tasks/p8/wave1-closeout.md) is GREEN/DEPLOYED within its staging UI/export scope (root `0.8.4` at tested release); Phase 8 remains OPEN. [Wave 2 `p8b`](tasks/p8b/README.md) is an owner-approved design continuation, not a started runner. [Human-first Page Layout design](design/page-layout-human-first.md) governs default templates, section controls, layout accessibility, Preview and native parity.
