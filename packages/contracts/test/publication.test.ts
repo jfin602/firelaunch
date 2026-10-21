@@ -69,6 +69,15 @@ const input = () => ({
   releaseId: `rel_${hex('a')}`, releaseSequence: 1, publishedAt: timestamp
 });
 
+test('draft-only layouts and presets cannot enter the v1 public manifest', () => {
+  const base = input();
+  const banner = { id: `mod_${hex('9')}`, kind: 'image-banner' as const, title: 'Story', body: 'Hello', imageContentId: base.channel.content[0]!.id };
+  const channelWith = (module: unknown) => ({ ...base.channel, pages: [{ ...base.channel.pages[0]!, modules: [module] }] });
+  assert.throws(() => projectApprovedManifest({ ...base, channel: channelWith(banner) }), /Requires App Update/);
+  assert.throws(() => projectApprovedManifest({ ...base, channel: channelWith({ ...base.channel.pages[0]!.modules[0], spacing: 'compact' }) }), /Requires App Update/);
+  assert.equal(projectApprovedManifest(base).channel.pages[0]!.modules[0]!.kind, 'hero');
+});
+
 test('approved private thumbnail resolves only through a release-scoped managed URL', () => {
   const base = input();
   const managedUrl = `https://media.example.org/media/${creatorAccountId.slice(3)}/${base.channel.id.slice(3)}/${artworkId.slice(3)}/delivery/artwork/${base.releaseId}/${'a'.repeat(64)}/poster.jpg`;
@@ -111,7 +120,7 @@ const bookBinding = () => ({ contentId: bookContent().id, catalogItemId: bookIte
 const writingInput = () => {
   const base = input();
   const pages = base.channel.pages.map(page => ({ ...page, modules: page.modules.map(module =>
-    module.kind === 'text' ? module : { ...module, contentIds: module.contentIds.map(id =>
+    module.kind === 'text' || module.kind === 'image-banner' || module.kind === 'image-text' ? module : { ...module, contentIds: module.contentIds.map(id =>
       id === base.channel.content[0]?.id ? bookContent().id : id) }) }));
   return { ...base, channel: { ...base.channel, pages, content: [bookContent()] },
     inventory: { ...base.inventory, items: [bookItem()], mediaAssets: [bookArtwork()] },

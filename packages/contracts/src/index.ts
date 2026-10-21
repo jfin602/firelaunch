@@ -26,6 +26,10 @@ const assetSchema = z.string().max(256).regex(/^assets\/[a-zA-Z0-9_-]+(?:\/[a-zA
 export const artworkSchema = z.union([httpUrlSchema, assetSchema]);
 const idList = z.array(itemIdSchema).max(100).refine(values => new Set(values).size === values.length, 'Duplicate IDs');
 const pageIdList = z.array(pageIdSchema).max(30).refine(values => new Set(values).size === values.length, 'Duplicate IDs');
+const spacingSchema = z.enum(['comfortable', 'compact']);
+const cropSchema = z.enum(['cover', 'contain']);
+const alignmentSchema = z.enum(['left', 'center']);
+const backgroundSchema = z.enum(['theme', 'surface']);
 
 export const brandSchema = z.strictObject({
   primaryColor: colorSchema,
@@ -37,10 +41,12 @@ export const brandSchema = z.strictObject({
   showTitle: z.boolean().default(true)
 });
 export const moduleSchema = z.discriminatedUnion('kind', [
-  z.strictObject({ id: moduleIdSchema, kind: z.literal('hero'), title: titleSchema.optional(), contentIds: z.array(itemIdSchema).max(1) }),
-  z.strictObject({ id: moduleIdSchema, kind: z.literal('rail'), title: titleSchema, contentIds: idList }),
-  z.strictObject({ id: moduleIdSchema, kind: z.literal('grid'), title: titleSchema, contentIds: idList }),
-  z.strictObject({ id: moduleIdSchema, kind: z.literal('text'), title: titleSchema, body: descriptionSchema })
+  z.strictObject({ id: moduleIdSchema, kind: z.literal('hero'), title: titleSchema.optional(), contentIds: z.array(itemIdSchema).max(1), crop: cropSchema.optional(), alignment: alignmentSchema.optional(), spacing: spacingSchema.optional() }),
+  z.strictObject({ id: moduleIdSchema, kind: z.literal('rail'), title: titleSchema, contentIds: idList, spacing: spacingSchema.optional() }),
+  z.strictObject({ id: moduleIdSchema, kind: z.literal('grid'), title: titleSchema, contentIds: idList, spacing: spacingSchema.optional() }),
+  z.strictObject({ id: moduleIdSchema, kind: z.literal('text'), title: titleSchema, body: descriptionSchema, alignment: alignmentSchema.optional(), background: backgroundSchema.optional(), spacing: spacingSchema.optional() }),
+  z.strictObject({ id: moduleIdSchema, kind: z.literal('image-banner'), title: titleSchema, body: descriptionSchema, imageContentId: itemIdSchema.optional(), crop: cropSchema.optional(), alignment: alignmentSchema.optional(), spacing: spacingSchema.optional(), background: backgroundSchema.optional() }),
+  z.strictObject({ id: moduleIdSchema, kind: z.literal('image-text'), title: titleSchema, body: descriptionSchema, imageContentId: itemIdSchema.optional(), imageSide: z.enum(['left', 'right']).optional(), crop: cropSchema.optional(), alignment: alignmentSchema.optional(), spacing: spacingSchema.optional(), background: backgroundSchema.optional() })
 ]);
 export const pageSchema = z.strictObject({ id: pageIdSchema, title: titleSchema, modules: z.array(moduleSchema).max(30) });
 export type PageTemplate = 'hero' | 'grid' | 'rows';
@@ -90,7 +96,9 @@ export const channelSpecSchema = z.strictObject({
     if (!pageIds.includes(id)) context.addIssue({ code: 'custom', message: `Unknown navigation page: ${id}` });
   }
   for (const page of spec.pages) for (const module of page.modules) {
-    if (module.kind !== 'text') for (const id of module.contentIds) {
+    if ((module.kind === 'image-banner' || module.kind === 'image-text') && module.imageContentId && !contentIds.includes(module.imageContentId))
+      context.addIssue({ code: 'custom', message: `Unknown image content: ${module.imageContentId}` });
+    if (module.kind === 'hero' || module.kind === 'rail' || module.kind === 'grid') for (const id of module.contentIds) {
       if (!contentIds.includes(id)) context.addIssue({ code: 'custom', message: `Unknown content: ${id}` });
     }
   }

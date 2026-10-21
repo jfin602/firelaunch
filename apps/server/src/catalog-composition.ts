@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { channelSpecSchema, type ChannelSpec, type ContentItem, type Module, type Page } from '@firelaunch/contracts';
+import { channelSpecSchema, createPageFromTemplate, type ChannelSpec, type ContentItem, type Module, type Page } from '@firelaunch/contracts';
 import type { CatalogProjection } from './catalog-projection.js';
 
 export type CompositionKind = 'video' | 'audio' | 'writing';
@@ -82,7 +82,7 @@ export function composeCatalogDraft(kind: CompositionKind, current: ChannelSpec,
     ])];
   }
   // Empty rails are omitted; text supplies a visible empty/review state instead.
-  pages = pages.map(p => ({ ...p, modules: p.modules.filter(m => m.kind === 'text' || m.contentIds.length) }));
+  pages = pages.map(p => ({ ...p, modules: p.modules.filter(m => m.kind === 'text' || m.kind === 'image-banner' || m.kind === 'image-text' || m.contentIds.length) }));
   const generated = channelSpecSchema.parse({ ...current, navigation: pages.map(p => p.id), pages, content: eligible });
   const oldPages = new Map(previous?.pages.map(p => [p.id, p]));
   const oldContent = new Map(previous?.content.map(c => [c.id, c]));
@@ -94,7 +94,7 @@ export function composeCatalogDraft(kind: CompositionKind, current: ChannelSpec,
     if (!ancestor) throw new Error(`Generated module ID collides with creator module: ${candidate.id}`);
     if (same(edited, ancestor)) return candidate;
     if (edited.kind !== candidate.kind) return edited;
-    if (edited.kind === 'text' || candidate.kind === 'text') return edited;
+    if (edited.kind === 'text' || edited.kind === 'image-banner' || edited.kind === 'image-text' || candidate.kind === 'text' || candidate.kind === 'image-banner' || candidate.kind === 'image-text') return edited;
     return { ...edited, contentIds: edited.contentIds.filter(id => !revoked.has(id)) };
   };
   const mergedPages = pages.flatMap(candidate => {
@@ -117,7 +117,8 @@ export function composeCatalogDraft(kind: CompositionKind, current: ChannelSpec,
         return [mergeModule(fresh, manual, old)];
       }) }];
   });
-  const untouchedStarter = !previous && current.pages.length === 1 && current.pages[0]?.title === 'Home' && current.pages[0].modules.length === 0;
+  const untouchedStarter = !previous && current.pages.length === 1 && current.pages[0]?.title === 'Home' && current.content.length === 0 &&
+    (current.pages[0].modules.length === 0 || same(current.pages[0], createPageFromTemplate(current.pages[0].id, 'Home', 'hero')));
   const manualPages = untouchedStarter ? [] : current.pages.filter(p => !generatedIds.has(p.id) && !oldPages.has(p.id));
   const manualContent = current.content.filter(c => !oldContent.has(c.id) && !allowed.has(c.id) && !revoked.has(c.id));
   const content = [...eligible.map(candidate => {
@@ -130,8 +131,15 @@ export function composeCatalogDraft(kind: CompositionKind, current: ChannelSpec,
       description: edited.description === ancestor.description ? candidate.description : edited.description };
   }), ...manualContent];
   const validContent = new Set(content.map(c => c.id));
-  const sanitized = [...mergedPages, ...manualPages].map(p => ({ ...p, modules: p.modules.map(m => m.kind === 'text' ? m :
-    ({ ...m, contentIds: m.contentIds.filter(id => validContent.has(id)) })) }));
+  const sanitized = [...mergedPages, ...manualPages].map(p => ({ ...p, modules: p.modules.map(m => {
+    if (m.kind === 'text') return m;
+    if (m.kind === 'image-banner' || m.kind === 'image-text') {
+      if (!m.imageContentId || validContent.has(m.imageContentId)) return m;
+      const { imageContentId: _removed, ...withoutImage } = m;
+      return withoutImage;
+    }
+    return { ...m, contentIds: m.contentIds.filter(id => validContent.has(id)) };
+  }) }));
   let navigation = previous && !same(current.navigation, previous.navigation)
     ? unique([...current.navigation.filter(id => sanitized.some(p => p.id === id)), ...mergedPages.map(p => p.id)])
     : unique([...mergedPages.map(p => p.id), ...manualPages.map(p => p.id)]);

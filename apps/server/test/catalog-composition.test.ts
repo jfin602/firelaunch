@@ -104,3 +104,18 @@ test('repeat generation is stable and preserves creator brand, text, module and 
   assert.equal(regenerated.spec.content[0]!.description, 'Updated source description');
   assert.throws(() => composeCatalogDraft('video', first.spec, source, { ...first.baseline, id: id('ch', 'b') }));
 });
+
+test('regeneration keeps authored static sections and clears revoked image links', () => {
+  const source = projection([film, episode]);
+  const first = composeCatalogDraft('video', channel, source);
+  const edited = structuredClone(first.spec);
+  const banner = { id: id('mod', '9'), kind: 'image-banner' as const, title: 'About us', body: 'Our note', imageContentId: film.id };
+  edited.pages[0]!.modules.push(banner);
+  const retained = composeCatalogDraft('video', edited, source, first.baseline).spec;
+  assert.deepEqual(retained.pages[0]!.modules.at(-1), banner);
+  const revoked = composeCatalogDraft('video', edited, projection([episode], [film.id]), first.baseline).spec;
+  const cleaned = revoked.pages[0]!.modules.find(module => module.id === banner.id);
+  assert.equal(cleaned?.kind, 'image-banner');
+  assert.equal(cleaned?.kind === 'image-banner' ? cleaned.imageContentId : 'unexpected', undefined);
+  assert.equal(cleaned?.kind === 'image-banner' ? cleaned.body : '', 'Our note');
+});

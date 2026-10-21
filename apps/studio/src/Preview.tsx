@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { contentPresentation, isPlayableContent, type ChannelSpec } from '@firelaunch/contracts';
+import { contentPresentation, isPlayableContent, mediaUseEligible, type ChannelSpec, type ContentItem } from '@firelaunch/contracts';
 import { activeItem, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
 import { keyboardCommand, navigate, reconcile } from './preview-state.js';
 import { VideoPlayer } from './VideoPlayer.js';
@@ -11,11 +11,26 @@ import { OwnedArtwork, ownedArtworkObject, useOwnedArtwork } from './OwnedArtwor
 function artwork(url: string): string {
   return url.startsWith('assets/') ? `/media/${url.slice(7)}` : url;
 }
-function catalogContentId(itemId: string): string {
+export function catalogContentId(itemId: string): string {
   return `item_${bytesToHex(sha256(new TextEncoder().encode(`catalog-content-v1\0${itemId}`))).slice(0, 32)}`;
 }
 
-function PreviewArtwork({ contentId, source, inventory, projectId, accountId }: { contentId: string; source: string; inventory: CatalogSnapshot | null; projectId?: string; accountId?: string | null | undefined }) {
+export function eligibleStaticImageContent(spec: ChannelSpec, inventory: CatalogSnapshot | null, accountId: string | undefined): ContentItem[] {
+  if (!accountId) return spec.content;
+  if (!inventory || inventory.projectId !== spec.id || inventory.creatorAccountId !== accountId) return [];
+  return spec.content.filter(content => inventory.items.some(item =>
+    item.projectId === spec.id && item.creatorAccountId === accountId && catalogContentId(item.id) === content.id &&
+    item.mediaAssetIds.some(id => inventory.mediaAssets.some(asset => asset.id === id && asset.projectId === spec.id &&
+      asset.creatorAccountId === accountId && asset.catalogItemId === item.id && asset.kind === 'artwork' &&
+      asset.deliveryEligible && mediaUseEligible(asset, 'television_display'))) &&
+    inventory.sources.some(source => source.id === item.sourceRecord.sourceId && source.projectId === spec.id &&
+      source.creatorAccountId === accountId && source.state !== 'discovered' &&
+      ['creator_asserted', 'provider_authorized'].includes(source.permission.retrieval) &&
+      ['creator_asserted', 'provider_authorized'].includes(source.permission.tvDisplay))));
+}
+
+
+export function PreviewArtwork({ contentId, source, inventory, projectId, accountId }: { contentId: string; source: string; inventory: CatalogSnapshot | null; projectId?: string; accountId?: string | null | undefined }) {
   const item = inventory?.items.find(value => catalogContentId(value.id) === contentId);
   const objectId = projectId && inventory ? ownedArtworkObject(item, inventory.mediaAssets, projectId, accountId ?? null) : null;
   const privateUrl = useOwnedArtwork(projectId ?? '', accountId ?? null, objectId, null, contentId);
@@ -86,9 +101,13 @@ export function Preview({ spec, hosted = false, accountId, libraryRevision = 0 }
           </header>
           <div className="tv-content" key={page.id}>
             {page.modules.length === 0 && <div className="tv-empty">Your channel is ready for content.<small>Add content to light up this screen.</small></div>}
-            {page.modules.map(module => <section className={'tv-module tv-' + module.kind} key={module.id}>
+            {page.modules.map(module => <section className={`tv-module tv-${module.kind} tv-crop-${module.crop ?? 'cover'} tv-align-${module.alignment ?? 'left'}`} key={module.id}>
               {module.title && <h3>{module.title}</h3>}
-              {module.kind === 'text' ? <p>{module.body}</p> : <div className="tv-items">{module.items.map(content => {
+              {module.kind === 'image-banner' || module.kind === 'image-text' ? <div className={`tv-static tv-static-${module.kind} tv-static-${module.imageSide ?? 'left'} tv-static-${module.spacing ?? 'comfortable'} tv-static-${module.background ?? 'theme'} tv-static-${module.alignment ?? 'left'} tv-static-${module.crop ?? 'cover'}`}>
+                {module.image && (!hosted || (accountId && eligibleStaticImageContent(spec, inventory, accountId).some(item => item.id === module.image?.id))) &&
+                  <span className="tv-static-art"><PreviewArtwork contentId={module.image.id} source={module.image.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/></span>}
+                <div className="tv-static-copy">{module.body && <p>{module.body}</p>}</div>
+              </div> : module.kind === 'text' ? <p className={`tv-text-${module.alignment ?? 'left'} tv-text-${module.background ?? 'theme'} tv-text-${module.spacing ?? 'comfortable'}`}>{module.body}</p> : <div className={`tv-items tv-spacing-${module.spacing ?? 'comfortable'}`}>{module.items.map(content => {
                 const id = itemFocusId(page.id, module.id, content.id);
                 return <button key={id} data-tv-focus={id} className={'tv-card' + focus(id)} onClick={() => selectFocus(id)} aria-label={`Open ${content.title}`}>
                   <span className="tv-art"><PreviewArtwork contentId={content.id} source={content.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/></span><span className="tv-card-caption">{content.title}</span>

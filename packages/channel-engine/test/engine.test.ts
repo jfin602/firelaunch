@@ -62,3 +62,16 @@ test('one addPage mutation persists and reopens its ordered starter modules', ()
   assert.deepEqual(reopened.navigation, [start.pages[0]!.id, page.id]);
   assert.deepEqual(reopened.pages[0], start.pages[0]);
 });
+
+test('removing content clears static image references without deleting text or changing focus content', () => {
+  const start = fixtureChannel();
+  const pageId = start.pages[0]!.id, contentId = start.content[0]!.id;
+  const banner = { id: `mod_${'a'.repeat(32)}`, kind: 'image-banner' as const, title: 'Story', body: 'A story', imageContentId: contentId };
+  const withImage = applyMutation(start, { type: 'addModule', pageId, module: banner });
+  assert.deepEqual(resolveContent(withImage, pageId, banner.id), []);
+  const removed = applyMutation(withImage, { type: 'removeContent', contentId });
+  assert.equal(removed.pages[0]!.modules.at(-1)!.kind, 'image-banner');
+  const cleaned = removed.pages[0]!.modules.at(-1)!;
+  assert.equal(cleaned.kind === 'image-banner' ? cleaned.imageContentId : 'wrong kind', undefined);
+  assert.deepEqual(migrateChannel(JSON.parse(JSON.stringify(removed))), removed);
+});

@@ -43,6 +43,17 @@ test('empty pages and bounded directional transitions never lose focus', () => {
   }
 });
 
+test('static sections project image and copy in order without adding D-pad targets', () => {
+  const spec = fixtureChannel(), page = spec.pages[0]!;
+  const image = { id: `mod_${'a'.repeat(32)}`, kind: 'image-text' as const, title: 'Our story', body: 'Hello', imageContentId: spec.content[0]!.id, imageSide: 'right' as const };
+  const tv = televisionFromSpec({ ...spec, pages: [{ ...page, modules: [image, ...page.modules] }] });
+  assert.deepEqual(tv.pages[0]!.modules.map(module => module.kind), ['image-text', 'hero']);
+  assert.equal(tv.pages[0]!.modules[0]!.image?.artwork, spec.content[0]!.artwork);
+  assert.equal(tv.pages[0]!.modules[0]!.body, 'Hello');
+  assert.deepEqual(tv.pages[0]!.modules[0]!.items, []);
+  assert.equal(focusRows(tv, page.id).length, 2);
+});
+
 test('informational detail cannot play and Back returns to its card; audio can play', () => {
   const spec = fixtureChannel();
   const book = { id: 'item_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', title: 'Guide', description: 'Read about this guide', artwork: 'assets/ocean.jpg', presentation: 'information' as const };

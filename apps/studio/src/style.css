@@ -659,6 +659,7 @@ body { min-width: 0; }
 .layout-page-rail button.active{border-color:var(--fl-orange);background:#422820}
 .layout-composition{min-width:0}.layout-composition h2{margin:7px 0}
 .layout-sections{display:grid;gap:16px;margin:20px 0}
+.tv-static{display:flex;gap:3%;align-items:center;min-height:9em;padding:1.2em;border-radius:.5em;overflow:hidden}.tv-static-surface,.tv-text-surface{background:#ffffff16}.tv-static-compact{min-height:6em;padding:.6em}.tv-static-center,.tv-text-center,.tv-align-center{text-align:center}.tv-static-image-text.tv-static-right{flex-direction:row-reverse}.tv-static-art{display:block;width:45%;flex:none;aspect-ratio:16/9;background:#ffffff12;overflow:hidden}.tv-static-image-banner .tv-static-art{width:60%}.tv-static-art img{width:100%;height:100%;object-fit:cover}.tv-static-contain .tv-static-art img,.tv-crop-contain .tv-art img{object-fit:contain}.tv-static-copy{flex:1;min-width:0}.tv-static-copy p{max-width:none;white-space:pre-wrap}.tv-text-compact{padding:.3em}.tv-text-comfortable{padding:1em}.tv-spacing-compact{gap:1%}.layout-static img{width:100%;max-width:340px;aspect-ratio:16/9;object-fit:cover;border-radius:8px}.layout-static-copy{white-space:pre-wrap}
 .layout-section{min-width:0;min-height:130px;padding:20px;border:1px solid var(--fl-border-soft);border-radius:12px;background:var(--fl-surface)}
 .layout-hero{min-height:230px;background:linear-gradient(135deg,#492d25,var(--fl-surface) 75%)}
 .layout-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700;color:var(--fl-text)}

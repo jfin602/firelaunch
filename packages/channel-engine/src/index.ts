@@ -108,8 +108,14 @@ export function applyMutation(input: ChannelSpec, rawMutation: unknown): Channel
     case 'removeContent':
       if (!spec.content.some(item => item.id === mutation.contentId)) throw new Error('Unknown content');
       next = { ...spec, content: spec.content.filter(item => item.id !== mutation.contentId), pages: spec.pages.map(page => ({
-        ...page, modules: page.modules.map(module => module.kind === 'text' ? module : {
-          ...module, contentIds: module.contentIds.filter(id => id !== mutation.contentId)
+        ...page, modules: page.modules.map(module => {
+          if (module.kind === 'image-banner' || module.kind === 'image-text') {
+            if (module.imageContentId !== mutation.contentId) return module;
+            const { imageContentId: _removed, ...withoutImage } = module;
+            return withoutImage;
+          }
+          if (module.kind === 'text') return module;
+          return { ...module, contentIds: module.contentIds.filter(id => id !== mutation.contentId) };
         })
       })) }; break;
   }
@@ -125,5 +131,6 @@ export function resolveContent(spec: ChannelSpec, pageId: string, moduleId: stri
   const valid = channelSpecSchema.parse(spec);
   const module = requirePage(valid, pageId).modules.find(item => item.id === moduleId);
   if (!module) throw new Error(`Unknown module: ${moduleId}`);
-  return module.kind === 'text' ? [] : module.contentIds.map(id => valid.content.find(item => item.id === id)!);
+  return module.kind === 'hero' || module.kind === 'rail' || module.kind === 'grid'
+    ? module.contentIds.map(id => valid.content.find(item => item.id === id)!) : [];
 }

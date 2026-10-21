@@ -5,8 +5,10 @@ function isPlayableContent(item: ContentItem): boolean {
 }
 
 export type TvModule = {
-  id: string; kind: 'hero' | 'rail' | 'grid' | 'text'; title?: string; body?: string;
-  items: ContentItem[];
+  id: string; kind: 'hero' | 'rail' | 'grid' | 'text' | 'image-banner' | 'image-text'; title?: string; body?: string;
+  items: ContentItem[]; image?: { id: string; artwork: string };
+  crop?: 'cover' | 'contain'; alignment?: 'left' | 'center'; spacing?: 'comfortable' | 'compact';
+  background?: 'theme' | 'surface'; imageSide?: 'left' | 'right';
 };
 export type TvPage = { id: string; title: string; modules: TvModule[] };
 export type Television = {
@@ -26,16 +28,28 @@ export function projectTelevision(spec: ChannelSpec): Television {
     pages: spec.navigation.map(pageId => {
       const page = pages.get(pageId);
       if (!page) throw new Error(`Unknown page: ${pageId}`);
-      return { id: page.id, title: page.title, modules: page.modules.map(module => ({
-        id: module.id, kind: module.kind,
-        ...(module.title ? { title: module.title } : {}),
-        ...(module.kind === 'text' ? { body: module.body } : {}),
-        items: module.kind === 'text' ? [] : module.contentIds.map(itemId => {
-          const item = content.get(itemId);
-          if (!item) throw new Error(`Unknown content: ${itemId}`);
-          return item;
-        })
-      })) };
+      return { id: page.id, title: page.title, modules: page.modules.map(module => {
+        const image = (module.kind === 'image-banner' || module.kind === 'image-text') && module.imageContentId
+          ? content.get(module.imageContentId) : undefined;
+        if ((module.kind === 'image-banner' || module.kind === 'image-text') && module.imageContentId && !image)
+          throw new Error(`Unknown image content: ${module.imageContentId}`);
+        const ids = module.kind === 'hero' || module.kind === 'rail' || module.kind === 'grid' ? module.contentIds : [];
+        return { id: module.id, kind: module.kind,
+          ...(module.title ? { title: module.title } : {}),
+          ...('body' in module ? { body: module.body } : {}),
+          ...('crop' in module && module.crop ? { crop: module.crop } : {}),
+          ...('alignment' in module && module.alignment ? { alignment: module.alignment } : {}),
+          ...('spacing' in module && module.spacing ? { spacing: module.spacing } : {}),
+          ...('background' in module && module.background ? { background: module.background } : {}),
+          ...('imageSide' in module && module.imageSide ? { imageSide: module.imageSide } : {}),
+          ...(image ? { image: { id: image.id, artwork: image.artwork } } : {}),
+          items: ids.map(itemId => {
+            const item = content.get(itemId);
+            if (!item) throw new Error(`Unknown content: ${itemId}`);
+            return item;
+          })
+        };
+      }) };
     })
   };
 }

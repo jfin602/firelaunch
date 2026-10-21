@@ -48,3 +48,18 @@ test('rejects extra fields, unknown references, duplicates and unsafe URLs', () 
   assert.equal(channelSpecSchema.safeParse({ ...spec, content: [{ ...spec.content[0], mediaUrl: 'file:///etc/passwd' }] }).success, false);
   assert.equal(channelSpecSchema.safeParse({ ...spec, brand: { ...spec.brand, logo: 'assets/../secret.png' } }).success, false);
 });
+
+test('static sections roundtrip in v1 while rejecting unbound images and unsafe presets', () => {
+  const old = fixtureChannel();
+  assert.deepEqual(channelSpecSchema.parse(old), old);
+  const banner = { id: `mod_${'a'.repeat(32)}`, kind: 'image-banner', title: 'Our story', body: 'Made for television',
+    imageContentId: old.content[0]!.id, crop: 'contain', alignment: 'center', spacing: 'compact', background: 'surface' };
+  const mixed = { id: `mod_${'b'.repeat(32)}`, kind: 'image-text', title: 'Behind the scenes', body: 'A note', imageSide: 'right' };
+  const next = { ...old, pages: [{ ...old.pages[0]!, modules: [...old.pages[0]!.modules, banner, mixed] }] };
+  assert.deepEqual(channelSpecSchema.parse(JSON.parse(JSON.stringify(next))), next);
+  const changed = (value: unknown) => ({ ...old, pages: [{ ...old.pages[0]!, modules: [value] }] });
+  assert.equal(channelSpecSchema.safeParse(changed({ ...banner, imageContentId: `item_${'f'.repeat(32)}` })).success, false);
+  assert.equal(channelSpecSchema.safeParse(changed({ ...banner, crop: 'execute-css' })).success, false);
+  assert.equal(channelSpecSchema.safeParse(changed({ ...banner, imageUrl: 'https://private.example/original' })).success, false);
+  assert.equal(channelSpecSchema.safeParse(changed({ ...banner, body: 'x'.repeat(2001) })).success, false);
+});

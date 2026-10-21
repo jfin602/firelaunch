@@ -17,6 +17,21 @@ Object.defineProperty(dom.window.HTMLMediaElement.prototype, 'pause', { value: (
 Object.defineProperty(dom.window.HTMLMediaElement.prototype, 'load', { value: () => {} });
 const { cleanup, fireEvent, render, screen, waitFor } = await import('@testing-library/react');
 
+test('Preview renders ordered static artwork and copy without selectable TV cards', () => {
+  const spec = fixtureChannel(), original = spec.pages[0]!;
+  spec.pages[0] = { ...original, modules: [
+    { id: `mod_${'a'.repeat(32)}`, kind: 'image-banner', title: 'Studio story', body: 'A quiet introduction', imageContentId: spec.content[0]!.id, crop: 'contain' },
+    { id: `mod_${'b'.repeat(32)}`, kind: 'image-text', title: 'More', body: 'The next chapter', imageSide: 'right' },
+    ...original.modules
+  ] };
+  try {
+    const view = render(createElement(Preview, { spec }));
+    assert.ok(view.container.querySelector('.tv-static-contain .tv-static-art img'));
+    assert.match(view.container.querySelector('.tv-content')?.textContent ?? '', /Studio story.*A quiet introduction.*More.*The next chapter.*Oceans/s);
+    assert.equal(view.container.querySelectorAll('.tv-static [data-tv-focus]').length, 0);
+  } finally { cleanup(); }
+});
+
 test('hosted Preview projects saved private artwork visually without changing ChannelSpec', async () => {
   const previousFetch = globalThis.fetch, create = URL.createObjectURL, revoke = URL.revokeObjectURL;
   const spec = fixtureChannel(), before = JSON.stringify(spec), owner = `cr_${'a'.repeat(32)}`;
@@ -24,8 +39,9 @@ test('hosted Preview projects saved private artwork visually without changing Ch
   const contentId = `item_${createHash('sha256').update('catalog-content-v1\0').update(itemId).digest('hex').slice(0, 32)}`;
   spec.content[0]!.id = contentId;
   const module = spec.pages[0]!.modules[0]!;
-  if (module.kind === 'text') throw new Error('Expected artwork module');
+  if (module.kind !== 'hero' && module.kind !== 'rail' && module.kind !== 'grid') throw new Error('Expected artwork module');
   module.contentIds = [contentId];
+  spec.pages[0]!.modules.push({ id: `mod_${'e'.repeat(32)}`, kind: 'image-banner', title: 'Private art', body: 'Draft only', imageContentId: contentId });
   const canonical = JSON.stringify(spec);
   const paths: string[] = [];
   URL.createObjectURL = () => 'blob:http://localhost/studio-art'; URL.revokeObjectURL = () => {};
@@ -46,6 +62,7 @@ test('hosted Preview projects saved private artwork visually without changing Ch
   try {
     const view = render(createElement(Preview, { spec, hosted: true, accountId: owner }));
     await waitFor(() => assert.equal(view.container.querySelector('.tv-art img')?.getAttribute('src'), 'blob:http://localhost/studio-art'));
+    assert.equal(view.container.querySelector('.tv-static-art img'), null, 'unapproved artwork stays out of the static TV section');
     assert.equal(JSON.stringify(spec), canonical);
     assert.notEqual(canonical, before);
     assert.doesNotMatch(JSON.stringify(spec), /blob:|secret|private-objects/);

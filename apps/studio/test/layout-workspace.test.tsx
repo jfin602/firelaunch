@@ -7,6 +7,8 @@ import { applyMutation } from '@firelaunch/channel-engine';
 import type { ChannelProject } from '@firelaunch/contracts';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
 import App from '../src/App.js';
+import { catalogContentId, eligibleStaticImageContent } from '../src/Preview.js';
+import type { CatalogSnapshot } from '../src/api.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://studio.example/' });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement });
@@ -20,6 +22,23 @@ const first: ChannelProject = { id: spec.id, spec, revision: 1, createdAt: '2026
 const second: ChannelProject = { ...first, id: `ch_${'b'.repeat(32)}`, spec: { ...fixtureChannel(), id: `ch_${'b'.repeat(32)}`, title: 'Other channel' } };
 const session = { accountId: `cr_${'a'.repeat(32)}`, email: 'owner@example.com', csrfToken: 'csrf', expiresAt: '2099-01-01T00:00:00.000Z' };
 const json = (value: unknown) => new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' } });
+
+test('static image picker admits only owned display-cleared catalog artwork', () => {
+  const owner = session.accountId, project = { ...first, spec: { ...first.spec, content: [{ ...first.spec.content[0]!, id: catalogContentId(`ci_${'9'.repeat(32)}`) }] } };
+  const itemId = `ci_${'9'.repeat(32)}`, assetId = `ma_${'8'.repeat(32)}`, sourceId = `src_${'7'.repeat(32)}`;
+  const snapshot = { creatorAccountId: owner, projectId: project.id,
+    items: [{ id: itemId, creatorAccountId: owner, projectId: project.id, sourceRecord: { sourceId }, mediaAssetIds: [assetId] }],
+    mediaAssets: [{ id: assetId, creatorAccountId: owner, projectId: project.id, catalogItemId: itemId, kind: 'artwork', deliveryEligible: true,
+      tvDisplayRights: { status: 'cleared', permittedUse: 'television_display' } }],
+    sources: [{ id: sourceId, creatorAccountId: owner, projectId: project.id, state: 'verified', permission: { retrieval: 'creator_asserted', tvDisplay: 'creator_asserted' } }] } as unknown as CatalogSnapshot;
+  assert.equal(eligibleStaticImageContent(project.spec, snapshot, owner).length, 1);
+  assert.deepEqual(eligibleStaticImageContent(project.spec, snapshot, second.id), []);
+  assert.deepEqual(eligibleStaticImageContent(project.spec, { ...snapshot, mediaAssets: [{ ...snapshot.mediaAssets[0]!, creatorAccountId: second.id }] }, owner), []);
+  assert.deepEqual(eligibleStaticImageContent(project.spec, { ...snapshot, mediaAssets: [{ ...snapshot.mediaAssets[0]!, tvDisplayRights: { status: 'revoked', basis: 'creator_asserted', permittedUse: 'television_display' } }] }, owner), []);
+  assert.deepEqual(eligibleStaticImageContent(project.spec, { ...snapshot, mediaAssets: [{ ...snapshot.mediaAssets[0]!,
+    tvDisplayRights: { status: 'unknown', basis: 'none', permittedUse: 'none' },
+    tvPlaybackRights: { status: 'cleared', basis: 'creator_asserted', permittedUse: 'television_playback' } }] }, owner), []);
+});
 
 test('Pages & Layout selection, rename, guarded deletion and account-safe project switch', async () => {
   let current = first;
@@ -87,6 +106,41 @@ test('layout controls remain accessible in narrow flow', () => {
   const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
   assert.match(css, /@media\(max-width:760px\).*\.layout-workspace.*display:block/s);
   assert.match(css, /\.layout-page-rail\{position:static;flex-direction:row;overflow:auto/s);
+});
+
+test('Image + Text section saves bounded text and preset through the normal mutation path', async () => {
+  let current = first;
+  const previous = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === '/api/auth/session') return json(session);
+    if (url === '/api/projects') return json([current]);
+    if (url === `/api/projects/${current.id}`) return json(current);
+    if (url === `/api/projects/${current.id}/mutations`) {
+      const { mutation } = JSON.parse(String(init?.body));
+      current = { ...current, revision: current.revision + 1, spec: applyMutation(current.spec, mutation) };
+      return json(current);
+    }
+    throw new Error(`Unexpected ${url}`);
+  }) as typeof fetch;
+  try {
+    render(createElement(App));
+    await screen.findByRole('heading', { name: 'Wild Earth', level: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Section type' }), { target: { value: 'image-text' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add section' }));
+    await waitFor(() => assert.equal(current.spec.pages[0]?.modules.at(-1)?.kind, 'image-text'));
+    const inspector = screen.getByRole('complementary', { name: 'Layout inspector' });
+    fireEvent.change(within(inspector).getByRole('textbox', { name: 'Section text' }), { target: { value: 'Our original story' } });
+    fireEvent.click(within(inspector).getByText('Customize'));
+    fireEvent.change(within(inspector).getByRole('combobox', { name: 'Image side' }), { target: { value: 'right' } });
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => { const module = current.spec.pages[0]?.modules.at(-1); assert.equal(module?.kind === 'image-text' ? module.body : undefined, 'Our original story'); });
+    const saved = current.spec.pages[0]?.modules.at(-1);
+    assert.equal(saved?.kind === 'image-text' ? saved.imageSide : undefined, 'right');
+    assert.match(within(inspector).getByRole('status').textContent ?? '', /Saved privately/);
+  } finally { cleanup(); globalThis.fetch = previous; dom.window.history.replaceState(null, '', '/'); }
 });
 
 test('section edits reorder by stable IDs, preserve Library references and retain failed drafts', async () => {

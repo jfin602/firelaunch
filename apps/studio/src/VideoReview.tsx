@@ -35,7 +35,8 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
     managed.tvDisplayRights?.status === 'cleared' && managed.tvPlaybackRights?.status === 'cleared' && managed.deliveryEligible;
   const stableId = `item_${bytesToHex(sha256(new TextEncoder().encode(`catalog-content-v1\0${item.id}`))).slice(0, 32)}`;
   const linked = project.spec.content.some(content => content.id === stableId && content.presentation === 'video') &&
-    project.spec.pages.some(page => page.modules.some(module => module.kind !== 'text' && module.contentIds.includes(stableId)));
+    project.spec.pages.some(page => page.modules.some(module =>
+      (module.kind === 'hero' || module.kind === 'rail' || module.kind === 'grid') && module.contentIds.includes(stableId)));
   const inLive = live?.catalogItemIds.includes(item.id) ?? false;
   const draftAfterLive = inLive && (live?.revisions.channel !== project.revision || live?.revisions.catalog !== inventory.revision);
 

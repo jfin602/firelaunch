@@ -34,7 +34,7 @@ export const toolDefinitions: Record<string, Tool> = {
   update_module: tool('Replace a module with a validated module of the same ID on its page.', z.strictObject({ pageId, module: moduleSchema }), (_spec, input) => ({ type: 'updateModule', ...input })),
   reorder_module_content: tool('Reorder existing content references within one hero, rail or grid, preserving exactly the same IDs.', z.strictObject({ pageId, moduleId, contentIds: z.array(contentId).max(100) }), (spec, { pageId: page, moduleId: id, contentIds }) => {
     const module = spec.pages.find(item => item.id === page)?.modules.find(item => item.id === id);
-    if (!module || module.kind === 'text') throw new Error('Unknown content module');
+    if (!module || (module.kind !== 'hero' && module.kind !== 'rail' && module.kind !== 'grid')) throw new Error('Unknown content module');
     if (contentIds.length !== module.contentIds.length || new Set(contentIds).size !== contentIds.length || contentIds.some(item => !module.contentIds.includes(item))) throw new Error('Content order must contain exactly the same IDs');
     return { type: 'updateModule', pageId: page, module: { ...module, contentIds } };
   }),
@@ -78,7 +78,7 @@ export function executeTool(spec: ChannelSpec, name: string, input: unknown, gro
     const pageOffset = parsed.data.pageOffset ?? 0;
     const moduleOffset = parsed.data.moduleOffset ?? 0;
     const contentOffset = parsed.data.contentOffset ?? 0;
-    return { spec, changed: false, output: JSON.stringify({ title: spec.title, brand: spec.brand, pageOffset, moduleOffset, totalPages: spec.pages.length, pages: spec.pages.slice(pageOffset, pageOffset + 5).map(page => ({ id: page.id, title: page.title, moduleCount: page.modules.length, modules: page.modules.slice(moduleOffset, moduleOffset + 5).map(module => ({ id: module.id, kind: module.kind, title: module.title, body: module.kind === 'text' ? module.body.slice(0, 120) : undefined, contentIds: module.kind === 'text' ? undefined : module.contentIds.slice(0, 5) })) })), navigation: spec.navigation, contentOffset, totalContent: spec.content.length, content: spec.content.slice(contentOffset, contentOffset + 10).map(item => ({ id: item.id, title: item.title, description: item.description.slice(0, 120) })) }) };
+    return { spec, changed: false, output: JSON.stringify({ title: spec.title, brand: spec.brand, pageOffset, moduleOffset, totalPages: spec.pages.length, pages: spec.pages.slice(pageOffset, pageOffset + 5).map(page => ({ id: page.id, title: page.title, moduleCount: page.modules.length, modules: page.modules.slice(moduleOffset, moduleOffset + 5).map(module => ({ id: module.id, kind: module.kind, title: module.title, body: 'body' in module ? module.body.slice(0, 120) : undefined, imageContentId: 'imageContentId' in module ? module.imageContentId : undefined, contentIds: module.kind === 'hero' || module.kind === 'rail' || module.kind === 'grid' ? module.contentIds.slice(0, 5) : undefined })) })), navigation: spec.navigation, contentOffset, totalContent: spec.content.length, content: spec.content.slice(contentOffset, contentOffset + 10).map(item => ({ id: item.id, title: item.title, description: item.description.slice(0, 120) })) }) };
   }
   const definition = toolDefinitions[name];
   if (!definition) throw new AgentToolError(`Unsupported tool: ${name.slice(0, 80)}`);
