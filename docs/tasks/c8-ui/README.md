@@ -1,31 +1,36 @@
-# C8-UI — TV-First Channel Workspace Correction
+# C8-UI — TV-First Channel Workspace Correction AFTER P8B
 
-**Status (2026-10-21): OWNER-APPROVED /docs-review APPLIED; ASSESSMENT, PLAN AND FOUR PROMPTS AUTHORED. NOT IMPLEMENTED OR QUALIFIED.** This is a **fixed-version 0.8.4 correction** to Wave 1's Channel shell, intended to run **BEFORE** the already-authored `p8b` (Phase 8 Wave 2) on a safely reconciled local checkout. Phase 8 remains OPEN; do not rewrite Wave 1 P5 or launch Phase 9.
+**Owner correction 2026-10-21: P8B ALREADY RAN LOCALLY.** This fixed-version correction repairs the **completed P8B Channel UI**, rather than modifying, restarting, or inserting work before P8B. [TV-first design](../../design/tv-first-channel-workspace.md) is the new target; [assessment](prompt-assessment.md) and [implementation plan](implementation-plan.md) bind execution. **AUTHORED ONLY / NOT IMPLEMENTED OR QUALIFIED.** Overall Phase 8 remains OPEN.
 
-## Owner-observed issue and canonical UX
+## Source/version reality
 
-[TV-first layout design contract](../../design/tv-first-channel-workspace.md) supersedes earlier side-by-side Preview/form layout suggestions. The owner screenshot shows a squashed TV next to a tall technical form, unstyled AI Assistant / Appearance / Pages & Shelves buttons, a Close TV Preview button, and avoidable document scrolling.
+At documentation review, GitHub `main` still reported root/lock `0.8.4` and P8B prompts *authored*. **The owner explicitly states P8B has already executed on their local checkout.** The authored P8B P6 implementation targets `0.8.10`; therefore every c8-ui prompt declares **Required unchanged project version: `0.8.10`** as the **expected** post-P8B source version, not a claim verified against the laptop. Check actual `git status --short`, HEAD, P8B P1–P6 commit history, any P7 manual closeout, and root + two lockfile versions BEFORE RUNNING. If P8B actually ended at `0.8.11` or otherwise differs, **STOP, reconcile c8-ui fixed-version metadata with exact proven local state before starting**; don't downgrade, reset or overwrite any P8B work. Never make a separate version-entry bump for this correction.
 
-**Canonical Channel:** always-on **16:9 interactive TV stage ABOVE a full-width attached editing dock**, no gap. Stage height fits the viewport while leaving a usable bottom dock (about 60–65% stage / 35–40% dock when possible, explicit minimum and safe letterboxing). **Dock tabs:** Pages & Layout and Appearance, properly styled and keyboard accessible; no user-facing AI Assistant or Close TV Preview. Normal Channel uses only one control to enter **Full Screen**. Long controls can scroll **inside** the dock, but entire Channel should not normally scroll at desktop.
+## What the owner wants fixed
 
-**True fullscreen:** same TV Preview instance; editing dock becomes a bottom-edge reveal overlay on hover near the bottom, with touch handle/gesture and keyboard access; remains open while focused/actively editing. Fullscreen element owns both TV and dock, preserving TV navigation/playback, unsaved form edits and return focus. Escape exits fullscreen while TV Back is a separate control. No new TV renderer or second editor.
+The owner's actual screenshot shows a small TV beside a long right editing form, unstyled top tabs, a Close TV Preview button, and excessive scrolling/unused space. Make the completed P8B Channel workspace **TV-first**:
 
-## Correction stack
+- **Standard Channel:** The **same real interactive 16:9 Preview** fills the upper stage. An attached full-width, height-allocated **bottom editing dock** directly meets its edge with zero gap. Use height-first sizing (roughly 60–65% top and 35–40% dock where practical), preserving aspect without filling all vertical space. Use dock width for horizontal Pages, Sections and selected Properties with only contained panel scrolling on short screens.
+- **Creator-facing dock tabs:** **Pages & Layout** and **Appearance** only. Remove AI Assistant and any stale shortcuts from Channel UI, without deleting agent backend. Remove Close TV Preview; the TV is ALWAYS ON. **Full Screen** is the sole Preview display toggle.
+- **True Full Screen:** The SAME P8B Preview and dock instance go into the fullscreen element. Dock overlays the TV when pointer nears the bottom edge and slides up, stays visible while hovered/focused/editing, hides when idle, and works with touch handle/swipe plus keyboard control. Esc = Exit; TV Back is separate. No duplicated page editor/player, no P8B functional regression.
+- **Preservation:** Keep already-implemented P8B Hero/Grid/Rows templates, human-first page creation and section editing, Image Banner/Image + Text, validated rights, native Vega/static compatibility and current fullscreen behavior. This correction is a **layout/interface repair**, not a new Page Layout feature stack or runtime rewrite.
 
-| Prompt | Model | Browser | Scope |
-| --- | --- | --- | --- |
-| [P1 always-on Preview](P1-always-on-channel-preview.txt) | GPT-6 Sol Medium | no | Show single TV by default, remove AI/Close Preview, preserve real Channel routes |
-| [P2 horizontal dock](P2-horizontal-editing-dock.txt) | GPT-6 Sol Medium | no | Height-first top stage and attached two-tab, horizontally usable editor dock |
-| [P3 fullscreen reveal](P3-fullscreen-edge-dock.txt) | GPT-6 Sol High | no | Same-instance fullscreen + pointer/touch/keyboard edge-reveal overlay |
-| [P4 manual closeout](P4-tv-first-closeout.txt) | GPT-6 Sol High | **yes** | Real browser UX, one aggregate, optional protected staging if operator-authorized; evidence |
+## Four sequential prompts — unchanged expected `0.8.10`
 
-[Prompt assessment](prompt-assessment.md) and [implementation plan](implementation-plan.md) bind the scope. P1–P3 are runner-owned commits; P4 is exactly one final manual browser-required correction closeout. All P1–P4 declare **unchanged root/version 0.8.4**; no package or lockfile bump, no `/activate` step. `c8-ui` closes only its own correction, not P8.
+| Prompt | Mode | Responsibility |
+| --- | --- | --- |
+| [P1 — Always-on Preview](P1-always-on-channel-preview.txt) | Sol Medium, runner | Correct actual post-P8B Channel mount/tabs; remove AI/Close Preview |
+| [P2 — Horizontal dock](P2-horizontal-editing-dock.txt) | Sol Medium, runner | Compose actual finished P8B editor into attached bottom dock with usable scrolling |
+| [P3 — Fullscreen edge dock](P3-fullscreen-edge-dock.txt) | Sol High, runner | Repair/extend existing P8B fullscreen, bottom-edge reveal, keyboard/touch |
+| [P4 — Independent closeout](P4-tv-first-closeout.txt) | Sol High, **manual browser** | Real creator testing, one final aggregate, protected staged deployment if authorized |
 
-## Safe execution ordering
+P1–P3 are runner-owned implementation commits. P4 is the **exactly one final closeout-type prompt**, browser-required/manual; evidence file `docs/tasks/c8-ui/closeout.md` only after observation. Correcting this UI does not close Phase 8.
 
-1. Inspect **actual local** `git status --short`, HEAD, `package.json` + two top-level `package-lock.json` version fields, staged/dirty P5 changes and whether **p8b already started**. At authoring GitHub main was version 0.8.4, P8B prompts authored not run. That does not prove a local checkout.
-2. **If local p8b has already committed P1 or advanced beyond 0.8.4, STOP**. Never reset/reorder finished sequential prompt stacks or run an older fixed-version correction over work. Instead plan a narrow correction against the newer actual HEAD.
-3. On a clean, coherent 0.8.4 source checkout, run `npm run codex:stack:validate -- c8-ui` then `npm run codex:stack -- c8-ui`. Runner executes P1–P3 and stops at P4. Use focused Studio tests/one package typecheck per implementation; P4 owns one aggregate and independent browser smoke.
-4. After c8-ui qualifies, `p8b` P1 (0.8.5) starts from the corrected **still-0.8.4** version and builds page templates/new static sections INTO this dock. P8B P2/P3/P6 must not reconstruct an obsolete side panel or second fullscreen preview.
+## Safe execution
 
-**Safety:** Reuse Wave 1 GREEN/staging and C7 R4 native playback evidence for untouched paths; no new hosted publication, MediaConvert, native worker/ZIP, cloud privileges or schema14 change to fix Studio layout. Protected staging deploy requires specific live operator authority and rollback, never assumed. Keep deadline Friday Oct 23 noon America/Chicago.
+1. Start from **owner's actual completed P8B source** and ensure pending P7/P8B edits are safe. GitHub's stale 0.8.4 HEAD cannot be pulled over completed local implementation without an explicit conflict-free sync. No resetting, forced pull, deleting, stashing without consent, reordering completed prompts or editing existing P8B files.
+2. Verify root package and both lockfile version fields exactly equal **0.8.10** with completed P8B P6 commit prefix. If not, STOP; retarget this correction's required unchanged version to the actual proven baseline and revalidate. Do not use c8-ui to jump versions.
+3. Run `npm run codex:stack:validate -- c8-ui`, then `npm run codex:stack -- c8-ui`. Runner handles P1–P3 and stops at browser P4. No `/activate`; P1–P3 run focused Studio tests/typecheck, P4 owns one aggregate and real browser.
+4. Any protected staging deployment requires exact approved source archive, existing operator permissions, backup, retained hashed assets and rollback. No AWS/MediaConvert/public release changes for this UI correction. Reuse prior Wave 1 and C7 GREEN evidence for unchanged systems.
+
+**Owner deadline:** October 23, 2026 noon America/Chicago; preserve already implemented functionality above speculative redesign.
