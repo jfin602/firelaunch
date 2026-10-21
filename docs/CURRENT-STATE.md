@@ -4,6 +4,8 @@ Last documentation reconciliation: 2026-10-21 UTC (P8 Wave 1 staging GREEN and W
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
 
 ## Current pushed P8B and optimized c8-ui handoff — 2026-10-21
+**Updated P4 closeout goal:** deploy the tested c8-ui candidate to protected staging and run final owner-authenticated Channel UI tests on that deployed release; use the same run for remaining P8B Wave 2 acceptance where evidence allows. A missing operator grant or native static-layout device result remains NOT GREEN, not a silent exception.
+
 
 **Verified GitHub main source:** P8B P1–P6 are committed through root and two lock fields **0.8.10**; [P8B P7 Wave 2](tasks/p8b/wave2-closeout.md) is **NOT GREEN / NOT DEPLOYED**. Its local disposable-creator and aggregate evidence is scoped PASS, but signed-in candidate, new native static-layout VirtualDevice and protected staging are unqualified. Staging remained Wave 1 0.8.4 at its last dated host readback. **Do not rerun P8B** or treat source version 0.8.10 as deployed.
 
