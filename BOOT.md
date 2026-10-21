@@ -4,7 +4,13 @@ Read this file before substantial repository-aware work.
 
 **Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) first for dated source/staging/AWS facts, current gates and next execution.** This boot file includes historical P0-P6 decisions; older activation instructions are preserved as history and MUST NOT override that current ledger, ADR 0011/0013, or p6-live-vod Q1-Q3. Last current-state reconciliation: 2026-10-20 UTC.
 
-## Owner-approved Phase 8 Creative UX plan — October 21 (docs only)
+## Current owner-approved execution — Phase 8 entry at 0.8.0 (2026-10-21)
+
+**READ FIRST:** [Phase 7 owner closeout](docs/tasks/p7/owner-closeout-2026-10-21.md) authorizes **owner-closed partial** P7/C7 and advancing to the Phase 8 source baseline `0.8.0`. This does not make C7 or the original P7 closeout GREEN: real VPKG/ZIP/VirtualDevice branding/artwork/Back/restart passed, but first TS HLS frame transfer, visible video, verified audio and pause/seek remained unqualified. Those are carried into Phase 9 final device acceptance, not P8 navigation/layout implementation blockers. The former C7 R4-only next-action sections below are historical.
+
+**Phase 8 P1 is the next runner step**, only after actual local `git status --short`, safe reconciliation of any uncommitted C7 work and clean sync to the approved `0.8.0` root/lock source baseline. Run `npm run codex:stack:validate -- p8`, then `npm run codex:stack -- p8`; P1–P4 runner-owned commits, P5 browser-required manual closeout. No `/activate`. No fresh native/paid build, host deploy or publication from this transition.
+
+## Historical Phase 8 authoring plan (superseded by approved entry) — October 21 (docs only)
 
 [Phase 8 Creative Studio UX & Pipeline Confirmation](docs/tasks/p8/README.md) is now approved and authored with [assessment](docs/tasks/p8/prompt-assessment.md), [implementation plan](docs/tasks/p8/implementation-plan.md) and five prompts P1–P5: P1 five-destination navigation **Home / Library / Channel / Publish / Export**, P2 right inspector **contextual-only** (no permanent empty rail; full-width task workspaces), P3 creative/video/persistence, P4 explicit content Publish vs real native Export, P5 independent manual creator UX closeout. Channel includes existing AI Assistant, Appearance, Pages & Shelves; Export retains Advanced Source and real ZIP download. Desert Heat, interactive Preview, existing video modal, owner/rights and source edit protection remain.
 
