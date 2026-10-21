@@ -63,11 +63,12 @@ function Intro({ onCreate, busy, hosted }: { onCreate: (title: string, sample: b
     </div></div>;
 }
 
-function Design({ project, commit }: { project: ChannelProject; commit: (mutation: ChannelMutation) => Promise<boolean> }) {
+function Design({ project, commit, onDirtyChange }: { project: ChannelProject; commit: (mutation: ChannelMutation) => Promise<boolean>; onDirtyChange: (dirty: boolean) => void }) {
   const { spec } = project;
   const [brand, setBrand] = useState(spec.brand);
   const [title, setTitle] = useState(spec.title);
   useEffect(() => { setBrand(spec.brand); setTitle(spec.title); }, [project.id, project.revision]);
+  useEffect(() => { onDirtyChange(title !== spec.title || JSON.stringify(brand) !== JSON.stringify(spec.brand)); }, [title, brand, spec.title, spec.brand, onDirtyChange]);
   return <div className="panel-content"><span className="eyebrow">CHANNEL IDENTITY</span><h2>Make it yours.</h2><p className="muted">Every change becomes part of your ChannelSpec and flows into Preview.</p>
     <form onSubmit={event => { event.preventDefault(); void commit({ type: 'setIdentity', title: title.trim(), slug: spec.slug }); }}><Field label="DISPLAY NAME"><input required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} /></Field><button disabled={title.trim() === spec.title}>Save name</button></form>
     <form onSubmit={event => { event.preventDefault(); void commit({ type: 'setBrand', brand }); }}><div className="color-fields">{(['primaryColor', 'backgroundColor', 'textColor'] as const).map(key => <Field key={key} label={key.replace('Color', '').toUpperCase()}><div className="color-input"><input type="color" value={brand[key]} onChange={event => setBrand({ ...brand, [key]: event.target.value })}/><code>{brand[key]}</code></div></Field>)}</div>
@@ -146,13 +147,31 @@ export default function App() {
   const [videoSelection, setVideoSelection] = useState<{ projectId: string; accountId: string; itemId?: string } | null>(null);
   const [libraryRevision, setLibraryRevision] = useState(0);
   const [signedOut, setSignedOut] = useState(false);
+  const [inspectorProject, setInspectorProject] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const inspectorDirty = useRef(false);
+  const inspectorOpener = useRef<HTMLButtonElement | null>(null);
+  const inspectorClose = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => { if (inspectorProject) inspectorClose.current?.focus(); }, [inspectorProject]);
+  const setInspectorDirty = (dirty: boolean) => { inspectorDirty.current = dirty; };
+  const closeInspector = () => {
+    if (inspectorDirty.current && !window.confirm('Discard unsaved appearance changes?')) return false;
+    inspectorDirty.current = false;
+    setInspectorProject(null);
+    window.setTimeout(() => inspectorOpener.current?.focus(), 0);
+    return true;
+  };
+  const navigate = (target: Surface) => {
+    if (inspectorProject && !closeInspector()) return;
+    setSurface(target); setNewChannel(false);
+  };
   const accountRef = useRef<string | null>(null);
   const identityGeneration = useRef(0);
   const switchGeneration = useRef(0);
   const select = (next: ChannelProject) => { projectRef.current = next; setProject(next); window.history.replaceState(null, '', `?project=${next.id}`); };
   const acceptProject = (next: ChannelProject) => { select(next); setProjects(previous => previous.map(item => item.id === next.id ? next : item)); };
   useEffect(() => {
-    const expired = () => { if (accountRef.current) clearVideoTransfers(accountRef.current); identityGeneration.current++; switchGeneration.current++; accountRef.current = null; setVideoSelection(null); setSignedOut(true); setSession(null); setProjects([]); setProject(null); setAgentEvents({}); setCatalogSelections({}); projectRef.current = null; window.history.replaceState(null, '', window.location.pathname); };
+    const expired = () => { if (accountRef.current) clearVideoTransfers(accountRef.current); identityGeneration.current++; switchGeneration.current++; accountRef.current = null; setVideoSelection(null); setInspectorProject(null); inspectorDirty.current = false; setSignedOut(true); setSession(null); setProjects([]); setProject(null); setAgentEvents({}); setCatalogSelections({}); projectRef.current = null; window.history.replaceState(null, '', window.location.pathname); };
     const checkSession = () => { if (!accountRef.current) return; void getSession().then(active => {
       if (!active || active.accountId !== accountRef.current) { expired(); return; }
       setSession(active);
@@ -172,6 +191,7 @@ export default function App() {
     return () => { window.removeEventListener('firelaunch-session-expired', expired); window.removeEventListener('focus', checkSession); window.clearInterval(interval); };
   }, []);
   const switchProject = async (id: string) => {
+    if (inspectorProject && inspectorDirty.current && !window.confirm('Discard unsaved appearance changes?')) return;
     const generation = ++switchGeneration.current;
     const identity = identityGeneration.current;
     if (id === projectRef.current?.id) return;
@@ -182,6 +202,7 @@ export default function App() {
       const next = await getProject(id);
       if (generation !== switchGeneration.current || identity !== identityGeneration.current || (active?.accountId ?? null) !== accountRef.current || next.id !== id) return;
       select(next);
+      setInspectorProject(null); inspectorDirty.current = false;
       setVideoSelection(null);
       setNewChannel(false);
     } catch (reason) { if (generation === switchGeneration.current && identity === identityGeneration.current) setError(reason instanceof Error ? reason.message : String(reason)); }
@@ -220,21 +241,37 @@ export default function App() {
     finally { setBusy(false); }
   };
   const draftSelection = project ? catalogSelections[project.id] : undefined;
-  const openChannel = (view: ChannelView) => { setChannelView(view); setSurface('Channel'); setNewChannel(false); };
+  const openChannel = (view: ChannelView) => { if (inspectorProject && !closeInspector()) return; setChannelView(view); setSurface('Channel'); setNewChannel(false); };
+  useEffect(() => {
+    if (!inspectorProject) return;
+    const onEscape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !(event.target as HTMLElement)?.closest('.tv-frame')) { event.preventDefault(); closeInspector(); } };
+    window.addEventListener('keydown', onEscape);
+    return () => window.removeEventListener('keydown', onEscape);
+  }, [inspectorProject]);
   const openVideo = (itemId?: string) => {
     if (!project || !session) return;
     setVideoSelection({ projectId: project.id, accountId: session.accountId, ...(itemId ? { itemId } : {}) });
   };
   if (signedOut) return <div className="welcome"><h1>Sign in to FireLaunch</h1><p>Your session has ended or you have not signed in.</p><a className="primary" href="/api/auth/login">Sign in with Google</a></div>;
   return <div className="app-shell"><aside className="sidebar" aria-label="Studio navigation"><div className="sidebar-head"><div className="wordmark"><span className="mark">✳</span><span>firelaunch<small>CREATOR STUDIO</small></span></div>{session && <div className="sidebar-account"><span title={session.email}>{session.email}</span><button onClick={() => void logout().then(() => window.dispatchEvent(new window.Event('firelaunch-session-expired'))).catch(reason => setError(String(reason)))}>Sign out</button></div>}</div><div className="sidebar-project"><div className="sidebar-label">WORKSPACE</div><button className="project-switch" onClick={() => setNewChannel(true)} aria-label="New channel workspace"><span className="project-avatar">{project?.spec.title[0] ?? '+'}</span><span>{project?.spec.title ?? 'New channel'}<small>{project ? `REV ${project.revision} · ${session ? 'PRIVATE' : 'LOCAL'}` : 'GET STARTED'}</small></span><span aria-hidden="true">＋</span></button>{projects.length > 1 && <select className="project-select" aria-label="Switch project" value={project?.id ?? ''} onChange={event => { if (projects.some(item => item.id === event.target.value)) void switchProject(event.target.value); }}>{projects.map(item => <option key={item.id} value={item.id}>{item.spec.title}</option>)}</select>}</div>
-    <div className="sidebar-label sidebar-sections-label">CHANNEL WORKSPACE</div><nav className="sidebar-nav" aria-label="Studio surfaces">{surfaces.map(target => <button key={target} disabled={!project} aria-current={surface === target && project && !newChannel ? 'page' : undefined} className={surface === target && project && !newChannel ? 'active' : ''} onClick={() => { setSurface(target); setNewChannel(false); }}><span aria-hidden="true">{icons[target]}</span>{target}</button>)}</nav><div className="sidebar-footer">✧ &nbsp; Vega-first creation<br/><small>{session ? 'Hosted studio' : 'Local studio'}</small></div></aside>
-    <main className="studio-main"><header className="topbar"><div className="topbar-title"><span className="eyebrow">STUDIO / {newChannel || !project ? 'NEW CHANNEL' : surface.toUpperCase()}</span><h1>{newChannel ? 'Your next channel' : project?.spec.title ?? 'Your next channel'}</h1></div><div className="topbar-right"><span className="status" role="status"><i aria-hidden="true"/> {busy ? 'SAVING' : project ? session ? 'SAVED PRIVATELY' : 'SAVED LOCALLY' : 'READY'}</span><button onClick={() => setNewChannel(previous => !previous)}>{newChannel && project ? '← Current channel' : '＋ New channel'}</button></div></header>
+    <div className="sidebar-label sidebar-sections-label">CHANNEL WORKSPACE</div><nav className="sidebar-nav" aria-label="Studio surfaces">{surfaces.map(target => <button key={target} disabled={!project} aria-current={surface === target && project && !newChannel ? 'page' : undefined} className={surface === target && project && !newChannel ? 'active' : ''} onClick={() => navigate(target)}><span aria-hidden="true">{icons[target]}</span>{target}</button>)}</nav><div className="sidebar-footer">✧ &nbsp; Vega-first creation<br/><small>{session ? 'Hosted studio' : 'Local studio'}</small></div></aside>
+    <main className="studio-main"><header className="topbar"><div className="topbar-title"><span className="eyebrow">STUDIO / {newChannel || !project ? 'NEW CHANNEL' : surface.toUpperCase()}</span><h1>{newChannel ? 'Your next channel' : project?.spec.title ?? 'Your next channel'}</h1></div><div className="topbar-right"><span className="status" role="status"><i aria-hidden="true"/> {busy ? 'SAVING' : project ? session ? 'SAVED PRIVATELY' : 'SAVED LOCALLY' : 'READY'}</span><button onClick={() => { if (inspectorProject && !closeInspector()) return; setNewChannel(previous => !previous); }}>{newChannel && project ? '← Current channel' : '＋ New channel'}</button></div></header>
       {session && project && <VideoTransferNotice accountId={session.accountId} projectId={project.id} onOpen={openVideo}/>}
       {error && <div className="error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></div>}
-      {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : surface === 'Home' ? <Home key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} projects={projects} accountId={session?.accountId ?? null} hosted={!!session} libraryRevision={libraryRevision} onSelectProject={id => void switchProject(id)} onSurface={setSurface} onEditChannel={() => openChannel('Appearance')} onOpenVideo={openVideo} onPreview={() => { openChannel('Appearance'); window.setTimeout(() => document.getElementById('tv-preview')?.scrollIntoView?.(), 0); }}/> : <div className="workspace"><div className="workspace-jump"><a href="#tv-preview">TV Preview</a><a href="#studio-controls">{surface} controls</a></div><div className="workspace-main" id="tv-preview"><Preview key={`${session?.accountId ?? 'local'}:${project.id}`} spec={project.spec} hosted={!!session} accountId={session?.accountId} libraryRevision={libraryRevision}/><div className="under-preview"><div><span className="eyebrow">TV-FIRST INTERACTION</span><h2>From idea to living room.</h2><p>Navigate every tile with the remote. Changes you save on the right appear here immediately. Device playback still needs separate qualification.</p></div><span className="signal">◉ &nbsp; SHARED TV SEMANTICS</span></div></div><aside className="inspector" id="studio-controls" aria-label={`${surface} controls`} key={`${project.id}:${surface}`}>
-        {surface === 'Channel' && <div className="chips studio-subviews" role="group" aria-label="Channel views">{channelViews.map(view => <button key={view} type="button" className={channelView === view ? 'active' : ''} aria-pressed={channelView === view} onClick={() => setChannelView(view)}>{view}</button>)}</div>}
-        {surface === 'Export' && <div className="chips studio-subviews" role="group" aria-label="Export views">{exportViews.map(view => <button key={view} type="button" className={exportView === view ? 'active' : ''} aria-pressed={exportView === view} onClick={() => setExportView(view)}>{view}</button>)}</div>}
-        {surface === 'Library' ? <Catalog project={project} hosted={!!session} {...(session ? { accountId: session.accountId } : {})} libraryRevision={libraryRevision} onOpenVideo={openVideo} onCatalogChange={() => setLibraryRevision(value => value + 1)} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => openChannel('AI Assistant')}/> : surface === 'Channel' && channelView === 'Appearance' ? <Design project={project} commit={commit}/> : surface === 'Channel' && channelView === 'Pages & Shelves' ? <Content project={project} commit={commit} hosted={!!session}/> : surface === 'Channel' ? <AgentPanel key={project.id} project={project} {...(draftSelection ? { catalogSelection: draftSelection.selection } : {})} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery key={`${project.id}:${surface}:${exportView}`} project={project} surface={surface === 'Publish' ? 'Publish' : exportView === 'Advanced Source' ? 'Code' : 'Build'} hosted={!!session} />}
-      </aside></div>}
+      {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : surface === 'Home' ? <Home key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} projects={projects} accountId={session?.accountId ?? null} hosted={!!session} libraryRevision={libraryRevision} onSelectProject={id => void switchProject(id)} onSurface={navigate} onEditChannel={() => openChannel('Appearance')} onOpenVideo={openVideo} onPreview={() => { openChannel('Appearance'); setPreviewOpen(true); window.setTimeout(() => document.getElementById('tv-preview')?.scrollIntoView?.(), 0); }}/> : <div className={`workspace ${surface === 'Channel' ? 'channel-workspace' : ''} ${inspectorProject === project.id && surface === 'Channel' && channelView === 'Appearance' ? 'has-inspector' : ''}`}>
+        <div className="workspace-main" id="studio-controls">
+          {surface === 'Channel' && <div className="channel-toolbar"><div className="chips studio-subviews" role="group" aria-label="Channel views">{channelViews.map(view => <button key={view} type="button" className={channelView === view ? 'active' : ''} aria-pressed={channelView === view} onClick={() => { if (inspectorProject && !closeInspector()) return; setChannelView(view); }}>{view}</button>)}</div><button type="button" className="preview-toggle" aria-expanded={previewOpen} aria-controls="tv-preview" onClick={() => setPreviewOpen(open => !open)}>{previewOpen ? 'Close TV Preview' : 'TV Preview'}</button></div>}
+          {surface === 'Export' && <div className="chips studio-subviews" role="group" aria-label="Export views">{exportViews.map(view => <button key={view} type="button" className={exportView === view ? 'active' : ''} aria-pressed={exportView === view} onClick={() => setExportView(view)}>{view}</button>)}</div>}
+          <div className={previewOpen && surface === 'Channel' ? 'channel-preview-split' : ''}>
+            {surface === 'Channel' && previewOpen && <div id="tv-preview"><Preview key={`${session?.accountId ?? 'local'}:${project.id}`} spec={project.spec} hosted={!!session} accountId={session?.accountId} libraryRevision={libraryRevision}/></div>}
+            <div className="channel-editor">
+              {surface === 'Library' ? <Catalog project={project} hosted={!!session} {...(session ? { accountId: session.accountId } : {})} libraryRevision={libraryRevision} onOpenVideo={openVideo} onCatalogChange={() => setLibraryRevision(value => value + 1)} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => openChannel('AI Assistant')}/> : surface === 'Channel' && channelView === 'Appearance' ? <div className="panel-content"><span className="eyebrow">CHANNEL IDENTITY</span><h2>Appearance</h2><p>Choose your channel name, colors and artwork for the TV experience.</p><button type="button" ref={inspectorOpener} aria-expanded={inspectorProject === project.id} aria-controls={inspectorProject === project.id ? 'appearance-inspector' : undefined} onClick={() => { if (inspectorProject) closeInspector(); else setInspectorProject(project.id); }}>Edit appearance</button></div> : surface === 'Channel' && channelView === 'Pages & Shelves' ? <Content key={project.id} project={project} commit={commit} hosted={!!session}/> : surface === 'Channel' ? <AgentPanel key={project.id} project={project} {...(draftSelection ? { catalogSelection: draftSelection.selection } : {})} onUpdate={acceptProject} events={agentEvents[project.id] ?? []} onEvents={entries => setAgentEvents(previous => ({ ...previous, [project.id]: [...(previous[project.id] ?? []), ...entries].slice(-36) }))} /> : <Delivery key={`${project.id}:${surface}:${exportView}`} project={project} surface={surface === 'Publish' ? 'Publish' : exportView === 'Advanced Source' ? 'Code' : 'Build'} hosted={!!session} />}
+            </div>
+          </div>
+        </div>
+        {surface === 'Channel' && channelView === 'Appearance' && inspectorProject === project.id && <aside className="inspector" id="appearance-inspector" aria-label="Appearance inspector"><div className="inspector-heading"><strong>Selected: appearance</strong><button ref={inspectorClose} type="button" aria-label="Close appearance inspector" onClick={closeInspector}>Close</button></div><Design key={project.id} project={project} commit={commit} onDirtyChange={setInspectorDirty}/></aside>}
+      </div>}
+      <span className="sr-only" role="status" aria-live="polite">{inspectorProject === project?.id && surface === 'Channel' && channelView === 'Appearance' ? 'Appearance inspector open' : 'Appearance inspector closed'}</span>
+
     </main>{videoSelection && project?.id === videoSelection.projectId && session?.accountId === videoSelection.accountId && !newChannel && <VideoWorkspace key={`${videoSelection.accountId}:${videoSelection.projectId}`} selection={videoSelection} project={project} onProjectUpdate={acceptProject} onIdentity={itemId => setVideoSelection(previous => previous && previous.projectId === project.id && previous.accountId === session.accountId ? { ...previous, itemId } : previous)} onClose={() => { setVideoSelection(null); setLibraryRevision(value => value + 1); }}/>}</div>;
 }

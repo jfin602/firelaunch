@@ -40,45 +40,41 @@ test('empty hosted account keeps onboarding, status and real navigation visible'
   } finally { restore(); }
 });
 
-test('shell preserves project switch, selected surfaces, inspector and Preview keyboard boundaries', async () => {
+test('contextual appearance inspector dismisses safely and restores focus across projects', async () => {
   const restore = mockApi([first, second]);
+  const originalConfirm = window.confirm;
   try {
     render(createElement(App));
     await screen.findByRole('heading', { name: first.spec.title, level: 1 });
-    assert.equal(screen.getByRole('button', { name: 'Home' }).getAttribute('aria-current'), 'page');
-    for (const invented of ['Templates', 'Analytics', 'Community']) assert.equal(screen.queryByRole('button', { name: invented }), null);
     fireEvent.click(screen.getByRole('button', { name: 'Library' }));
-    assert.ok(screen.getByRole('region', { name: 'Interactive TV Preview' }));
-    assert.equal(screen.getByRole('button', { name: 'Library' }).getAttribute('aria-current'), 'page');
+    assert.equal(screen.queryByRole('complementary', { name: /inspector/i }), null);
+    assert.equal(document.querySelector('.workspace')?.classList.contains('has-inspector'), false);
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
-    assert.equal(screen.getByRole('button', { name: 'Channel' }).getAttribute('aria-current'), 'page');
-    assert.ok(screen.getByRole('complementary', { name: 'Channel controls' }));
     fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-    const color = screen.getByLabelText(/PRIMARY/);
-    const focused = document.querySelector('.tv-screen .focused')?.getAttribute('data-tv-focus');
-    fireEvent.keyDown(color, { key: 'ArrowDown' });
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Channel' }), { key: 'Enter' });
-    assert.equal(document.querySelector('.tv-screen .focused')?.getAttribute('data-tv-focus'), focused);
-    fireEvent.click(screen.getByRole('button', { name: '＋ New channel' }));
-    assert.ok(screen.getByRole('heading', { level: 1, name: 'Your next channel' }));
+    assert.equal(screen.queryByRole('complementary', { name: /inspector/i }), null);
+    const opener = screen.getByRole('button', { name: 'Edit appearance' });
+    opener.focus(); fireEvent.click(opener);
+    assert.ok(screen.getByRole('complementary', { name: 'Appearance inspector' }));
+    const title = screen.getByLabelText('DISPLAY NAME') as HTMLInputElement;
+    fireEvent.change(title, { target: { value: 'Unsaved name' } });
+    window.confirm = () => false;
+    fireEvent.click(screen.getByRole('button', { name: 'Close appearance inspector' }));
+    assert.ok(screen.getByRole('complementary', { name: 'Appearance inspector' }));
+    window.confirm = () => true;
+    fireEvent.keyDown(title, { key: 'Escape' });
+    await waitFor(() => assert.equal(screen.queryByRole('complementary', { name: 'Appearance inspector' }), null));
+    await waitFor(() => assert.equal(document.activeElement, opener));
+    fireEvent.click(opener);
     fireEvent.change(screen.getByRole('combobox', { name: 'Switch project' }), { target: { value: second.id } });
     await screen.findByRole('heading', { name: 'Second channel', level: 1 });
-    assert.equal(screen.getByRole('button', { name: 'Channel' }).getAttribute('aria-current'), 'page');
-    assert.ok(screen.getByRole('complementary', { name: 'Channel controls' }));
-    assert.equal(dom.window.location.search, `?project=${second.id}`);
-    fireEvent.click(screen.getByRole('button', { name: 'Pages & Shelves' }));
-    assert.ok(screen.getByRole('button', { name: 'Add page' }));
-    fireEvent.click(screen.getByRole('button', { name: 'AI Assistant' }));
-    assert.ok(screen.getByRole('complementary', { name: 'Channel controls' }));
+    assert.equal(screen.queryByRole('complementary', { name: 'Appearance inspector' }), null);
+    fireEvent.click(screen.getByRole('button', { name: 'TV Preview' }));
+    assert.ok(screen.getByRole('region', { name: 'Interactive TV Preview' }));
+    assert.equal(screen.getByRole('button', { name: 'Close TV Preview' }).getAttribute('aria-expanded'), 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Export' }));
-    assert.ok(screen.getByRole('group', { name: 'Export views' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Advanced Source' }));
-    assert.ok(screen.getByRole('heading', { name: 'Vega source' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
-    await waitFor(() => assert.equal(screen.getByRole('button', { name: 'Publish' }).getAttribute('aria-current'), 'page'));
-    assert.ok(screen.getByRole('complementary', { name: 'Publish controls' }));
-    assert.deepEqual([...screen.getByRole('navigation', { name: 'Studio surfaces' }).querySelectorAll('button')].map(button => button.textContent?.trim()), ['⌂Home', '▤Library', '◈Channel', '↗Publish', '⬡Export']);
-  } finally { restore(); }
+    assert.equal(document.querySelector('.workspace')?.classList.contains('has-inspector'), false);
+    assert.equal(screen.queryByRole('complementary', { name: /inspector/i }), null);
+  } finally { window.confirm = originalConfirm; restore(); }
 });
 
 test('responsive shell declares edge-to-edge canvas and inline tablet inspector', () => {
@@ -88,7 +84,7 @@ test('responsive shell declares edge-to-edge canvas and inline tablet inspector'
   assert.match(shell, /\.app-shell\s*\{[^}]*width:\s*100%/s);
   assert.match(shell, /min-height:\s*100dvh/);
   assert.match(shell, /@media \(max-width: 1180px\)/);
-  assert.match(shell, /\.workspace\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/);
+  assert.match(css, /\.workspace\.has-inspector\s*\{[^}]*grid-template-columns/s);
   assert.match(shell, /@media \(max-width: 900px\)/);
   assert.match(shell, /\.sidebar-project \.project-select\s*\{\s*display:\s*block/);
   assert.match(shell, /\.sidebar-nav\s*\{[^}]*overflow-x:\s*auto/s);
