@@ -1,0 +1,26 @@
+TASK: Phase 8 / P5 — Native Vega layout parity and publish compatibility
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.9`.
+
+GOAL
+Make the generated native Vega app render the new static sections and bounded presentation presets consistently with ChannelSpec and Studio Preview, and PREVENT incompatible layouts from reaching already-installed TV apps through data-only publication. No native device run/worker rebuild here; P7 owns independent evidence.
+
+PREFLIGHT
+Read P8B plan, P4 typed contract/handoff, current actual 0.8.8 HEAD/status. Inspect templates/vega-channel/src/App.js, native tv-runtime/renderer import, packages/generator, shared TV projection, packages/contracts/src/publication.ts and apps/server/src/publication-repository.ts plus focused tests. Inspect exact installed-app capabilities/release binding; do not guess from a package name or a hardcoded app version. Reuse C7 R4 GREEN only for untouched media.
+
+IMPLEMENT
+1. Render Image Banner and Image + Text natively (image, title/body, left/right, crop, safe spacing/color/font). Honor ordered modules, 10-foot safe area, identity and links, predictable fallback if artwork unavailable. Support necessary typed presets for existing hero/rail/grid/text. Source code should not silently ignore an unknown module kind. Static-only section has no false focus/action target.
+2. Align generator/native TV projection with Studio Preview and contracts. Avoid a second mutable layout model, new shell, arbitrary native JS or unsafe remote execution. Verify old ChannelSpec v1 and old published manifests continue to work.
+3. Fail-closed publication compatibility NOW: current public release/installed package may only accept section kinds/presets that the known installed runtime supports. If capability evidence is missing, classify newer section type Requires App Update or Blocked and prevent Publish Now through existing approval paths. Do not auto-publish or mutate free release #1. If robust per-package capability negotiation would explode scope, conservatively reject publishing new static variants on unknown/old installed packages and document later Phase 9 upgrade dependency; don't loosen the gate.
+4. Preserve owner/CSRF/revision/artwork-display-rights/private-object checks. No fake rights, no implicit app store submission. Keep native package ID/deployment identity and custom-source protection unchanged.
+
+VALIDATION
+Focused native JSX/runtime/generator snapshot tests comparing same ChannelSpec sections/presets/order and focus to Studio projection; historical/unknown module behavior; owner/public-approval compatibility negative tests including older package. Typecheck touched generator/contracts/server/tv packages only and focused tests. No full root npm run test/build, no real Vega CLI/MediaConvert/worker/ZIP/device, no staging or public release changes. P7 owns one independent native proof if authorized and available.
+
+HANDOFF / BOUNDARIES
+Runner commits only at root+two top-level lock 0.8.9, workspace package versions unchanged. Do not self-commit, /activate, change schema14, publish content, alter cloud/security. Target <=8 min, hard 15; if publishing compatibility cannot be proved, leave new modules fail-closed and provide the exact pending P7/P9 handoff.
