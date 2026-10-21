@@ -3,6 +3,14 @@
 Bootstrap date: 2026-10-08.
 Hackathon deadline: 2026-10-23 12:00 PM PDT.
 
+## Approved Phase 8 Wave 2 — human-first layouts and full-screen Preview (2026-10-21)
+
+**Current evidenced status:** [Wave 1 P5](../tasks/p8/wave1-closeout.md) is **GREEN / DEPLOYED** to protected staging for navigation, contextual-only inspector, creative review and native Export, at root/lock `0.8.4` and recorded release hash. **Phase 8 remains OPEN.** Do not edit/rerun Wave 1 P5 or treat the proposed `0.8.5` closeout target as an applied version. The owner approved **Wave 2** as a [new `p8b` planning continuation](../tasks/p8b/README.md); [human-first design specification](../design/page-layout-human-first.md) is authoritative. No Wave 2 implementation, prompt files, version entry or staging deployment has yet occurred.
+
+**Wave 2 goal:** Make Channel → **Pages & Layout** a first-class simple creator workflow: **name page → choose Hero/Grid/Rows → choose media/text → actual TV Preview**. Home defaults Hero; additional pages suggest Rows; templates only seed editable ordered sections. Six constrained section types include Featured Hero, Content Row, Content Grid, Text Area, Image Banner and Image + Text; section customization uses bounded presets and an on-selection contextual inspector, not a freeform web canvas. **View full screen** expands the same interactive 16:9 TV Preview while preserving page, TV focus/playback and editor context with accessible Back/Exit separation.
+
+**Proposed split, not prompts:** template/page creation → human-first Pages & Layout editing → static image/text + shared Studio/Vega parity → full-screen Preview/accessibility → independent Wave 2 staging qualification, then further owner usability review. Prompt assessment/planning/version assignment still required; use the exact accepted Wave 1 baseline and `p8b` continuation grammar. Reuse existing GREEN native HLS evidence for unchanged paths, require focused native parity for new module types, and block publishing layout data to older installed runtimes that cannot render it. Keep October 23 noon Central owner delivery priority and Phase 9 distinct.
+
 ## Active October 21 phase handoff — P7 owner-closed, P8 baseline 0.8.0
 
 **Owner disposition:** [Phase 7 owner closeout](../tasks/p7/owner-closeout-2026-10-21.md) closes P7/C7 as **OWNER-ACCEPTED PARTIAL / NOT GREEN**. Independent native build/ZIP, creator-bound x86_64 VPKG installation, approved artwork/branding, Back and restart had direct evidence. HLS TS fragment `FRAG_LOADED`, visible moving picture, confirmed sound and pause/seek remained unqualified. Do not rewrite history or imply an installed app now streams successfully.
