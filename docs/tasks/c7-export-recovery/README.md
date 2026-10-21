@@ -1,5 +1,9 @@
 # c7-export-recovery — P7 continuation: single-VPS native export
 
+## Owner closure — October 21 (overrides the execution handoff below)
+
+The owner has **closed C7 as accepted partial** to start Phase 8, recorded in [Phase 7 owner closeout](../p7/owner-closeout-2026-10-21.md). The original measured [C7 closeout](closeout.md) is still **PARTIAL / NOT GREEN**: successful isolated native build, authenticated ZIP, real VPKG installation/branding/artwork/Back/restart, but native first-TS HLS playback and sound/controls NOT GREEN. R4 playback recovery below is a **historical planned task, no longer an automatic entry gate for P8**. Do not fabricate a later successful device outcome. P8 starts at owner-approved `0.8.0` source baseline; this does not change recorded deployed `0.7.3` staging or schema 14.
+
 **Status:** [C7 final closeout PARTIAL / NOT GREEN](closeout.md) on 2026-10-20. [R1 Studio startup SCOPED GREEN](R1-closeout.md); R2 isolated native worker GREEN; R3 authenticated owner ZIP export SCOPED GREEN; R4 native Vega playback NOT GREEN because the installed app never completes its first approved HLS TS fragment and times out. P7 original [P4 closeout](../p7/closeout.md) remains NOT GREEN. Deadline Friday 2026-10-23 12:00 America/Chicago (CDT). Root package.json and both top-level lockfile version entries remain 0.7.3. Manual correction prompts only; no runner or agent commits.
 
 ## Active October 21 R4 recovery
