@@ -1,5 +1,9 @@
 # FireLaunch Architecture
 
+## Fullscreen overlay state addition — c8-ui3 P3 (2026-10-21)
+
+Scoped to existing `apps/studio/src/App.tsx` fullscreenRoot/previewFullscreen/dockVisible, `Preview.tsx` remote/Exit presentation and fullscreen CSS only. Preserve ONE Preview/VideoPlayer, SAME mounted left editor, Fullscreen API/fallback, TV focus and keyboard commands. In fullscreen render TV at maximum fitting 16:9 without reserved control space; Virtual remote BOTTOM LEFT, Exit/Hide TOP RIGHT as overlays. Additional Clean View visibility mode hides all Studio overlays and uses H, top-right corner, Alt+E or Escape for safe recovery while never intercepting input fields/TV interactions. Existing P1/P2 normal-mode corrections unchanged. P4 protected deploy-first Codex-browser qualification, not P3. No ChannelSpec/native/runtime/rights/schema changes; Phase 8 OPEN.
+
 ## c8-ui3 Studio-only presentation boundary (2026-10-21)
 
 [c8-ui3](tasks/c8-ui3/README.md) is a normal-mode UI composition correction after committed c8-ui2 P1–P3 at root/lock `0.8.10`. It changes only `apps/studio/src/style.css` and small `App.tsx`/`Preview.tsx` presentation areas as needed: flush global/editor sidebar and header, cool gray editor palette, Channel-wide solid dark canvas, largest safe borderless 16:9 TV and BELOW-TV utility row/remote. Preserve the single mounted `Preview`/TV/player, fullscreen LEFT overlay and existing `ChannelSpec` canonical contracts. No native Vega, schema, worker, approval or media changes. Staging qualification is c8-ui3 P3, protected-deploy FIRST, then authenticated Codex browser visual comparison using user's attached approved image; c8-ui2 P4 is superseded but historical prompt unchanged. Phase 8 OPEN.
