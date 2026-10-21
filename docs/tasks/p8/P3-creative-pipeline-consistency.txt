@@ -1,0 +1,26 @@
+TASK: Phase 8 / P3 — Creator edits and video pipeline consistency
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.3`.
+
+GOAL
+Prove the P1/P2 creator UI uses existing saved data correctly across Library, Channel, video workspace and private Preview. Repair only real drift/regressions from current source; no new media architecture.
+
+PREFLIGHT
+Read P8 README/assessment/plan, P1/P2 handoffs, docs/CURRENT-STATE.md, docs/tasks/c6-supporting-media/README.md, docs/tasks/c6-usability/closeout.md and c7 recovery. Confirm coherent P2 0.8.2 and local status; do not overwrite Phase 7/manual changes. Inspect actual Catalog/VideoWorkspace/VideoUpload/VideoReview/OwnedArtwork/Home/Preview and tested server catalog/publication pathways before editing. Do not assume GitHub head equals staging or that R2 is green.
+
+IMPLEMENT
+1. Trace one creator-owned CatalogItem + MediaAsset through video creation/import -> title/description/thumbnail rights and optional supporting media -> ChannelSpec placement in existing Videos shelf -> reload/reopen. Verify selected image priority (saved creator choice, persisted versions, generated fallback) across Home, Library, video dialog, upload/progress/processing and private Preview, with proper fallback when unavailable.
+2. Check distinct truthful upload/transfer, verified HLS readiness, creator display/playback rights, private preview, approved publication and live flags. An encoded READY private file is not published; public release cannot be inferred from preview. Preserve optional subtitle independence. Keep single stable item/video identity, no duplicate media records due to new navigation.
+3. Ensure edited Channel Appearance / Pages & Shelves and AI request use current validated mutations and revision persistence. Honor changed-source protection, creator override priority, project/account isolation and P3 catalog import. For real UI regression, repair the smallest component/projection issue, keeping published manifest contract unchanged.
+4. Use fixtures/mocks and existing rights-cleared READY media for checks. Do not trigger new MediaConvert encode or publish a fresh release simply to make tests green.
+
+VALIDATION
+Focused persistence/reopen, artwork, rights, video status, source-preserving channel mutations and private Preview tests. Check owner/foreign negatives for changed routes, affected typecheck/build and git diff --check. Manual authenticated browser checks only when already available; report missing external evidence honestly. Do not redo entire Phase 6/Q2 historical suite.
+
+HANDOFF / GIT / SAFETY
+Runner owns P3 commit after P2 coherent baseline; set only root package and two top-level lockfile versions to 0.8.3. No self-commit, deployment, publication, AWS/IAM/CDN, public access relaxation or unapproved staging changes; protect Q2 historical state, schema 14 and free release #1. <=8 min goal, 15 min cap; pass exact tested artwork/video identity and unresolved P4 publication/export dependencies.
