@@ -14,6 +14,8 @@ Before implementation:
 9. the current prompt
 
 ## Current c8-ui correction after pushed P8B — verified 2026-10-21
+**P4 owner update:** protected staging deployment followed by final signed-in UI/browser testing there is required; the closeout can also issue a dated follow-on P8B Wave 2 result after real native static layout proof. Exact-source operator authorization and rollback requirements are unchanged.
+
 
 GitHub main now includes **P8B P1–P6 at root/lock `0.8.10`**, and the committed P8B P7 outcome is **NOT GREEN / NOT DEPLOYED** for signed-in candidate, native static-layout device and protected staging gates. Do not rerun P8B or overwrite its completed templates/static section/editor/native compatibility. The [optimized `c8-ui`](docs/tasks/c8-ui/README.md) is a **fixed `0.8.10` correction**: P1 always-on TV and remove UI AI/Close Preview; P2 true height-first 16:9 top stage + horizontal bottom dock; P3 reuse existing fullscreen state with shared TV+dock root and bottom-edge hover/touch/keyboard overlay; P4 real browser UI closeout and staging result separately. See [design](docs/design/tv-first-channel-workspace.md). Local dirty changes still require safe reconciliation before `npm run codex:stack:validate -- c8-ui` and `npm run codex:stack -- c8-ui`. No `/activate`; Phase 8 OPEN.
 
