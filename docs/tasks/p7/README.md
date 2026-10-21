@@ -1,5 +1,9 @@
 # P7 — Vega Export & Device Qualification
 
+## Owner-accepted Phase 7 transition — October 21
+
+**Phase 7 is OWNER-CLOSED / ACCEPTED WITH KNOWN EXCEPTIONS**, not GREEN. The owner approved moving to the Phase 8 `0.8.0` source baseline despite C7's documented first-TS-fragment HLS playback failure (no verified moving video, audio, pause or seek). R1–R3 native worker/ZIP and R4 installation/artwork/Back/restart evidence remain valid at their tested scopes. See [owner closeout](owner-closeout-2026-10-21.md) and [measured C7 closeout](../c7-export-recovery/closeout.md). The following P7 status and instructions are historical; do not rerun P7, revive C7 gates as an automatic Phase 8 activation blocker, or call failed device gates GREEN. Native playback remains a Phase 9 final-launch evidence gap.
+
 **Status (October 20, 2026): P1-P3 IMPLEMENTED through `0cec1c7` at root `0.7.3`; P4 manually closed NOT GREEN after blank-page staging rollback; creator ZIP/device playback NOT QUALIFIED.** Planned implementation versions 0.7.1–0.7.4. Deadline: October 23, 2026 noon America/Chicago (internal target 11:30 AM; freeze target October 22 5 PM).
 
 ## Owner-approved P7 continuation — October 20, 2026
