@@ -26,10 +26,10 @@ Use the checked-in tests and preserved route APIs. Do not create an additional C
 
 | Checkpoint | Mandatory focused evidence | Explicitly leave to later |
 | --- | --- | --- |
-| P1 | Actual navigation/component tests, `npm run typecheck -w @firelaunch/studio`, diff check | Layout/browser/full build |
-| P2 | Inspector/selection/focus/Preview tests and Studio typecheck, diff check | P1 navigation suite replay, full device/UI regression |
-| P3 | Artwork/private video/reopen/shelf/rights tests for changed components, Studio typecheck, changed-server typecheck/test if touched | C7 worker/ZIP, new encode, full media suite |
-| P4 | Publish-vs-Export UI tests and any **changed** backend ownership/CSRF/rights/status tests; typecheck touched package(s), diff check | Full build/aggregate, worker/device retest |
+| P1 | Actual navigation/component tests, Studio package typecheck (runner handles diff check) | Layout/browser/full build |
+| P2 | Inspector/selection/focus/Preview tests and Studio typecheck (runner handles diff check) | P1 navigation suite replay, full device/UI regression |
+| P3 | Artwork/private video/reopen/shelf/rights tests for changed components, Studio typecheck on changed code, changed-server typecheck/test if touched | C7 worker/ZIP, new encode, full media suite |
+| P4 | Publish-vs-Export UI tests and any **changed** backend ownership/CSRF/rights/status tests; typecheck touched package(s); runner handles diff check | Full build/aggregate, worker/device retest |
 | P5 | One real desktop creator journey + brief tablet/mobile spot checks; one `npm run check` (includes build/tests) on final candidate, stack validation and diff check | Re-running unchanged R1–R3 or Q2/Q3 matrices |
 
 Use discovered existing test file paths, e.g. `node --import tsx --test apps/studio/test/<actual>.test.tsx`, not unbounded `npm run test:studio` per step. If focused validation exposes an actual cross-package regression, escalate that **specific failing dependency** and explain why, rather than skipping tests or expanding to generic loops. P1 reads full baseline once; P2–P4 read prior handoff plus changed files/essential authority, not entire historical reports again. P5 uses a previously authenticated owner and saved content where possible; no fresh paid AWS jobs or native builds without a changed dependency and separately approved operator scope.
