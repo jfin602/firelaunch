@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { ChannelProject } from '@firelaunch/contracts';
-import { buildStatus, codeOverview, createBundle, generateCode, nativeExportStatus, readSource, readiness, runBuild, saveSource, type BuildEvidence, type CodeOverview, type NativeExportStatus, type Readiness, type SourceFile } from './api.js';
+import { ApiError, buildStatus, codeOverview, createBundle, generateCode, nativeExportStatus, readSource, readiness, requestNativeBuild, runBuild, saveSource, type BuildEvidence, type CodeOverview, type NativeExportStatus, type Readiness, type SourceFile } from './api.js';
 import { LivePublication } from './LivePublication.js';
 import { NativeExportWorkspace } from './NativeExportWorkspace.js';
 
@@ -11,13 +11,17 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
   const [build, setBuild] = useState<BuildEvidence | null>(null);
   const [nativeExport, setNativeExport] = useState<NativeExportStatus | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [exportStarting, setExportStarting] = useState(false);
+  const exportPending = useRef(false);
+  const currentProject = useRef(project.id);
+  currentProject.current = project.id;
   const [publish, setPublish] = useState<Readiness | null>(null);
   const [bundle, setBundle] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     let active = true;
-    setCode(null); setFile(null); setBuild(null); setNativeExport(null); setPublish(null); setBundle(''); setError('');
+    setCode(null); setFile(null); setBuild(null); setNativeExport(null); setExportOpen(false); setPublish(null); setBundle(''); setError('');
     void Promise.allSettled([codeOverview(project.id), buildStatus(project.id), readiness(project.id), hosted ? nativeExportStatus(project.id) : Promise.resolve(null)])
       .then(([source, evidence, checks, exportState]) => {
         if (!active) return;
@@ -37,6 +41,35 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
     if (file && draft !== file.content && !window.confirm('Discard unsaved edits?')) return;
     await action(async () => { const next = await readSource(project.id, name); setFile(next); setDraft(next.content); });
   }
+  async function beginNativeExport() {
+    if (exportPending.current) return;
+    exportPending.current = true;
+    const projectId = project.id;
+    setExportStarting(true); setError('');
+    try {
+      // This runs only from the creator's click. A restored terminal job needs
+      // a separately labeled retry; reads, mounts and polling never enqueue.
+      let current: NativeExportStatus | null = null;
+      try { current = await nativeExportStatus(projectId); }
+      catch (reason) {
+        // A former ready receipt can become stale after an approved release
+        // changes. Only the click may request a newly checked build.
+        if (!(reason instanceof ApiError) || reason.status !== 409) throw reason;
+      }
+      const next = current && (current.status === 'failed' || current.status === 'expired' || current.status === 'canceled' ||
+        current.status === 'queued' || current.status === 'running' || current.downloadReady)
+        ? current : await requestNativeBuild(projectId);
+      if (currentProject.current !== projectId) return;
+      setNativeExport(next);
+      setExportOpen(true);
+    } catch (reason) {
+      if (currentProject.current === projectId) {
+        const message = reason instanceof Error ? reason.message : String(reason);
+        setError(/deployment not found|native deployment is not creator-approved|no creator-approved published release/i.test(message)
+          ? 'Approve a deployment and publish a rights-cleared release in Publish before exporting this native app.' : message);
+      }
+    } finally { exportPending.current = false; setExportStarting(false); }
+  }
   return <div className="panel-content delivery"><span className="eyebrow">{surface.toUpperCase()} / CREATOR-OWNED</span>
     {!code && !error && <p role="status">Loading source, build and readiness evidence…</p>}
     {error && <p role="alert" className="delivery-error">{error}</p>}
@@ -49,7 +82,7 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
     </>}
     {surface === 'Build' && <><h2>Release build evidence</h2><p className="muted">Local legacy builds use a verified Vega CLI. Hosted native builds use the approved published release.</p>{!hosted && code && !code.generated && <p className="delivery-warning">Generate source in Code before building.</p>}{!hosted && code?.stale && <p className="delivery-warning">Source is stale. Regenerate in Code before building.</p>}<button disabled={busy || hosted || !code?.generated || code.stale || build?.status === 'blocked'} onClick={() => void action(async () => { setBuild(await runBuild(project.id)); setPublish(await readiness(project.id)); })}>Run Vega release build</button>
       <p>Status: <strong>{build?.status ?? 'Loading'}</strong>{build?.reason && ` — ${build.reason}`}</p>
-      {hosted && <section aria-label="Export App"><h3>Export App</h3><p role="status">{nativeExport ? <><strong>{nativeExport.status}</strong>{nativeExport.job && ` · job ${nativeExport.job.id}`}</> : 'Loading export availability…'}</p><button className="primary" onClick={() => setExportOpen(true)}>Build &amp; Export App</button><p className="muted">Build the approved published release and download its verified Vega ZIP.</p></section>}
+      {hosted && <section aria-label="Export App"><h3>Export App</h3><p role="status">{nativeExport ? <><strong>{nativeExport.status}</strong>{nativeExport.job && ` · job ${nativeExport.job.id}`}</> : 'Loading export availability…'}</p><button className="primary" disabled={exportStarting} onClick={() => void beginNativeExport()}>{exportStarting ? 'Checking approved release…' : 'Build & Export App'}</button><p className="muted">Publish explicitly approves live content. Export builds the native app from that approved release. Compatible approved content updates can reach an installed app without a new binary; native code, permissions, identity or incompatible contracts require a new approved package.</p></section>}
       {build?.command && <p>Command: <code>{build.command.join(' ')}</code> · exit {build.exitCode ?? 'signal'} · {build.durationMs} ms</p>}
       {build?.artifact && <p>Verified VPKG: <code>{build.artifact.path}</code> ({build.artifact.bytes} bytes)<br/>SHA-256: <code>{build.artifact.sha256}</code></p>}
       {build?.output && <pre tabIndex={0} aria-label="Build command output">{build.output}</pre>}

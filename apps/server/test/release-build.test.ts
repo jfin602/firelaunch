@@ -217,9 +217,26 @@ test('hosted snapshot denies foreign identity, preserves released revision, and 
   } as unknown as PublicationRepository;
   const workspace = new HostedWorkspaceService(repository, publication);
   const first = await workspace.releaseBuildInput(owner, project.id);
+  assert.equal(first.files['src/App.js'], source.files['src/App.js']);
+  source = { ...source, files: { ...source.files, 'src/App.js': `${source.files['src/App.js']}\n// valid creator edit` } };
+  const customized = await workspace.releaseBuildInput(owner, project.id);
+  assert.equal(customized.files['src/App.js'], source.files['src/App.js']);
+  assert.notEqual(customized.fingerprint, first.fingerprint);
+  const trusted = source;
+  source = { ...source, files: { ...source.files,
+    'manifest.toml': source.files['manifest.toml']!.replace('com.creator.channel', 'com.foreign.channel') } };
+  await assert.rejects(workspace.releaseBuildInput(owner, project.id), /Preserve edits and review Advanced Source/);
+  source = trusted;
+  source = { ...source, baseline: { ...source.baseline, 'src/App.js': 'not the generated baseline' } };
+  await assert.rejects(workspace.releaseBuildInput(owner, project.id), /baseline is incomplete or unsafe/);
+  source = trusted;
+  source = await stored();
   active = foreign;
   await assert.rejects(workspace.releaseBuildInput(foreign, project.id), { code: 'NOT_FOUND' });
   active = owner;
+  await assert.rejects(new HostedWorkspaceService({ ...repository,
+    readDeployment: async () => { throw Object.assign(new Error('Deployment not found'), { code: 'NOT_FOUND' }); }
+  } as HostedProjectRepository, publication).releaseBuildInput(owner, project.id), { code: 'NOT_FOUND' });
   await assert.rejects(new HostedWorkspaceService({ ...repository,
     readDeployment: async () => ({ ...deployment, nativeReleaseApproval: 'pending_creator' })
   } as HostedProjectRepository, publication).releaseBuildInput(owner, project.id), { code: 'CONFLICT' });
@@ -229,6 +246,9 @@ test('hosted snapshot denies foreign identity, preserves released revision, and 
   currentRelease = { ...release, sequence: 2 };
   await assert.rejects(workspace.assertReleaseBuildInputCurrent(owner, project.id, first.fingerprint), { code: 'CONFLICT' });
   currentRelease = release;
+  await assert.rejects(new HostedWorkspaceService(repository, { ...publication,
+    currentSummary: async () => null
+  } as PublicationRepository).releaseBuildInput(owner, project.id), /No creator-approved published release/);
   currentProject = { ...project, revision: 4 };
   assert.equal((await workspace.releaseBuildInput(owner, project.id)).fingerprint, first.fingerprint);
   const draft = { ...spec, title: 'New private draft' };
@@ -239,6 +259,12 @@ test('hosted snapshot denies foreign identity, preserves released revision, and 
   assert.equal((await workspace.releaseBuildInput(owner, project.id)).fingerprint, first.fingerprint);
   assert.equal(source.files['app.json'], draftFiles['app.json']);
   source = { ...source, files: { ...source.files, 'src/App.js': `${source.files['src/App.js']}\n// private edit` } };
+  const preserved = JSON.stringify(source);
+  await assert.rejects(workspace.releaseBuildInput(owner, project.id), /Preserve edits before building/);
+  assert.equal(JSON.stringify(source), preserved, 'stale custom source stays untouched');
+  source = { ...source, files: { ...source.baseline }, fingerprint: 'malformed' };
+  await assert.rejects(workspace.releaseBuildInput(owner, project.id), /Preserve edits before building/);
+  source = { ...source, fingerprint: draftGenerated.fingerprint, baseline: {} };
   await assert.rejects(workspace.releaseBuildInput(owner, project.id), /Preserve edits before building/);
   source = null as unknown as StoredSource;
   assert.equal((await workspace.releaseBuildInput(owner, project.id)).fingerprint, first.fingerprint);

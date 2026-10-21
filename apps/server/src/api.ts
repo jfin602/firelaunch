@@ -151,6 +151,8 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             if (segments.length === 4 && request.method === 'GET') {
               await hostedRepository.read(principal, projectId);
               const job = await nativeBuildQueue!.latestStatus(principal.accountId, projectId);
+              if (job && (job.state === 'queued' || job.state === 'running'))
+                await hostedWorkspace.assertReleaseBuildInputCurrent(principal, projectId, job.inputFingerprint);
               const verified = job?.state === 'ready' ? await nativeExportForOwner(nativeBuildQueue!, hostedWorkspace,
                 principal, projectId, job.id, process.env.FIRELAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights) : undefined;
               respond(response, 200, job ? nativeExportJobStatus(job, verified) : { status: 'blocked', reason: 'No native build has been submitted for this project',

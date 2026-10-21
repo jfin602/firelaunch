@@ -85,3 +85,73 @@ test('hosted Export opens the app popup and clears project-scoped status on swit
     assert.equal((screen.getByRole('button', { name: 'Run Vega release build' }) as HTMLButtonElement).disabled, true);
   } finally { cleanup(); globalThis.fetch = nativeFetch; }
 });
+
+test('one Export click submits once, reopening only reads, and terminal retry is explicit', async () => {
+  const nativeFetch = globalThis.fetch;
+  const projectId = `ch_${'1'.repeat(32)}`;
+  const deploymentId = `dep_${'2'.repeat(32)}`;
+  const project = { id: projectId, revision: 3, spec: { title: 'Films' } } as Parameters<typeof Delivery>[0]['project'];
+  let state: 'blocked' | 'queued' | 'failed' | 'ready' = 'blocked';
+  let posts = 0;
+  let approved = true;
+  let stale = false;
+  const receipt = () => ({ status: state, job: state === 'blocked' ? null : { id: `job_${'3'.repeat(32)}` },
+    downloadReady: state === 'ready', reason: state === 'failed' ? 'Native build failed' : undefined });
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith('/code')) return Response.json({ generated: false, files: [], changed: [], stale: false, path: null });
+    if (url.endsWith('/build')) return Response.json({ status: 'blocked', reason: 'Hosted local build disabled' });
+    if (url.endsWith('/readiness')) return Response.json({ checks: [], copy: {}, assets: {}, submitted: false });
+    if (url.endsWith('/deployment')) return Response.json({ schemaVersion: 1, id: deploymentId,
+      creatorAccountId: `cr_${'4'.repeat(32)}`, projectId, channelId: projectId, appName: 'Films',
+      packageId: 'com.creator.films', releaseControl: 'creator', nativeReleaseApproval: 'creator_approved',
+      manifestEndpoint: 'https://films.example.test/', consoleEvidence: { state: 'none' } });
+    if (url.endsWith('/current-summary')) return Response.json({ releaseId: `rel_${'5'.repeat(32)}`, sequence: 1,
+      revisions: { channel: 3, catalog: 0 }, catalogItemIds: [] });
+    if (url.endsWith('/export-app')) {
+      if (init?.method === 'POST') {
+        posts++;
+        if (!approved) return Response.json({ error: { message: 'No creator-approved published release' } }, { status: 409 });
+        state = 'queued'; stale = false;
+      }
+      if (stale) return Response.json({ error: { message: 'Build input changed' } }, { status: 409 });
+      return Response.json(receipt());
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+  try {
+    render(createElement(Delivery, { project, surface: 'Build', hosted: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Build & Export App' }));
+    assert.ok(await screen.findByRole('dialog', { name: 'Build & Export App' }));
+    await waitFor(() => assert.ok(screen.getByText(/Your build is in the queue/)));
+    assert.equal(posts, 1);
+    assert.equal(screen.queryByRole('button', { name: 'Build App' }), null);
+    fireEvent.click(screen.getByRole('button', { name: 'Close app export' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Build & Export App' }));
+    assert.ok(await screen.findByRole('dialog', { name: 'Build & Export App' }));
+    assert.equal(posts, 1, 'reopening queued work cannot submit');
+    fireEvent.click(screen.getByRole('button', { name: 'Close app export' }));
+    state = 'failed';
+    fireEvent.click(screen.getByRole('button', { name: 'Build & Export App' }));
+    assert.ok(await screen.findByRole('button', { name: 'Retry native build' }));
+    assert.equal(posts, 1, 'a failed receipt needs an explicit retry');
+    await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Retry native build' }) as HTMLButtonElement).disabled, false));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry native build' }));
+    await waitFor(() => assert.equal(posts, 2));
+    fireEvent.click(screen.getByRole('button', { name: 'Close app export' }));
+    state = 'ready';
+    fireEvent.click(screen.getByRole('button', { name: 'Build & Export App' }));
+    assert.ok(await screen.findByRole('button', { name: 'Download ZIP' }));
+    assert.equal(posts, 2, 'verified ready ZIP needs no new build');
+    fireEvent.click(screen.getByRole('button', { name: 'Close app export' }));
+    stale = true;
+    fireEvent.click(screen.getByRole('button', { name: 'Build & Export App' }));
+    assert.ok(await screen.findByRole('dialog', { name: 'Build & Export App' }));
+    assert.equal(posts, 3, 'stale ready receipt starts a newly checked build from the click');
+    fireEvent.click(screen.getByRole('button', { name: 'Close app export' }));
+    state = 'blocked'; approved = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Build & Export App' }));
+    assert.ok(await screen.findByText(/publish a rights-cleared release in Publish/i));
+    assert.equal(posts, 4);
+  } finally { cleanup(); globalThis.fetch = nativeFetch; }
+});

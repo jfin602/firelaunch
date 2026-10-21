@@ -17,6 +17,7 @@ test('hosted export submits only the session owner snapshot and reports owned qu
   let principal = '';
   let csrf = false;
   let snapshotCalls = 0;
+  let currentFingerprint = 'e'.repeat(64);
   let enqueued: ReleaseBuildInput | null = null;
   let state: 'queued' | 'running' | 'ready' | 'failed' | 'expired' = 'queued';
   const jobId = `job_${'d'.repeat(32)}`;
@@ -28,15 +29,18 @@ test('hosted export submits only the session owner snapshot and reports owned qu
   t.mock.method(HostedWorkspaceService.prototype, 'releaseBuildInput', async (caller, id) => {
     assert.equal(caller.accountId, owner); assert.equal(id, project); snapshotCalls++; return input;
   });
+  t.mock.method(HostedWorkspaceService.prototype, 'assertReleaseBuildInputCurrent', async (_caller, _id, fingerprint) => {
+    if (fingerprint !== currentFingerprint) throw new RepositoryError('CONFLICT', 'Build input changed');
+  });
   t.mock.method(NativeBuildQueue.prototype, 'enqueue', async value => { enqueued = value; return jobId; });
   t.mock.method(NativeBuildQueue.prototype, 'latestStatus', async (accountId, id) => {
     assert.equal(accountId, owner); assert.equal(id, project);
-    return enqueued ? { id: jobId, state, attempt: 1, errorCode: state === 'failed' ? 'SANDBOX_BUILD_FAILED' : null,
+    return enqueued ? { id: jobId, state, attempt: 1, inputFingerprint: input.fingerprint, errorCode: state === 'failed' ? 'SANDBOX_BUILD_FAILED' : null,
       artifactSha256: null, artifactBytes: null, expiresAt: '2026-10-21T00:00:00.000Z' } : null;
   });
   t.mock.method(NativeBuildQueue.prototype, 'status', async (accountId, id, requestedJobId) => {
     assert.equal(accountId, owner); assert.equal(id, project); assert.equal(requestedJobId, jobId);
-    return { id: jobId, state, attempt: 1, errorCode: null, artifactSha256: null, artifactBytes: null,
+    return { id: jobId, state, attempt: 1, inputFingerprint: input.fingerprint, errorCode: null, artifactSha256: null, artifactBytes: null,
       expiresAt: '2026-10-21T00:00:00.000Z' };
   });
   const hosted = { read: async (caller: { accountId: string }, id: string) => {
@@ -82,6 +86,9 @@ test('hosted export submits only the session owner snapshot and reports owned qu
       assert.equal(current.downloadReady, false);
       assert.equal(current.job.errorCode, next === 'failed' ? 'SANDBOX_BUILD_FAILED' : null);
     }
+    state = 'queued'; currentFingerprint = 'f'.repeat(64);
+    assert.equal((await fetch(url)).status, 409, 'stale queued receipt cannot look current');
+    currentFingerprint = input.fingerprint;
     state = 'ready';
     assert.equal((await fetch(url)).status, 404); // A queue label without a private verified artifact never enables download.
     assert.equal((await fetch(`${url}/job_deadbeef/download`)).status, 404);

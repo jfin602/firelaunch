@@ -30,7 +30,7 @@ export function NativeExportWorkspace({ project, initial, onClose, onStatus }: {
       setVerifying(true);
       const next = await nativeExportStatus(project.id);
       setStatus(next); onStatus(next); setError('');
-    } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
+    } catch (reason) { setStatus(null); setError(reason instanceof Error ? reason.message : String(reason)); }
     finally { pending.current = false; setVerifying(false); setLoading(false); }
   };
   useEffect(() => {
@@ -73,8 +73,8 @@ export function NativeExportWorkspace({ project, initial, onClose, onStatus }: {
     if (event.shiftKey && (document.activeElement === first || !dialog.current?.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && (document.activeElement === last || !dialog.current?.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
   };
-  const build = async () => {
-    if (busy || active(status) || status?.downloadReady) return;
+  const retry = async () => {
+    if (busy || !['failed', 'canceled', 'expired'].includes(status?.status ?? '')) return;
     setBusy(true); setError('');
     try { const next = await requestNativeBuild(project.id); setStatus(next); onStatus(next); }
     catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
@@ -101,12 +101,15 @@ export function NativeExportWorkspace({ project, initial, onClose, onStatus }: {
       {!loading && <section className="native-export-stage"><div className="native-export-stage-heading"><span className={active(status) || verifying || busy ? 'native-export-spinner' : 'native-export-dot'} aria-hidden="true"/><div><span className="eyebrow">BUILD STATUS</span><h3>{stage}</h3></div></div>
         {status?.status === 'queued' && <p>Your build is in the queue. You can close this popup and return later.</p>}
         {status?.status === 'running' && <p>The isolated Vega worker is building the approved release. You can browse Studio while it runs.</p>}
-        {status?.status === 'failed' && <p>The build failed. Review the error and try again.</p>}
-        {status?.reason && status.status !== 'failed' && <p>{status.reason}</p>}
+        {status?.status === 'failed' && <p>The build failed. Review the error before retrying.</p>}
+        {status?.status === 'expired' && <p>The previous build expired. Retry to check the current approved release.</p>}
+        {status?.reason && <p>{status.reason}</p>}
+        {status?.job?.errorCode && <p>Worker result: {status.job.errorCode}</p>}
         {status?.job && <p className="native-export-meta">Job {status.job.id} · Attempt {status.job.attempt ?? 0}{active(status) && ` · Elapsed ${Math.floor(elapsed / 60)}m ${String(elapsed % 60).padStart(2,'0')}s`}</p>}
       </section>}
       {status?.downloadReady && status.job ? <div className="native-export-ready"><p>The verified x86_64 Vega package is ready in a four-file ZIP.</p><dl><div><dt>Architecture</dt><dd>x86_64 Release</dd></div><div><dt>Package size</dt><dd>{status.job.artifactBytes ? formatBytes(status.job.artifactBytes) : 'Verified'}</dd></div><div><dt>Completed</dt><dd>{status.job.completedAt ? new Date(status.job.completedAt).toLocaleString() : 'Ready'}</dd></div></dl><button className="primary" type="button" disabled={busy} onClick={() => void download()}>{busy ? 'Preparing download…' : 'Download ZIP'}</button></div>
-        : <button className="primary" type="button" disabled={loading || busy || active(status) || !deployment || !release} onClick={() => void build()}>{busy ? 'Preparing…' : 'Build App'}</button>}
+        : ['failed', 'canceled', 'expired'].includes(status?.status ?? '') ? <button className="primary" type="button" disabled={loading || busy || !deployment || !release} onClick={() => void retry()}>{busy ? 'Checking approved release…' : 'Retry native build'}</button>
+          : !deployment || !release ? <p>Approve a deployment and publish a rights-cleared release in Publish before exporting the native app.</p> : null}
       <p className="muted">The build continues after you close this popup. Reopen it to check progress or download the finished app.</p>
     </div>
   </div></div>, document.body);

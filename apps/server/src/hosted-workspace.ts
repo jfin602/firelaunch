@@ -23,15 +23,38 @@ export const sourceMatchesBaseline = (content: string | undefined, baseline: str
 async function releaseSourceForApproved(source: Awaited<ReturnType<HostedProjectRepository['source']>>,
   approved: ChannelProject, deployment: ChannelDeployment): Promise<StoredSource> {
   const generated = await generateProject(approved.spec, deployment);
-  if (source?.specRevision === approved.revision && source.fingerprint === generated.fingerprint) return source;
-  if (source && [...new Set([...Object.keys(source.files), ...Object.keys(source.baseline)])].some(name =>
-    !sourceMatchesBaseline(source.files[name], source.baseline[name])))
-    throw new RepositoryError('CONFLICT', 'Custom generated files exist. Preserve edits before building the approved release.');
+  if (source?.specRevision === approved.revision && source.fingerprint === generated.fingerprint) {
+    const expected = Object.fromEntries(generated.files);
+    if (Object.keys(source.baseline).length !== Object.keys(expected).length ||
+      Object.entries(expected).some(([name, content]) => !sourceMatchesBaseline(content, source.baseline[name])))
+      throw new RepositoryError('CONFLICT', 'Saved source baseline is incomplete or unsafe. Preserve edits and review Advanced Source before building.');
+    return source;
+  }
+  if (source) {
+    const files = Object.keys(source.files);
+    const baseline = Object.keys(source.baseline);
+    if (!Number.isSafeInteger(source.specRevision) || source.specRevision < 1 ||
+      !/^[a-f0-9]{64}$/.test(source.fingerprint) || !files.length ||
+      files.length !== baseline.length ||
+      [...new Set([...files, ...baseline])].some(name => !sourceMatchesBaseline(source.files[name], source.baseline[name])))
+      throw new RepositoryError('CONFLICT', 'Saved source is stale, incomplete or has custom edits. Preserve edits before building: review Advanced Source for the approved release.');
+  }
   // A newer private draft may have clean saved source. Build a separate,
   // immutable source snapshot from the approved release without changing it.
   const files = Object.fromEntries(generated.files);
   return { specRevision: approved.revision, fingerprint: generated.fingerprint,
     files, baseline: { ...files } };
+}
+async function approvedBuildInput(project: ChannelProject, source: StoredSource, deployment: ChannelDeployment,
+  release: { releaseId: string; sequence: number }, ownerId: string): Promise<ReleaseBuildInput> {
+  try { return await createReleaseBuildInput(project, source, deployment, release, ownerId); }
+  catch (error) {
+    if (error instanceof RepositoryError &&
+      [...new Set([...Object.keys(source.files), ...Object.keys(source.baseline)])].some(name =>
+        !sourceMatchesBaseline(source.files[name], source.baseline[name])))
+      throw new RepositoryError('CONFLICT', `Saved custom source cannot be built: ${error.message}. Preserve edits and review Advanced Source before retrying.`);
+    throw error;
+  }
 }
 function safeName(name: string): void {
   if (!name || name.length > 240 || name.includes('\\') || name.includes('\0') || name.startsWith('/') ||
@@ -65,7 +88,7 @@ export class HostedWorkspaceService {
     const approvedProject = { ...project, spec: approved.channel, revision: approved.revision };
     const source = await this.repository.source(principal, id);
     const releaseSource = await releaseSourceForApproved(source, approvedProject, deployment);
-    const input = await createReleaseBuildInput(approvedProject, releaseSource, deployment,
+    const input = await approvedBuildInput(approvedProject, releaseSource, deployment,
       { releaseId: release.releaseId, sequence: release.sequence }, principal.accountId);
     // Repeat after assembling the snapshot. P2 must call this again before artifact acceptance/download.
     const current = await this.repository.read(principal, id);
@@ -80,7 +103,7 @@ export class HostedWorkspaceService {
     if (currentApproved.revision !== currentRelease.revisions.channel)
       throw new RepositoryError('CONFLICT', 'Approved channel changed during snapshot');
     const currentApprovedProject = { ...current, spec: currentApproved.channel, revision: currentApproved.revision };
-    const confirmed = await createReleaseBuildInput({ ...current, spec: currentApproved.channel, revision: currentApproved.revision },
+    const confirmed = await approvedBuildInput({ ...current, spec: currentApproved.channel, revision: currentApproved.revision },
       await releaseSourceForApproved(currentSource, currentApprovedProject, currentDeployment), currentDeployment,
       { releaseId: currentRelease.releaseId, sequence: currentRelease.sequence }, principal.accountId);
     if (confirmed.fingerprint !== input.fingerprint) throw new RepositoryError('CONFLICT', 'Build input changed during snapshot');

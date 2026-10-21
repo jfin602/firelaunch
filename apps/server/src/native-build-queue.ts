@@ -128,16 +128,18 @@ export class NativeBuildQueue {
 
   async status(ownerId: string, projectId: string, jobId: string): Promise<{
     id: string; state: State; attempt: number; errorCode: string | null;
+    inputFingerprint: string;
     artifactSha256: string | null; artifactBytes: number | null; expiresAt: string; createdAt: string; completedAt: string | null;
   } | null> {
     const result = await this.pool.query<{ id:string;state:State;attempt:number;error_code:string|null;
+      input_fingerprint:string;
       artifact_sha256:string|null;artifact_bytes:string|null;expires_at:Date;created_at:Date;updated_at:Date }>(
-      `SELECT id,state,attempt,error_code,artifact_sha256,artifact_bytes,expires_at,created_at,updated_at
+      `SELECT id,state,attempt,error_code,input_fingerprint,artifact_sha256,artifact_bytes,expires_at,created_at,updated_at
        FROM firelaunch_build.jobs WHERE id=$3 AND creator_account_id=$1 AND project_id=$2`,
       [ownerId,projectId,jobId]);
     const row = result.rows[0];
     return row ? { id:row.id,state:row.expires_at.getTime() <= Date.now() ? 'expired' : row.state,
-      attempt:row.attempt,errorCode:row.error_code,
+      attempt:row.attempt,errorCode:row.error_code,inputFingerprint:row.input_fingerprint,
       artifactSha256:row.state === 'ready' && row.expires_at.getTime() > Date.now() ? row.artifact_sha256 : null,
       artifactBytes:row.state === 'ready' && row.expires_at.getTime() > Date.now() ? Number(row.artifact_bytes) : null,
       expiresAt:row.expires_at.toISOString(), createdAt:row.created_at.toISOString(),
