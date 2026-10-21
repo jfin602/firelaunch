@@ -1,0 +1,26 @@
+TASK: Phase 8 / P2 — Human-first Pages and Layout workspace
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.6`.
+
+GOAL
+Make Channel → Pages & Layout a first-class, readable workspace instead of a dense low-level Content form. Create visible page list + large editable page composition + existing contextual-only inspector, without implementing every section customization yet.
+
+PREFLIGHT
+Read P8B plan and P1 runner handoff; inspect actual 0.8.5 HEAD/version/dirty state and current apps/studio/src/App.tsx, Preview.tsx, style.css, existing navigation/inspector tests. Do not re-read all historical P6/C7/Phase 8 files or redo P1 creation tests. Confirm no concurrent dirty source.
+
+IMPLEMENT
+1. Rename Channel subview Pages & Shelves → Pages & Layout while preserving route state, existing Page/Content/Library workflows and owner-scoped mutations. Do not create duplicate editors or AI systems.
+2. Page rail: Home/other page names, current selection, New page, Rename, Delete with last-page protection and confirmation. Central large composition: actual page order and recognizable section visuals/empty choose-content prompts; show explicit Edit section/Select section controls. Reuse existing Preview/TV state, keeping actual live vs draft distinction; do not pretend a static rendering mock is the TV runtime.
+3. Right inspector appears ONLY for actual selected page/section, closes/deselects cleanly with keyboard focus restore; no reserved space on unselected desktop. Keep existing Wave 1 inspector implementation and mobile responsive flow. Project/account switch clears temporary selected page/section, no foreign state leaks.
+4. Preserve low-level features somewhere discoverable (e.g. existing advanced/source path) without forcing casual creators through a film URL form. P3 owns friendly section edit operations; P4 new static types.
+
+VALIDATION
+Focused Studio workspace tests for subview mapping, selected page, empty-state visibility, contextual inspector open/close, rename/delete guard, project switch, keyboard focus and mobile DOM accessibility; Studio typecheck. No browser screenshot matrix, global tests/build, native package or staging work. Runner owns diff/version checks.
+
+HANDOFF / BOUNDARIES
+Runner exclusively commits sequential candidate at root+both top-level lock 0.8.6; no self-commit, release/publication, AWS, migration or /activate. Protect working Wave 1 routes and live content. <=8 min goal, 15 min cap. Report actual behavior and P3 action-control handoff.
