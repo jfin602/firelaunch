@@ -7,6 +7,9 @@ MODEL / REASONING / USAGE
 VERSIONING
 - This prompt's assigned project version is `0.8.5`.
 
+PRIORITY UI-SHELL CONTRACT — supersedes older side-editor/fullscreen assumptions
+P1: three Hero/Grid/Rows template cards and New Page dialog must appear inside the corrected c8-ui bottom editing dock, beneath an always-visible TV. Do not reintroduce page-top tabs, AI Assistant or a Preview visibility toggle. P1 should add only template/page data and creation UX; do not rewrite stage/dock/fullscreen.
+
 GOAL
 Give creators a meaningful Home Hero page by default on NEW channels, and a two-decision (name + Hero/Grid/Rows) new-page flow that saves an ordered valid starter composition in ONE page mutation. Do not begin a second editor or introduce image/text schema variants here.
 
