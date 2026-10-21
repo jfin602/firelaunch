@@ -9,6 +9,12 @@
 - Desert Heat visual baseline expects a right rail but must now lock it as contextual ONLY. Full-width content workspaces and preserved in-context Preview are both requirements.
 - Phase 6 supporting media and P7 real native export/release work are integrated risks. **C7 closeout dated 2026-10-20 23:39 UTC:** R1 Studio startup SCOPED GREEN; R2 same-VPS isolated worker and creator-bound VPKG GREEN; R3 authenticated four-file owner ZIP SCOPED GREEN; R4 installed the exact VPKG, displayed branding/artwork/Back/restart but stopped at its first HLS TS fragment. Actual moving playback, independently verified audio and pause/seek are NOT GREEN. Reuse positive evidence, do not requalify R1–R3 or infer staging status from a GitHub source hash.
 
+## One-click export gap confirmed (owner-approved P4 expansion)
+
+Current `Delivery.tsx` opens `NativeExportWorkspace` on **Build & Export App**, but a second `Build App` click triggers `requestNativeBuild`; then Download ZIP is offered after an asynchronous build. `HostedWorkspaceService.releaseBuildInput` already uses `generateProject(approved.channel, deployment)` **ephemerally if no saved source exists**. However `createReleaseBuildInput` rejects a **stale saved source** even if all files equal their generated baseline, while the Code page's manual regeneration is based on the current editable draft rather than the approved release. Fix this in P4 without overwriting creator files: resolve missing or stale-but-unmodified source against the exact approved publication snapshot, preserve up-to-date custom source, and reject stale/unsafe custom changes. Keep server owner/CSRF/release rights and queue fingerprint checks, and use an explicit click-driven enqueue/resume/download flow; do not auto-submit from a modal mount or poll effect. When finished asynchronously, show an explicit Download ZIP fallback rather than assuming browser auto-download is permitted.
+
+Targeted tests must cover absent/current/unmodified-stale/current-custom/stale-custom source, draft/newer-than-published mismatch, no approved release, request idempotence, stale/foreign/expired job denial and browser reopen/ready-download. P4 owns affected server source-resolution and Studio export tests, not new worker infrastructure or native playback qualification. Full aggregate remains P5-only.
+
 ## Scope decisions and risks
 
 | Risk/gap | Mitigation | Owner |
