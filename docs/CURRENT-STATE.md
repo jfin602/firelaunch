@@ -1,7 +1,13 @@
 # FireLaunch Current State
 
-Last documentation reconciliation: 2026-10-21 UTC (documentation aligned to committed C7 closeout c5a4421; staging and AWS status remain dated observations, not fresh inspections).
+Last documentation reconciliation: 2026-10-21 UTC (owner-approved Phase 7 partial closure and Phase 8 entry; staging and AWS remain dated observations, not fresh inspections).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
+
+## Active owner transition — Phase 7 closed, Phase 8 entry approved (2026-10-21)
+
+**Phase 7/C7 is OWNER-CLOSED / ACCEPTED PARTIAL, NOT TECHNICALLY GREEN.** See [Phase 7 owner closeout](tasks/p7/owner-closeout-2026-10-21.md). The last C7 evidence showed a working isolated native worker, creator-bound VPKG, authenticated ZIP, independent VirtualDevice installation, channel/artwork/Back/restart. **Still unqualified:** first HLS TS fragment did not complete through the installed app; moving playback, audible sound, pause and seek. The owner elects to advance without falsely qualifying these. Carry the native playback gap into Phase 9 final MVP acceptance; do not make unrelated P8 navigation/creative prompts repeat R1–R3 or require C7 full GREEN.
+
+**Repository transition:** root `package.json` and the two top-level `package-lock.json` fields are owner-approved for `0.8.0` as a **source/runner baseline** (no workspace-version or schema changes). P8 P1–P4 target `0.8.1`–`0.8.4` and P5 manual browser closeout follows. The [Phase 8 stack](tasks/p8/README.md) is **authored, not implemented**. This baseline edit by itself is not an actual local-worktree inspection, package build, native rebuild, staging deployment or public publication. Before starting on any computer, reconcile its local dirty C7 work and fast-forward safely to this committed baseline. Owner deadline remains Friday Oct 23 noon America/Chicago.
 
 ## Phase 9 approved direction (October 21; documentation only)
 
