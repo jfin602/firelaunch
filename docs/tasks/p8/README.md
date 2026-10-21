@@ -1,8 +1,16 @@
 # P8 — Creative Studio UX & Pipeline Confirmation
 
-**Owner-approved entry: 2026-10-21 America/Chicago. Status: ROOT/LOCK 0.8.0 RUNNER BASELINE; P8 IMPLEMENTATION NOT STARTED / NOT QUALIFIED.** Owner closed P7 with explicit partial evidence exceptions; this does NOT qualify native HLS playback. Phase 8 owns 0.8.x implementation after local checkout synchronization. Owner delivery: Friday October 23, 2026 12:00 PM America/Chicago; internal handoff 11:30 AM; freeze target Thursday 5:00 PM CDT.
+**Current status (2026-10-21): WAVE 1 P5 GREEN / DEPLOYED at root/lock `0.8.4`, but PHASE 8 REMAINS OPEN.** Wave 1 qualified the initial navigation, contextual-inspector, creative and one-action Export milestone on protected staging. Wave 2 human-first Page Layout and full-screen Preview is approved **for documentation/planning only**, not implemented or qualified. The historical 0.8.0 runner baseline and original Phase 7 evidence are retained below. Owner delivery: Friday October 23, 2026 12:00 PM America/Chicago; internal handoff 11:30 AM; freeze target Thursday 5:00 PM CDT.
 
-## Current C7 dependency (October 21)
+## Current Wave 1 / Wave 2 handoff — October 21
+
+[Wave 1 P5 staging closeout](wave1-closeout.md) is **GREEN / DEPLOYED** for the tested P1–P4 Studio and Export UX, root/lock `0.8.4` with schema 14 preserved. The original `P5-creator-ux-closeout.txt` is a **Wave 1 milestone** and must not be rewritten or interpreted as overall Phase 8 completion. The user has approved [Wave 2 `p8b` planning](../p8b/README.md) and the [human-first Page Layout design contract](../../design/page-layout-human-first.md). No `p8b` prompt assessment, implementation plan, executable prompts, version bump or new staging rollout exists yet.
+
+**Next Wave 2 user outcome:** Channel → **Pages & Layout**, choose a professionally composed page with Hero / Grid / Rows (Home defaults Hero; additional pages suggest Rows), then add content via friendly section controls. Six bounded section choices support more customization without a freeform web canvas. A prominent **View full screen** action expands the SAME interactive TV Preview, preserving TV selection/playback and editor focus with clear Back vs Exit semantics. Wave 2 qualification and deployment is a separate milestone; Phase 8 stays open afterward for owner usability review. Do not activate Phase 9 on this approval.
+
+The latest dated [C7 R4 evidence](../c7-export-recovery/R4-playback-evidence.md) actually **qualifies native video/audio/pause/seek on its tested VirtualDevice VPKG**, superseding earlier partial C7 playback observations. Reuse unchanged evidence, but obtain focused Vega parity for newly introduced Page Layout section types. Physical Fire TV, Appstore and the broader Phase 9 update flows remain separately unqualified.
+
+## Historical C7 handoff at initial Phase 8 entry (superseded by later R4/Wave 1 evidence)
 
 The five P8 checkpoints remain as authored. [P7 owner closeout](../p7/owner-closeout-2026-10-21.md) accepts Phase 7/C7 **PARTIAL / NOT GREEN** and authorizes the **0.8.0** runner baseline. Prior C7 evidence confirms native worker/ZIP/installation/branding/artwork/Back/restart, while first-TS-fragment HLS moving playback/audio/pause/seek remain **NOT QUALIFIED**. Those native device limits carry into Phase 9 final acceptance, not P8 navigation/layout entry. P8 must reuse successful worker/ZIP evidence without replaying it.
 
