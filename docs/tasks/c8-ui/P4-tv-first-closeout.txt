@@ -10,6 +10,9 @@ VERSIONING
 TYPE
 Independent MANUAL real-browser correction closeout, not an implementation prompt or global Phase 8 closure. Write docs/tasks/c8-ui/closeout.md after direct evidence. P8 Wave 1 accepted milestone remains historical; P8B already ran: its Wave 2 P7 is NOT GREEN / NOT DEPLOYED. Do not repeat that whole qualification or relabel its native/static-layout gates.
 
+CLOSEOUT OVERRIDE — 2026-10-21 OWNER DECISION
+P4 is the required protected staging rollout and final real-browser qualification for c8-ui. It may also close the outstanding P8B Wave 2 milestone if P8B's previously missing signed-in candidate, newly added native static-section device parity, and staging acceptance are all actually proved. Run the final UI checks on the DEPLOYED candidate, not only a disposable local browser. Preserve P8B P7's historical NOT GREEN report and write a dated follow-on result. This decision supersedes any optional-rollout or c8-ui-only language below; do not claim success when deployment or external proof is blocked.
+
 MISSION
 Qualify the precise TV-first Channel UI on a real creator browser, including always-on TV, usable attached horizontal bottom dock, two creator-facing tabs, and actual fullscreen TV with edge-reveal editing overlay. Preserve completed P8B source at verified GitHub root/lock 0.8.10; qualify ONLY the corrected Channel composition and fullscreen dock without rerunning P8B.
 
