@@ -3,6 +3,14 @@
 Last documentation reconciliation: 2026-10-21 UTC (P8 Wave 1 staging GREEN and Wave 2 human-first layout design approved for planning; earlier sections are dated evidence).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
 
+## Current owner-directed correction — c8-ui AFTER locally executed P8B (2026-10-21)
+
+The owner has explicitly reported **P8B ALREADY RAN LOCALLY**. GitHub `main` at this docs review still shows the older `0.8.4` Wave 1 baseline; it is **not** proof of the current local P8B source. **Do not rerun, modify, downgrade or overwrite completed P8B prompts/commits.** The owner rejected its resulting Channel presentation (TV squeezed beside a long editor, AI and Close TV Preview controls). [`c8-ui` post-P8B correction](tasks/c8-ui/README.md) now owns the [TV-first design](design/tv-first-channel-workspace.md): real always-on 16:9 TV above directly attached horizontal Pages & Layout/Appearance dock, with true fullscreen and hover/touch/keyboard bottom-edge reveal.
+
+Authored P8B P6 target is `0.8.10`, so c8-ui correction prompts provisionally require unchanged **0.8.10** and MUST verify the real local root/lock/HEAD and any manual P7 changes before running. If actual version differs, STOP to reconcile correction metadata, not local code. c8-ui implementation/qualification and staging deployment remain **NOT EXECUTED**; Phase 8 stays OPEN, Wave 1 remains GREEN/DEPLOYED and C7 later scoped device playback GREEN. P8B documentation and prompts are untouched.
+
+## Historical P8B authoring handoff (superseded by c8-ui post-P8B correction)
+
 ## Phase 8 Wave 2 prompt stack authored — 2026-10-21
 
 **Wave 1 P5 remains GREEN / DEPLOYED at root/lock 0.8.4; Phase 8 remains OPEN.** The owner authorized `/prompt-ass + /prompt-plan + /prompt-write p8b`; [P8B README](tasks/p8b/README.md), [assessment](tasks/p8b/prompt-assessment.md), [implementation plan](tasks/p8b/implementation-plan.md) and **P1–P7 executable prompts are now authored, NOT RUN**. This is the human-first Page Layout / full-screen Preview continuation. No source version bump, schema changes, native Vega app build or staging deployment accompanies prompt authoring.
