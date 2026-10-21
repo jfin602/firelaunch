@@ -1,0 +1,26 @@
+TASK: Correction 8 / P3 — Fullscreen TV with edge-reveal dock
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.4`.
+
+GOAL
+Add the ONLY fullscreen toggle for the TV-first Channel layout. In true fullscreen show the real TV; the SAME bottom dock becomes an overlay that slides up when pointer nears the bottom edge, with touch/keyboard alternatives and no lost playback/state/edits.
+
+PREFLIGHT
+Read C8-UI plan/design and P2 handoff; inspect actual App.tsx/Preview.tsx, toolbar/container and CSS, preview-state keyboard bindings, existing Studio focus/modal tests. Confirm 0.8.4 unchanged and no competing P8B commits or dirty work. Reuse the P2 dock; do not build another editor or Preview instance.
+
+IMPLEMENT
+1. A visible Full Screen / Exit Full Screen control near stage opens real browser Fullscreen API only on direct user gesture. The fullscreen **element must contain both existing Preview and existing editing dock** (browser hides outside DOM layers). Provide truthful accessible viewport-filling modal fallback when API absent/rejected. Preserve aspect, letterbox as needed. No Studio sidebar/topbar while fullscreen.
+2. Present the SAME dock as a bottom overlay in fullscreen: activate on pointer entering ~32–40px edge zone, slide upward briefly unless reduced motion, remain visible while pointer inside, focus/unsaved edit, or modal/selection active; hide after short delay only while idle. State machine should not use brittle hover alone; touch edge handle/swipe and keyboard-focus shortcut must reveal/dismiss. Overlay does not permanently steal TV area; no double rendering of dock or forms.
+3. Maintain ONE Preview mount and same TvState/media instance across embed/true fullscreen/fallback transitions; retain page, D-pad, active playback, editor scroll and selected section; handle fullscreenchange/browser-Escape, resize, project switch, cleanup. Escape exits fullscreen; TV Back is a separate explicit remote button or Backspace (not in editable input), documented. Restore focus to toggle on exit; no focus trap or hidden active controls.
+4. Ensure fullscreen dock tabs still work and Stage media/playback aren't inadvertently modified while editing. Respect browser Fullscreen API constraints, mobile touch, keyboard, reduced motion.
+
+VALIDATION
+Focused Studio tests: Fullscreen API accepted/rejected, fallback, enter/exit, no duplicated Preview or dock, state/focus/back preservation, pointer reveal and idle hide, touch/keyboard reveal, focused/dirty panel stays open, project switching, cleanup and mobile semantics; Studio typecheck. No full npm test/build, real hosted deployment, new TV/VPKG or network work. Browser true fullscreen visual verification belongs P4.
+
+HANDOFF / SAFETY
+Required correction root/lock version stays 0.8.4; runner exclusively commits. Do not call /activate, self-commit, publish, alter owner/rights controls or services. <=8 minute goal, stop at 15 with exact blockers. Hand off P4 true-browser checks.
