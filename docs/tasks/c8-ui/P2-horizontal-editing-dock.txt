@@ -1,0 +1,26 @@
+TASK: Correction 8 / P2 — Horizontal Channel editing dock
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.4`.
+
+GOAL
+Replace the screenshot's small split Preview + endless right editor with the approved **TV stage above an attached full-width bottom dock**. Channel's real TV stays visible, the dock contains Pages & Layout/Appearance tabs, and forms use horizontal space with limited, contained scrolling.
+
+PREFLIGHT
+Read C8-UI design+plan, P1 handoff and inspect actual App.tsx, style.css, Content/Design controls, inspector save/dirty handlers, responsive CSS and focused Studio tests. Verify unchanged root+lock 0.8.4 and coherent runner prefix; no accidental P8B local implementation conflicts.
+
+IMPLEMENT
+1. Channel composition under existing topbar: upper TV stage (real 16:9 frame, centered/letterboxed, no stretching/cropping), lower editing dock butted directly to stage with subtle divider and zero gap. Use viewport-height budget rather than naive width 100% TV: initial TV stage roughly 60–65% and dock 35–40% of available area; dock min ~240–280px desktop or safe responsive constraint. No ordinary whole-Channel vertical scroll at 1440x900/1280x720; allow limited INNER panel scrolling for long catalogs/lists/forms, never hide Save.
+2. Put the two REAL styled accessible tabs inside dock header. Dock uses horizontal layout: Pages column, Sections column and selected editor/context region for Pages & Layout; Appearance grouped compact controls spanning dock width. Until p8b template work, reuse functional old Content and Design editing controls with human labels and accessible compact presentation; do not fake advanced sections or throw away film/page CRUD. If no section selected fill space with useful actions not empty inspector. Eliminate permanent side inspector/third rail for Channel.
+3. Keep TV interactive for TV functions; editing selection via dock, not by clicking playable cards. Preserve panel field values on tab changes, dirty-edit confirm/focus and accessible keyboard tabs/arrow semantics. Respect Desert Heat restrained dark/orange and independent creator/media art colors, with clear focus.
+4. Tablet/narrow desktop dock transitions to contained compact tabs or stacked subpanels; phone has usable touch bottom sheet/focused dock panels with TV still 16:9. Avoid overflow and impossible 3 tiny columns. No unrelated Home/Export restructure.
+
+VALIDATION
+Focused Studio component/CSS tests for default stage/dock, adjacent layout, tabs and panel selection, short-height overflow containment, functional page and brand forms, saving/dirty-state, 375/768/1280/1440 simulated layouts where available, focus order. Studio typecheck once and changed tests, no global builds or screenshots claimed as real browser. P4 owns live viewport acceptance.
+
+HANDOFF / SAFETY
+Correction root+lock stays exactly 0.8.4, no self-commit, /activate, native build, migration, publication or staging. Runner owns commit. <=8m goal/15m cap. Provide P3 parent element and dock component/state handoff; don't implement a new second Preview.
