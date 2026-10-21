@@ -3,7 +3,13 @@
 Last documentation reconciliation: 2026-10-21 UTC (P8 Wave 1 staging GREEN and Wave 2 human-first layout design approved for planning; earlier sections are dated evidence).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
 
-## Current owner-directed correction — c8-ui AFTER locally executed P8B (2026-10-21)
+## Current pushed P8B and optimized c8-ui handoff — 2026-10-21
+
+**Verified GitHub main source:** P8B P1–P6 are committed through root and two lock fields **0.8.10**; [P8B P7 Wave 2](tasks/p8b/wave2-closeout.md) is **NOT GREEN / NOT DEPLOYED**. Its local disposable-creator and aggregate evidence is scoped PASS, but signed-in candidate, new native static-layout VirtualDevice and protected staging are unqualified. Staging remained Wave 1 0.8.4 at its last dated host readback. **Do not rerun P8B** or treat source version 0.8.10 as deployed.
+
+The [c8-ui optimized correction](tasks/c8-ui/README.md) uses **unchanged 0.8.10** and reuses actual P8B code. P1 removes AI/Preview toggle and defaults to one mounted TV; P2 creates top 16:9 TV + touching horizontal bottom dock holding the completed Pages/Sections/Appearance editor; P3 reuses existing P8B fullscreen API/fallback by moving its target to the shared TV+dock root and adding accessible edge reveal; P4 independently qualifies UI and reports any protected staging deploy separately. **NOT IMPLEMENTED yet.** Preserve Phase 8 OPEN and public release #1.
+
+## Historical owner correction before the P8B push (superseded)
 
 The owner has explicitly reported **P8B ALREADY RAN LOCALLY**. GitHub `main` at this docs review still shows the older `0.8.4` Wave 1 baseline; it is **not** proof of the current local P8B source. **Do not rerun, modify, downgrade or overwrite completed P8B prompts/commits.** The owner rejected its resulting Channel presentation (TV squeezed beside a long editor, AI and Close TV Preview controls). [`c8-ui` post-P8B correction](tasks/c8-ui/README.md) now owns the [TV-first design](design/tv-first-channel-workspace.md): real always-on 16:9 TV above directly attached horizontal Pages & Layout/Appearance dock, with true fullscreen and hover/touch/keyboard bottom-edge reveal.
 
