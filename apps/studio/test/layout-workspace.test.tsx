@@ -88,3 +88,73 @@ test('layout controls remain accessible in narrow flow', () => {
   assert.match(css, /@media\(max-width:760px\).*\.layout-workspace.*display:block/s);
   assert.match(css, /\.layout-page-rail\{position:static;flex-direction:row;overflow:auto/s);
 });
+
+test('section edits reorder by stable IDs, preserve Library references and retain failed drafts', async () => {
+  let current = first;
+  let fail = false;
+  const originalFetch = globalThis.fetch;
+  const originalConfirm = window.confirm;
+  const writes: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === '/api/auth/session') return json(session);
+    if (url === '/api/projects') return json([current, second]);
+    if (url === `/api/projects/${current.id}`) return json(current);
+    if (url === `/api/projects/${first.id}/mutations`) {
+      const { mutation } = JSON.parse(String(init?.body));
+      writes.push(mutation.type);
+      if (fail) return new Response(JSON.stringify({ error: 'Save unavailable' }), { status: 503, headers: { 'content-type': 'application/json' } });
+      current = { ...current, revision: current.revision + 1, spec: applyMutation(current.spec, mutation) };
+      return json(current);
+    }
+    throw new Error(`Unexpected ${url}`);
+  }) as typeof fetch;
+  try {
+    render(createElement(App));
+    await screen.findByRole('heading', { name: 'Wild Earth', level: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
+    const section = screen.getByRole('region', { name: 'hero section 1' });
+    fireEvent.click(within(section).getByRole('button', { name: 'Edit section' }));
+    const inspector = screen.getByRole('complementary', { name: 'Layout inspector' });
+    assert.equal((within(inspector).getByRole('checkbox', { name: 'Oceans' }) as HTMLInputElement).checked, true);
+    assert.ok(within(inspector).getByText('Choose content'));
+    const originalMedia = current.spec.content[0]?.mediaUrl;
+    fireEvent.click(within(inspector).getByRole('checkbox', { name: 'Oceans' }));
+    await waitFor(() => assert.deepEqual((current.spec.pages[0]?.modules[0] as { contentIds: string[] }).contentIds, []));
+    fireEvent.click(within(inspector).getByRole('checkbox', { name: 'Oceans' }));
+    await waitFor(() => assert.equal((current.spec.pages[0]?.modules[0] as { contentIds: string[] }).contentIds[0], current.spec.content[0]?.id));
+    assert.equal(current.spec.content[0]?.mediaUrl, originalMedia);
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Close layout inspector' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Section type' }), { target: { value: 'text' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add section' }));
+    await waitFor(() => assert.equal(current.spec.pages[0]?.modules.length, 2));
+    const textId = current.spec.pages[0]!.modules[1]!.id;
+    const editor = screen.getByRole('complementary', { name: 'Layout inspector' });
+    fireEvent.change(within(editor).getByRole('textbox', { name: 'Section text' }), { target: { value: 'Our story' } });
+    window.confirm = () => false;
+    fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+    assert.ok(screen.getByRole('complementary', { name: 'Layout inspector' }));
+    fail = true;
+    fireEvent.click(within(editor).getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => assert.match(within(editor).getByRole('status').textContent ?? '', /Failed to save/));
+    assert.equal((within(editor).getByRole('textbox', { name: 'Section text' }) as HTMLTextAreaElement).value, 'Our story');
+    fail = false;
+    fireEvent.click(within(editor).getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => assert.equal(current.spec.pages[0]?.modules[1]?.kind === 'text' && current.spec.pages[0]?.modules[1]?.body, 'Our story'));
+    fireEvent.click(within(editor).getByRole('button', { name: 'Close layout inspector' }));
+    const move = screen.getByRole('button', { name: 'Move About up' });
+    move.focus(); fireEvent.click(move);
+    await waitFor(() => assert.equal(current.spec.pages[0]?.modules[0]?.id, textId));
+    assert.equal(document.activeElement, move);
+    window.confirm = () => false;
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove section' })[0]!);
+    assert.equal(current.spec.pages[0]?.modules.length, 2);
+    window.confirm = () => true;
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove section' })[0]!);
+    await waitFor(() => assert.equal(current.spec.pages[0]?.modules.length, 1));
+    assert.equal(current.spec.content[0]?.title, 'Oceans');
+    assert.deepEqual(writes.slice(0, 2), ['updateModule', 'updateModule']);
+    assert.ok(writes.includes('reorderModules'));
+  } finally { cleanup(); globalThis.fetch = originalFetch; window.confirm = originalConfirm; dom.window.history.replaceState(null, '', '/'); }
+});
