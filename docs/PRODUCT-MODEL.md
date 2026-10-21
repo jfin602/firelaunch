@@ -1,5 +1,9 @@
 # FireLaunch Product Model
 
+## Latest Channel editing experience — c8-ui2 (owner approved 2026-10-21)
+
+**Planned next correction, not implemented:** following c8-ui's measured UI GREEN/staging deployment, Channel's normal presentation should use the existing persistent global sidebar, an immediately adjacent SECONDARY LEFT VERTICAL EDITOR RAIL, and the true interactive 16:9 TV Preview to the right. Place the Virtual remote in lower-right empty space beneath TV, not over content. The rail's Pages & Layout and Appearance tabs and action buttons use coherent Desert Heat neutral/selected/danger/focus styling, not browser-default white. Fullscreen leaves the SAME Preview/editor mounted, hiding the editor as a LEFT-edge overlay that slides out on hover/touch/keyboard and stays visible while editing. No bottom editing dock. This does not change ChannelSpec, P8B layout templates/static sections, publication/rights, Vega or one-click Export. See [c8-ui2 design](design/channel-secondary-rail.md), [correction stack](tasks/c8-ui2/README.md). Root remains 0.8.10; Phase 8 OPEN.
+
 ## Active Creator Studio information architecture — Phase 8 decision (2026-10-21)
 
 **Documentation-only target, not implemented/qualified.** The current source still uses the historical eight-surface Studio until P8 work is performed. Owner-approved five primary destinations are **Home**, **Library** (Catalog and media rights), **Channel** (existing Create/Agent as AI Assistant, Design as Appearance, Content as Pages & Shelves), **Publish** (explicit rights-reviewed immutable live content) and **Export** (creator-bound native Vega build/download, **Advanced > Source** for protected editable generated code). Interactive TV Preview is a prominent toolbar/editor companion, not a redundant top-level route. The existing VideoWorkspace remains the reusable creator-owned modal/sheet rather than a duplicate video editor.
