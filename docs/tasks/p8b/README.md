@@ -2,12 +2,6 @@
 
 **Status (2026-10-21): /prompt-ass + /prompt-plan + /prompt-write COMPLETE; SEVEN EXECUTABLE PROMPTS AUTHORED, NOT RUN / NOT QUALIFIED.** Root/lock on GitHub main at authoring: **0.8.4**. Phase 8 remains OPEN. This is a pre-1.0 **Phase 8 continuation B**, not a new roadmap phase or the old Wave 1 runner.
 
-## UI shell dependency — c8-ui correction (owner-approved 2026-10-21)
-
-[c8-ui](../c8-ui/README.md) defines the **default TV-first Channel shell** and edge-reveal fullscreen dock. **Run it from a clean unchanged `0.8.4` checkout before P8B IF P8B has not started**: always-on real 16:9 TV stage on top, directly attached horizontal dock (Pages & Layout, Appearance), no AI Assistant or Close TV Preview. In fullscreen the same dock rises over TV when pointer is near bottom, with touch/keyboard access. **Do not overwrite already-completed local P8B commits** if local version has advanced; replan a later scoped correction instead.
-
-P8B keeps its already-authored versions P1 `0.8.5` through P7 `0.8.11` proposed. The `c8-ui` correction does NOT bump `0.8.4`: P8B P1 can follow its commits from the same version. P8B P1's template creation happens **inside dock**; P2/P3 organize Pages/Sections/Properties horizontally in the dock rather than building a competing central/side editor; P6 enhances/tests the existing same-instance fullscreen overlay (do not duplicate it). **Correction completion is a preflight dependency, not a new extra P8B prompt or version.**
-
 ## Source of authority
 
 - [Wave 1 P5 GREEN / DEPLOYED](../p8/wave1-closeout.md) is the tested protected staging UI/export milestone; its manual P5 did **not** change root version to 0.8.5. Its report contains dated host/browser evidence, not a present-time host inspection.
