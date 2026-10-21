@@ -1,0 +1,26 @@
+TASK: Phase 8 / P6 — Stateful full-screen TV Preview
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.10`.
+
+GOAL
+Make View full screen an obvious Channel toolbar action that expands the SAME interactive TV Preview while retaining page, D-pad focus, playback and editor context. No second renderer or full-screen copy of ChannelSpec.
+
+PREFLIGHT
+Read P8B plan and P5 handoff; inspect actual 0.8.9 HEAD/root+lock/status. Inspect apps/studio/src/Preview.tsx, preview-state.ts, app Channel toolbar/Preview mounting, style.css and existing Preview tests. Reuse previous P2–P5 layouts and no historical test matrix.
+
+IMPLEMENT
+1. Add labeled View full screen in Channel/Preview toolbar. Use browser Fullscreen API only from direct user gesture, with meaningful error handling and accessible full-viewport dialog fallback. Fullscreen displays the actual TV content, minimal exit/back/help UI and correct responsive 16:9 fit without cropping TV focus/cards.
+2. Keep ONE live Preview instance and single TvState/media player across embedded/fullscreen transitions; don't unmount/remount or create a second async playback source. Preserve selected page/focus/playback, editor scroll/selected section and transient unsaved controls; ensure a project switch exits or rebases safely.
+3. Distinguish Escape to Exit full screen from TV Back (Backspace or visible virtual remote/keyboard hint), handle fullscreenchange when browser exits independently, restore focus to trigger, preserve keyboard/mobile touch navigation and reduced-motion semantics. Ensure background Studio is noninteractive while fallback modal open; no focus trap or hidden Back.
+4. No modifications to native Vega player's full-screen implementation unless essential for parity; this is a Studio Preview presentation change.
+
+VALIDATION
+Focused Studio state/Preview tests for direct click, native fullscreen accepted/rejected/fallback, repeat entry/exit, focus return, no duplicate Preview mounts, project switch and representative TV D-pad/Back/playback preservation. Studio package typecheck once plus affected tests, no full builds, repeated browser sessions, paid AWS or native device. P7 owns live screenshot/accessibility evidence.
+
+HANDOFF / BOUNDARIES
+Runner-only commit/version transition 0.8.9 → 0.8.10 (root and two lock fields). No self-commit, /activate, hosted publication, runtime rights changes or deployment. <=8 min goal/15 min max; accurately record any unverified real-browser API behavior for P7.
