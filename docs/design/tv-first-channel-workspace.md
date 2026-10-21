@@ -1,5 +1,9 @@
 # TV-First Channel Workspace — Phase 8 UI Contract
 
+## Superseding presentation after c8-ui GREEN — c8-ui2
+
+The top-stage/bottom-dock specification below is **historical and was successfully implemented/qualified in c8-ui**. The owner subsequently approved [c8-ui2 secondary LEFT editor rail](channel-secondary-rail.md) as the NEW canonical Channel presentation: second left vertical editor panel, right 16:9 Preview, Virtual remote beneath TV and all controls styled to Desert Heat. Fullscreen reuses the same TV/editor with a LEFT-edge popup drawer instead of the prior bottom-edge dock. Keep c8-ui evidence, but do not implement these old layout dimensions for c8-ui2. No new schema/native changes are requested.
+
 **Owner-approved /docs-review, 2026-10-21; DESIGN TARGET ONLY, NOT IMPLEMENTED OR QUALIFIED.** This contract supersedes the earlier Phase 8/P8B proposal to display a narrow TV Preview beside a tall right-side page editor. Implement as [c8-ui](../tasks/c8-ui/README.md) **AFTER the already-executed local P8B work**, preserving existing Hero/Grid/Rows templates, section editing, native Vega compatibility and fullscreen behavior. The pushed GitHub `main` now confirms P8B P1–P6 at coherent root/lock `0.8.10`, followed by a committed P7 **NOT GREEN / NOT DEPLOYED** report. This correction uses unchanged `0.8.10` and must preserve its finished page editor, new static modules, rights and fullscreen logic. The staging host remained at Wave 1 `0.8.4` at the P7 dated readback, which is not the same as source. See [Desert Heat baseline](studio-visual-baseline.md) and [human-first layout design](page-layout-human-first.md).
 
 ## The immediate failure to fix
