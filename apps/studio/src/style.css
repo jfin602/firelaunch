@@ -884,3 +884,22 @@ body { min-width: 0; }
 @media(max-width:1000px){.channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 220px)*16/9));max-height:calc(100cqh - 220px)}}
 @media(max-width:760px){.channel-tv-stage .remote-bar>div:first-child{display:grid}}
 @media(max-width:690px){.channel-tv-stage{height:max(460px,calc(100vw*9/16 + 240px))}.channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 240px)*16/9));max-height:calc(100cqh - 240px)}.channel-tv-stage .preview-heading{justify-content:center}.channel-tv-stage .channel-stage-action{margin-left:0}.channel-tv-stage .remote-bar>div:first-child{display:none}}
+
+/* C8-UI3 P3: fullscreen fits the single TV to the viewport; chrome floats above it. */
+.preview-fullscreen .channel-tv-stage{height:100%;padding:0}
+.preview-fullscreen .channel-tv-stage #tv-preview{height:100%;container-type:size}
+.preview-fullscreen .channel-tv-stage .preview-wrap{height:100%;width:100%;padding:0;align-items:center;justify-content:center;overflow:hidden}
+.preview-fullscreen .channel-tv-stage .tv-frame{width:min(100%,177.777778dvh);height:auto;max-height:100dvh;aspect-ratio:16/9;flex:none;border:0;border-radius:0;box-shadow:none}
+.preview-fullscreen .channel-tv-stage .preview-heading{position:absolute;z-index:5;top:12px;right:12px;left:auto;width:auto;min-height:0;margin:0;padding:0;display:block}
+.preview-fullscreen .fullscreen-controls{display:flex;align-items:center;gap:8px;padding:5px;background:#11191be8;border-radius:8px}
+.preview-fullscreen .fullscreen-controls button{min-height:40px;padding:7px 12px;border:1px solid #728082;border-radius:6px;background:#293436;color:#fff;font-size:13px;font-weight:700}
+.preview-fullscreen .fullscreen-controls .preview-exit{border-color:#d87951;background:#a84c2e}
+.preview-fullscreen .channel-tv-stage .remote-bar{position:absolute;z-index:4;left:12px;right:auto;bottom:12px;order:0;display:flex;align-self:auto;align-items:center;gap:10px;margin:0;padding:8px;background:#11191be8;border-radius:8px}
+.preview-fullscreen .channel-tv-stage .remote-bar>div:first-child{display:grid;text-align:left}
+.preview-fullscreen .channel-tv-stage .remote-bar span{max-width:180px}
+.preview-fullscreen .channel-tv-stage .remote button{min-width:40px;min-height:40px}
+.preview-fullscreen .preview-heading[hidden],.preview-fullscreen .remote-bar[hidden],.preview-fullscreen.clean-view .preview-fullscreen-notice{display:none}
+.preview-fullscreen.clean-view .channel-dock,.preview-fullscreen.clean-view .channel-dock-handle{display:none;pointer-events:none}
+.preview-fullscreen .fullscreen-corner-recovery{position:absolute;z-index:6;top:0;right:0;width:28px;height:28px;padding:0;border:0;background:transparent;opacity:0;touch-action:manipulation}
+.preview-fullscreen .fullscreen-corner-recovery:focus-visible{opacity:1;background:#293436;outline:2px solid var(--fl-focus)}
+@media(max-width:690px){.preview-fullscreen .channel-tv-stage{height:100%}.preview-fullscreen .channel-tv-stage .tv-frame{width:min(100%,177.777778dvh);max-height:100dvh}.preview-fullscreen .channel-tv-stage .remote-bar>div:first-child{display:none}}

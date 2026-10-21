@@ -153,6 +153,76 @@ test('full-screen fallback retains the live Preview, TV playback and focus on ex
   }
 });
 
+test('Clean View hides Studio chrome and recovers by H, corner, editor shortcut and Escape', async () => {
+  const restore = mockApi([first]);
+  const original = HTMLElement.prototype.requestFullscreen;
+  Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: undefined });
+  try {
+    render(createElement(App));
+    await screen.findByRole('heading', { name: first.spec.title, level: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
+    const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
+    const editor = document.querySelector('.channel-editor');
+    const trigger = screen.getByRole('button', { name: 'View full screen' });
+    fireEvent.click(trigger);
+    const root = screen.getByRole('dialog', { name: 'Full-screen TV Preview' });
+    assert.ok(root.querySelector('.remote-bar'));
+    assert.ok(root.querySelector('.fullscreen-controls'));
+    fireEvent.click(screen.getByRole('button', { name: /Hide controls/ }));
+    assert.ok(root.classList.contains('clean-view'));
+    assert.equal(root.querySelector('.preview-heading')?.hasAttribute('hidden'), true);
+    assert.equal(root.querySelector('.remote-bar')?.hasAttribute('hidden'), true);
+    assert.equal(root.querySelector('.channel-dock')?.hasAttribute('inert'), true);
+    assert.equal(screen.queryByRole('button', { name: 'Exit full screen' }), null);
+    assert.equal(screen.queryByRole('button', { name: 'Up' }), null);
+    assert.equal(screen.queryByRole('button', { name: /editing drawer/ }), null);
+    assert.equal(preview, root.querySelector('.preview-wrap'));
+    assert.equal(editor, root.querySelector('.channel-editor'));
+    const tv = root.querySelector<HTMLElement>('.tv-frame')!;
+    tv.focus();
+    fireEvent.keyDown(tv, { key: 'Tab', shiftKey: true });
+    assert.equal(document.activeElement, screen.getByRole('button', { name: /Show full-screen controls/ }));
+    fireEvent.keyDown(root.querySelector<HTMLInputElement>('.channel-dock input')!, { key: 'h' });
+    assert.ok(root.classList.contains('clean-view'));
+    fireEvent.keyDown(tv, { key: 'h', ctrlKey: true });
+    assert.ok(root.classList.contains('clean-view'));
+    fireEvent.keyDown(tv, { key: 'h' });
+    assert.equal(root.classList.contains('clean-view'), false);
+    fireEvent.keyDown(tv, { key: 'h' });
+    assert.ok(root.classList.contains('clean-view'));
+    fireEvent.pointerEnter(screen.getByRole('button', { name: /Show full-screen controls/ }), { pointerType: 'mouse' });
+    assert.equal(root.classList.contains('clean-view'), false);
+    fireEvent.click(screen.getByRole('button', { name: /Hide controls/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Show full-screen controls/ }));
+    assert.equal(root.classList.contains('clean-view'), false);
+    fireEvent.click(screen.getByRole('button', { name: /Hide controls/ }));
+    fireEvent.keyDown(root, { key: 'e', altKey: true });
+    assert.equal(root.classList.contains('clean-view'), false);
+    assert.ok(root.classList.contains('dock-revealed'));
+    assert.equal(editor, root.querySelector('.channel-editor'));
+    await new Promise(resolve => setTimeout(resolve, 50));
+    assert.equal(document.activeElement, root.querySelector('.studio-subviews button'));
+    fireEvent.click(screen.getByRole('button', { name: /Hide controls/ }));
+    fireEvent.keyDown(root, { key: 'Escape' });
+    await waitFor(() => assert.equal(root.classList.contains('preview-fullscreen'), false));
+    assert.equal(root.classList.contains('clean-view'), false);
+    await waitFor(() => assert.equal(document.activeElement, trigger));
+  } finally {
+    Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: original });
+    restore();
+  }
+});
+
+test('fullscreen geometry and overlay placement override normal mode at every breakpoint', () => {
+  const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
+  const fullscreen = css.split('/* C8-UI3 P3:')[1];
+  assert.ok(fullscreen);
+  assert.match(fullscreen, /\.preview-fullscreen \.channel-tv-stage \.tv-frame\{width:min\(100%,177\.777778dvh\);height:auto;max-height:100dvh;aspect-ratio:16\/9;flex:none;border:0;border-radius:0;box-shadow:none\}/);
+  assert.match(fullscreen, /\.preview-fullscreen \.channel-tv-stage \.remote-bar\{[^}]*left:12px;right:auto;bottom:12px/);
+  assert.match(fullscreen, /\.preview-fullscreen \.channel-tv-stage \.preview-heading\{[^}]*top:12px;right:12px/);
+  assert.match(fullscreen, /\.preview-fullscreen \.preview-heading\[hidden\],\.preview-fullscreen \.remote-bar\[hidden\]/);
+});
+
 test('native fullscreen success and rejection keep one Preview and return focus', async () => {
   const restore = mockApi([first]);
   const originalRequest = HTMLElement.prototype.requestFullscreen;
