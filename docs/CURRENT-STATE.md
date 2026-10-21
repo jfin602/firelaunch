@@ -1,7 +1,13 @@
 # FireLaunch Current State
 
-Last documentation reconciliation: 2026-10-20 23:39 UTC (C7 export/device closeout; no new AWS inspection).
+Last documentation reconciliation: 2026-10-21 UTC (documentation aligned to committed C7 closeout c5a4421; staging and AWS status remain dated observations, not fresh inspections).
 Purpose: The current, evidence-linked operational and planning entry point. A dated observation is **not** a live health or AWS status check; reverify before changes.
+
+## Active October 21: C7 R4 playback recovery only
+
+**C7 PARTIAL / NOT GREEN.** Later C7 closeout proves R1 Studio startup SCOPED GREEN, R2 isolated same-VPS worker and real creator-bound native VPKG GREEN, R3 authenticated four-file Studio ZIP SCOPED GREEN. R4 independently installed the exact downloaded VPKG on a stable Vega VirtualDevice, displaying the approved channel, artwork, Back navigation and restart. **Remaining:** Hls.js parsed approved master and variant playlists but stalled at the first TS fragment (no FRAG_LOADED); moving video, independently verified sound, pause and seek remain unqualified. Run only the manual [R4 playback recovery](docs/tasks/c7-export-recovery/R4-playback-recovery.txt) with at most three focused repair cycles. Reuse existing GREEN work. Root 0.7.3 and core schema 14 unchanged; preserve approved public release #1.
+
+The exact approved segment returned HTTP 200 and 1,175,564 bytes from the device shell, but that does not prove Hls.js received/consumed it in the app. Both vendored FetchLoader and XhrLoader fragment paths stalled; the root cause is UNPROVEN. Focus on instrumenting loader completion, binary bytes, TS transmux and MSE append before changing native code. Last observed active protected staging release 20261020T233126Z-d375ee6f1709, with both services healthy, schema 14, protected backup and previous rollback. The later GitHub c5a4421 commit is source provenance, not the archive hash.
 
 ## October 20 23:39 UTC — C7 final export recovery
 
@@ -87,8 +93,8 @@ Fresh [host and HTTPS inspection](staging-consolidation-2026-10-19.md) found one
 | Approved free CloudFront HLS, owned public manifest | **Q2 overall NOT GREEN; release #1 accessible** | [Q2 closeout](tasks/p6-live-vod/Q2-closeout.md); an isolated F7 test release was temporarily accessible, then its artwork right and CDN access were revoked; video lifecycle proof remains open |
 | Progressive two-hour popup and close/reopen UX | **P6 STAGING SMOKE PASS, BOUNDED** | [P6 closeout](tasks/c6-usability/closeout.md); no new paid job; actual two-hour throughput not proven |
 | Creative/video preview, thumbnail, publication artwork integration | **NEW SOURCE AT b0d2897; NOT STAGING/DEVICE QUALIFIED** | [c6-supporting-media](tasks/c6-supporting-media/README.md); reconcile source, public artwork origin and end-to-end proof |
-| P7 downloadable creator-specific Vega ZIP/export | **PLANNED / NOT QUALIFIED; CRITICAL DELIVERY RISK** | [P7](tasks/p7/README.md): isolated hosted build and direct ZIP download not evidenced; fixture VPKG insufficient |
-| P7 independent creator-bound Vega playback / historical Q3 LKG matrix | **NOT QUALIFIED** | [P7](tasks/p7/README.md) owns minimum export/playback; [historical Q3](tasks/p6-live-vod/Q3-vega-device-playback.txt) remains wider unqualified evidence |
+| C7 native creator ZIP/export | **R2 GREEN / R3 SCOPED GREEN** | [C7 closeout](tasks/c7-export-recovery/closeout.md): owner-authenticated four-file ZIP, real x86_64 VPKG and working separate worker; new native video playback remains open |
+| C7 native VirtualDevice playback / historical Q3 LKG matrix | **Installation, branding, artwork, Back and restart PASS; motion, audio, pause and seek NOT GREEN** | [C7 closeout](tasks/c7-export-recovery/closeout.md): HLS master/variant parsed but first TS fragment did not complete; broader Q3 remains historically unqualified |
 | P5/c5 creator-bound real device and HTTPS acceptance | **Historical NOT GREEN** | Retain [P5](tasks/p5/closeout.md), [c5](tasks/c5-vega/closeout.md); carried into Q3 |
 | P2/c2 complete production hosting S1-S6, P4 live provider, physical Fire TV and Appstore | **Not fully qualified** | Historical closeouts and later launch gates remain independently open |
 | Desert Heat Studio visual redesign | **Docs/prompt stack authored, not qualified as deployed** | [c6-desert-heat-studio](tasks/c6-desert-heat-studio/README.md) and [ADR 0012](decisions/0012-studio-visual-identity.md) |

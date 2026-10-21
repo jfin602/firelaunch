@@ -6,6 +6,10 @@
 
 The remaining P7 native export implementation is continued **manually** in [c7-export-recovery](../c7-export-recovery/README.md). R1 Studio 0.7.3 SCOPED GREEN is complete. R2 builds a **single-VPS dedicated systemd worker and PostgreSQL queue**, R3 adds authenticated Studio ZIP delivery, and R4 qualifies only the new queue/export/Vega device path. No second VPS, no runner, no repeat of P7 P1-P3 or unaffected GREEN work. The historical P7 P4 closeout stays NOT GREEN until its missing delivery is separately evidenced; root remains 0.7.3.
 
+## Current October 21 C7 continuation result
+
+The original P7 P4 remains historically NOT GREEN. The later [C7 closeout](../c7-export-recovery/closeout.md) directly proves R1 Studio startup, R2 native worker/VPKG and R3 owner ZIP at their recorded GREEN scopes, as well as VirtualDevice installation, approved artwork, Back and restart. Remaining C7 blocker is first HLS TS fragment completion and consequently moving video, sound, pause and seek. [R4 recovery prompt](../c7-export-recovery/R4-playback-recovery.txt) has exactly three focused repair cycles. Do not rerun original P7 runner/phase, unrelated media or existing successful gates.
+
 ## Goal
 From signed-in Studio, a creator downloads a ZIP with a fresh real creator/deployment-bound x86_64 Vega release VPKG, extracts it independently, installs it on Vega VirtualDevice, sees their approved branding/shelves/artwork and plays their approved published free HLS video with sound, remote controls and success after app restart. A Studio browser Preview, fixture VPKG or ZIP of source files is not sufficient.
 
@@ -24,7 +28,7 @@ The separate Phase 6 creative/video correction can proceed concurrently and P7 c
 
 Implementation checkpoints P1–P3 will use focused checks with runner-owned commits once prompts are authored, usually within 8 minutes per prompt (15-minute hard cap). P4 runs manually. GREEN only when the exact independently downloaded archive and contained real VPKG run actual published HLS on VirtualDevice. Physical Fire TV, Appstore approval, paid entitlements and billing are outside scope.
 
-## Active recovery handoff (October 20)
+## Historical October 20 recovery handoff (superseded by latest C7 evidence)
 
 The [P7 P4 closeout](closeout.md) documents the 0.7.3 browser blank root, a successful protected rollback to staging 0.6.7, existing published free release #1 preservation, absence of isolated worker/owner ZIP, and missing graphical VVD. Its Hls.js scanner/source-reader repairs are in GitHub main commit `88257d4`; do not repeat P7 P1-P3 or rewrite closeout evidence. The separate [c7-export-recovery](../c7-export-recovery/README.md) at fixed root 0.7.3 now owns R1 browser rendering, R2 worker isolation, R3 owner ZIP jobs, R4 manual hosted/device qualification. Actual local worktree/host readbacks may be newer than docs.
 

@@ -3,6 +3,12 @@
 Bootstrap date: 2026-10-08.
 Hackathon deadline: 2026-10-23 12:00 PM PDT.
 
+## Active October 21–23 delivery override — native HLS only
+
+**C7 PARTIAL / NOT GREEN.** Later C7 closeout proves R1 Studio startup SCOPED GREEN, R2 isolated same-VPS worker and real creator-bound native VPKG GREEN, R3 authenticated four-file Studio ZIP SCOPED GREEN. R4 independently installed the exact downloaded VPKG on a stable Vega VirtualDevice, displaying the approved channel, artwork, Back navigation and restart. **Remaining:** Hls.js parsed approved master and variant playlists but stalled at the first TS fragment (no FRAG_LOADED); moving video, independently verified sound, pause and seek remain unqualified. Run only the manual [R4 playback recovery](docs/tasks/c7-export-recovery/R4-playback-recovery.txt) with at most three focused repair cycles. Reuse existing GREEN work. Root 0.7.3 and core schema 14 unchanged; preserve approved public release #1.
+
+**Critical path:** R4 diagnose first TS fragment in Vega binary loader vs MSE → three focused repair cycles maximum → if native source changes, one actual owner-built/downloaded ZIP and independent exact-VPKG install/playback qualification → P8 separately approved creative UX and pipeline confirmation → P9 short final creator walkthrough. No reimplementation or repeated broad acceptance of working R1/R2/R3, no new paid MediaConvert/publication. Deadline Friday October 23 noon America/Chicago (11:30 AM internal). The older October 20 plan below is retained as dated historical guidance.
+
 ## October 20–23 delivery override (active plan; earlier phase history retained)
 
 **Owner delivery target:** **Friday, 2026-10-23 at 12:00 PM America/Chicago (CDT)**; internal handoff target **11:30 AM CDT**. The older 12:00 PM **PDT** hackathon line at the top of this roadmap is a distinct historical time-zone statement, not the same instant. Confirm external submission requirements separately; the owner delivery target controls this sprint.
@@ -26,7 +32,7 @@ Hackathon deadline: 2026-10-23 12:00 PM PDT.
 
 Supersedes the earlier R2 plan that required a second build host or cross-server worker. [c7-export-recovery](../tasks/c7-export-recovery/README.md) now continues existing P7 with **manual R2** (single muffinos VPS PostgreSQL queue and separate OS-restricted build worker), **manual R3** (creator-authenticated ZIP export) and **manual R4** (delta-only host/device acceptance). R1 Studio startup is already SCOPED GREEN on 0.7.3; do not revisit its qualification or replay P7 P1-P3. Only new queue/worker/ZIP/Vega HLS/audio, and a short post-deploy rendered Studio smoke, require new direct evidence. Main application schema stays 14 and older rollback must stay functional; no second VPS, external broker, remote worker API, unnecessary cross-server signing, or mandatory broad unmodified-system regression. Deadline and owner permissions unchanged.
 
-## Active recovery after P7 P4 NOT GREEN (October 20)
+## Historical October 20 initial C7 recovery plan (superseded by R4-only work)
 
 **Next:** [c7-export-recovery](../tasks/c7-export-recovery/README.md), fixed root 0.7.3, before Phase 8. The [P7 P4 closeout](../tasks/p7/closeout.md) recorded an exact 0.7.3 staging release that loaded static assets but left React #root empty. Protected rollback returned staging to 0.6.7/schema 14 and preserved approved FREE release #1 byte hashes. Source repairs in the closeout were subsequently committed to main at 88257d4; recheck the local branch and deployed host, do not duplicate or clobber those fixes.
 

@@ -1,12 +1,18 @@
 # FireLaunch
 
+## Current October 21 C7 status
+
+**C7 PARTIAL / NOT GREEN.** Later C7 closeout proves R1 Studio startup SCOPED GREEN, R2 isolated same-VPS worker and real creator-bound native VPKG GREEN, R3 authenticated four-file Studio ZIP SCOPED GREEN. R4 independently installed the exact downloaded VPKG on a stable Vega VirtualDevice, displaying the approved channel, artwork, Back navigation and restart. **Remaining:** Hls.js parsed approved master and variant playlists but stalled at the first TS fragment (no FRAG_LOADED); moving video, independently verified sound, pause and seek remain unqualified. Run only the manual [R4 playback recovery](docs/tasks/c7-export-recovery/R4-playback-recovery.txt) with at most three focused repair cycles. Reuse existing GREEN work. Root 0.7.3 and core schema 14 unchanged; preserve approved public release #1.
+
+The recorded protected staging release is 20261020T233126Z-d375ee6f1709 (2026-10-20 23:39 UTC readback), not a new live host inspection. C7 closeout source is committed at c5a4421, distinct from tested archive provenance.
+
 FireLaunch is a creator-owned Fire TV channel studio with authenticated hosted creator workspaces, catalog, private video uploads, managed HLS processing, explicit free-video channel publication, and React Native for Vega source/build infrastructure. **As of the dated October 20 evidence**, the `0.6.7` staging Studio has a closeable/reopenable progressive video workspace and AWS ingest configuration ACTIVE; earlier Q1/F7 work completed real MediaConvert HLS and an explicit creator-approved FREE CloudFront release #1. **Q2 F7 remains PARTIAL/NOT GREEN; native creator-bound Vega export/download and independent installed VirtualDevice playback remain UNQUALIFIED.** No new paid job was run in the c6-usability P6 deployment. Latest `main` source at `b0d2897` has newer creative/video artwork integration that is **not automatically confirmed deployed**. See [current state](docs/CURRENT-STATE.md) and the [October 20–23 delivery override](docs/roadmap/mvp-roadmap.md).
 
 **Start here:** [Current State](docs/CURRENT-STATE.md) (dated evidence, deployment, risks), [October 20–23 delivery roadmap](docs/roadmap/mvp-roadmap.md), [c6-usability P6 closeout](docs/tasks/c6-usability/closeout.md), [supporting-media reconciliation](docs/tasks/c6-supporting-media/README.md), [p6-live-vod Q1-Q3](docs/tasks/p6-live-vod/README.md) (historic manual gates and current device routing), [ADR 0011](docs/decisions/0011-aws-vod-foundation.md) and [ADR 0013](docs/decisions/0013-hybrid-video-access.md).
 
 Historical P0 qualification was NOT GREEN at 0.0.7. Preserve [P0 closeout](docs/tasks/p0/closeout.md) and historical phase results without presenting them as the current application status.
 
-## October 20 recovery status
+## Historical October 20 recovery status (superseded above)
 
 [P7 P4 closeout](docs/tasks/p7/closeout.md) is **NOT GREEN** after an authorized version 0.7.3 staging rollout left React root empty; rollback restored the prior healthy 0.6.7 Studio. Local aggregate: 326 passed, 15 skipped, no device ZIP/VPKG playback. The next approved docs/prompt workflow is [c7-export-recovery](docs/tasks/c7-export-recovery/README.md) at **unchanged 0.7.3**: diagnose Studio rendering, finish isolated worker, complete real Studio ZIP download, and independently requalify x86_64 Vega playback. No physical Fire TV/Appstore claims or automatic source synchronization.
 
@@ -14,7 +20,7 @@ Historical P0 qualification was NOT GREEN at 0.0.7. Preserve [P0 closeout](docs/
 
 [Phase 7](docs/tasks/p7/README.md) targets actual creator-bound x86_64 Vega ZIP export, independent installation and free HLS playback. [Phase 8](docs/tasks/p8/README.md) confirms the full creative/video publication pipeline. [Phase 9](docs/tasks/p9/README.md) confirms an integrated Studio-to-independent-VirtualDevice walkthrough by Friday October 23 noon Central. Planned version bands: 0.7.x, 0.8.x, 0.9.x, not shipped software.
 
-Intended journey: creator explicitly publishes rights-cleared content -> clicks Export App -> authenticated ZIP download includes actual x86_64 VPKG, README, export-info.json and SHA256SUMS -> independently extract and install/launch on Vega VirtualDevice -> see actual branded channel and published artwork/video -> HLS audio, remote control and app restart work. Current hosted Delivery.tsx still blocks unsafe in-process native builds pending isolated worker; a fixture VPKG or source bundle is not proof.
+Intended journey: creator explicitly publishes rights-cleared content -> clicks Export App -> authenticated ZIP download includes actual x86_64 VPKG, README, export-info.json and SHA256SUMS -> independently extract and install/launch on Vega VirtualDevice -> see actual branded channel and published artwork/video -> HLS audio, remote control and app restart work. The current hosted Build & Export popup uses the separate restricted worker and authenticated owner ZIP; the remaining C7 issue is native HLS playback, not export infrastructure.
 
 Automatic external catalog synchronization and a standalone creator billing/Console operations phase have been removed. Manual creator-import/re-import, explicit approval and native refresh of already published manifests remain; MediaConvert processing after creator uploads continues. Physical Fire TV/Appstore and paid video are outside this deadline.
 

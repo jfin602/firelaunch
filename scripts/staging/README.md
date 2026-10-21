@@ -1,6 +1,12 @@
 # muffinos staging release workflow
 
-## Same-VPS Vega build worker — approved design, NOT DEPLOYED (October 20)
+## Current observed C7 staging / installed worker — 2026-10-20 23:39 UTC
+
+[C7 closeout](../../docs/tasks/c7-export-recovery/closeout.md) reports protected active staging release `20261020T233126Z-d375ee6f1709` (archive SHA256 `d375ee6f17091935bd93e41f0c5fcb06803b3b9a8b769e072a536a5dd4584532`), prior rollback `20261020T232640Z-59d0374bcf28`, verified encrypted predeploy backup, version 0.7.3 and core schema14. **Both `firelaunch-staging.service` and `firelaunch-build-worker.service` were ACTIVE.** Existing VPS has a restricted worker, PostgreSQL build queue and 12 GB private job filesystem. A real creator obtained a four-file checksum-verifiable ZIP and installed its VPT-valid x86_64 package on Vega VirtualDevice. The worker IS DEPLOYED and creator export works. **C7 is still NOT GREEN** because first native HLS TS segment stalled; moving video/audio/seek/pause are unqualified. This is a dated closeout readback, not a new live service check.
+
+**Next:** manual [R4 playback recovery](../../docs/tasks/c7-export-recovery/R4-playback-recovery.txt), maximum three narrow repair cycles. Preserve the working worker/ZIP and approved FREE release #1, use guarded exact-hash deployment/backup/rollback only under valid scoped operator approval, and if native code changes use a new authentic owner-built/downloaded ZIP for installed-device proof. No new VPS, paid encode, Ngest or CloudFront/public rights changes.
+
+## Historical worker setup plan (completed; not current status)
 
 See [current c7 manual plan](../../docs/tasks/c7-export-recovery/implementation-plan.md). Owner requires the worker to share muffinos with the existing FireLaunch application, NOT a new VPS. Provision only after a scoped operator-reviewed change, preserving the single `firelaunch-staging.service` on 4184, deployed Studio 0.7.3, schema-14 application migration history, and prior 0.6.7 rollback. This is a runbook proposal, not a claimed service installation.
 
@@ -10,7 +16,7 @@ See [current c7 manual plan](../../docs/tasks/c7-export-recovery/implementation-
 
 **Protected rollout:** first archive exact tested source and record hashes; separately review queue schema/roles and verify old 0.7.3 or 0.6.7 application compatibility; take protected backup; install worker unit and artifacts only with narrow granted operator command; verify ability to disable worker while Studio stays healthy. Reuse existing release `20261020T185232Z-2b17f1479a0e` R1 evidence; after any Studio update run ONE short real browser render smoke (signed-out + owner Home), not the whole R1 loop. Verify approved free release #1 bytes stay unchanged. Restore/disable only affected worker and use protected app rollback if needed. No new MediaConvert job, CloudFront/public asset change, Ngest intervention or second VPS.
 
-## October 20 18:52 UTC — current Studio release
+## Historical October 20 18:52 UTC — earlier Studio repair release
 
 An owner-authorized Studio repair activated `/srv/firelaunch/releases/20261020T185232Z-2b17f1479a0e` at root 0.7.3 and schema 14 after protected backup. The live browser rendered signed-out sign-in and an owner-authenticated project Home with no console errors; a fresh tab did too. The old 0.6.7 entrypoint's hashed JS is retained alongside the new bundle, and both paths return JavaScript MIME. `/srv/firelaunch/previous` is the healthy 0.6.7 rollback release. See [rollout evidence](../../docs/tasks/c7-export-recovery/studio-rollout-20261020.md). Hosted native export remains blocked; this is not P7 ZIP/device qualification.
 

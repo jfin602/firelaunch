@@ -1,5 +1,7 @@
 # c7-export-recovery — Updated prompt assessment: single-VPS worker
 
+**October 21 superseding evidence:** The original R2/R3 plan below is historical, not remaining implementation. [C7 closeout](closeout.md) demonstrates R1 SCOPED GREEN, R2 real worker/VPKG GREEN, R3 authenticated owner ZIP SCOPED GREEN and device installation/artwork/Back/restart PASS. Native first TS fragment stalls, so C7 remains PARTIAL / NOT GREEN. The active manual [R4 playback-only correction](R4-playback-recovery.txt) has THREE focused repair cycles, not a worker/ZIP rebuild or repeat of Phase 6. Preserve version 0.7.3 and main schema14.
+
 Owner decision: 2026-10-20, deadline Friday 2026-10-23 12:00 America/Chicago (CDT). Root package.json and both top-level lockfile version entries remain 0.7.3. These are manually executed correction prompts; do not invoke the Prompt Stack runner, auto-commit implementation, or replay P7 P1-P3.
 
 ## What is already GREEN and must not be repeated

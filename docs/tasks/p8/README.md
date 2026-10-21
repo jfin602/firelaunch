@@ -2,6 +2,10 @@
 
 **Owner approval: 2026-10-20 23:55 America/Chicago (2026-10-21 UTC). Status: PLAN/PROMPTS AUTHORED; NOT IMPLEMENTED / NOT QUALIFIED.** Phase 8 is the next 0.8.x band; the checked-in root and root lockfile remain 0.7.3 until an explicitly approved, coherent Phase 8 entry transition. Owner delivery: Friday October 23, 2026 12:00 PM America/Chicago; internal handoff 11:30 AM; freeze target Thursday 5:00 PM CDT.
 
+## Current C7 dependency (October 21)
+
+The owner-approved five-checkpoint Phase 8 Creative Studio UX plan below is preserved unchanged. [C7 closeout](../c7-export-recovery/closeout.md) confirms working native creator export/ZIP and install/branding/artwork/Back/restart, but native HLS first-segment playback remains NOT GREEN. P8 should reuse R1–R3 evidence without repeated worker, ZIP or paid media qualification; R4 recovery remains the narrow native-video blocker.
+
 ## Goal and ordered scope
 Make Studio feel like a coherent creator tool before final creative-pipeline confirmation. Preserve Desert Heat, ChannelSpec/TV semantics, the existing creator-owned video pipeline, rights and explicit publication, and Phase 7's real isolated export worker/ZIP/Vega device path. This is **not** a greenfield editor or pipeline rewrite.
 

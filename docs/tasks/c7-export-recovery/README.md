@@ -2,6 +2,12 @@
 
 **Status:** [C7 final closeout PARTIAL / NOT GREEN](closeout.md) on 2026-10-20. [R1 Studio startup SCOPED GREEN](R1-closeout.md); R2 isolated native worker GREEN; R3 authenticated owner ZIP export SCOPED GREEN; R4 native Vega playback NOT GREEN because the installed app never completes its first approved HLS TS fragment and times out. P7 original [P4 closeout](../p7/closeout.md) remains NOT GREEN. Deadline Friday 2026-10-23 12:00 America/Chicago (CDT). Root package.json and both top-level lockfile version entries remain 0.7.3. Manual correction prompts only; no runner or agent commits.
 
+## Active October 21 R4 recovery
+
+**C7 PARTIAL / NOT GREEN.** R1 startup SCOPED GREEN, R2 isolated worker/VPKG GREEN, R3 authenticated owner ZIP SCOPED GREEN. R4 stable Vega installation, creator artwork, Back and restart passed; Hls.js stalled on the first TS fragment, leaving moving video, sound, pause and seek NOT GREEN. Next: [manual R4 first-fragment playback recovery](R4-playback-recovery.txt), maximum three focused repair cycles. Do not redo R1–R3. Keep 0.7.3/schema 14, same-VPS architecture and approved free release #1.
+
+The earlier VirtualDevice startup failure (running:false, qemu:-1) was resolved for the tested held graphical session; serial amazon-34bb27f8dce87e75 and installed x86_64 VPKG were observed. The first TS fragment remains the open boundary. Latest committed source c5a4421 differs from the tested 20261020T233126Z-d375ee6f1709 archive; preserve both identities.
+
 ## Current deployment / trusted evidence
 
 At the 2026-10-20 23:39 UTC readback, protected 0.7.3 staging release `/srv/firelaunch/releases/20261020T233126Z-d375ee6f1709` and the separate worker were active with core schema 14. The approved release #1 pointer and HLS master retained their verified hashes. Owner job `job_ec7ec7a188b54a6095e214ecb9f20e30` produced a VPT-valid VPKG and downloadable four-file ZIP. The exact ZIP-extracted package installed on Vega VirtualDevice and showed creator branding/artwork after restart, but playback timed out at HLS segment request. See [final closeout](closeout.md) for current evidence; the earlier 22:02 R2 failure in [R2 evidence](R2-evidence.md) is preserved as historical.
@@ -34,7 +40,7 @@ No second VPS, Redis, external queue broker, remote worker HTTP API, Kubernetes 
 
 **Queue migration compatibility:** Use an additive dedicated `firelaunch_build` schema/table(s) **within the existing Postgres instance**, separately versioned or idempotently installed, with least-privilege API and worker roles. Do **not** bump or invalidate the main app's schema-14 migration ledger: both current Studio 0.7.3 and the previous 0.6.7 rollback must continue to recognize schema 14. If an operator migration would break rollback, do not apply it. No automatic live database or systemd changes are authorized by prompt authoring.
 
-## MANUAL implementation sequence (no runner)
+## Historical manual implementation sequence (R1–R3 completed)
 
 | Step | Prompt | Deliverable / focused exit |
 | --- | --- | --- |
@@ -45,11 +51,11 @@ No second VPS, Redis, external queue broker, remote worker HTTP API, Kubernetes 
 
 All steps use GPT-6 Sol High manually. Target one bounded work unit (normally <=8 min, 15 min hard stop); if actual host provisioning/SDK access needs a separate operator privilege, state the exact blocker and continue only safe local implementation, never propose a new VPS by default. No `/activate` or runner command.
 
-## R2 work boundaries
+## Historical R2 work boundaries (GREEN)
 
 Use the existing P7 `ReleaseBuildInput`, `NativeBuildEvidence`, VPT validation, `createNativeExport`, `hosted-workspace` ownership and Postgres foundation. Implement worker queue/claim/lease/failure/recovery and a separate `firelaunch-build-worker.service`. Exactly one active build by default, measurable admission/resources, 15-minute timeout, per-job scratch/cleanup and no credentials in executable child. A queue table is not proof the worker has run; a source-built fixture is not proof the creator has exported.
 
-## R3 work boundaries
+## Historical R3 work boundaries (SCOPED GREEN)
 
 Creator-only API job creation/status/cancel/download, CSRF on mutations, revision/release fingerprint and owner checks at submission, worker result acceptance and download. Private retention and TTL; no foreign/stale/revoked/expired ZIP access. Studio shows truthful states and download after exact VPKG+ZIP verification. If the on-host sandbox is unavailable, keep Export App blocked rather than executing user code with the API privileges.
 
