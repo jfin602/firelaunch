@@ -13,7 +13,13 @@ Before implementation:
 8. the active docs/tasks/<stack>/ README, prompt-assessment and implementation-plan
 9. the current prompt
 
-## Current Phase 8 Wave 2 planning target — October 21
+## Current Phase 8 Wave 2 P8B prompt stack (2026-10-21)
+
+**Wave 1 GREEN/DEPLOYED at unchanged `0.8.4`; Phase 8 still OPEN.** [P8B](docs/tasks/p8b/README.md) now includes [assessment](docs/tasks/p8b/prompt-assessment.md), [plan](docs/tasks/p8b/implementation-plan.md) and P1–P7 prompts, based on [human-first page layout design](docs/design/page-layout-human-first.md). P1–P6 are implementation checkpoints `0.8.5`–`0.8.10`; **P7** is one manual browser/native parity/protected staging Wave 2 closeout (proposed `0.8.11`), NOT global Phase 8 completion. Do not run initial `p8` again or invent extra activation.
+
+P8B first action: inspect local git HEAD/status, dirty P5 source, root+both lock versions and clean `0.8.4` runner prefix, then `npm run codex:stack:validate -- p8b` and `npm run codex:stack -- p8b` only when safe. Do not reset/stash/force-pull owner's edits. Human-first UI is a **hard acceptance contract**: Hero/Grid/Rows create flow; Pages & Layout central composition and contextual inspector; bounded image/text customization; same-instance full-screen TV Preview; native Vega/static-asset rights and installed-client compatibility. Reuse unaffected Wave 1 and C7 device evidence, fail closed for unsupported public layouts, no live AWS/deploy without scope.
+
+## Historical Wave 2 design planning target (superseded by executable stack)
 
 Latest [Wave 1 P5 closeout](docs/tasks/p8/wave1-closeout.md) is **GREEN / DEPLOYED** for the tested Studio UX/Export scope at source version `0.8.4`; **Phase 8 remains OPEN**. Owner approved a human-first Page Layout and Full-Screen Preview Wave 2 design. Read [`p8b` README](docs/tasks/p8b/README.md) and [design spec](docs/design/page-layout-human-first.md). **Design/documents only, NOT RUNNABLE:** no `p8b` assessment/plan/prompts/version transition/qualification is yet authorized. Do not rerun `p8` P1–P5 or silently mark Phase 8 closed.
 
