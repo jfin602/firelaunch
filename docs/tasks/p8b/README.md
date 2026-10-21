@@ -1,39 +1,50 @@
 # P8B — Phase 8 Wave 2: Human-First Page Layout & Full-Screen Preview
 
-**Status 2026-10-21:** Owner-approved design direction and documentation scope; **PLANNING ONLY — NO RUNNABLE PROMPTS, NO CODE OR VERSION BUMP, NOT QUALIFIED**. Phase 8 remains OPEN. This is the **continuation** of the initial `p8` Wave 1 stack, not a replacement for its existing P1–P5 or a new roadmap phase.
+**Status (2026-10-21): /prompt-ass + /prompt-plan + /prompt-write COMPLETE; SEVEN EXECUTABLE PROMPTS AUTHORED, NOT RUN / NOT QUALIFIED.** Root/lock on GitHub main at authoring: **0.8.4**. Phase 8 remains OPEN. This is a pre-1.0 **Phase 8 continuation B**, not a new roadmap phase or the old Wave 1 runner.
 
-## Dependency and baseline
+## Source of authority
 
-[Wave 1 P5](../p8/wave1-closeout.md) is **GREEN / DEPLOYED** for the tested Studio navigation, contextual inspector, creative review, and native Export workflow at **root/lock 0.8.4**, with a protected dated staging archive. Phase 8 is not globally closed. Inspect exact local Git HEAD, dirty P5 changes, origin/main and actual staging before writing or running Wave 2 prompts. GitHub source and a dated staging report do not prove the current laptop/worktree state.
+- [Wave 1 P5 GREEN / DEPLOYED](../p8/wave1-closeout.md) is the tested protected staging UI/export milestone; its manual P5 did **not** change root version to 0.8.5. Its report contains dated host/browser evidence, not a present-time host inspection.
+- [Human-first design contract](../../design/page-layout-human-first.md): exact creator journeys, controls, empty states, copy, media rights, responsive/focus, and parity gates.
+- [Prompt assessment](prompt-assessment.md): real existing module/editor/runtime limitations and risk split.
+- [Implementation plan](implementation-plan.md): sequential source ownership, tests, versioning, manual Wave 2 acceptance.
+- [Current state](../../CURRENT-STATE.md), [C7 R4 real Vega device evidence](../c7-export-recovery/R4-playback-evidence.md) and [Phase 9 capability model](../p9/README.md) take precedence over old historical C7/P7 partial snapshots. The actual local HEAD/dirty state must always be inspected before executing.
 
-The prior P8 P5 is a **manual Wave 1 milestone**, not an actual 0.8.5 version bump; do not call it Phase 8 final closeout. `p8b` is the planned continuation folder under the existing runner's pre-1.0 continuation grammar; final assigned versions must be derived from the **actual accepted package version and Git-verified checkpoint prefix** during `/prompt-plan`, not invented by this README. No `/activate` step. No changes to P8 P1–P5, C7 worker/ZIP or the owner-approved Phase 9 scope.
+## User-facing goal
 
-## Human-first product goal
+**Channel → Pages & Layout** becomes a first-class layout editor with a simple happy path:
 
-A creator should be able to **Choose a layout → Choose content → Preview the actual TV page** in one clear flow, with attractive defaults and no technical editing vocabulary. Treat **Pages & Layout** as a first-class Channel workspace, not a web canvas builder. The detailed [human-first design specification](../../design/page-layout-human-first.md) is normative for controls, empty states, template defaults, affordances, keyboard/touch, save feedback, mobile behavior and TV parity. Retain the restrained Desert Heat Studio chrome and the already implemented **contextual-only inspector**.
+**Name page → Choose Hero / Grid / Rows → Choose actual creator-owned content → View in Preview (including full screen).**
 
-## Wave 2 outcomes
+Home in **new channels** defaults to Hero; other new pages suggest Rows; existing saved channels are never silently redesigned. Templates are valid starter section arrangements, not a locked alternate page schema. **Six bounded section types:** Featured Hero, Content Row, Content Grid, Text Area, Image Banner and Image + Text. Friendly selected-only controls (Choose content, Change image, Edit text, Move up/down, Customize) and an unobtrusive contextual inspector replace low-level module/URL forms as the primary route. **Fullscreen** uses the SAME interactive TV Preview state and player, with explicit TV Back vs Exit and focus restoration. No freeform web editor, separate page data source or second TV preview engine.
 
-1. **Three starting page templates.** New Home starts with **Hero**; additional pages default to **Rows** unless creator selects **Grid** or **Hero**. Creation asks for page name + a visually previewed layout choice. Scaffold valid starter sections and content-selection placeholders, never fake licensed video or publish a private draft. Templates seed ordered modules; users can customize their page later without being locked into a fixed page type.
-2. **Pages & Layout workspace.** Rename the Channel subview **Pages & Shelves** → **Pages & Layout**. Show page list, large preview/editing center, and a contextual inspector only for actual selected page/section. Direct creator-language actions: Choose content, Change image, Edit text, Move up/down, Customize, Remove, Rename, New page. Show save/persistence feedback and protect unsaved edits.
-3. **Six bounded section types.** Featured Hero, Content Row, Content Grid and Text Area reuse existing `hero/rail/grid/text` modules. Add Image Banner and Image + Text through narrowly validated shared contracts; copy/asset rights and existing projects stay safe. Style controls are presets (e.g., image crop, position, spacing, background, card density); **no freeform pixel canvas** or custom HTML/CSS.
-4. **Full-screen interactive TV Preview.** A discoverable toolbar action reuses the SAME Preview state and D-pad/Back/playback behavior, supports Fullscreen API with accessible full-viewport fallback, preserves editor focus/scroll and distinguishes Exit full screen from TV Back.
-5. **Wave 2 milestone qualification and protected staging release.** One real creator journey, targeted new schema/runtime/Preview parity tests and device proof for any new native section types, one final aggregate on exact candidate, then a protected exact-hash staging deployment and short signed-in browser smoke if valid scoped authorization is available. Record **Wave 2 GREEN/NOT GREEN** and owner-visible usability findings. **Do not close overall Phase 8** or activate Phase 9 merely because this wave passes.
+All changes must be represented in canonical ChannelSpec and project equally through Studio Preview and installed native Vega. New static types and presentation presets must never be pushed to an installed app that cannot render them: conservatively block or classify Requires App Update until verified compatible. Preserve media/image ownership and public rights, unchanged approved free release #1, working Wave 1 Studio and C7 worker/ZIP/media playback.
 
-## Proposed checkpoint split (not yet authored)
+## Sequential prompt stack and versions
 
-| Proposed step | Scope | Default validation ownership |
-| --- | --- | --- |
-| P1 | Page creation templates and Home default | Focused page/schema/mutation tests, no full builds |
-| P2 | Pages & Layout editing and human-first contextual UX | Focused Studio keyboard/selection/persistence tests |
-| P3 | Static image/text sections, safe customization and Studio/native parity | Focused contracts, TV projection/renderer, ownership and compatibility tests |
-| P4 | Full-screen Preview and responsive keyboard/touch | Focused Preview state/fullscreen tests |
-| P5 | Independent Wave 2 acceptance + staging rollout | One aggregate and small actual browser/device acceptance delta |
+| Step | Version | Prompt | Responsibility |
+| --- | --- | --- | --- |
+| P1 | **0.8.5** | [Page templates](P1-page-template-foundation.txt) | New Home Hero and atomic new-page Hero/Grid/Rows seed; visual choice |
+| P2 | **0.8.6** | [Pages & Layout workspace](P2-pages-layout-workspace.txt) | Page list, central composition and contextual-only selection |
+| P3 | **0.8.7** | [Human-first section controls](P3-human-first-section-controls.txt) | Friendly edit, reorder, selection and save states |
+| P4 | **0.8.8** | [Static image/text contracts](P4-static-section-contracts.txt) | Safe schema/projection/Studio Preview and existing-project compatibility |
+| P5 | **0.8.9** | [Vega parity and compatibility](P5-vega-parity-compatibility.txt) | Native renderer and fail-closed installed-app publishing |
+| P6 | **0.8.10** | [Full-screen Preview](P6-stateful-fullscreen-preview.txt) | Reuse same TV player/state, Back/Exit and responsive access |
+| P7 | **0.8.11 proposed** | [Wave 2 staging closeout](P7-wave2-staging-closeout.txt) | MANUAL browser/native parity evidence + protected staging deploy; Wave 3 handoff |
 
-This split must be revisited at `/prompt-ass` to keep tasks <=8 minutes where feasible (15-minute hard ceiling), and to avoid forcing an unsafe schema/native change into one oversized prompt. Do not write executable `P*.txt` files or fake GREEN until explicitly asked to run `/prompt-ass + /prompt-plan + /prompt-write p8b`. The runner requires exactly one final *closeout-type* prompt per stack; that closes **Wave 2**, not Phase 8.
+P1–P6 are sequential **runner-owned implementation commits**. P7 is the exactly one final closeout-type prompt and is **browser-required/manual**: normal runner stops before it. P7 closes **Wave 2 only**, not Phase 8. Do not use `docs/tasks/p8/closeout.md` for this milestone; P7 writes `docs/tasks/p8b/wave2-closeout.md` only after direct evidence. No `/activate` or special stack activation command.
 
-## Safety and Phase 9 interaction
+## Entry and validation
 
-Keep `ChannelSpec` the only canonical page definition and maintain Studio Preview + generated native Vega semantic parity. The old `SCHEMA_VERSION=1` channels and old published manifests must remain usable or reject new features explicitly. New section types must never be remotely published to **already-installed clients that cannot render them**: classify supported approved content updates as Publish Now, unsupported sections as Requires App Update / Blocked. No implicit approval, source regeneration that destroys edits, new public artwork rights, arbitrary native OTA executable content, billing, infrastructure provisioning or physical Fire TV/Appstore claim.
+The already accepted root + two top-level lockfile version fields are **0.8.4**. P8B is a pre-1.0 continuation folder: its version offset is **4** (P1 targets 0.8.5, then consecutive patches). **Do not make a separate 0.8.5 entry bump** or rerun Wave 1 P5. Inspect the actual local checkout (`git status --short`, HEAD and root+lock versions, origin sync, P8B existing commits). Reconcile dirty P5 files without overwrite/reset/force-pull. GitHub version alone cannot prove a clean local start. Check the standard runner grammar:
 
-Reuse latest [C7 R4 GREEN](../c7-export-recovery/R4-playback-evidence.md) device playback evidence and [Wave 1 GREEN](../p8/wave1-closeout.md) for unchanged systems. Native section parity itself needs new focused proof, not a broad replay of old worker/encoding matrices. Before production actions validate schema 14, backup/rollback and explicit deploy authority.
+```bash
+npm run codex:stack:validate -- p8b
+npm run codex:stack -- p8b
+```
+
+Implementation prompts target <=8 minutes (15-minute hard stop) with focused changes/test files and affected package typechecks only; the runner owns commit/version/diff checks. Avoid repeated root builds, Studio-wide tests, browser logins, native builder, MediaConvert and expensive qualifications. P7 runs one aggregate `npm run test` after source settles, a short actual creator browser journey, focused changed-module native proof and a guarded exact-hash staging rollout with valid operator permission. Reuse prior passing C7 R4 and Wave 1 evidence for unaffected systems; no physical Fire TV or Appstore claims.
+
+## Wave 2 does not close Phase 8
+
+Following a truthful **Wave 2 GREEN/NOT GREEN, DEPLOYED/NOT DEPLOYED** outcome, the owner reviews the staging UX, identifies further friction and decides subsequent continuation work. **Do not automatically activate Phase 9, re-label P7/P5/c5 historical results or claim broad Phase 8 closure.** Project deadlines and rights/security constraints remain in force.
