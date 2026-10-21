@@ -3,6 +3,14 @@
 Bootstrap date: 2026-10-08.
 Hackathon deadline: 2026-10-23 12:00 PM PDT.
 
+## Current Phase 8 correction priority — TV-first Channel UI AFTER P8B (2026-10-21)
+
+The owner reports P8B already executed locally, beyond the GitHub `0.8.4` docs snapshot. **Preserve its completed implementation.** The screenshot reveals a Channel presentation defect: an undersized Preview beside an oversized editing form, unstyled tiny tabs, optional Preview toggle and unnecessary AI Assistant. [`c8-ui`](../tasks/c8-ui/README.md) is the **post-P8B fixed-version correction** based on the [TV-first design](../design/tv-first-channel-workspace.md), not a prerequisite to P8B or a rewrite of its prompts. Standard Channel = real 16:9 TV on top and a directly attached full-width bottom dock, only Pages & Layout / Appearance tabs. Fullscreen keeps same TV/dock and reveals editing controls by bottom-edge pointer hover plus touch/keyboard alternatives.
+
+The authored P8B P6 version is `0.8.10`; c8-ui targets unchanged `0.8.10` conditionally on actual local version/runner provenance. If P8B manual closeout or local history resulted in another version, stop and reconcile correction metadata, never overwrite source. P1–P3 c8-ui runner-owned, P4 manual browser and any separately authorized protected staging closeout. **No implementation or deployment yet from doc authoring.** Phase 8 remains OPEN.
+
+## Historical P8B authoring handoff (superseded by c8-ui post-P8B correction)
+
 ## Phase 8 Wave 2 — implementation prompts authored (2026-10-21)
 
 The owner approved `/prompt-ass + /prompt-plan + /prompt-write p8b`. [P8B continuation](../tasks/p8b/README.md) now has a full [assessment](../tasks/p8b/prompt-assessment.md), [implementation plan](../tasks/p8b/implementation-plan.md) and seven ordered prompts: **P1 page templates 0.8.5, P2 layout workspace 0.8.6, P3 section editing 0.8.7, P4 safe static image/text contracts 0.8.8, P5 native parity/compatibility 0.8.9, P6 same-state fullscreen Preview 0.8.10, P7 manual Wave 2 staging closeout target 0.8.11.** Runner-compatible pre-1.0 continuation starts from Wave 1's committed unchanged root `0.8.4`; `p8b` prompts are AUTHORED, **not yet run**, version remains 0.8.4 and no new staging release exists. Final P7 qualifies Wave 2 only; **Phase 8 remains OPEN**. Keep human-first design and conservative installed-Vega publish compatibility, do not rerun Wave 1 or unrelated native media gates.
