@@ -1,5 +1,9 @@
 # C8-UI2 — Secondary Channel Editor Rail & Fullscreen Left Overlay
 
+## Superseding c8-ui3 four-prompt closeout sequence (2026-10-21)
+
+The unrun c8-ui2 P4 remains superseded, now by [c8-ui3 P4](../c8-ui3/P4-staging-visual-closeout.txt) (not P3). The new [c8-ui3 P3](../c8-ui3/P3-true-fullscreen-clean-view.txt) is runner-owned implementation of immersive fullscreen/Clean View, and c8-ui3 P4 alone performs the protected staging deployment and Codex-browser closeout. Historical c8-ui2 P1–P4 files and tested code are unchanged. Root/lock stay 0.8.10; Phase 8 OPEN.
+
 ## Handoff to c8-ui3 final visual/staging acceptance (2026-10-21)
 
 [c8-ui2 P1–P3] are committed at unchanged `0.8.10`. No c8-ui2 P4 closeout exists at this documentation checkpoint. The owner accepted the final maximized, borderless TV mockup and requested [c8-ui3](../c8-ui3/README.md). **The outstanding c8-ui2 P4 is superseded for visual/staging closeout by c8-ui3 P3 and should NOT be run as a second staged acceptance.** Preserve historical c8-ui2 P1–P4 prompt files and their results; P4 was authored but is not claimed executed. P8B native static-layout proof and overall Phase 8 remain open.
