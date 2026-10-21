@@ -1,5 +1,9 @@
 # FireLaunch Boot Context
 
+## Current execution: c8-ui3 true fullscreen and Clean View (2026-10-21)
+
+[c8-ui3](docs/tasks/c8-ui3/README.md) now has four prompts at unchanged 0.8.10: P1/P2 normal mockup unchanged, NEW P3 implementing truly maximum 16:9 fullscreen with remote bottom-left, Exit/Hide top-right and completely hidden overlays Clean View; P4 manual protected deploy FIRST + staged signed-in Codex browser qualification. Keep existing left editor pop-out drawer, same Preview/player/editor and recovery via H (not text inputs), top-right corner/touch, Alt+E and Escape. Previous P3 staging closeout was replaced; c8-ui2 P4 remains superseded and unrun. Verify local HEAD/status/version before `npm run codex:stack:validate -- c8-ui3` and `npm run codex:stack -- c8-ui3`; runner stops before P4. Do not claim deployment/qualification before evidence. Phase 8 OPEN.
+
 ## Current owner directive — c8-ui3 final Channel visual correction (2026-10-21)
 
 The final owner-approved image makes [c8-ui3](docs/tasks/c8-ui3/README.md) the next correction. GitHub source has c8-ui2 P1–P3 at root/lock `0.8.10`; c8-ui2 P4 has not produced a closeout and is superseded for staging/visual testing by c8-ui3 P3. Read [final visual design](docs/design/channel-preview-final-composition.md). Fix seam/header padding, gray New Page toolbar, whole Channel near-black background (no canyon), largest borderless right 16:9 TV, and place Draft/Interactive + View Full Screen/Remote BELOW screen. Keep same Preview and fullscreen LEFT editor drawer. Execute after safe local sync: `npm run codex:stack:validate -- c8-ui3`; `npm run codex:stack -- c8-ui3` (P1/P2), then manual P3 deploys latest source FIRST and tests in Codex browser on staging with owner-attached mockup. No `/activate`, source version change or unauthorized deployment. P8B native static device gate and Phase 8 remain open.
