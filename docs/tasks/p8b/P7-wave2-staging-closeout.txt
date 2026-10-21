@@ -1,0 +1,34 @@
+TASK: Phase 8 / P7 — Wave 2 independent staging closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.11`.
+
+TYPE
+Independent MANUAL browser/device + protected staging milestone closeout, NOT runner implementation or final Phase 8 closure. This is the ONE final closeout-type prompt required by the p8b continuation runner; write docs/tasks/p8b/wave2-closeout.md after real evidence. **PHASE 8 REMAINS OPEN** for subsequent owner-led usability work. Do not create docs/tasks/p8/closeout.md or activate P9.
+
+MISSION
+Prove an ordinary creator can make useful Hero/Grid/Rows pages, customize static image/text sections and view the same TV experience full screen; confirm changed Studio/new native layout behavior, deploy qualified source through the protected staging workflow, and collect Wave 3 human usability findings without repeating unchanged C7/P8 Wave 1 qualification.
+
+PREFLIGHT
+Read docs/tasks/p8b/{README.md,implementation-plan.md,prompt-assessment.md}, design contract, P1–P6 handoffs and current-state ledger. Inspect actual local HEAD/dirty status and coherent P6 root+both lock versions 0.8.10, checked runner commits. Reuse latest C7 R4 actual HLS/audio/device GREEN and Wave 1 P5 staging/ZIP proof for unchanged paths. Read actual scripts/staging/README.md and guarded exact-hash archive/smoke/deploy/rollback scripts; reverify current service/source/schema/backup before touching staging. Browser authentication/device/operator privileges are real prerequisites; if absent, record NOT QUALIFIED/NOT DEPLOYED, do not invent logs or bypass. A Chrome browser attachment, if required, must be explicitly requested rather than claimed.
+
+OWNER CREATOR ACCEPTANCE
+1. ONE real signed-in desktop creator journey in the candidate: see Home Hero default for NEW channel (use safe test fixture/project only), New page with readable Hero/Grid/Rows previews and suggested Rows, create page and choose a genuine owner-owned title, reorder sections, edit Text Area, add Image Banner and Image + Text using rights-approved artwork, apply one bounded Customize preset, save/reload/reopen. Verify existing older project remains unchanged, no fake licensed catalog.
+2. Verify Pages & Layout is obvious under Channel; compact page list, big central TV composition, context-only inspector, clear save/error state, accessible keyboard Move up/down, safe delete, switching projects clears selection. No raw IDs/modules/CSS in normal path. Brief tablet/mobile layout/focus spot checks, NOT a full second and third journey.
+3. Enter View full screen from current page, verify same state/focus/playback, D-pad/Back, distinct fullscreen Exit, real browser Fullscreen API or actual fallback, scroll/focus restore after exit. Do not confuse video player fullscreen with whole-app TV Preview.
+4. Confirm current Publish-vs-Export honest, owned private content protected; new static section variants not remotely published to old incompatible installed packages. Reuse Wave 1 one-click export/worker proof. Exercise changed native static layout rendering on real x86_64 Vega VirtualDevice from a rights-safe approved test fixture/package ONCE when toolchain and owner/operator permission allow; report exact package/SDK/log/render/projection/hash. If no device parity proof, mark that gate NOT GREEN; don't claim Studio screenshots qualify native output. No new approved public release #1, paid encode or AWS/IAM changes merely for UX testing.
+5. Fix at most TWO observed bounded blockers with focused tests, not speculative loops. AFTER source settles, run npm run codex:stack:validate -- p8b, git diff --check and ONE npm run test (already builds/typechecks all workspaces then runs suites) on final candidate. No separate root npm run check/build or repeated full suites. A post-aggregate code change invalidates stale proof; focused verification then final aggregate only when needed.
+
+PROTECTED STAGING ROLLOUT
+6. On qualified safe candidate, with actual scoped operator permission, build ONE exact-source archive via existing staging scripts, retain prior hashed Studio assets, run production-bundle visible-root smoke on assembled new + previous cached entrypoints, verify SHA-256 and schema-14 compatibility, protected encrypted predeploy backup and current rollback, then guarded exact-hash deploy. Do not use ad hoc sudo/rsync to bypass grant, modify worker configuration, new VPS, AWS, creator release or destructive migrations. If blocked, report NOT DEPLOYED and do not label deployed GREEN.
+7. Postdeploy live HTTPS: signed-out and authenticated owner fresh-tab nonempty React root/no JS/CSP/MIME errors; current release/symlink/worker/schema/backup readback; short Pages & Layout, full-screen Preview and saved page/artwork/Publish-Export owner smoke, no foreign/private exposure. Preserve exact approved public release #1 byte identity. On critical breakage, execute ONLY authorized protected rollback, verify restored signed-in browser and safe schema, then mark Wave 2 NOT GREEN/ROLLED BACK.
+
+CLOSEOUT / NEXT-WAVE HANDOFF
+Write docs/tasks/p8b/wave2-closeout.md: exact candidate HEAD, dirty diff/version, P1–P6 commit IDs, tested owner/project and source, device/static section parity proof or precise blocker, desktop/tablet/mobile human-friction results, full-screen focus/back/playback, test counts, release archive/hash/symlink/schema/backup/rollback, public release #1 unchanged, qualification/deploy status. Explicit Wave 2 GREEN / NOT GREEN, DEPLOYED / NOT DEPLOYED, rollback result if any; do not claim whole Phase 8 GREEN. Rank 3–5 observed usability opportunities for Wave 3 and hand them to owner without implementing unapproved follow-ons.
+
+VERSION / SAFETY
+0.8.11 is only the proposed MANUAL Wave 2 closeout target; no automatic root/lock bump, self-commit/push, Appstore or Phase 9 activation. All operator grants must be scoped and verified; no credential disclosure, media rights relaxation, public auto-publication, paid MediaConvert or schema14 alteration. Preserve working Wave 1 staging and rollback until new release independently passes.
