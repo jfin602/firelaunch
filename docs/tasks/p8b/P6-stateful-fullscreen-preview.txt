@@ -7,6 +7,9 @@ MODEL / REASONING / USAGE
 VERSIONING
 - This prompt's assigned project version is `0.8.10`.
 
+PRIORITY UI-SHELL CONTRACT — supersedes older side-editor/fullscreen assumptions
+P6: c8-ui already implements the same-instance Full Screen toggle and bottom-edge editing-dock reveal. DO NOT build another fullscreen engine. Audit and enhance its existing state machine for edge hover (32–40px), idle hide, focused/dirty open persistence, touch handle/swipe, keyboard reveal and Exit versus TV Back. Preserve the SAME dock and Preview across standard/fullscreen transitions and test real-browser fallback in P7.
+
 GOAL
 Make View full screen an obvious Channel toolbar action that expands the SAME interactive TV Preview while retaining page, D-pad focus, playback and editor context. No second renderer or full-screen copy of ChannelSpec.
 
