@@ -38,7 +38,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     assert.match(projectId ?? '', /^ch_[a-f0-9]{32}$/);
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-    assert.ok(within(screen.getByRole('region', { name: 'Channel editing dock' })).getByRole('complementary', { name: 'Appearance editor' }));
+    assert.ok(within(screen.getByRole('region', { name: 'Channel editor rail' })).getByRole('complementary', { name: 'Appearance editor' }));
     fireEvent.change(screen.getByLabelText(/PRIMARY/), { target: { value: '#aabbcc' } });
     fireEvent.click(screen.getByRole('button', { name: /Save brand/ }));
     await waitFor(() => assert.ok(screen.getByText('REV 9 · LOCAL')));

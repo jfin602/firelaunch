@@ -68,9 +68,13 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
     assert.equal(screen.getAllByRole('region', { name: 'Interactive TV Preview' }).length, 1);
     const root = document.getElementById('channel-fullscreen-root')!;
-    assert.deepEqual(Array.from(root.children).map(child => child.className), ['channel-tv-stage', 'channel-dock']);
-    const dock = screen.getByRole('region', { name: 'Channel editing dock' });
+    assert.deepEqual(Array.from(root.children).map(child => child.className), ['channel-dock', 'channel-tv-stage']);
+    const dock = screen.getByRole('region', { name: 'Channel editor rail' });
     assert.ok(dock.contains(screen.getByRole('group', { name: 'Channel views' })));
+    assert.ok(root.querySelector('.channel-tv-stage')?.contains(preview));
+    assert.ok(preview.contains(screen.getByLabelText('Virtual remote')));
+    assert.equal(root.querySelectorAll('.tv-frame').length, 1);
+    assert.equal(root.querySelectorAll('.channel-editor').length, 1);
     const editor = dock.querySelector('.channel-editor')!;
     assert.equal(screen.queryByRole('complementary', { name: 'Layout inspector' }), null);
     let rail = screen.getByRole('navigation', { name: 'Channel pages' });
@@ -136,10 +140,11 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
 
 test('layout controls remain accessible in narrow flow', () => {
   const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
-  assert.match(css, /\.channel-presentation\{height:100%;min-height:0;min-width:0;display:grid;grid-template-rows:/);
-  assert.match(css, /\.channel-tv-stage \.tv-frame\{width:min\(100%,calc\(\(100cqh - 42px\)\*16\/9\)\)/);
-  assert.match(css, /\.channel-editor \.layout-page-rail,\.channel-editor \.layout-composition,\.channel-editor \.layout-inspector\{[^}]*overflow:auto/);
-  assert.match(css, /@media\(max-width:760px\)[\s\S]*\.channel-editor \.layout-workspace[^}]*flex-direction:column/);
+  assert.match(css, /\.channel-presentation\{grid-template-columns:clamp\(340px,39%,520px\) minmax\(0,1fr\);grid-template-rows:minmax\(0,1fr\)\}/);
+  assert.match(css, /\.channel-dock-body\{overflow-y:auto;overscroll-behavior:contain\}/);
+  assert.match(css, /\.channel-tv-stage \.tv-frame\{width:min\(100%,calc\(\(100cqh - 190px\)\*16\/9\)\)/);
+  assert.match(css, /\.channel-tv-stage \.remote-bar\{right:16px;bottom:12px/);
+  assert.match(css, /@media\(max-width:1000px\)[\s\S]*\.channel-presentation\{height:auto;min-height:0;display:flex;flex-direction:column\}/);
 });
 
 test('Image + Text section saves bounded text and preset through the normal mutation path', async () => {

@@ -746,3 +746,35 @@ body { min-width: 0; }
   .channel-appearance .panel-content form,.channel-appearance .panel-content form:first-of-type{display:block;width:100%}
 }
 @media(max-width:690px){.channel-presentation{height:calc(100dvh - 160px)}.channel-tv-stage .tv-screen{font-size:clamp(8px,1.5vw,12px)}}
+
+/* C8-UI2 P1: the existing editor and Preview share a left rail / right stage. */
+.channel-presentation{grid-template-columns:clamp(340px,39%,520px) minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.channel-dock{grid-column:1;grid-row:1;border-top:0;border-right:1px solid var(--fl-border)}
+.channel-tv-stage{grid-column:2;grid-row:1}
+.channel-dock-body{overflow-y:auto;overscroll-behavior:contain}
+.channel-editor,.channel-appearance{flex:none;overflow:visible}
+.channel-appearance .panel-content form,.channel-appearance .panel-content form:first-of-type{display:block;width:100%;margin:6px 0 12px}
+.channel-editor .layout-workspace,.channel-editor .layout-workspace.layout-has-inspector{height:auto;flex:none;display:flex;flex-direction:column;align-items:stretch;overflow:visible}
+.channel-editor .layout-page-rail,.channel-editor .layout-composition,.channel-editor .layout-inspector{flex:none;max-height:none;min-height:0;overflow:visible;border-right:0;border-bottom:1px solid var(--fl-border-soft)}
+.channel-editor .layout-inspector{grid-column:auto;grid-row:auto}
+.channel-tv-stage .preview-wrap{justify-content:flex-start;padding:14px 12px 132px}
+.channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 190px)*16/9));max-height:calc(100cqh - 190px)}
+.channel-tv-stage .remote-bar{right:16px;bottom:12px;background:#181d1d}
+.preview-fullscreen .channel-tv-stage .preview-wrap{justify-content:center;padding:6px 12px}
+.preview-fullscreen .channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 48px)*16/9));max-height:calc(100cqh - 48px)}
+.preview-fullscreen .channel-tv-stage .remote-bar{right:12px;bottom:10px;background:#181d1dcc}
+@media(max-width:1050px){
+  .channel-editor .layout-workspace.layout-has-inspector{display:flex;grid-template-rows:none}
+  .channel-editor .layout-workspace.layout-has-inspector .layout-page-rail{grid-row:auto}
+}
+@media(max-width:1000px){
+  .studio-main:has(>.channel-workspace){height:auto;min-height:100dvh;display:block;overflow:visible}
+  .channel-workspace>.workspace-main{height:auto;min-height:0;padding:0}
+  .channel-presentation{height:auto;min-height:0;display:flex;flex-direction:column}
+  .channel-dock{height:min(55dvh,480px);min-height:280px;border-right:0;border-bottom:1px solid var(--fl-border)}
+  .channel-tv-stage{height:min(58dvh,500px);min-height:300px}
+  .channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 160px)*16/9));max-height:calc(100cqh - 160px)}
+  .channel-tv-stage .preview-wrap{padding-bottom:116px}
+}
+@media(max-width:760px){.channel-editor .layout-page-rail{overflow-x:auto;overflow-y:hidden;max-height:68px}}
+@media(max-width:690px){.channel-presentation{height:auto}.channel-tv-stage{height:370px}.channel-tv-stage .tv-frame{width:min(100%,calc((100cqh - 155px)*16/9));max-height:calc(100cqh - 155px)}}
