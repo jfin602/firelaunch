@@ -10,9 +10,6 @@ VERSIONING
 TYPE
 Independent MANUAL browser/device + protected staging milestone closeout, NOT runner implementation or final Phase 8 closure. This is the ONE final closeout-type prompt required by the p8b continuation runner; write docs/tasks/p8b/wave2-closeout.md after real evidence. **PHASE 8 REMAINS OPEN** for subsequent owner-led usability work. Do not create docs/tasks/p8/closeout.md or activate P9.
 
-PRIORITY UI-SHELL CONTRACT — supersedes older side-editor/fullscreen assumptions
-P7: creator browser acceptance MUST check normal Channel loads TV on top with bottom dock butted directly below, two styled dock tabs and no AI/Close TV Preview; horizontal Pages/Sections/properties controls should avoid whole-Channel desktop scrolling at common laptop sizes. In real fullscreen, verify SAME TV and dock, bottom-edge hover slide-up, input focus keeps dock visible, touch/keyboard reveal, TV Back distinct from fullscreen Exit, selection/playback restoration. Reuse c8-ui scoped GREEN evidence if current and unchanged, but verify final combined P8B UX/staging; do not repeat redundant earlier native qualification.
-
 MISSION
 Prove an ordinary creator can make useful Hero/Grid/Rows pages, customize static image/text sections and view the same TV experience full screen; confirm changed Studio/new native layout behavior, deploy qualified source through the protected staging workflow, and collect Wave 3 human usability findings without repeating unchanged C7/P8 Wave 1 qualification.
 
