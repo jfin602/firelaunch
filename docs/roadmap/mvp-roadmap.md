@@ -3,7 +3,11 @@
 Bootstrap date: 2026-10-08.
 Hackathon deadline: 2026-10-23 12:00 PM PDT.
 
-## Approved Phase 8 Wave 2 — human-first layouts and full-screen Preview (2026-10-21)
+## Phase 8 Wave 2 — implementation prompts authored (2026-10-21)
+
+The owner approved `/prompt-ass + /prompt-plan + /prompt-write p8b`. [P8B continuation](../tasks/p8b/README.md) now has a full [assessment](../tasks/p8b/prompt-assessment.md), [implementation plan](../tasks/p8b/implementation-plan.md) and seven ordered prompts: **P1 page templates 0.8.5, P2 layout workspace 0.8.6, P3 section editing 0.8.7, P4 safe static image/text contracts 0.8.8, P5 native parity/compatibility 0.8.9, P6 same-state fullscreen Preview 0.8.10, P7 manual Wave 2 staging closeout target 0.8.11.** Runner-compatible pre-1.0 continuation starts from Wave 1's committed unchanged root `0.8.4`; `p8b` prompts are AUTHORED, **not yet run**, version remains 0.8.4 and no new staging release exists. Final P7 qualifies Wave 2 only; **Phase 8 remains OPEN**. Keep human-first design and conservative installed-Vega publish compatibility, do not rerun Wave 1 or unrelated native media gates.
+
+## Historical Wave 2 design-only direction (superseded by prompt authoring)
 
 **Current evidenced status:** [Wave 1 P5](../tasks/p8/wave1-closeout.md) is **GREEN / DEPLOYED** to protected staging for navigation, contextual-only inspector, creative review and native Export, at root/lock `0.8.4` and recorded release hash. **Phase 8 remains OPEN.** Do not edit/rerun Wave 1 P5 or treat the proposed `0.8.5` closeout target as an applied version. The owner approved **Wave 2** as a [new `p8b` planning continuation](../tasks/p8b/README.md); [human-first design specification](../design/page-layout-human-first.md) is authoritative. No Wave 2 implementation, prompt files, version entry or staging deployment has yet occurred.
 
