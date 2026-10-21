@@ -75,6 +75,8 @@ test('draft-only layouts and presets cannot enter the v1 public manifest', () =>
   const channelWith = (module: unknown) => ({ ...base.channel, pages: [{ ...base.channel.pages[0]!, modules: [module] }] });
   assert.throws(() => projectApprovedManifest({ ...base, channel: channelWith(banner) }), /Requires App Update/);
   assert.throws(() => projectApprovedManifest({ ...base, channel: channelWith({ ...base.channel.pages[0]!.modules[0], spacing: 'compact' }) }), /Requires App Update/);
+  assert.throws(() => projectApprovedManifest({ ...base, deployment: { ...base.deployment, packageId: 'com.creator.older' },
+    channel: channelWith(banner) }), /Requires App Update/);
   assert.equal(projectApprovedManifest(base).channel.pages[0]!.modules[0]!.kind, 'hero');
 });
 

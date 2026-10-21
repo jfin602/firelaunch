@@ -511,6 +511,19 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     assert.equal(hlsRelease.manifest.schemaVersion, 1);
     assert.equal(hlsRelease.manifest.channel.content[0]?.mediaUrl, hlsUrl);
     assert.doesNotMatch(hlsRelease.bytes, /managed_hls|private_object|original|staged|signedUrl|verificationEvidenceId/);
+    const staticSpec = { ...revised, pages: revised.pages.map(page => ({ ...page, modules: [
+      ...page.modules, { id: id('mod'), kind: 'image-banner' as const, title: 'About', body: 'Creator note',
+        imageContentId: revised.content[0]!.id }
+    ] })) };
+    const staticRevision = await restarted.update(owner, project.id, 3, staticSpec);
+    const blockedRequest = { ...hlsRequest, revisions: { channel: staticRevision.revision, catalog: 7 },
+      expectedLiveReleaseId: hlsRelease.manifest.releaseId };
+    await assert.rejects(hlsPublication.approve(owner, blockedRequest),
+      { code: 'CONFLICT', message: /Requires App Update/ });
+    assert.equal((await route('approve', { revisions: blockedRequest.revisions,
+      expectedLiveReleaseId: blockedRequest.expectedLiveReleaseId, bindings })).status, 409);
+    assert.equal((await new PublicReleaseResolver(restarted).current(deploymentId)).id,
+      hlsRelease.manifest.releaseId, 'incompatible approval cannot move the public release');
     await assert.rejects(hlsPublication.publish(owner, project.id, deploymentId, losingApproval.approvalId), { code: 'CONFLICT' });
     assert.equal((await new PublicReleaseResolver(restarted).current(deploymentId)).id, hlsRelease.manifest.releaseId);
     await restarted.pool.query(`INSERT INTO media_asset_lifecycle(asset_id,item_id,project_id,creator_account_id,revoked_at)

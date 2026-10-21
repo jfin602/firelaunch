@@ -3,7 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod';
 import type { PoolClient } from 'pg';
 import {
-  catalogInventorySchema, channelDeploymentSchema, channelSpecSchema, mediaUseEligible, projectApprovedManifest,
+  assertInstalledLayoutCompatible, catalogInventorySchema, channelDeploymentSchema, channelSpecSchema, mediaUseEligible, projectApprovedManifest,
   mediaRenditionSetSchema, publicationApprovalSchema, publicationBindingsSchema, publishedManifestSchema,
   type CatalogInventory, type ChannelSpec, type PublicationBindings, type PublishedManifest
 } from '@firelaunch/contracts';
@@ -52,6 +52,10 @@ export function canonicalBytes(value: unknown): string {
   return JSON.stringify(sort(value));
 }
 function conflict(message: string): never { throw new RepositoryError('CONFLICT', message); }
+function requireInstalledLayout(channel: ChannelSpec): void {
+  try { assertInstalledLayoutCompatible(channel); }
+  catch { conflict('Requires App Update: installed client does not support this layout'); }
+}
 function failure(error: unknown): never {
   if (error instanceof RepositoryError || error instanceof z.ZodError) throw error;
   if (error && typeof error === 'object' && 'code' in error && error.code === '23505') conflict('Publication state changed');
@@ -147,6 +151,7 @@ export class PublicationRepository {
 
   private async manifest(client: PoolClient, state: Locked, approvalId: string, approvedAt: string, channel: ChannelSpec,
     bindings: PublicationBindings, releaseId: string, publishedAt: string, promote = false): Promise<PublishedManifest> {
+    requireInstalledLayout(channel);
     const resolvedPlayback = await this.resolvedPlayback(client, state, bindings, false);
     try {
       const artworkCopies: PreparedArtwork[] = [];
@@ -304,6 +309,7 @@ export class PublicationRepository {
       const state = await this.locked(client, principal, input.projectId, input.deploymentId);
       const approvalId = newId('ap');
       const { channel, bindings, rollback } = await this.reviewedSelection(client, state, input, approvalId);
+      requireInstalledLayout(channel);
       const approvedAt = new Date().toISOString();
       await client.query(`INSERT INTO publication_approvals(id, creator_account_id, project_id, deployment_id,
         channel_revision, catalog_revision, expected_live_release_id, rollback_source_release_id, channel_snapshot, bindings, approved_at)
@@ -346,6 +352,7 @@ export class PublicationRepository {
         const source = await this.historical(client, state, deploymentId, row.rollback_source_release_id);
         if (!isDeepStrictEqual(source.channel, channel) || !isDeepStrictEqual(source.bindings, bindings)) conflict('Rollback snapshot changed');
       }
+      requireInstalledLayout(channel);
       await this.requireReviewedItems(client, state, projectId, bindings);
       const releaseId = releaseForApproval(approvalId);
       const publishedAt = new Date().toISOString();

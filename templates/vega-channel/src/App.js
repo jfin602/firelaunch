@@ -23,6 +23,51 @@ function SoundIcon({ muted }) {
   </View>;
 }
 
+function StaticArtwork({ source, crop, banner, font, color }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [source]);
+  const artStyle = [styles.staticArt, banner && styles.bannerArt];
+  if (source?.startsWith('https://') && !failed) return <Image source={{ uri: source }}
+    resizeMode={crop === 'contain' ? 'contain' : 'cover'} onError={() => setFailed(true)} style={artStyle} />;
+  return <View style={[artStyle, styles.missingArt]}><Text style={[font, color]}>Artwork unavailable</Text></View>;
+}
+
+function Section({ module, page, state, brand, font, focusStyle, setView }) {
+  const color = { color: brand.textColor };
+  const aligned = { textAlign: module.alignment === 'center' ? 'center' : 'left' };
+  const compact = module.spacing === 'compact';
+  const surface = module.background === 'surface' ? styles.sectionSurface : null;
+  const title = module.title && <Text style={[styles.moduleTitle, font, color, aligned]}>{module.title}</Text>;
+  if (module.kind === 'text') return <View style={[styles.module, surface, compact ? styles.compactSection : styles.comfortableSection]}>
+    {title}<Text style={[styles.body, font, color, aligned]}>{module.body}</Text>
+  </View>;
+  if (module.kind === 'image-banner' || module.kind === 'image-text') {
+    const art = <StaticArtwork source={module.image?.artwork} crop={module.crop}
+      banner={module.kind === 'image-banner'} font={font} color={color} />;
+    return <View style={[styles.module, styles.staticSection, surface, compact ? styles.compactSection : styles.comfortableSection]}>
+      {title}<View style={[styles.staticRow, module.kind === 'image-text' && module.imageSide === 'right' && styles.staticRight]}>
+        {art}<Text style={[styles.body, styles.staticCopy, font, color, aligned]}>{module.body}</Text>
+      </View>
+    </View>;
+  }
+  if (module.kind !== 'hero' && module.kind !== 'rail' && module.kind !== 'grid')
+    throw new Error(`Unsupported TV section: ${module.kind}`);
+  return <View style={[styles.module, compact && styles.compactSection]}>
+    {title}<View style={module.kind === 'grid' ? styles.grid : styles.rail}>{module.items.map(content => {
+      const focusId = itemFocusId(page.id, module.id, content.id);
+      return <Pressable key={focusId} focusable={false} onPress={() => setView(previous => ({ ...previous,
+        state: transition(previous.channel, { screen: 'page', pageId: page.id, focusId }, 'select') }))}
+        style={[styles.card, module.kind === 'hero' && styles.hero,
+          compact && styles.compactCard, state.focusId === focusId && [styles.focused, focusStyle]]}>
+        {content.artwork?.startsWith('https://') ? <Image source={{ uri: content.artwork }}
+          resizeMode={module.crop === 'contain' ? 'contain' : 'cover'} style={styles.artwork} />
+          : <View style={styles.artwork} />}
+        <Text style={[font, color, aligned]}>{content.title}</Text>
+      </Pressable>;
+    })}</View>
+  </View>;
+}
+
 function Playback({ item, muted, controls, activity, onBack, typography }) {
   const [playback, setPlayback] = useState({ status: 'loading', message: 'Loading video' });
   const [position, setPosition] = useState({ currentTime: 0, duration: 0, paused: true, muted });
@@ -161,21 +206,8 @@ export default function App() {
         style={[styles.navItem, state.focusId === navFocusId(target.id) && [styles.focused, focusStyle]]}>
         <Text style={[font, { color: brand.textColor }]}>{target.title}</Text>
       </Pressable>)}</View>
-      <ScrollView>{page.modules.map(module => <View key={module.id} style={styles.module}>
-        {module.title && <Text style={[styles.moduleTitle, font, { color: brand.textColor }]}>{module.title}</Text>}
-        {module.kind === 'text' ? <Text style={[font, { color: brand.textColor }]}>{module.body}</Text> :
-          <View style={module.kind === 'grid' ? styles.grid : styles.rail}>{module.items.map(content => {
-            const focusId = itemFocusId(page.id, module.id, content.id);
-            return <Pressable key={focusId} focusable={false} onPress={() => setView(previous => ({ ...previous,
-              state: transition(previous.channel, { screen: 'page', pageId: page.id, focusId }, 'select') }))}
-              style={[styles.card, module.kind === 'hero' && styles.hero,
-                state.focusId === focusId && [styles.focused, focusStyle]]}>
-              {content.artwork.startsWith('https://') ? <Image source={{ uri: content.artwork }} style={styles.artwork} />
-                : <View style={styles.artwork} />}
-              <Text style={[font, { color: brand.textColor }]}>{content.title}</Text>
-            </Pressable>;
-          })}</View>}
-      </View>)}</ScrollView>
+      <ScrollView>{page.modules.map(module => <Section key={module.id} module={module} page={page}
+        state={state} brand={brand} font={font} focusStyle={focusStyle} setView={setView} />)}</ScrollView>
     </> : <>
       <Text style={[styles.heading, font, { color: brand.textColor }]}>{item?.title}</Text>
       {state.screen === 'detail' ? <>
@@ -196,6 +228,12 @@ const styles = StyleSheet.create({
   screen: { flex: 1, padding: 60 }, heading: { fontSize: 48, fontWeight: 'bold' },
   nav: { flexDirection: 'row', marginVertical: 24 }, navItem: { padding: 16, marginRight: 16 },
   module: { marginVertical: 16 }, moduleTitle: { fontSize: 30, marginBottom: 12 },
+  body: { fontSize: 22, lineHeight: 32 }, sectionSurface: { backgroundColor: '#ffffff16', borderRadius: 8 },
+  compactSection: { padding: 8, marginVertical: 8 }, comfortableSection: { padding: 20 },
+  staticSection: { minHeight: 170 }, staticRow: { flexDirection: 'row', alignItems: 'center' },
+  staticRight: { flexDirection: 'row-reverse' }, staticArt: { width: '45%', height: 220, backgroundColor: '#ffffff12' },
+  bannerArt: { width: '60%' }, missingArt: { alignItems: 'center', justifyContent: 'center' },
+  staticCopy: { flex: 1, paddingHorizontal: 24 }, compactCard: { marginRight: 8 },
   rail: { flexDirection: 'row' }, grid: { flexDirection: 'row', flexWrap: 'wrap' },
   card: { width: 250, padding: 12, borderWidth: 4, borderColor: 'transparent', marginRight: 16 },
   hero: { width: 420 }, artwork: { height: 160, width: '100%', marginBottom: 12 },

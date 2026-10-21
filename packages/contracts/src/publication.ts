@@ -136,6 +136,21 @@ export function assertClientCompatible(manifestInput: unknown, clientSchemaVersi
   return manifest;
 }
 
+/** No installed-package capability record currently binds a renderer to this deployment.
+ * Keep new layouts draft-only until a verified native upgrade is recorded. */
+export function assertInstalledLayoutCompatible(channelInput: unknown): ChannelSpec {
+  const channel = channelSpecSchema.parse(channelInput);
+  if (channel.pages.some(page => page.modules.some(module =>
+    module.kind === 'image-banner' || module.kind === 'image-text' ||
+    ('crop' in module && module.crop !== undefined) ||
+    ('alignment' in module && module.alignment !== undefined) ||
+    ('spacing' in module && module.spacing !== undefined) ||
+    ('background' in module && module.background !== undefined) ||
+    ('imageSide' in module && module.imageSide !== undefined))))
+    throw new Error('Requires App Update: installed client does not support this layout');
+  return channel;
+}
+
 export function projectApprovedManifest(input: {
   approval: unknown; deployment: unknown; channel: unknown; inventory: unknown; bindings: unknown;
   releaseId: string; releaseSequence: number; previousReleaseId?: string; publishedAt: string;
@@ -144,16 +159,7 @@ export function projectApprovedManifest(input: {
 }): PublishedManifest {
   const approval = publicationApprovalSchema.parse(input.approval);
   const deployment = channelDeploymentSchema.parse(input.deployment);
-  const channel: ChannelSpec = channelSpecSchema.parse(input.channel);
-  // The installed v1 renderer cannot display these draft-only sections or presets.
-  // P5 must replace this conservative gate with verified package capabilities.
-  if (channel.pages.some(page => page.modules.some(module =>
-    module.kind === 'image-banner' || module.kind === 'image-text' ||
-    ('crop' in module && module.crop !== undefined) ||
-    ('alignment' in module && module.alignment !== undefined) ||
-    ('spacing' in module && module.spacing !== undefined) ||
-    ('background' in module && module.background !== undefined))))
-    throw new Error('Requires App Update: installed client does not support this layout');
+  const channel = assertInstalledLayoutCompatible(input.channel);
   const inventory: CatalogInventory = catalogInventorySchema.parse(input.inventory);
   const bindings = publicationBindingsSchema.parse(input.bindings);
   if (approval.creatorAccountId !== deployment.creatorAccountId || approval.creatorAccountId !== inventory.creatorAccountId ||

@@ -28,10 +28,19 @@ const content = z.strictObject({
   series: z.string().trim().min(1).max(80).optional()
 }).refine(item => item.presentation === 'information' ? !item.mediaUrl && !item.durationSeconds : !!item.mediaUrl);
 const moduleSchema = z.discriminatedUnion('kind', [
-  z.strictObject({ id: id('mod'), kind: z.literal('hero'), title: title.optional(), contentIds: z.array(id('item')).max(1) }),
+  z.strictObject({ id: id('mod'), kind: z.literal('hero'), title: title.optional(), contentIds: z.array(id('item')).max(1),
+    crop: z.enum(['cover', 'contain']).optional(), alignment: z.enum(['left', 'center']).optional(),
+    spacing: z.enum(['comfortable', 'compact']).optional() }),
   ...['rail', 'grid'].map(kind => z.strictObject({ id: id('mod'), kind: z.literal(kind), title,
-    contentIds: z.array(id('item')).max(100).refine(unique) })),
-  z.strictObject({ id: id('mod'), kind: z.literal('text'), title, body: z.string().max(2000) })
+    contentIds: z.array(id('item')).max(100).refine(unique), spacing: z.enum(['comfortable', 'compact']).optional() })),
+  z.strictObject({ id: id('mod'), kind: z.literal('text'), title, body: z.string().max(2000),
+    alignment: z.enum(['left', 'center']).optional(), background: z.enum(['theme', 'surface']).optional(),
+    spacing: z.enum(['comfortable', 'compact']).optional() }),
+  ...['image-banner', 'image-text'].map(kind => z.strictObject({ id: id('mod'), kind: z.literal(kind), title,
+    body: z.string().max(2000), imageContentId: id('item').optional(),
+    ...(kind === 'image-text' ? { imageSide: z.enum(['left', 'right']).optional() } : {}),
+    crop: z.enum(['cover', 'contain']).optional(), alignment: z.enum(['left', 'center']).optional(),
+    spacing: z.enum(['comfortable', 'compact']).optional(), background: z.enum(['theme', 'surface']).optional() }))
 ]);
 const channel = z.strictObject({
   schemaVersion: z.literal(1), id: id('ch'), title,
@@ -46,8 +55,12 @@ const channel = z.strictObject({
   const items = value.content.map(item => item.id);
   const modules = value.pages.flatMap(page => page.modules.map(module => module.id));
   if (!unique(pages) || !unique(items) || !unique(modules) || value.navigation.some(page => !pages.includes(page)) ||
-    value.pages.some(page => page.modules.some(module => module.kind !== 'text' &&
-      module.contentIds.some(item => !items.includes(item))))) context.addIssue({ code: 'custom', message: 'Invalid channel references' });
+    value.pages.some(page => page.modules.some(module =>
+      (module.kind === 'hero' || module.kind === 'rail' || module.kind === 'grid')
+        ? module.contentIds.some(item => !items.includes(item))
+        : (module.kind === 'image-banner' || module.kind === 'image-text') &&
+          !!module.imageContentId && !items.includes(module.imageContentId))))
+    context.addIssue({ code: 'custom', message: 'Invalid channel references' });
 });
 const binding = z.strictObject({ contentId: id('item'), catalogItemId: id('ci'),
   playbackAssetId: id('ma').optional(), artworkAssetId: id('ma') });

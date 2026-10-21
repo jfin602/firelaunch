@@ -7,6 +7,7 @@ import { fixtureChannel } from '../../channel-engine/test/fixtures.js';
 import { generateProject, writeGeneratedProject } from '../src/index.js';
 import { televisionFromSpec } from '@firelaunch/tv';
 import type { ChannelDeployment } from '@firelaunch/contracts';
+import { parse } from '@babel/parser';
 
 test('deterministic tree contains true shared runtime, manifest and projected content', async () => {
   const spec = fixtureChannel();
@@ -34,6 +35,33 @@ test('deterministic tree contains true shared runtime, manifest and projected co
   assert.notEqual((await generateProject({ ...spec, title: 'Another' })).fingerprint, first.fingerprint);
   const quoted = await generateProject({ ...spec, title: 'A "quoted" channel' });
   assert.match(quoted.files.get('manifest.toml')!, /title = "A \\"quoted\\" channel"/);
+});
+
+test('native source and shared projection retain ordered static sections and focus only content', async () => {
+  const old = fixtureChannel();
+  const hero = { ...old.pages[0]!.modules[0]!, crop: 'contain' as const, alignment: 'center' as const };
+  const banner = { id: `mod_${'a'.repeat(32)}`, kind: 'image-banner' as const,
+    title: 'Welcome', body: 'A story', imageContentId: old.content[0]!.id,
+    crop: 'contain' as const, background: 'surface' as const };
+  const mixed = { id: `mod_${'b'.repeat(32)}`, kind: 'image-text' as const,
+    title: 'About', body: 'Details', imageSide: 'right' as const, spacing: 'compact' as const };
+  const spec = { ...old, pages: [{ ...old.pages[0]!, modules: [banner, hero, mixed] }] };
+  const generated = await generateProject(spec);
+  const projected = JSON.parse(generated.files.get('src/channel.json')!);
+  assert.deepEqual(projected.pages[0].modules.map((module: { kind: string }) => module.kind),
+    ['image-banner', 'hero', 'image-text']);
+  assert.deepEqual(projected, televisionFromSpec(spec));
+  assert.equal(projected.pages[0].modules[0].image.artwork, old.content[0]!.artwork);
+  assert.deepEqual(projected.pages[0].modules[0].items, []);
+  const runtime = await import(`data:text/javascript,${encodeURIComponent(generated.files.get('src/tv-runtime.js')!)}`);
+  assert.equal(runtime.transition(projected, runtime.initialState(projected), 'down').focusId,
+    `item:${old.pages[0]!.id}:${hero.id}:${old.content[0]!.id}`);
+  const source = generated.files.get('src/App.js')!;
+  assert.doesNotThrow(() => parse(source, { sourceType: 'module', plugins: ['jsx'] }));
+  assert.match(source, /module\.kind === 'image-banner' \|\| module\.kind === 'image-text'/);
+  assert.match(source, /module\.imageSide === 'right'/);
+  assert.match(source, /resizeMode=\{module\.crop === 'contain'/);
+  assert.match(source, /Unsupported TV section/);
 });
 
 test('writes source once and never overwrites customized files', async () => {

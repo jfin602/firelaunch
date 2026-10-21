@@ -54,6 +54,21 @@ test('generated client verifies releases and retains last-known-good across fail
         sha256: digest(bytes) }, bytes, manifest };
     };
     const first = release(1, 'First');
+    const staticChannel = { ...first.manifest.channel, pages: first.manifest.channel.pages.map(page => ({
+      ...page, modules: [...page.modules, { id: id('mod', '9'), kind: 'image-text', title: 'About', body: 'A note',
+        imageContentId: original.content[0]!.id, imageSide: 'right', crop: 'contain', spacing: 'compact' }]
+    })) };
+    const staticManifest = { ...first.manifest, channel: staticChannel };
+    const staticBytes = canonicalBytes(staticManifest);
+    const staticPointer = { ...first.pointer, sha256: digest(staticBytes) };
+    const staticVerified = verifyRelease(staticPointer, staticBytes, config);
+    assert.equal(staticVerified.channel.pages[0].modules.at(-1)?.kind, 'image-text');
+    assert.deepEqual(staticVerified.channel.pages[0].modules.at(-1)?.items, []);
+    const unknownManifest = { ...staticManifest, channel: { ...staticChannel, pages: staticChannel.pages.map(page => ({
+      ...page, modules: [...page.modules.slice(0, -1), { id: id('mod', '9'), kind: 'unknown', title: 'Unsupported' }]
+    })) } };
+    const unknownBytes = canonicalBytes(unknownManifest);
+    assert.throws(() => verifyRelease({ ...first.pointer, sha256: digest(unknownBytes) }, unknownBytes, config));
     const second = release(2, 'Second', first.pointer.releaseId);
     const rollback = release(3, 'First', second.pointer.releaseId);
     let delivered = first;
