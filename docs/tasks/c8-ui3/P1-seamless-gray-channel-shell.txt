@@ -1,0 +1,26 @@
+TASK: Correction 8 / P1 — Seamless gray Channel shell
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.10`.
+
+GOAL
+Implement the APPROVED final visual shell of the Channel page: global nav meets secondary left editor seamlessly, topbar aligns without odd insets, editor uses the neutral New Page charcoal-gray palette, and a solid near-black Channel background covers the canyon image. Preserve committed c8-ui2 two-column structure and fullscreen LEFT drawer; P2 owns preview sizing and control relocation.
+
+PREFLIGHT
+Read docs/tasks/c8-ui3/{README.md,implementation-plan.md}, docs/design/channel-preview-final-composition.md, latest docs/CURRENT-STATE.md and c8-ui2 P1–P3 handoffs. Check actual local HEAD/status and coherent root package + both top-level lock version fields 0.8.10, preserving any uncommitted work. Require prior c8-ui2 P1–P3 implementation, not c8-ui2 P4 qualification; P4 is superseded for final staging visual acceptance. Inspect actual apps/studio/src/style.css .studio-main/.workspace/.workspace-main/.channel-presentation/.channel-dock/.topbar and any image/scenic background rules plus New Page .page-dialog palette and affected Studio shell tests. Avoid broad P8B/C7 history.
+
+IMPLEMENT
+1. Align the primary navigation and secondary LEFT editor as a single connected Studio surface. Eliminate Channel-only outer padding/gutters, odd topbar insets and visible seam gaps; keep one subtle divider where it helps orientation. Do not remove necessary keyboard focus rings or change other Studio pages.
+2. On the Channel work area ONLY, extend the existing solid near-black preview-stage background everywhere behind tool rail and TV so NO scenic canyon image bleeds through. Preserve the global main nav and topbar controls and selected project context. Maintain browser viewport coverage without overlaying dialogs.
+3. Use the dark neutral charcoal-gray surfaces and borders already used in New Page for Channel editor rail, page rows, section cards, forms and default tabs, replacing brown-heavy panel fills. Keep restrained ember orange for selected/primary, clear destructive states and creator-owned artwork/TV brand colors unchanged. Reuse c8-ui2's already-styled semantic button classes, not a new global button reset.
+4. Do not change right TV internal markup or move preview heading, fullscreen or remote (P2 owns those). Preserve all existing P8B template/media editing, rights and draft-save paths; preserve normal two columns, fullscreen LEFT drawer, Preview state, keyboard and low-height/narrow responsive behavior.
+
+VALIDATION
+Run only existing affected Studio shell/style/layout tests and ONE Studio package typecheck. Validate Channel-only background/spacing and that other Studio pages retain their canyon/brand when expected; browser DOM tests do not prove actual visual seam dimensions. Do not run root npm test/build/check, hosted browser, native device, AWS or deployment. P3 owns actual staging visual evidence. Runner owns version/diff/commit checks.
+
+HANDOFF / SAFETY
+Keep 0.8.10 unchanged in package and both lock roots; no /activate, self-commit, broad CSS reset, new model/runtime, cloud/publication/rights changes. <=8m implementation target, 15m hard stop. Report exact CSS selectors, focused results and P2 handoff.
