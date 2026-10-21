@@ -1,5 +1,9 @@
 # FireLaunch Creator Studio: Desert Heat Visual Baseline
 
+## Current Channel-only visual exception — c8-ui3 (2026-10-21)
+
+[Approved final Channel mockup contract](channel-preview-final-composition.md): use the neutral charcoal-gray New Page palette for secondary Channel editor/tools; align global and secondary left rail/topbar without stray padding; extend the dark preview background over the entire Channel workspace **hiding the scenic canyon image on Channel ONLY**. TV Preview fills the largest safe borderless 16:9 upper-right space and status/Full Screen/Remote sit BELOW it. Keep Desert Heat accent orange for selected and primary actions; retain original movie imagery and creator-owned TV brand styling. Other Studio pages keep their earlier approved background behavior. This is a planned c8-ui3 correction, not yet qualified.
+
 ## Latest Channel rail and control styling authority — c8-ui2
 
 The new [secondary Channel rail design](channel-secondary-rail.md) supersedes the old Channel bottom-dock placement, **not** the overall Desert Heat palette or full-bleed Studio shell. The editor sits as a second LEFT vertical rail beside the existing global navigation; real 16:9 TV Preview sits on the RIGHT with virtual remote below. In fullscreen the editing panel slides from the LEFT edge, not from bottom. Every Channel button/tab/action must match calm charcoal/warm neutral surfaces and restrained orange-selected/primary hierarchy: no plain browser-default white action buttons, no widespread orange media art. Keep high-contrast focus/disabled/danger states and keyboard/touch accessibility. Target only; source correction [c8-ui2](../tasks/c8-ui2/README.md) not yet qualified.
