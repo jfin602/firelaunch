@@ -14,7 +14,7 @@ const id = (prefix: string, char: string) => `${prefix}_${char.repeat(32)}`;
 const projectId = id('ch', 'a'), owner = id('cr', 'b'), itemId = id('ci', 'c'), assetId = id('ma', 'd'), artId = id('ma', 'e'), sourceId = id('src', 'f'), deploymentId = id('dep', '1');
 const contentId = `item_${bytesToHex(sha256(new TextEncoder().encode(`catalog-content-v1\0${itemId}`))).slice(0, 32)}`;
 const spec = starterChannel('Films', projectId, id('page', '2'));
-const project = { id: projectId, revision: 3, spec: { ...spec, content: [{ id: contentId, title: 'Film', description: '', artwork: 'https://cdn.example/film.png', mediaUrl: 'https://cdn.example/master.m3u8', presentation: 'video' }] }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as any;
+const project = { id: projectId, revision: 3, spec: { ...spec, pages: [{ ...spec.pages[0]!, modules: [{ id: id('mod', '3'), kind: 'rail', title: 'Videos', contentIds: [contentId] }] }], content: [{ id: contentId, title: 'Film', description: '', artwork: 'https://cdn.example/film.png', mediaUrl: 'https://cdn.example/master.m3u8', presentation: 'video' }] }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as any;
 const item = { schemaVersion: 1, id: itemId, creatorAccountId: owner, projectId, kind: 'video', sourceRecord: { sourceId, externalId: { provider: 'creator', kind: 'upload_id', value: 'a'.repeat(64) }, observedAt: new Date().toISOString(), metadata: { title: 'Film' } }, externalIdentifiers: [], mediaAssetIds: [assetId, artId] } as any;
 const source = { schemaVersion: 1, id: sourceId, creatorAccountId: owner, projectId, type: 'creator_upload', state: 'verified', permission: { retrieval: 'creator_asserted', tvDisplay: 'creator_asserted' } };
 const rights = (use: string) => ({ status: 'cleared', basis: 'creator_asserted', permittedUse: use, assertedAt: new Date().toISOString() });
@@ -57,6 +57,34 @@ test('owned release summary distinguishes published video from later private dra
     render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item, inventory, refresh: async () => inventory, onProjectUpdate: () => {} }));
     await screen.findByText(/Published in live release #2 · newer private draft changes await approval/);
     await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Review live channel' })));
+  } finally { cleanup(); globalThis.fetch = prior; }
+});
+
+test('READY owned video remains a private draft until its stable content is placed on a shelf and separately published', async () => {
+  const prior = globalThis.fetch;
+  const unplaced = { ...project, spec: { ...project.spec, pages: [{ ...project.spec.pages[0], modules: [] }] } };
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const route = String(input);
+    if (route.endsWith('/media-uploads')) return response({ uploadId: id('up', '1'), uploadState: 'verified', processing: { state: 'ready' } });
+    if (route.endsWith('/deployment')) return response({ error: { message: 'Not found' } }, 404);
+    throw new Error(route);
+  }) as typeof fetch;
+  try {
+    const firstView = render(createElement(VideoReview, { page: 'channel', onNavigate: () => {}, project: unplaced, item, inventory,
+      refresh: async () => inventory, onProjectUpdate: () => {} }));
+    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Add to channel preview' })));
+    assert.match(screen.getByText(/When this video is ready/).textContent ?? '', /collection choice.*saved separately/);
+    firstView.unmount();
+    const shelved = render(createElement(VideoReview, { page: 'channel', onNavigate: () => {}, project, item, inventory,
+      refresh: async () => inventory, onProjectUpdate: () => {} }));
+    await screen.findByText('This video is in your private channel preview.');
+    assert.equal(screen.queryByRole('button', { name: 'Add to channel preview' }), null);
+    shelved.unmount();
+    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item, inventory,
+      refresh: async () => inventory, onProjectUpdate: () => {} }));
+    await screen.findByText('Private draft · this video is not in the current live release.');
+    assert.equal(item.id, itemId);
+    assert.equal(project.spec.pages[0].modules[0].contentIds[0], contentId);
   } finally { cleanup(); globalThis.fetch = prior; }
 });
 
