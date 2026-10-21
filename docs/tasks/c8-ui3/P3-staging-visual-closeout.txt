@@ -1,0 +1,38 @@
+TASK: Correction 8 / P3 — Final Channel visual staging closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes.
+
+VERSIONING
+- Required unchanged project version: `0.8.10`.
+
+TYPE
+Exactly ONE final MANUAL browser-required correction closeout, not a runner implementation, no automatic version bump or global Phase 8 closure. This P3 **supersedes the unrun c8-ui2 P4** as the final staging+visual qualification of c8-ui2 P1–P3 together with c8-ui3 P1–P2. Do not edit the historical c8-ui2 P1–P4 prompts or fabricate prior closeout; document supersession in c8-ui3/closeout.md. Phase 8 remains OPEN.
+
+MISSION — REQUIRED ORDER
+Deploy the LATEST qualified c8-ui3 source to existing protected staging FIRST. Then, against that live deployed release, use the CODEX BROWSER to compare with the user-approved attached final mockup, including seamless tool seams, gray editor, full near-black background, borderless maximum 16:9 TV, utility actions BELOW the screen, Virtual remote LOWER RIGHT and preserved fullscreen LEFT drawer. The mockup must be supplied as an image attachment to this manual Codex invocation. If attachment absent, do not claim visual equality; describe exactly what layout could be observed.
+
+1. SOURCE, TEST AND OPERATOR PREFLIGHT.
+Read c8-ui3 README/assessment/plan/design, c8-ui2 P1–P3 handoff, c8-ui historic closeout and current staging runbook/scripts. Inspect real local git HEAD/status, P1/P2 commits and all three root/lock version fields 0.8.10. Preserve uncommitted repairs without silent reset/force pull; the archive must contain exact tested source, not a stale main version. Check existing protected staging symlink/service/schema14/current rollback, approved public FREE release #1 bytes and the grant scope for THIS candidate archive/path/hash. Run ONE npm run test on settled candidate (includes built/typechecked workspaces and all suites), npm run codex:stack:validate -- c8-ui3 and git diff --check. Do not duplicate root npm run build/check/typecheck or replay C7/Vega/MediaConvert history.
+
+2. PROTECTED DEPLOYMENT FIRST, BEFORE MAIN UI WALKTHROUGH.
+Build ONE exact-source release archive with previous hashed Studio assets retained, smoke assembled new and cached entrypoints in production-bundle visible-root checks and record independent SHA-256. Require approved command-specific deploy identity, protected encrypted predeploy backup, tested previous release rollback and schema compatibility. Deploy using the existing authorized exact-hash script ONLY, verify active release/symlink/hash/schema14, application+worker service status and public release #1 unchanged. If grant/backup/host/smoke fails, STOP with NOT DEPLOYED and do NOT replace this with localhost browser tests or invented staging evidence.
+
+3. CODEX BROWSER: REAL STAGING OWNER LOGIN.
+Navigate fresh to https://firelaunch.jfin.dev/ in the Codex browser; use fresh/cache-safe navigation so prior OAuth callback HTML/JS isn't confused with current release. Check nonempty React root, correct new hashed JS/CSS, console/network CSP/MIME failures, signed-out sign-in screen, then real owner Google sign-in through normal supported flow. Do not use fixture identity as final evidence. Confirm deployed build/release identity in real browser. If browser unavailable or cannot authenticate, mark owner staging qualification BLOCKED (not GREEN).
+
+4. FINAL VISUAL COMPARISON ON STAGING.
+Compare actual screenshots with the APPROVED ATTACHED MOCKUP (not rough approximations). At ~1440×900 and ~1280×720 record specific viewport sizes, editor/main-sidebar seam gap and topbar alignment, gray New Page-like editor/tool cards, orange selected controls, absence of canyon/background fragments in Channel, available right preview space, 16:9 fitted FRAME without bezel/border/shadow and no cropping. Confirm label 'Draft TV Preview', 16:9 Interactive and View full screen all BELOW the TV, and Virtual remote further down/right without overlapping TV. Check no unnecessary overall document scrolling, working Pages & Layout/Appearance/section dialogs, readable Save/error states. Quick tablet/phone checks only, not duplicate journeys.
+
+5. SAME EDITOR / FULLSCREEN LEFT DRAWER REGRESSION.
+In staging browser select and save one low-risk private draft change and restore original; verify reload and proper private/live rights. Enter true browser fullscreen when permitted (report fallback separately), confirm same Preview TV page/focus/player and LEFT edge editor drawer triggered by pointer/handle/Alt+E/touch emulation. Keep drawer open on focused/unsaved form, hide on idle, Exit distinct from TV Back, restore editor scroll and keyboard focus. No bottom dock, no second preview. Verify a short read-only Publish/Export status, no new public release or worker build.
+
+6. LIMITED REAL-STAGING REPAIRS AND ROLLBACK.
+At most TWO narrow directly observed correction loops: patch affected code, rerun focused tests/typecheck and one final aggregate if prior evidence invalid, assemble NEW SHA-verified archive under valid operator grant, protected redeploy and RETEST IN CODEX BROWSER AGAINST NEW ACTIVE STAGING. Do not patch live files or reuse superseded archive. If blank root, broken sign-in, lost creator data/security boundary or severe regression, use ONLY authorized protected rollback, verify restored signed-in Studio/schema/public pointer, and record ROLLED BACK / NOT GREEN.
+
+CLOSEOUT
+Write docs/tasks/c8-ui3/closeout.md with source commits/version/dirty state; aggregate test pass/fail/skip; archive SHA/deployed release/previous rollback/backup/schema/service; owner Codex browser staging URL, screenshot references, JS/CSS identities and viewport measurements; mockup similarity/discrepancies; seamless gray/black shell, borderless 16:9 TV and under-TV utility/remote, P8B page editing save/fullscreen left drawer; separate UI GREEN/NOT GREEN and STAGING DEPLOYED/NOT DEPLOYED/ROLLED BACK. Document that c8-ui3 P3 replaces the not-yet-run c8-ui2 P4 visual/staging qualification, while preserving older c8-ui2 prompts. P8B native static-section device proof is NOT automatically qualified; Phase 8 stays OPEN, Phase 9 not activated.
+
+VERSION / SAFETY
+Root and both top-level lock versions remain 0.8.10; no self-bump, self-commit/push, credential disclosure, operator bypass, creator publication, unsafe rights change, new MediaConvert, AWS/IAM, schema or native Vega build merely for visual correction. Fail closed with precise blockers instead of claiming unperformed staging/browser/image acceptance.
