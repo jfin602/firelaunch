@@ -2,12 +2,6 @@
 
 **Decision:** Owner-approved design direction, 2026-10-21, **Phase 8 Wave 2 (proposed continuation `p8b`)**. **Design specification only: NOT IMPLEMENTED / NOT QUALIFIED.** Wave 1 [P5](../tasks/p8/wave1-closeout.md) is GREEN/DEPLOYED at its tested 0.8.4 milestone; overall Phase 8 stays OPEN. See [Desert Heat baseline](studio-visual-baseline.md), [product model](../PRODUCT-MODEL.md), [architecture](../ARCHITECTURE.md), and [Wave 2 README](../tasks/p8b/README.md).
 
-## Superseding Channel workspace composition — c8-ui (2026-10-21)
-
-**This subsection supersedes the earlier side-rail/left-center-right workspace suggestions elsewhere in this file; the creator workflows, templates, sections and model/parity requirements below remain valid.** Owner-approved [TV-first Channel design](tv-first-channel-workspace.md): in normal Channel view a **large always-visible 16:9 real TV Preview** fills the top stage, and a **horizontal editing dock** directly touches its bottom edge. The dock tabs are **Pages & Layout** and **Appearance**, removing user-facing AI Assistant and the obsolete Close TV Preview button. Pages, Sections, and selected-context controls take dock width horizontally. View Full Screen is the one dedicated stage toggle; fullscreen TV reveals the SAME dock as a slide-up bottom-edge overlay with hover + keyboard + touch access, preserving TV/editor state. Avoid entire-page scrolling on desktop while allowing contained dock panel scrolling.
-
-The prior description of a **left page list / center page canvas / right inspector** now means **three horizontal regions inside the bottom dock**, NOT three columns consuming the same vertical space as TV. Selecting a section exposes properties inside the dock, not a permanent right rail. The Preview above remains the only interactive TV instance; any editor selection in dock must not turn clicks on TV content into editing instead of playback. [c8-ui](../tasks/c8-ui/README.md) is the fixed-version `0.8.4` shell correction to run before P8B when not already advanced locally. P8B adds Hero/Grid/Rows, image/text sections and richer controls within that shell. P8B fullscreen prompt should enhance/test existing functionality, not build it again.
-
 ## What a creator is trying to do
 
 > "Make my channel look good, put these videos on the right pages, and let me see the actual television experience."
