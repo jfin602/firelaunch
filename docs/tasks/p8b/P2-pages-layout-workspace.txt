@@ -7,9 +7,6 @@ MODEL / REASONING / USAGE
 VERSIONING
 - This prompt's assigned project version is `0.8.6`.
 
-PRIORITY UI-SHELL CONTRACT — supersedes older side-editor/fullscreen assumptions
-P2: the c8-ui correction already provides the top 16:9 TV stage and attached horizontal editing dock. Build a Pages list, Sections list and selected-context controls as HORIZONTAL REGIONS INSIDE THE BOTTOM DOCK; the large live page is the TV ABOVE, not a new full-height central canvas or a new right-hand inspector. Use the same two tabs Pages & Layout / Appearance, not another toolbar. No permanent right rail or Preview close. Retain the same Preview and dock state.
-
 GOAL
 Make Channel → Pages & Layout a first-class, readable workspace instead of a dense low-level Content form. Create visible page list + large editable page composition + existing contextual-only inspector, without implementing every section customization yet.
 
