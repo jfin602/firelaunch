@@ -1,5 +1,14 @@
 # FireLaunch Agent Instructions
 
+## CURRENT IMPLEMENTATION ENTRY — P8C MANUAL CODEX BROWSER STACK (2026-10-21 local / 2026-10-22 UTC)
+
+The owner explicitly approved [P8C](docs/tasks/p8c/README.md): [assessment](docs/tasks/p8c/prompt-assessment.md), [plan](docs/tasks/p8c/implementation-plan.md), and four manual executable prompt files. **DO NOT USE the runner** (`npm run codex:stack -- p8c` or its validator) or `/activate`. Invoke each prompt individually in Codex with the connected CODEX BROWSER; **each agent owns its version bump and scoped git commit(s)**, tested exact-source packaging, staging deployment under the existing approved standing grant, fresh signed-in browser debugging and evidence/handoff. P1 0.8.11 artwork/media, P2 0.8.12 first-time creator, P3 0.8.13 editor usability, P4 manual unchanged 0.8.13 final staging/native static Vega/Phase 8 closeout. Source/testing commits are NOT runner-owned. P4 commits `docs/tasks/p8/closeout.md` with truthful GREEN/NOT GREEN only after execution; Phase 9 still needs explicit owner approval.
+
+Latest c8-ui3 [closeout](docs/tasks/c8-ui3/closeout.md) is **STAGING DEPLOYED / UI NOT GREEN** at 0.8.10: correct fullscreen remote **BOTTOM RIGHT** (older P3/AGENTS bottom-left language below is superseded), fallback Clean View worked, mockup artwork scale and editor art image were discrepant, native Fullscreen API denied; P8B new static-section Vega parity remains unqualified. Preserve all historical results. Current [standing staging access](scripts/staging/README.md) permits guarded archived deploy/rollback without per-candidate sudoers rule; verify source, SHA-256, backup, schema14, rollback and active owner browser for each new manual release; it is root-equivalent on shared staging, not production authorization.
+
+---
+
+
 ## Current staging operator access (2026-10-21)
 
 The owner approved a permanent standing sudoers grant on `muffinos` for the root-owned FireLaunch staging deploy and rollback scripts, replacing per-candidate exact-hash sudoers requests. Its versioned rule and procedure are in [scripts/staging/README.md](scripts/staging/README.md). Continue to pass and verify each candidate's SHA-256, keep all source edits in Git, run the script's backup/schema/health checks, and verify the active signed-in browser after deployment. Historical task prompts and closeouts retain the grant policy under which they ran; do not ask for a new per-hash grant solely because those dated files mention one. The deploy account can effectively run candidate code as root through this standing staging path; do not extend it to production or schema-changing releases.
