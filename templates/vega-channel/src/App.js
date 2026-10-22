@@ -48,7 +48,7 @@ function HeroBackdrop({ source }) {
   const visible = source?.startsWith('https://') && source !== failedSource;
   return <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
     {visible && <Image key={source} source={{ uri: source }} resizeMode="cover"
-      onError={() => setFailedSource(source)} style={StyleSheet.absoluteFillObject} />}
+      onError={() => setFailedSource(source)} style={styles.heroBackdropImage} />}
     <View style={styles.featureDim} />
     {Array.from({ length: 24 }, (_, index) => <React.Fragment key={`edge:${index}`}>
       <View style={{ position: 'absolute', top: 0, bottom: 0, left: `${index * 2.5}%`, width: '2.6%',
@@ -58,7 +58,7 @@ function HeroBackdrop({ source }) {
     </React.Fragment>)}
     {Array.from({ length: 14 }, (_, index) => <View key={`bottom:${index}`} style={{ position: 'absolute',
       left: 0, right: 0, bottom: `${index * 4}%`, height: '4.1%', backgroundColor: '#000',
-      opacity: 0.95 * Math.pow(1 - index / 14, 2) }} />)}
+      opacity: 0.98 * Math.pow(1 - index / 14, 0.8) }} />)}
   </View>;
 }
 
@@ -137,7 +137,8 @@ function Section({ module, page, state, brand, font, focusStyle, layout, feature
         <Text style={[styles.cardType, font, color]}>{content.presentation === 'information' ? 'Book' : content.presentation === 'audio' ? 'Audio' : 'Video'}</Text>
       </Pressable>;
     });
-  return <View onLayout={onLayout} style={[styles.module, moduleSpacing, compact && styles.compactSection]}>
+  return <View onLayout={onLayout} style={[styles.module, moduleSpacing, compact && styles.compactSection,
+    featureSelector && styles.featureSelectorSurface]}>
     {title}{module.kind === 'grid' && !featureSelector ? <View onLayout={onRowLayout} style={styles.grid}>{cards}</View>
       : <ScrollView horizontal ref={rowRef} showsHorizontalScrollIndicator={false} onLayout={onRowLayout}
         onScroll={event => onRowScroll(module.id, event?.nativeEvent?.contentOffset?.x ?? 0)}
@@ -452,6 +453,7 @@ const styles = StyleSheet.create({
   scrollArea: { flex: 1 }, scrollIndicator: { position: 'absolute', right: -2, width: 2,
     borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
   feature: { flexDirection: 'row', overflow: 'hidden', marginBottom: 2 },
+  heroBackdropImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: '10%' },
   featureDim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.12)' },
   featureCopy: { justifyContent: 'center', zIndex: 1 },
   featureKicker: { color: '#E5EEE9', fontSize: 14, fontWeight: 'bold', borderLeftWidth: 4, paddingLeft: 8 },
@@ -462,6 +464,7 @@ const styles = StyleSheet.create({
     borderRadius: 5, paddingHorizontal: 14, paddingVertical: 7 },
   featureFrame: { alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   featureFallback: { color: '#E5EEE9', fontSize: 18 },
+  featureSelectorSurface: { backgroundColor: 'rgba(0,0,0,0.86)' },
   module: { marginVertical: 8 }, moduleTitle: { fontSize: 27, marginBottom: 8 },
   body: { fontSize: 22, lineHeight: 32 }, sectionSurface: { backgroundColor: '#ffffff16', borderRadius: 8 },
   compactSection: { padding: 8, marginVertical: 8 }, comfortableSection: { padding: 20 },
