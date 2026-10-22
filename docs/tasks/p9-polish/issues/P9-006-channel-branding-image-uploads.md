@@ -35,6 +35,39 @@ Branding and image sections currently expect an image URL, rather than presentin
 - Verify against markedly different source ratios (square, portrait, landscape, ultra-wide), edge-to-edge background, title/foreground readability and safe overlays. Avoid unexpected white bands, tiling, letterboxing or body-level Studio background bleed. It must be the **Vega app's background**, not the Studio's global Desert Heat canyon background.
 - If supported cleanly, simple focal positioning can be offered later; the MVP does not require a full crop editor or artistic effects.
 
+### B1. Page-specific backgrounds and channel-wide application — owner amendment 2026-10-22 13:45 UTC
+
+**Additional owner request (verbatim):**
+> "be sure to update the background image option as a per page setting. you could choose to set it on every page, or set individual images per page"
+
+**Required controls / mental model:**
+
+- A **channel-wide default background image** remains available in **Appearance**, optionally applied throughout the TV app. New pages and pages without custom overrides inherit it automatically.
+- Each selected page exposes a **Background** setting in the page's contextual Appearance/settings editor. Creators can choose **Use channel default**, **Custom image for this page**, or **Color only** (explicitly suppresses inheritance on that page). Reuse the formal P9-006 image-upload popup, visually standardized by P9-007.
+- Provide a clear, intentional **Apply to all pages** action so a creator can make a selected background image the same across **every existing page** (and set it as channel default for new pages). If some pages already have custom images/opt-outs, warn that the bulk action will replace their background settings and require explicit confirmation before overwriting. Bulk action may instead use an equivalent safe inheritance model as long as all existing pages visibly match and future default is unambiguous.
+- **Per-page change must not affect other pages.** Reverting one page to "Use channel default" removes only its custom override; removing the channel default falls back to that page's saved color or channel color without deleting custom per-page images. "Color only" remains meaningful even when a channel default image exists.
+- The creator should be able to tell at a glance whether the current page is **inheriting**, **overriding**, or **suppressing** the image. Avoid complex multi-level settings or hidden implicit overrides.
+
+**Deterministic rendering priority for page P:**
+
+1. If P has a saved **custom background image**, render that image.
+2. If P explicitly chooses **Color only**, render P's configured color if such a page color exists, otherwise the channel's selected background color.
+3. If P is set to **Use channel default**, render the channel-wide default background image when present; otherwise the configured color fallback.
+
+The active image always replaces the visible color on that page, but the saved color is retained as fallback. **All image backgrounds remain aspect-preserving `cover`, without stretching**, even for square/portrait source art; cropping of decorative backgrounds is permitted. This does **not** change P9-008's `contain` requirement for content artwork.
+
+**Data/runtime:** Use a channel-scoped default background asset reference plus optional **stable page-ID-scoped** override/mode; prefer existing page/appearance contracts. Preserve existing channels' global color and image configuration on upgrade; treat legacy channel background image as the inherited default unless evidence requires migration. Save page override independently. Changing selected page in Studio's interactive TV Preview and navigating between pages in fullscreen/exported Vega must immediately display the correct resolved background. Do not bake only one channel-wide bitmap into every view or depend on an authenticated Studio URL from the native package.
+
+**Acceptance for amendment:**
+
+1. Set a channel default background and create a new page: the new page inherits it; all existing non-overridden pages show it.
+2. Change only Page B to image B: Page A still shows the default; Page B shows image B. Reload/relogin and confirm the distinction remains.
+3. Set Page C to Color only while a channel default exists: it displays color without an image. Revert to Use channel default: image returns.
+4. Apply a chosen background to every existing page: all TV pages display it, including those previously overridden **only after explicit overwrite confirmation**. Future new pages inherit the same default.
+5. Remove one page's override: it reverts to the channel default, not an unrelated image or blank background. Remove the global image: non-overridden pages use the saved color; custom-page images remain intact.
+6. Verify aspect-safe filling, readable foreground, refresh/session persistence and page-to-page navigation across normal/fullscreen Preview and freshly exported native Vega package/VirtualDevice. No page uses the Studio's canyon image unintentionally.
+7. Retain previous page IDs, titles, ordering, sections and image assets. Avoid altering video/media publishing, native channel releases or other creators' pages.
+
 ### C. Channel logo replaces visible app title
 
 - In **Appearance**, provide **Channel Logo** with Upload/Replace/Remove.
@@ -62,7 +95,7 @@ Branding and image sections currently expect an image URL, rather than presentin
 ## Acceptance tests / visual gates
 
 1. On a new or existing channel, creator can **choose a logo image from local disk in a popup**, preview, save, reload and see it in place of text title in interactive/fullscreen Vega UI; removing it restores the channel title.
-2. Creator can upload a **background image** in Appearance. It replaces the displayed app background color; remove returns the saved color. Portrait/square/wide source images fill a **16:9 TV preview without stretch** (center crop where needed) and do not introduce white bars or unreadable overlays.
+2. Creator can upload a **background image** in Appearance. The channel-wide default and each page-specific override behave according to **B1** (inherit / custom / color only / Apply to all pages); removing images restores saved color fallbacks. Portrait/square/wide backgrounds fill a **16:9 TV preview without stretch** (center crop where needed) and do not introduce white bars or unreadable overlays.
 3. Creator can upload/replace/remove an image for **Image Banner** and **Image + Text** sections, with preview and correct section-targeted persistence. The workflow never *requires* a pasted URL.
 4. Unsupported/oversized/malformed file produces a clear recoverable error. Cancel, failed upload and retry do not corrupt the previously saved image.
 5. Assets remain scoped to creator/channel, survive reload and service restart and cannot be fetched/attached by a different creator without proper authorization.
@@ -75,6 +108,6 @@ Branding and image sections currently expect an image URL, rather than presentin
 
 - Coordinate with **P9-005**: Add Section remains compact, while each image-based section's existing Edit Section control launches the shared image upload dialog. Do not make the entire editor rail taller or duplicate large permanent forms.
 - Coordinate with **P9-004** on a one-time asset rights confirmation and with Phase 8 P8C artwork/media work; inspect current source to avoid overwriting what Phase 8 has already fixed.
-- Keep **logo / app background / section-image** semantics distinctly scoped and preserve fallback states.
+- Keep **logo / channel-default background / per-page background / section-image** semantics distinctly scoped and preserve fallback states. Coordinate page settings placement with P9-005.
 - High-priority MVP implementation, but avoid scope creep into a full art editor, AI image generation, media CDN overhaul, global layout rearchitecture, or installed-app hot updates.
 - **Documentation only:** not implemented, deployed or qualified.
