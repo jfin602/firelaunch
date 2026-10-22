@@ -54,6 +54,8 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
   const [state, setState] = useState<TvState | null>(null);
   const current = reconcile(tv, state);
   const screenRef = useRef<HTMLDivElement>(null);
+  const scrollIndicatorRef = useRef<HTMLSpanElement>(null);
+  const scrollIndicatorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const tvRef = useRef(tv);
   const stateRef = useRef(current);
@@ -97,6 +99,21 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
     focused?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }, [current.focusId, current.pageId, current.screen]);
 
+  useEffect(() => () => { if (scrollIndicatorTimer.current) clearTimeout(scrollIndicatorTimer.current); }, []);
+  const showScrollPosition = (event: React.UIEvent<HTMLDivElement>) => {
+    const content = event.currentTarget;
+    const indicator = scrollIndicatorRef.current;
+    if (!indicator || content.scrollHeight <= content.clientHeight + 1) return;
+    const size = Math.max(4, content.clientHeight / content.scrollHeight * 100);
+    const travel = 100 - size;
+    const progress = content.scrollTop / (content.scrollHeight - content.clientHeight);
+    indicator.style.height = `${size}%`;
+    indicator.style.top = `${Math.max(0, Math.min(travel, progress * travel))}%`;
+    indicator.classList.add('is-scrolling');
+    if (scrollIndicatorTimer.current) clearTimeout(scrollIndicatorTimer.current);
+    scrollIndicatorTimer.current = setTimeout(() => indicator.classList.remove('is-scrolling'), 900);
+  };
+
   const page = tv.pages.find(candidate => candidate.id === current.pageId)!;
   const item = activeItem(tv, current);
   const privateDrafts = hosted && inventory ? inventory.items.filter(value => value.kind === 'video' && !spec.content.some(content => content.id === catalogContentId(value.id))).slice(0, 8) : [];
@@ -112,7 +129,7 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
             {tv.brand.showTitle && <strong className="tv-logo">{tv.brand.logo && <img src={artwork(tv.brand.logo)} alt=""/>}{tv.title}</strong>}
             <nav className="tv-nav" aria-label="TV pages">{tv.pages.map(target => <button key={target.id} data-tv-focus={navFocusId(target.id)} className={'tv-nav-button' + focus(navFocusId(target.id))} onClick={() => setState({ screen: 'page', pageId: target.id, focusId: navFocusId(target.id) })}>{target.title}</button>)}</nav>
           </header>
-          <div className="tv-content" key={page.id}>
+          <div className="tv-content-wrap" key={page.id}><div className="tv-content" onScroll={showScrollPosition}>
             {page.modules.length === 0 && <div className="tv-empty">Your channel is ready for content.<small>Add content to light up this screen.</small></div>}
             {page.modules.map(module => <section className={`tv-module tv-${module.kind} tv-crop-${module.crop ?? 'cover'} tv-align-${module.alignment ?? 'left'}`} key={module.id}>
               {module.title && <h3>{module.title}</h3>}
@@ -131,7 +148,7 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
               <h3>Private video drafts · artwork preview only</h3><div className="tv-items">{privateDrafts.map(draft =>
                 <div className="tv-card" key={draft.id}><span className="tv-art"><OwnedArtwork item={draft} assets={inventory!.mediaAssets} projectId={spec.id} accountId={accountId ?? null} className="studio-draft-art" fallback={<span aria-label="Artwork unavailable">▣</span>}/></span><span className="tv-card-caption">{draft.creatorOverrides?.title ?? draft.sourceRecord.metadata.title}</span></div>)}</div>
             </section>}
-          </div>
+          </div><span className="tv-scroll-indicator" ref={scrollIndicatorRef} aria-hidden="true" /></div>
         </> : item && <div className={'tv-overlay tv-' + current.screen}>
           {current.screen === 'detail' ? <>
             <PreviewArtwork contentId={item.id} source={item.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/>

@@ -244,7 +244,7 @@ export default function App() {
   const page = channel.pages.find(candidate => candidate.id === state.pageId);
   const item = activeItem(channel, state);
   const brand = channel.brand;
-  const focusStyle = { borderColor: brand.primaryColor, backgroundColor: `${brand.primaryColor}22` };
+  const focusStyle = { borderColor: brand.primaryColor };
   const font = { fontFamily: brand.typography === 'serif' ? 'serif' : 'sans-serif' };
   if (state.screen === 'playback' && item) return <Playback key={item.id} item={item}
     muted={channel.playback.startMuted} controls={controls} activity={playbackActivity}
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   artwork: { height: 124, width: '100%', marginBottom: 8 },
   brandLogo: { width: 160, height: 80, resizeMode: 'contain' },
   detailArtwork: { width: 420, height: 240, resizeMode: 'contain', marginBottom: 20 },
-  focused: { transform: [{ scale: 1.015 }] },
+  focused: {},
   playerScreen: { flex: 1, backgroundColor: '#000000' },
   fullscreenVideo: { ...StyleSheet.absoluteFillObject },
   playerTop: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center',

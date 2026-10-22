@@ -3,10 +3,10 @@ export function tvLayout(width, height) {
   const horizontalInset = Math.max(28, Math.min(64, width * 0.045));
   const topInset = Math.max(12, Math.min(32, height * 0.035));
   const contentWidth = Math.max(320, width - horizontalInset * 2);
-  const heroArtworkHeight = Math.min(height * 0.24, contentWidth * 0.62 * 9 / 16);
+  const heroArtworkHeight = Math.min(height * 0.34, contentWidth * 0.58 * 9 / 16);
   const heroWidth = Math.min(contentWidth, heroArtworkHeight * 16 / 9 + 16 * scale);
-  const cardWidth = Math.min(250, Math.max(190, contentWidth * 0.22));
-  const cardArtworkHeight = Math.min(124, height * 0.115);
+  const cardArtworkHeight = Math.min(height * 0.17, contentWidth * 0.26 * 9 / 16);
+  const cardWidth = Math.min(contentWidth, cardArtworkHeight * 16 / 9 + 16 * scale);
   return { scale, horizontalInset, topInset, heroArtworkHeight, heroWidth, cardWidth, cardArtworkHeight };
 }
 
