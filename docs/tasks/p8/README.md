@@ -1,5 +1,12 @@
 # P8 — Creative Studio UX & Pipeline Confirmation
 
+## CURRENT EXECUTION HANDOFF — P8C MANUAL PROMPTS (2026-10-21 local / 2026-10-22 UTC)
+
+**Phase 8 OPEN.** Owner-selected manual browser-led P8C is now [assessed](../p8c/prompt-assessment.md), [planned](../p8c/implementation-plan.md) and [written](../p8c/README.md): P1 `0.8.11` artwork/media, P2 `0.8.12` first-time creator, P3 `0.8.13` editor usability, P4 at **unchanged 0.8.13** final phase acceptance. All four are **independent MANUAL prompts with Codex browser**; NO runner, NO `/activate`. P1–P3 individually bump root/lock, TEST, COMMIT, deploy through protected standing staging grant and run real owner browser debugging; P4 does final aggregate, owner-browser/staging, bounded Vega static-section device parity and **commits `docs/tasks/p8/closeout.md`** after execution (GREEN/NOT GREEN truthful). No prompt has been run or product version changed from this docs authoring. Existing c8-ui3 staging is 0.8.10 **DEPLOYED/UI NOT GREEN**, not final P8C proof. P9 starts only after explicit approved `0.9.0` handoff. Historical initial P8C plan-only wording and older c8-ui runner plans below are superseded.
+
+---
+
+
 ## Latest approved Phase 8 final continuation — P8C (2026-10-21 local / 2026-10-22 UTC)
 
 **PHASE 8 OPEN.** The owner approved [P8C Final Creator UX and Phase Closeout](../p8c/README.md) and its [implementation plan](../p8c/implementation-plan.md). This documentation alignment **does not implement P8C, deploy its candidate or write final `closeout.md`**. `p8c` has exactly three implementation checkpoints (artwork/media clarity `0.8.11`, first-time creator experience `0.8.12`, editor usability polish `0.8.13`) and **one independent manual P4 at unchanged `0.8.13`**. P4 is authoritative for final staging/editor acceptance, targeted Vega static-layout parity and **the full Phase 8 GREEN/NOT GREEN disposition**, recorded in `docs/tasks/p8/closeout.md` only after direct evidence. Phase 9 `0.9.0` requires an explicit subsequent owner-approved handoff.
