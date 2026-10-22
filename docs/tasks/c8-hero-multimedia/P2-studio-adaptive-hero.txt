@@ -1,0 +1,27 @@
+TASK: Correction 8 / P2 — Studio adaptive hero and one visible row
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.17`.
+
+TYPE
+Focused correction implementation; RUNNER OWNS Git commit. No self-commit, deploy, browser-required evidence, package bump, `/activate`, or Phase 8 final disposition.
+
+MISSION
+Make current Studio's SAME mounted interactive TV Preview show the selected media item's featured title/copy/artwork in one cinematic Hero area, with exactly ONE selectable content row directly underneath in the initial 16:9 TV viewport. Moving focus in that row changes the hero, not playback. The owner wants the existing simple `snabble tv` format modernized, NOT a generic streaming-app redesign.
+
+PREFLIGHT
+Read accepted P1 runner commit and `docs/tasks/c8-hero-multimedia` README/assessment/plan/design. Check coherent 0.8.17 versions and actual dirty/source prefix. Inspect `apps/studio/src/Preview.tsx`, `style.css` `.tv-*` selectors, `PreviewArtwork` owner-safe resolver, shared `packages/tv` helper and relevant Studio tests. The owner will attach mock artwork to MANUAL P4, not to this runner task. Don't invent a reference path or duplicate image from a concept mock.
+
+IMPLEMENT
+1. Render eligible Hero pages using one new bounded Preview presentation (hero copy/foreground art + atmospheric background + first selector row) driven by P1's shared selection. Don't render the old one-item Hero card as a second giant row. Preserve the stored Hero/first rail content, author order, all other modules and selected media. Rows/Grid/static pages unaffected.
+2. Display title, safe truncated description, only available artist/author/year/category/series and media-aware Watch/Listen/Explore/Listen to Audiobook label. A book without audio MUST NOT show Play. Background: same existing authorized artwork blurred/darkened/cropped with gradient if safe; FOREGROUND landscape/square/portrait always fits intended natural proportions without stretching/cropping book covers. Never use generated art, private original media URLs in spec, a new CDN pipeline or FireLaunch Studio's global theme.
+3. For artwork too small, unavailable, revoked or not rights-cleared, show neutral brand-tinted/contrasting gradient and honest readable fallback (don't leak private blob URL or escalate permissions). Keep background low-contrast to prioritize title. Reuse existing private owner artwork resolver without generating a second API path.
+4. Fit top nav + hero roughly 40–50% stage height + one bottom row into 1280x720 and 1920x1080 TV frames, no forced vertical scroll to reveal first selector row. Additional creator-authored rows/sections remain below and scrollable when intentionally navigating to them. Horizontal D-pad row carousel can scroll; maintain focus border using existing creator brand accent. Preserve 16:9 borderless frame, fullscreen Clean View, editor left drawer and remote bottom RIGHT.
+5. Build efficient reactive selection transition: no player remount or large image decode on every unrelated state change, stable selected card, race-safe image loading and reduced-motion-friendly treatment. Selecting bottom card via keyboard/virtual remote updates title/copy/artwork instantly; Select opens existing item detail and Back returns to same selected card without playback on focus.
+
+VALIDATION
+Add focused Studio Preview tests for 720p/1080p geometries, missing/small/square/portrait/landscape artwork, focus-driven text and media action, no duplicate hero row, no unintended vertical scroll-to-row, old Rows/Grid parity and detail/Back/playback unaffected. Run changed Studio/typecheck plus `git diff --check`, no full `npm run test`, staging deployment, live browser or native package. Keep root and BOTH lock versions unchanged 0.8.17. LEAVE changes UNCOMMITTED for the runner; concise P3 handoff and truthful evidence. No new publication/rights or video encoding.
