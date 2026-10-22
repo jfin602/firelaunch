@@ -36,7 +36,8 @@ export function PreviewArtwork({ contentId, source, inventory, projectId, accoun
   const privateUrl = useOwnedArtwork(projectId ?? '', accountId ?? null, objectId, null, contentId);
   const [failed, setFailed] = useState('');
   const url = privateUrl && privateUrl !== failed ? privateUrl : artwork(source);
-  return <img src={url} alt="" onError={() => setFailed(url)}/>;
+  return url === failed ? <span className="preview-artwork-fallback" role="img" aria-label="Artwork unavailable">▣</span>
+    : <img src={url} alt="" onError={() => setFailed(url)}/>;
 }
 
 export function Preview({ spec, selectedPageId, hosted = false, accountId, libraryRevision = 0, fullscreen = false, controlsVisible = true, onHideControls, onEnterFullscreen, onExitFullscreen, enterButtonRef, exitButtonRef }: { spec: ChannelSpec; selectedPageId?: string | undefined; hosted?: boolean; accountId?: string | null | undefined; libraryRevision?: number; fullscreen?: boolean; controlsVisible?: boolean; onHideControls?: () => void; onEnterFullscreen?: () => void; onExitFullscreen?: () => void; enterButtonRef?: React.Ref<HTMLButtonElement>; exitButtonRef?: React.Ref<HTMLButtonElement> }) {

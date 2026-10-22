@@ -158,6 +158,50 @@ test('layout controls remain accessible in narrow flow', () => {
   assert.match(composition, /@media\(max-height:760px\)\{\.channel-presentation:not\(\.preview-fullscreen\) \.channel-tv-stage \.remote-bar span\{display:none\}\}/);
   assert.match(composition, /\.preview-fullscreen \.channel-tv-stage \.preview-heading\{position:absolute/);
   assert.match(css, /@media\(max-width:1000px\)[\s\S]*\.channel-presentation\{height:auto;min-height:0;display:flex;flex-direction:column\}/);
+  assert.ok(css.lastIndexOf('.tv-hero .tv-card,.preview-fullscreen .tv-hero .tv-card{width:90%;max-width:100%}') > css.lastIndexOf('.preview-fullscreen .tv-hero .tv-card{width:min(100%,42em)}'));
+});
+
+test('saved owner artwork resolves to the same private image in editor and TV', async () => {
+  const originalFetch = globalThis.fetch, create = URL.createObjectURL, revoke = URL.revokeObjectURL;
+  const itemId = `ci_${'8'.repeat(32)}`, assetId = `ma_${'9'.repeat(32)}`, objectId = `ma_${'a'.repeat(32)}`;
+  const sourceId = `src_${'a'.repeat(32)}`, externalId = { provider: 'creator', kind: 'upload_id', value: 'owned-film' };
+  const unknown = { status: 'unknown', basis: 'none', permittedUse: 'none' };
+  const contentId = catalogContentId(itemId);
+  const ownedSpec = fixtureChannel();
+  ownedSpec.content[0] = { ...ownedSpec.content[0]!, id: contentId, artwork: 'assets/catalog-placeholder.png' };
+  const hero = ownedSpec.pages[0]!.modules[0]!;
+  if (hero.kind !== 'hero' && hero.kind !== 'rail' && hero.kind !== 'grid') throw new Error('Expected artwork section');
+  hero.contentIds = [contentId];
+  const project = { ...first, spec: ownedSpec };
+  URL.createObjectURL = () => 'blob:https://studio.example/owned-preview';
+  URL.revokeObjectURL = () => {};
+  const requests: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input); requests.push(path);
+    if (path === '/api/auth/session') return json(session);
+    if (path === '/api/projects') return json([project]);
+    if (path === `/api/projects/${project.id}`) return json(project);
+    if (path === `/api/projects/${project.id}/catalog`) return json({ schemaVersion: 1, revision: 1, projectId: project.id, creatorAccountId: session.accountId,
+      sources: [{ schemaVersion: 1, id: sourceId, projectId: project.id, creatorAccountId: session.accountId, type: 'creator_upload', state: 'discovered', permission: { retrieval: 'unknown', tvDisplay: 'unknown' } }], collections: [],
+      items: [{ schemaVersion: 1, id: itemId, projectId: project.id, creatorAccountId: session.accountId, kind: 'video', mediaAssetIds: [assetId], sourceRecord: { sourceId, externalId, observedAt: '2026-10-21T00:00:00.000Z', metadata: { title: 'Oceans' } }, externalIdentifiers: [externalId] }],
+      mediaAssets: [{ schemaVersion: 1, id: assetId, projectId: project.id, creatorAccountId: session.accountId, catalogItemId: itemId, kind: 'artwork', location: { type: 'private_object', objectId }, tvDisplayRights: unknown, tvPlaybackRights: unknown, deliveryEligible: false }] });
+    if (path.endsWith('/capability')) return json({ capability: 'private-header' });
+    if (path.endsWith('/content')) {
+      assert.equal(new Headers(init?.headers).get('x-private-capability'), 'private-header');
+      return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { headers: { 'content-type': 'image/jpeg' } });
+    }
+    throw new Error(`Unexpected ${path}`);
+  }) as typeof fetch;
+  try {
+    render(createElement(App));
+    await screen.findByRole('button', { name: 'Switch workspace, current channel Wild Earth' });
+    fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
+    const editor = screen.getByRole('region', { name: 'hero section 1' });
+    const tv = screen.getByRole('region', { name: 'Interactive TV Preview' });
+    await waitFor(() => assert.equal(editor.querySelector('.layout-tile img')?.getAttribute('src'), 'blob:https://studio.example/owned-preview'), { onTimeout: () => new Error(requests.join('\n')) });
+    await waitFor(() => assert.equal(tv.querySelector('.tv-art img')?.getAttribute('src'), 'blob:https://studio.example/owned-preview'));
+    assert.doesNotMatch(document.body.innerHTML, /private-header|private-objects/);
+  } finally { cleanup(); globalThis.fetch = originalFetch; URL.createObjectURL = create; URL.revokeObjectURL = revoke; dom.window.history.replaceState(null, '', '/'); }
 });
 
 test('Image + Text section saves bounded text and preset through the normal mutation path', async () => {

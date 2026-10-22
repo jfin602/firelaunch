@@ -652,6 +652,7 @@ body { min-width: 0; }
 .layout-hero .layout-tiles{grid-template-columns:minmax(0,1fr)}.layout-tile{min-width:0;display:grid;gap:5px}
 .layout-tile img{width:100%;height:90px;object-fit:cover;border-radius:5px;background:#352721}.layout-hero .layout-tile img{height:150px}
 .layout-tile span{font-size:13px}.layout-advanced{margin:20px 0;border-top:1px solid var(--fl-border-soft);padding-top:16px}
+.layout-tile .preview-artwork-fallback,.tv-art .preview-artwork-fallback{display:grid;place-items:center;width:100%;height:100%;background:#303236;color:#b8b9b6;font-size:1.5em}.layout-tile .preview-artwork-fallback{min-height:90px}.layout-hero .layout-tile .preview-artwork-fallback{min-height:150px}
 .layout-advanced summary{cursor:pointer;font-weight:700}.layout-advanced>p{color:var(--fl-muted)}
 .layout-inspector{min-width:0}.layout-inspector .panel-content{padding:20px}.layout-inspector .module-editor{margin-top:12px}
 @media(max-width:1350px){.layout-workspace.layout-has-inspector{grid-template-columns:150px minmax(0,1fr)}.layout-inspector{grid-column:2}}
@@ -945,3 +946,6 @@ body:has(.preview-fullscreen){overflow:hidden}
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover { background: #9b9fa2; }
+
+/* Keep the featured card close to the approved TV composition in both modes. */
+.tv-hero .tv-card,.preview-fullscreen .tv-hero .tv-card{width:90%;max-width:100%}

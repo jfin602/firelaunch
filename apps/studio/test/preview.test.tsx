@@ -5,7 +5,7 @@ import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
 import { televisionFromSpec, initialState, itemFocusId, navFocusId } from '@firelaunch/tv';
-import { Preview } from '../src/Preview.js';
+import { Preview, PreviewArtwork } from '../src/Preview.js';
 import { keyboardCommand, navigate, reconcile } from '../src/preview-state.js';
 import { studioVideoSource } from '../src/VideoPlayer.js';
 import { createHash } from 'node:crypto';
@@ -71,6 +71,19 @@ test('hosted Preview projects saved private artwork visually without changing Ch
     await waitFor(() => assert.equal(view.container.querySelector('.studio-private-artwork img')?.getAttribute('src'), 'blob:http://localhost/studio-art'));
     assert.match(view.container.querySelector('.studio-private-artwork')?.textContent ?? '', /artwork preview only/);
   } finally { cleanup(); globalThis.fetch = previousFetch; URL.createObjectURL = create; URL.revokeObjectURL = revoke; }
+});
+
+test('editor and TV artwork show an honest fallback when the saved source is unavailable', () => {
+  try {
+    const view = render(createElement('div', {},
+      createElement('div', { className: 'layout-tile' }, createElement(PreviewArtwork, { contentId: 'missing', source: 'assets/catalog-placeholder.png', inventory: null })),
+      createElement('div', { className: 'tv-art' }, createElement(PreviewArtwork, { contentId: 'missing', source: 'assets/catalog-placeholder.png', inventory: null }))));
+    const images = view.container.querySelectorAll('img');
+    assert.equal(images.length, 2);
+    for (const image of images) fireEvent.error(image);
+    assert.equal(view.container.querySelectorAll('img').length, 0);
+    assert.equal(view.container.querySelectorAll('[aria-label="Artwork unavailable"]').length, 2);
+  } finally { cleanup(); }
 });
 
 test('Studio replaces only canonical managed HLS with its owner-scoped same-origin route', () => {
