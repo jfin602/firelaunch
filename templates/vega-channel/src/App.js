@@ -56,9 +56,9 @@ function HeroBackdrop({ source, backgroundColor }) {
       <View style={{ position: 'absolute', top: 0, bottom: 0, right: `${index * 1.25}%`, width: '1.35%',
         backgroundColor, opacity: 0.98 * Math.pow(1 - index / 24, 1.6) }} />
     </React.Fragment>)}
-    {Array.from({ length: 14 }, (_, index) => <View key={`bottom:${index}`} style={{ position: 'absolute',
-      left: 0, right: 0, bottom: `${index * 4}%`, height: '4.1%', backgroundColor,
-      opacity: 0.98 * Math.pow(1 - index / 14, 0.8) }} />)}
+    {Array.from({ length: 12 }, (_, index) => <View key={`bottom:${index}`} style={{ position: 'absolute',
+      left: 0, right: 0, bottom: `${10 + index * 2}%`, height: '2.1%', backgroundColor,
+      opacity: 0.98 * Math.pow(1 - index / 12, 1.5) }} />)}
   </View>;
 }
 
