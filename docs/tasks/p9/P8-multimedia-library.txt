@@ -1,0 +1,24 @@
+TASK: Phase 9 Polish manual P8 — P9-010 multimedia-library
+OWNER ISSUE: docs/tasks/p9-polish/issues/P9-010-multimedia-library-formalization.md
+SUGGESTED VERSION ONLY: 0.9.8; actual baseline checked at runtime.
+
+BASELINE OVERRIDE: clean 0.9.0 is already an owner-approved version baseline, not P1 implementation. Target this prompt's checked-in sequence 0.9.8 only after verifying actual previous accepted version; root package and both top-level lock fields must agree. Phase 8 CLOSED BY OWNER with documented NOT GREEN exceptions; do not rerun Phase 8 as entry gate.
+
+MISSION — P9-010
+Formalize current Library after CONFIRMED P8D Audio MP3 and Book Showcase baseline. Main Library category destinations All / Videos / Audio / Books / Assets (logos, backgrounds, section art, posters) in one coherent Desert Heat UI. Respect video Watch, MP3 Listen, Book detail + optional SAME-book audiobook; NO TV book reader or fake unsupported formats. Creator-friendly status/cards and genuine add/edit flows, remove old video-only intro/catalog teaser and redundant rights/legal lines; keep existing functional import tools. Design assets reusable by logo/global-per-page background/section image pickers, NOT auto-published as channel content. Do not delete referenced assets, don't duplicate storage or create a new media backend.
+
+ISSUE-SPECIFIC BROWSER / ACCEPTANCE MATRIX
+Use existing P8D owned video, MP3 audio and book + audiobook in selected project; cards/categories/entry actions are type-specific and usable in real browser, including empty and loading/failure states. Upload/reuse logo/background art in Assets then apply in Channel and reopen; images never show as TV programs. Private vs In Channel state preserved, cross-owner asset API denied, duplicate uploads/save/reload/session. Responsive Library grid and keyboard tab/focus. Stage shows no broken media/rights labels and actual functionality; ensure no native media behavior falsely promised.
+
+MANUAL CODEX EXECUTION — GPT-6 SOL HIGH; BROWSER REQUIRED: YES; RUNNER: NEVER.
+This is ONE issue only. Read AGENTS.md, docs/tasks/p9/README.md, docs/tasks/p9/implementation-plan.md, docs/tasks/p9-polish/issues/P9-010 companion, prior issue evidence and actual source/tests. Verify c8-hero-multimedia result and accept Phase 8/P8D NOT GREEN history without relabel. Before editing check local HEAD/dirty status/origin, root package version + BOTH root-lock top-level version fields, current staging version/schema. 0.8.17 entry and planned 0.9.x are provisional; reconcile current baseline. No runner/validator/activate/reset/force/stash; preserve concurrent work.
+
+Implement ONLY this named issue, not all polish. Reuse current TV/player/asset/channel models; keep tenant privacy, owner rights/READY/CSRF, current Video/MP3/Book Showcase contracts, existing native compatibility and public approved FREE #1 unchanged. No live installed-app publication, new AWS/IAM/CDN/paid encode/production action or unauthorized schema migration. If no code change necessary, demonstrate existing behavior, no artificial bump.
+
+Run issue-focused tests and affected package typecheck/build, git diff --check; commit changed product and NEXT reconciled root+both root-lock semver together. Never package dirty/uncommitted source. If a schema change is necessary without approved safe schema rollout, record BLOCKED instead of using privileged staging as a migration bypass.
+
+PROTECTED STAGING FIRST: use scripts/staging/README.md. Verify actual standing grant, schema (latest confirmed 15), exact committed archive SHA-256/local-incoming hash, encrypted predeploy backup, health/worker, schema compatibility, retained JS/CSS, previous rollback, original public FREE release #1 pointer/digest unchanged. Deploy exact commit on muffinos STAGING with guarded workflow; independently read active symlink/version/asset hashes. On serious regression use supported guarded rollback.
+
+ONLY AFTER staged readback: actual connected Codex browser, signed in as owner to fresh https://firelaunch.jfin.dev/; test real DOM/CSS/console/network/screenshot, happy and failing cases, refresh, relevant viewport/keyboard/touch. For changed Vega rendering/export, independently test a newly exported VPKG on real Vega VirtualDevice when possible; browser-only can't prove native. Two observed narrow correction loops MAX, each requiring new tested commit+new archive+guarded redeploy+fresh browser acceptance. 8-minute target / 15-minute hard cap; stop with honest NOT GREEN/BLOCKED and a precise recovery note rather than hide risk.
+
+Commit docs/tasks/p9/evidence/P8-P9-010.md with product SHA separate from evidence commit, test results, protected staging archive/release/backup/schema, owner-authenticated browser proof/screenshot references outside Git, issue-specific GREEN/NOT GREEN/BLOCKED and next handoff. Never call a mere successful deploy GREEN. Do not advance as if a required preceding issue passed when it is blocked.

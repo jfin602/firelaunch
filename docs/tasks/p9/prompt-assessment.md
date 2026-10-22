@@ -1,13 +1,37 @@
-# P9 prompt assessment
+# P9 Polish — prompt assessment (2026-10-22)
 
-Owner-approved for documentation, 2026-10-21. Not implemented/qualified.
+**Owner transition:** Phase 8 CLOSED by owner with outstanding evidence carried; P9 base is 0.9.0, P1–P10 manual issue prompts increment to 0.9.1–0.9.10. P11 final evidence-only. Supersedes older notes that Phase 8 owner closure is pending; does not rewrite historical NOT GREEN findings.
 
-Make post-deployment publishing a first-class FireLaunch feature while preserving former **Final MVP Launch Qualification** as P9 P5. Extend P5 publication/native loader and C7 isolated builder; do not recreate them.
+## Decision
+**Ten manually executed, independent issue-targeted prompts** with one post-deploy authenticated Codex-browser verification per prompt, plus one final integrated smoke/closeout. No runner, no `/activate`; each implementation owns its own version, commits, staged exact SHA and issue evidence. Old installed-client publishing moved to [deferred Phase 10](../p10/README.md).
 
-- P1 Sol High: deterministic compatibility and installed-client version/capability lineage.
-- P2 Sol High: explicit owner-approved same-installed-client live refresh, LKG, faults and rollback.
-- P3 Sol High: real same-package-identity successor VPKG, version/build and manual Amazon handoff.
-- P4 Sol Medium: clear live Publish vs native Export inside existing P8 navigation.
-- P5 Sol High MANUAL: real owner browser + external Vega proof of v1→v2 without reinstall, same-ID upgrade, offline/rollback and full original video/audio/remote creator journey.
+## Baseline
+Current `main` at review has root/lock `0.8.17`, current schema 15. P8D Phase 8 overall NOT GREEN; `c8-hero-multimedia` correction at unchanged 0.8.17 remains a dependency. This is dated GitHub evidence, not a fresh local/staging preflight. The owner authorized a Phase 9 scope pivot, **not retroactive Phase 8 qualification**.
 
-C7 R4 first-HLS-TS-fragment repair remains technical priority; R1–R3 evidence is reusable. P8 needs safe handoff and separately approved 0.9.0 entry. P1–P4 runner checkpoints <=8 min target/15 min hard stop, no /activate; P5 manual one aggregate. Oct 22 5 PM CDT freeze; Oct 23 11:30 internal/noon America/Chicago delivery. Defer WebView/OTA native code, new dynamic renderer, paid video, new AWS services, automatic Amazon submission and repeat metered encoding. Historical P5/c5/Q2/Q3 outcomes remain unchanged.
+## One-issue partition
+1. **P9-001** Simple creation, low risk, one route/form.
+2. **P9-004** One-time rights attestation, use persisted per-media record rather than new legal gate, broad labels/screens; must precede P9-002 where practical.
+3. **P9-002** P0 private-inventory-vs-included channel distinction with real preview/export parity and eligibility.
+4. **P9-007** Shared visual modal shell across actual MVP popups, foundation for new P9-006 dialog.
+5. **P9-006** High-complexity shared secure image uploads + global/per-page backgrounds/logo/section assets; run after modal standard.
+6. **P9-008** Aspect-safe foreground artwork, tied to P9-006 and hero correction without changing decorative-background cover.
+7. **P9-005** Compact, animated, accessible section editor reorder; keep actual page/layout persistence and native parity.
+8. **P9-010** Library categories + reusable non-content assets, based on *finished actual* P8D source and P9-006.
+9. **P9-003** Home actions, using now-valid Library entry and same existing fullscreen Preview.
+10. **P9-009** Login styling with owner-approved actual 16:9 canyon image from conversation; auth safe; visual reference asset must be explicitly supplied if absent in repo.
+
+P11 does a single whole-product browser walk, one final aggregate and limited native/export smoke; no new features.
+
+## Risk handling
+
+- Biggest technical risk **P9-002/P9-006/P9-010** (source of truth / private media auth / native export). Do not lower acceptance to UI-only for those features.
+- Highest visual risk **P9-005/P9-007/P9-008**. Browser screenshots and actual keyboard/layout behavior required, not merely unit tests.
+- **P9-009 image** has been approved, but is not yet committed as a binary; attach/recover exact conversation-generated asset rather than swapping stock image.
+- Different media behaviors: video Watch, MP3 Listen, Book Showcase (book-only no Play; attached audiobook shares audio player). Don't resurrect old catalog import or claim an EPUB reader.
+- P9-004 confirmation must persist without bypassing real storage security, rights revocation or media-ready checks.
+- P9-002 is channel membership for current draft/fresh export only; P10 handles live remote installed-client updates.
+- Existing staging access is host-privileged. Do not run arbitrary scripts/migrations; verify SHA, encrypted backup, current schema, rollback, worker and public approved release #1.
+- Some individual issue scopes may take longer than an eight-minute target; one-issue partition is preserved and blockers are **reported**, not concealed by splitting into unrelated uncontrolled changes.
+
+## Qualification rule
+Each issue: inspected baseline -> changed scope tested -> committed candidate -> **protected deployed** -> real authenticated browser -> evidence commit. Scoped GREEN only when all issue-relevant checks pass. Missing/stale deployment, missing image asset, native renderer proof, forbidden schema migration or rights regressions = accurate NOT GREEN/BLOCKED and a recovery handoff. No phase-level claim until P11.

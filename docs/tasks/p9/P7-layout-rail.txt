@@ -1,0 +1,24 @@
+TASK: Phase 9 Polish manual P7 — P9-005 layout-rail
+OWNER ISSUE: docs/tasks/p9-polish/issues/P9-005-compact-channel-layout-editor.md
+SUGGESTED VERSION ONLY: 0.9.7; actual baseline checked at runtime.
+
+BASELINE OVERRIDE: clean 0.9.0 is already an owner-approved version baseline, not P1 implementation. Target this prompt's checked-in sequence 0.9.7 only after verifying actual previous accepted version; root package and both top-level lock fields must agree. Phase 8 CLOSED BY OWNER with documented NOT GREEN exceptions; do not rerun Phase 8 as entry gate.
+
+MISSION — P9-005
+Refine Channel > Pages & Layout secondary rail. Replace heavy Edit/Move Up/Move Down/Delete Section button rows with visually BORDERLESS icon actions (still accessible tooltip/keyboard/touch). Add drag handle for section reordering with lift/elevation, dynamically shifting insertion preview and settle animation; preserve stable section ID/order and live TV preview. Keyboard reorder alternative and reduced motion required. Make "+ New Page" distinct from existing page selection. Remove standalone "Edit page" button but keep essential page title/settings edit reachable. Compact Add Section form at TOP of selected page section list, Desert Heat styling and all supported section types.
+
+ISSUE-SPECIFIC BROWSER / ACCEPTANCE MATRIX
+Real browser first/last/middle drag reorder while rail scrolls, visibly lift/shifting/drop, save/refresh/reopen preserves same order and preview matches. Drag cancel/Escape/save failure restores order; keyboard and touch reorder works; pointer click Edit/Delete doesn't drag; other page untouched. Check "+ New Page", page metadata accessibility, add each supported section without hunting at bottom. Narrow and wide browser screenshot comparison; no clipped toolbar, tiny click targets, big orange borders or TV/remote/fullscreen regression. Native layout parity tested if serialized order changed.
+
+MANUAL CODEX EXECUTION — GPT-6 SOL HIGH; BROWSER REQUIRED: YES; RUNNER: NEVER.
+This is ONE issue only. Read AGENTS.md, docs/tasks/p9/README.md, docs/tasks/p9/implementation-plan.md, docs/tasks/p9-polish/issues/P9-005 companion, prior issue evidence and actual source/tests. Verify c8-hero-multimedia result and accept Phase 8/P8D NOT GREEN history without relabel. Before editing check local HEAD/dirty status/origin, root package version + BOTH root-lock top-level version fields, current staging version/schema. 0.8.17 entry and planned 0.9.x are provisional; reconcile current baseline. No runner/validator/activate/reset/force/stash; preserve concurrent work.
+
+Implement ONLY this named issue, not all polish. Reuse current TV/player/asset/channel models; keep tenant privacy, owner rights/READY/CSRF, current Video/MP3/Book Showcase contracts, existing native compatibility and public approved FREE #1 unchanged. No live installed-app publication, new AWS/IAM/CDN/paid encode/production action or unauthorized schema migration. If no code change necessary, demonstrate existing behavior, no artificial bump.
+
+Run issue-focused tests and affected package typecheck/build, git diff --check; commit changed product and NEXT reconciled root+both root-lock semver together. Never package dirty/uncommitted source. If a schema change is necessary without approved safe schema rollout, record BLOCKED instead of using privileged staging as a migration bypass.
+
+PROTECTED STAGING FIRST: use scripts/staging/README.md. Verify actual standing grant, schema (latest confirmed 15), exact committed archive SHA-256/local-incoming hash, encrypted predeploy backup, health/worker, schema compatibility, retained JS/CSS, previous rollback, original public FREE release #1 pointer/digest unchanged. Deploy exact commit on muffinos STAGING with guarded workflow; independently read active symlink/version/asset hashes. On serious regression use supported guarded rollback.
+
+ONLY AFTER staged readback: actual connected Codex browser, signed in as owner to fresh https://firelaunch.jfin.dev/; test real DOM/CSS/console/network/screenshot, happy and failing cases, refresh, relevant viewport/keyboard/touch. For changed Vega rendering/export, independently test a newly exported VPKG on real Vega VirtualDevice when possible; browser-only can't prove native. Two observed narrow correction loops MAX, each requiring new tested commit+new archive+guarded redeploy+fresh browser acceptance. 8-minute target / 15-minute hard cap; stop with honest NOT GREEN/BLOCKED and a precise recovery note rather than hide risk.
+
+Commit docs/tasks/p9/evidence/P7-P9-005.md with product SHA separate from evidence commit, test results, protected staging archive/release/backup/schema, owner-authenticated browser proof/screenshot references outside Git, issue-specific GREEN/NOT GREEN/BLOCKED and next handoff. Never call a mere successful deploy GREEN. Do not advance as if a required preceding issue passed when it is blocked.
