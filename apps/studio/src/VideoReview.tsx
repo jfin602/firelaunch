@@ -12,6 +12,7 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
   onNavigate: (page: VideoPage) => void;
 }) {
   const [video, setVideo] = useState<VideoAssetStatus>(null);
+  const [videoLoaded, setVideoLoaded] = useState(false);
   const [live, setLive] = useState<LiveSummary>(null);
   const [liveLoaded, setLiveLoaded] = useState(false);
   const [liveError, setLiveError] = useState(false);
@@ -34,7 +35,7 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
   const completingArtwork = !!source && !!managed && !!privateArtwork && !privateArtwork.deliveryEligible &&
     sourceReady && sourceUseEligible(source, privateArtwork, 'television_display') &&
     privateArtwork.tvDisplayRights?.attestationVersion === 'channel-media-v1';
-  const ready = !!managed && video?.uploadState === 'verified' && video.processing?.state === 'ready' &&
+  const ready = videoLoaded && !!managed && video?.uploadState === 'verified' && video.processing?.state === 'ready' &&
     managed.tvDisplayRights?.status === 'cleared' && managed.tvPlaybackRights?.status === 'cleared' && managed.deliveryEligible;
   const stableId = `item_${bytesToHex(sha256(new TextEncoder().encode(`catalog-content-v1\0${item.id}`))).slice(0, 32)}`;
   const linked = project.spec.content.some(content => content.id === stableId && content.presentation === 'video') &&
@@ -45,12 +46,14 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
 
   useEffect(() => {
     let active = true;
-    if (!managed) { setVideo(null); return; }
-    const update = () => void readVideoAssetStatus(project.id, managed.id).then(value => { if (active) setVideo(value); })
-      .catch(() => { if (active) setVideo(null); });
+    if (!managed) { setVideo(null); setVideoLoaded(true); return; }
+    setVideoLoaded(false);
+    const update = () => void readVideoAssetStatus(project.id, managed.id).then(value => {
+      if (active) { setVideo(value); setVideoLoaded(true); }
+    }).catch(() => { if (active) { setVideo(null); setVideoLoaded(true); } });
     update(); const timer = window.setInterval(update, 5000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [project.id, managed?.id]);
+  }, [project.id, managed?.id, inventory.revision]);
   useEffect(() => {
     if (!source || !privateArtwork || privateArtwork.deliveryEligible || !managed ||
       !sourceUseEligible(source, managed, 'television_playback') ||
@@ -124,7 +127,7 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
       <h3>Channel preview</h3>
       <p>{linked ? 'This video is in your private channel preview.' : 'When this video is ready, add it to the private channel preview. Your collection choice above is saved separately.'}</p>
       {!linked && <>
-        {!ready && <p role="status">{!managed ? 'Upload your video on Video first.' : video?.processing?.state === 'failed' ? 'Processing failed. Retry on Video.' : video?.processing?.state === 'revoked' ? 'Video rights were revoked; publication is blocked.' : 'Wait for private video processing to finish on Video.'}</p>}
+        {!ready && <p role="status">{!videoLoaded ? 'Checking video status…' : !managed ? 'Upload your video on Video first.' : video?.processing?.state === 'failed' ? 'Processing failed. Retry on Video.' : video?.processing?.state === 'revoked' ? 'Video rights were revoked; publication is blocked.' : 'Wait for private video processing to finish on Video.'}</p>}
         {ready && <button disabled={busy} onClick={linkDraft}>Add to channel preview</button>}
       </>}
     </>}
@@ -132,7 +135,7 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
       <h3>Publish</h3>
       {liveLoaded && <p role="status">{inLive ? `${ready ? 'Published' : 'Referenced but currently blocked'} in live release #${live!.sequence}${draftAfterLive ? ' · newer private draft changes await approval' : ''}` : 'Private draft · this video is not in the current live release.'}</p>}
       {liveError && <p role="alert">Live release status is unavailable. Reopen this video before relying on its status.</p>}
-      {!ready && <p role="status">{!managed ? 'Upload a video on Video.' : video?.processing?.state === 'failed' ? 'Processing failed. Retry on Video.' : video?.processing?.state === 'revoked' ? 'Video rights were revoked. Replace the video or resolve the revocation.' : 'Private video processing must finish before publication.'} <button type="button" onClick={() => onNavigate('video')}>Go to Video</button></p>}
+      {!ready && <p role="status">{!videoLoaded ? 'Checking video status…' : !managed ? 'Upload a video on Video.' : video?.processing?.state === 'failed' ? 'Processing failed. Retry on Video.' : video?.processing?.state === 'revoked' ? 'Video rights were revoked. Replace the video or resolve the revocation.' : 'Private video processing must finish before publication.'} {videoLoaded && <button type="button" onClick={() => onNavigate('video')}>Go to Video</button>}</p>}
       {!sourceReady && <div className="video-review-requirement"><h4>Confirm your source</h4><p>Keep private proof that you control this video and can show it on TV.</p>
         {source?.type === 'creator_upload' && source.state === 'discovered' ? <><label className="field"><span>Private proof (PDF, PNG or JPEG)</span><input type="file" accept="application/pdf,image/png,image/jpeg" onChange={event => setSourceEvidence(event.target.files?.[0] ?? null)}/></label>
           <label className="check"><input type="checkbox" checked={sourceApproved} onChange={event => setSourceApproved(event.target.checked)}/> I control this video source and have TV display permission.</label>

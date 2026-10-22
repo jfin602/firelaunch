@@ -44,6 +44,22 @@ test('unverified, failed and revoked media cannot enter the guided publication c
   } finally { cleanup(); globalThis.fetch = prior; }
 });
 
+test('pending video status does not falsely say a confirmed video needs processing', () => {
+  const prior = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    if (String(input).endsWith('/media-uploads')) return new Promise<Response>(() => {});
+    if (String(input).endsWith('/deployment')) return response({ error: { message: 'Not found' } }, 404);
+    throw new Error(String(input));
+  }) as typeof fetch;
+  try {
+    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item, inventory,
+      refresh: async () => inventory, onProjectUpdate: () => {} }));
+    assert.ok(screen.getByText('Checking video status…'));
+    assert.equal(screen.queryByText(/Private video processing must finish/), null);
+    assert.equal(screen.queryByRole('button', { name: 'Review live channel' }), null);
+  } finally { cleanup(); globalThis.fetch = prior; }
+});
+
 test('owned release summary distinguishes published video from later private draft changes', async () => {
   const prior = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL) => {
