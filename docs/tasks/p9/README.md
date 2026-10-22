@@ -1,5 +1,12 @@
 # P9 — Live Channel Publishing & App Updates
 
+## CURRENT PRE-P9 — P8D runner checkpoint conversion (2026-10-22)
+
+[Owner-cleared P8D](../p8d/README.md) now uses **runner P1** at `0.8.14` then intentional browser-required/manual stops for P2 `0.8.15`, P3 `0.8.16`, P4 `0.8.17` (manual implementation commits with exact version subjects), followed by P5 browser-required independent closeout with grammar assigned `0.8.18` but product staying `0.8.17`. No automatic runner browser emulation and no Phase 9 `0.9.0` version transition. P8C historical NOT GREEN is owner-deferred for P8D ENTRY, not relabeled as passed. Installed Vega clients without new MP3/book player capability remain **Requires App Update / Blocked**; P9 follows explicit owner approval. Dated no-runner P8D instructions below are superseded.
+
+---
+
+
 ## NEW PRE-P9 DEPENDENCY — P8D multimedia implementation (owner decision 2026-10-22)
 
 **Phase 9 remains PLANNED / NOT ACTIVATED; do not bump `0.9.0` yet.** Owner authorized [P8D](../p8d/README.md) **now**, to support Audio MP3 and Book Showcase with optional SAME-book audiobook MP3 (no TV reader), before larger P9 installed-app publication/update polishing. Its five manually executed Codex checkpoints target `0.8.14`/0.8.15/0.8.16/0.8.17 plus unchanged P5 closeout 0.8.17; **P1 ready now**. P8C [historical final closeout](../p8/closeout.md) is **NOT GREEN** for unproved static-section Vega parity and hero art composition; the owner explicitly defers those as P8D ENTRY gates without changing past evidence or waiving native proof for P8D. P9 compatibility decisions must account for the new audiobook binding/player, unknown installed renderer capabilities defaulting to `Requires App Update/Blocked`, and separately approved native package version lineage. Phase 9 entry remains a future explicit owner authorization after P8D.
