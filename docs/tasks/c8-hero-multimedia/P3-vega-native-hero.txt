@@ -1,0 +1,27 @@
+TASK: Correction 8 / P3 — Vega native adaptive hero parity
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.17`.
+
+TYPE
+RUNNER-OWNED final IMPLEMENTATION checkpoint before independent browser-required manual P4. No self-commit/deploy/host edit/version bump/expensive real device qualification or `/activate`.
+
+MISSION
+Make the existing generated VPKG React Native TV app use P1's shared hero selection with P2's exact visual semantics. Fullscreen Native at 1280x720 / 1920x1080: creator's top title/nav, media-specific selected spotlight and ONE focusable selector row beneath it already visible without vertical scrolling. No new native app architecture or parallel state machine.
+
+PREFLIGHT
+Read P1/P2 runner commit handoffs, design/plan, current `templates/vega-channel/src/App.js`, `tv-layout.js`, `packages/tv/src/runtime.ts` and native template/test files. Check actual HEAD/status and root+both lock versions 0.8.17. Prior historical Stage R2 schema is 15, NOT 14; do not run stage or change schemas. Vega SDK/react-native supported APIs must be inspected from current dependency/template, not invented.
+
+IMPLEMENT
+1. Detect only eligible Hero-template page derived from P1; render selected title, safe metadata/description and current selected artwork above first associated rail/grid selector. Don't render legacy giant Hero card as a second row, lose author content, or alter ChannelSpec arrays. Nonhero/multi-section pages retain old rendering. Selector focus uses existing TVEventHandler/Pressable/transition; moving D-pad focus changes top selected content, no playback; Select goes to its detail, Back returns to selected card.
+2. Background: same eligible approved HTTPS artwork as underlying dark/scrim/faded cover, with sharp foreground contained landscape/square/portrait frame. Native `Image resizeMode='cover'` only on background and `contain` on foreground. Use blur/gradient only if SDK verifies support and performance, otherwise neutral brand backdrop and overlay without broken imports. Protect text/readability, memory bounds, race-safe image errors and owner-supplied color semantics. Do not pack private Blob/S3 original/signed upload capability URLs.
+3. Compute TV safe-area responsive layout from real `useWindowDimensions`: nav + hero+first horizontal selector row fit in standard 1280x720/1920x1080 viewport. Don't allow `revealFocus`/`scrollTarget` to scroll the first row off-screen merely when focus changes; allow deliberate access to any following authored sections. Preserve horizontal scrolling for extra cards, D-pad visibility, no bottom padding/border glitch. Current portrait book cover correction uses `resizeMode='contain'`; never regress it.
+4. Preserve released HLS video, native MP3 audiobook/player with audible pause/seek/back, book-only no Play, Image Banner/Image+Text and native compatibility gating. Don't mutate AWS, public FREE release #1, shared owner rights, CSRF or release manifest shape.
+5. Add targeted native/TV template tests for initial layout metrics, wide/square/portrait art, 16:9 and different viewports, focus→selected backdrop/copy without autoplay, Select/Back, nav switch, empty/fallback and lower sections still reachable. Focused native generator build/test checks only; P4 owns *real* x86_64 VirtualDevice install/browser evidence.
+
+VALIDATION / HANDOFF
+Run directly affected package/typecheck/tests and `git diff --check`, with a narrow generator/native build smoke if fast and safe; DO NOT run root aggregate repeatedly or use fake screenshots. Keep `0.8.17` root+both lock. LEAVE all source changes UNCOMMITTED; runner will commit P3. Report exact source seams/tests plus P4 browser/device hazards including known zero-byte Vega screenshot failure and owner mock art attachment requirement. P4 is manual, not a runner stage. <=8-minute goal/15-minute focused stop.
