@@ -1,5 +1,12 @@
 # P8 — Creative Studio UX & Pipeline Confirmation
 
+## NEW FOCUSED OWNER VISUAL CORRECTION — c8-hero-multimedia (2026-10-22)
+
+[Phase 8 final recovery closeout](closeout.md) is still **NOT GREEN** at tested 0.8.17. Owner approved an implementation-only focus-driven hero correction [c8-hero-multimedia](../c8-hero-multimedia/README.md): one featured spotlight and **one row beneath it within first TV viewport**; bottom row focus updates title/art/background above without autoplay, Select/detail and Back preserve focus. Supports landscape video, square audio and uncropped portrait book foreground, same-art dark/faded background, old other sections and creator branding. P1–P3 runner-owned code commits, unchanged 0.8.17; P4 browser-required MANUAL staging-first owner-ART-ATTACHED and real x86_64 Vega visual closeout. Run validator+runner, then P4 separately in Codex. Historical final Phase 8 NOT GREEN remains untouched; **this correction alone does not qualify the unapproved mixed-media test publication, authorize Phase 9, or rewrite canonical closeout**. All work here is docs-only until prompts actually execute.
+
+---
+
+
 ## LATEST — P8D P5 will own the TRUE final Phase 8 closeout (2026-10-22)
 
 The owner replaced P8D P5's bounded media-only closeout with the **single integrated Phase 8** [manual staging-first P5](../p8d/P5-multimedia-closeout.txt). P5 tests video/Wave 1, P8B layout/native, P8C creator/editor/hero, P8D audio/books/mixed publishing and real Vega device; it **deploys exact committed source to staging BEFORE live acceptance** and may perform up to **eight observed correction cycles**, with a new protected release and fresh live browser/device retest after EACH code change. The final aggregate must match last settled source.
