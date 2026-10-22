@@ -1,5 +1,12 @@
 # P9 — Live Channel Publishing & App Updates
 
+## CURRENT PRE-P9 OWNER UI CORRECTION — c8-hero-multimedia (2026-10-22)
+
+Before any Phase 9 `0.9.0` owner entry, [c8-hero-multimedia](../c8-hero-multimedia/README.md) targets remaining actual TV hero composition/focus gap: bottom ONE row controls top context with a media-appropriate same-art backdrop, native and Studio parity at 720p/1080p, and mock-artwork visual proof. P1–P3 runner implementation at unchanged 0.8.17, P4 manual Codex browser-required staging-first and real Vega capture with owner mock attached. [Phase 8 NOT GREEN](../p8/closeout.md) retains mixed-media immutable publication and native book-visual qualification gaps; hero correction cannot silently close unrelated gates. No automatic P9 activation or publication/upgrade to approved existing FREE release #1. Previous planned Phase 9 descriptions below are historical until explicit owner authorization.
+
+---
+
+
 ## CURRENT ENTRY — Phase 8 final NOT GREEN (2026-10-22)
 
 The [single final Phase 8 closeout](../p8/closeout.md) and [P8D P5 evidence](../p8d/closeout.md) now replace the pre-execution notes below. Tested source is **0.8.17**; protected staging release `20261022T154910Z-c991c12b770a` is deployed and the private owner Studio flow is scoped accepted. Current-generator Vega device proof covers synthetic static sections and approved HLS video/sound, but public HTTPS MP3/audiobook device playback, portrait/book-only proof, final owner hero/static composition, and mixed-media publication/installed upgrade remain open. The [historical P8C NOT GREEN archive](../p8c/closeout-2026-10-22-not-green.md) is unchanged. **P9 `0.9.0` is NOT STARTED** and still requires a separate explicit owner decision; keep incompatible installed clients `Requires App Update / Blocked`. Earlier “current” sections are dated pre-closeout history.
