@@ -887,3 +887,25 @@ body { min-width: 0; }
 .preview-fullscreen .fullscreen-corner-recovery:focus-visible{opacity:1;background:#293436;outline:2px solid var(--fl-focus)}
 @media(max-width:690px){.preview-fullscreen .channel-tv-stage{height:100%}.preview-fullscreen .channel-tv-stage .tv-frame{width:min(100%,177.777778dvh);max-height:100dvh}.preview-fullscreen .channel-tv-stage .remote-bar>div:first-child{display:none}}
 @media(max-height:760px){.channel-presentation:not(.preview-fullscreen) .channel-tv-stage .remote-bar span{display:none}}
+
+/* Keep every Studio scroll area aligned with the dark shell. */
+:root {
+  --fl-scroll-track: #211b1c;
+  --fl-scroll-thumb: #756d6d;
+}
+.channel-dock {
+  --fl-scroll-track: #222426;
+  --fl-scroll-thumb: #777c80;
+}
+:root, :root * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--fl-scroll-thumb) var(--fl-scroll-track);
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--fl-scroll-track); }
+::-webkit-scrollbar-thumb {
+  background: var(--fl-scroll-thumb);
+  border: 2px solid var(--fl-scroll-track);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover { background: #9b9fa2; }
