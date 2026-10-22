@@ -947,5 +947,5 @@ body:has(.preview-fullscreen){overflow:hidden}
 }
 ::-webkit-scrollbar-thumb:hover { background: #9b9fa2; }
 
-/* Keep the featured card close to the approved TV composition in both modes. */
-.tv-hero .tv-card,.preview-fullscreen .tv-hero .tv-card{width:90%;max-width:100%}
+/* Fill the available TV content row while preserving the artwork's selected crop mode. */
+.tv-hero .tv-card,.preview-fullscreen .tv-hero .tv-card{width:100%}

@@ -158,7 +158,7 @@ test('layout controls remain accessible in narrow flow', () => {
   assert.match(composition, /@media\(max-height:760px\)\{\.channel-presentation:not\(\.preview-fullscreen\) \.channel-tv-stage \.remote-bar span\{display:none\}\}/);
   assert.match(composition, /\.preview-fullscreen \.channel-tv-stage \.preview-heading\{position:absolute/);
   assert.match(css, /@media\(max-width:1000px\)[\s\S]*\.channel-presentation\{height:auto;min-height:0;display:flex;flex-direction:column\}/);
-  assert.ok(css.lastIndexOf('.tv-hero .tv-card,.preview-fullscreen .tv-hero .tv-card{width:90%;max-width:100%}') > css.lastIndexOf('.preview-fullscreen .tv-hero .tv-card{width:min(100%,42em)}'));
+  assert.ok(css.lastIndexOf('.tv-hero .tv-card,.preview-fullscreen .tv-hero .tv-card{width:100%}') > css.lastIndexOf('.preview-fullscreen .tv-hero .tv-card{width:min(100%,42em)}'));
 });
 
 test('saved owner artwork resolves to the same private image in editor and TV', async () => {
