@@ -1,5 +1,16 @@
 # FireLaunch Current State
 
+## Latest owner-approved Phase 8 final plan — P8C (2026-10-21 local / 2026-10-22 UTC)
+
+**Phase 8 remains OPEN. Documentation-only approval:** [P8C README](tasks/p8c/README.md) and [P8C implementation plan](tasks/p8c/implementation-plan.md) establish P1 artwork/media clarity (`0.8.11`), P2 first-time creator experience (`0.8.12`), P3 editor usability polish (`0.8.13`), and one **manual P4 at unchanged `0.8.13`** that owns final qualified staging, targeted native static-layout Vega proof and the authoritative `tasks/p8/closeout.md` Phase 8 GREEN/NOT GREEN decision. No P8C executable prompts, product code, releases or phase closeout are created by this docs change. Future `/prompt-ass + /prompt-plan + /prompt-write p8c` must check latest actual local HEAD/dirty state and runner version offset.
+
+**Latest observed c8-ui3 evidence:** [closeout](tasks/c8-ui3/closeout.md) from 2026-10-21 23:12 UTC reports **STAGING DEPLOYED / UI NOT GREEN** at root/lock `0.8.10`, protected release `20261021T230818Z-c382c81aeacd`, schema14, source `7983f3f`, approved FREE release #1 unchanged. The normal Channel/remote and fallback fullscreen/Clean View were observed; featured-art width and editor image placeholder disagree with approved mockup, native Fullscreen API was denied, and Export displayed `Build input changed` on read-only check. The native new Image Banner/Image + Text Vega device parity remains **NOT GREEN** from P8B follow-on evidence. Preserve c8-ui3's historical NOT GREEN rather than reclassifying; reuse verified prior C7 video/audio evidence where unchanged. The repo's latest GitHub docs review main at `4e3dc601a8` still has package version 0.8.10; this is not current host/worktree proof.
+
+**Phase handoff:** P8C P4 is the one final acceptance owner. Completed c8-ui, c8-ui2 and c8-ui3 correction closeouts remain individually dated and do not duplicate P8C phase closure. Phase 9 [plan](tasks/p9/README.md) remains unimplemented; a separate explicit approval is required for `0.9.0` entry. Deadline 2026-10-23 noon America/Chicago (freeze target Thu 17:00, handoff Fri 11:30).
+
+---
+
+
 ## Active c8-ui3 fullscreen extension — 2026-10-21
 
 Owner expanded the [c8-ui3 correction](tasks/c8-ui3/README.md) to FOUR prompts (unchanged root+lock 0.8.10). P1 seamless gray Channel shell and P2 normal borderless TV remain **unchanged instructions**, preserving any local completed work. NEW P3 implements genuine maximal 16:9 fullscreen with Virtual remote overlay BOTTOM LEFT, Exit+Hide controls TOP RIGHT, existing LEFT editor drawer, and reversible **Clean View showing ONLY the TV app**; H/top-right corner/Alt+E/Escape recover controls. P4 is now the sole manual protected staging DEPLOY-FIRST + authenticated Codex-browser visual/fullscreen closeout. Old P3 staging closeout filename was retired; c8-ui2 P4 remains unrun and superseded by c8-ui3 P4. No c8-ui3 code or staging action was performed by this docs-apply; Phase 8 remains OPEN.
