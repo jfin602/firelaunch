@@ -4,12 +4,12 @@ import { channelSpecSchema } from '@firelaunch/contracts';
 import { Preview } from './src/Preview.js';
 import './src/style.css';
 import './hero-demo.css';
-import silentPlanet from '../../docs/tasks/c8-hero-multimedia/demo-art/silent-planet.jpg';
-import echoesOfEarth from '../../docs/tasks/c8-hero-multimedia/demo-art/echoes-of-earth.jpg';
-import neonShadows from '../../docs/tasks/c8-hero-multimedia/demo-art/neon-shadows.jpg';
-import lastFrontier from '../../docs/tasks/c8-hero-multimedia/demo-art/last-frontier.jpg';
-import ambientFocus from '../../docs/tasks/c8-hero-multimedia/demo-art/ambient-focus.jpg';
-import observatoryBook from '../../docs/tasks/c8-hero-multimedia/demo-art/observatory-book.jpg';
+import silentPlanet from '../../test-assets/hero-multimedia/silent-planet.jpg';
+import echoesOfEarth from '../../test-assets/hero-multimedia/echoes-of-earth.jpg';
+import neonShadows from '../../test-assets/hero-multimedia/neon-shadows.jpg';
+import lastFrontier from '../../test-assets/hero-multimedia/last-frontier.jpg';
+import ambientFocus from '../../test-assets/hero-multimedia/ambient-focus.jpg';
+import observatoryBook from '../../test-assets/hero-multimedia/observatory-book.jpg';
 
 const page = (digit: string) => `page_${digit.repeat(32)}`;
 const mod = (digit: string) => `mod_${digit.repeat(32)}`;
