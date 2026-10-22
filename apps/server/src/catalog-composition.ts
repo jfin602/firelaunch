@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { channelSpecSchema, createPageFromTemplate, type ChannelSpec, type ContentItem, type Module, type Page } from '@firelaunch/contracts';
+import { starterChannel } from '@firelaunch/channel-engine';
 import type { CatalogProjection } from './catalog-projection.js';
 
 export type CompositionKind = 'video' | 'audio' | 'writing';
@@ -117,8 +118,10 @@ export function composeCatalogDraft(kind: CompositionKind, current: ChannelSpec,
         return [mergeModule(fresh, manual, old)];
       }) }];
   });
-  const untouchedStarter = !previous && current.pages.length === 1 && current.pages[0]?.title === 'Home' && current.content.length === 0 &&
-    (current.pages[0].modules.length === 0 || same(current.pages[0], createPageFromTemplate(current.pages[0].id, 'Home', 'hero')));
+  const untouchedStarter = !previous && current.pages.length === 1 && current.content.length === 0 && !!current.pages[0] &&
+    (current.pages[0].modules.length === 0 ||
+      same(current.pages[0], createPageFromTemplate(current.pages[0].id, 'Home', 'hero')) ||
+      same(current.pages[0], starterChannel(current.title, current.id, current.pages[0].id).pages[0]));
   const manualPages = untouchedStarter ? [] : current.pages.filter(p => !generatedIds.has(p.id) && !oldPages.has(p.id));
   const manualContent = current.content.filter(c => !oldContent.has(c.id) && !allowed.has(c.id) && !revoked.has(c.id));
   const content = [...eligible.map(candidate => {

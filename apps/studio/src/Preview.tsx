@@ -203,6 +203,8 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
 
   const page = tv.pages.find(candidate => candidate.id === current.pageId)!;
   const heroPair = heroSelector(page);
+  const emptyFeature = !heroPair && page.modules.length === 2 && page.modules[0]?.kind === 'hero' &&
+    page.modules[1]?.kind === 'rail' && !page.modules[0].items.length && !page.modules[1].items.length;
   const spotlight = heroSpotlight(page, current);
   const item = activeItem(tv, current);
   const privateDrafts = hosted && inventory ? inventory.items.filter(value => value.kind === 'video' && !spec.content.some(content => content.id === catalogContentId(value.id))).slice(0, 8) : [];
@@ -220,7 +222,16 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
           </header>
           <div className="tv-content-wrap" key={page.id}><div className="tv-content" onScroll={showScrollPosition}>
             {page.modules.length === 0 && <div className="tv-empty">Your channel is ready for content.<small>Add content to light up this screen.</small></div>}
-            {page.modules.map(module => module === heroPair?.selector ? null : module === heroPair?.hero && spotlight ? <section className="tv-feature" key={module.id} aria-label="Featured title and selector">
+            {page.modules.map(module => emptyFeature && module === page.modules[1] ? null : emptyFeature && module === page.modules[0] ?
+              <section className="tv-feature tv-feature-empty" key={module.id} aria-label="Featured layout, awaiting content">
+                <div className="tv-feature-display"><div className="tv-feature-copy"><span className="tv-feature-kicker">FEATURED</span>
+                  <h2>Your featured title</h2><p>Add your first item to bring its title, story and artwork into this space.</p></div>
+                  <div className="tv-feature-empty-art" role="img" aria-label="Artwork appears here when you add a title" />
+                </div>
+                <div className="tv-feature-selector"><h3>{page.modules[1]?.title}</h3><p className="tv-feature-empty-hint">Your content row will appear here.</p>
+                  <div className="tv-feature-empty-cards" aria-hidden="true">{Array.from({ length: 5 }, (_, index) =>
+                    <span className="tv-feature-empty-card" key={index} />)}</div></div>
+              </section> : module === heroPair?.selector ? null : module === heroPair?.hero && spotlight ? <section className="tv-feature" key={module.id} aria-label="Featured title and selector">
               <div className="tv-feature-display">
                 <div className="tv-feature-copy"><span className="tv-feature-kicker">FEATURED</span><h2>{spotlight.title}</h2>
                   <p>{spotlight.description.length > 220 ? `${spotlight.description.slice(0, 217).trimEnd()}…` : spotlight.description}</p>

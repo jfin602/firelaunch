@@ -4,11 +4,15 @@ import { applyMutation, migrateChannel, navigationPages, resolveContent, starter
 import { fixtureChannel } from './fixtures.js';
 import { createPageFromTemplate } from '@firelaunch/contracts';
 
-test('starter has a navigable home and stable supplied IDs', () => {
+test('new channels start with the featured TV layout and creator-editable colors', () => {
   const spec = starterChannel('Wild Earth', fixtureChannel().id, fixtureChannel().pages[0]!.id);
   assert.equal(spec.slug, 'wild-earth');
-  assert.equal(navigationPages(spec)[0]?.title, 'Home');
+  assert.equal(navigationPages(spec)[0]?.title, 'Featured');
   assert.deepEqual(spec.pages[0]?.modules.map(module => module.kind), ['hero', 'rail']);
+  assert.equal(spec.pages[0]?.modules[1]?.title, 'Featured titles');
+  assert.equal(spec.brand.primaryColor, '#FF6A00');
+  assert.equal(spec.brand.backgroundColor, '#000000');
+  assert.equal(spec.brand.textColor, '#FFFFFF');
   assert.deepEqual(spec.content, []);
 });
 

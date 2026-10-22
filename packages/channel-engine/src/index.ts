@@ -17,10 +17,12 @@ export function slugify(title: string): string {
 }
 
 export function starterChannel(title: string, id = newId('ch'), pageId = newId('page')): ChannelSpec {
+  const featured = createPageFromTemplate(pageId, 'Featured', 'hero');
   return channelSpecSchema.parse({
     schemaVersion: SCHEMA_VERSION, id, title, slug: slugify(title),
-    brand: { primaryColor: '#49BDA5', backgroundColor: '#101820', textColor: '#FFFFFF' },
-    navigation: [pageId], pages: [createPageFromTemplate(pageId, 'Home', 'hero')],
+    brand: { primaryColor: '#FF6A00', backgroundColor: '#000000', textColor: '#FFFFFF' },
+    navigation: [pageId], pages: [{ ...featured, modules: featured.modules.map(module =>
+      module.kind === 'rail' ? { ...module, title: 'Featured titles' } : module) }],
     content: [], playback: { autoplayNext: false, startMuted: false }
   });
 }

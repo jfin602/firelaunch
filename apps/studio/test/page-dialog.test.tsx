@@ -47,7 +47,7 @@ test('new-page dialog keeps input on conflict, retries once, saves composition a
     const name = screen.getByRole('textbox', { name: 'Page name' }) as HTMLInputElement;
     assert.ok(document.activeElement === name);
     assert.equal((screen.getByRole('radio', { name: /Rows/ }) as HTMLInputElement).checked, true);
-    fireEvent.change(name, { target: { value: 'Home' } });
+    fireEvent.change(name, { target: { value: 'Featured' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create page' }));
     assert.match(screen.getByRole('alert').textContent ?? '', /already exists/);
     assert.equal(writes, 0);

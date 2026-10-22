@@ -1019,6 +1019,13 @@ body:has(.preview-fullscreen){overflow:hidden}
 .tv-feature-selector .tv-audio-card .tv-art{aspect-ratio:1/1;width:60%}
 .tv-feature-selector .tv-book-card .tv-art{aspect-ratio:2/3;width:43%}
 .tv-feature-selector .tv-card-caption{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tv-feature-empty .tv-feature-display{background:linear-gradient(90deg,#050505 0%,#0b0b0b 60%,color-mix(in srgb,var(--tv-accent) 12%,#080808) 100%)}
+.tv-feature-empty .tv-feature-copy p{color:color-mix(in srgb,var(--tv-text) 72%,transparent)}
+.tv-feature-empty-art{position:absolute;right:7%;width:31%;aspect-ratio:16/9;border:1px solid color-mix(in srgb,var(--tv-accent) 35%,#232323);border-radius:.35em;background:radial-gradient(circle at 65% 46%,color-mix(in srgb,var(--tv-accent) 27%,#111) 0%,#151515 37%,#090909 74%);box-shadow:0 1em 2em #0008}
+.tv-feature-empty-hint{font-size:.75em;color:color-mix(in srgb,var(--tv-text) 65%,transparent);margin:.15em 0 .6em}
+.tv-feature-empty-cards{display:flex;gap:2%;height:calc(100% - 3.5em);overflow:hidden}
+.tv-feature-empty-card{width:min(24%,28cqh);height:auto;align-self:flex-start;flex:none;aspect-ratio:16/9;border:1px solid color-mix(in srgb,var(--tv-accent) 24%,#292929);border-radius:.25em;background:linear-gradient(140deg,#1d1d1d,#0c0c0c)}
+.tv-feature-empty-card:first-child{box-shadow:inset 0 0 0 2px var(--tv-accent)}
 .preview-fullscreen .tv-feature{max-height:none}
 @media(prefers-reduced-motion:reduce){.tv-feature-art.has-art::before{filter:brightness(.6)}}
 

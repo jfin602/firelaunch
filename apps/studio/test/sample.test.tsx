@@ -16,7 +16,8 @@ test('sample fills the starter Hero and row without adding sections or changing 
   assert.deepEqual(tv.pages[0]!.modules.map(module => module.kind), ['hero', 'rail']);
   assert.deepEqual(next.pages[0]!.modules.map(module => module.id), spec.pages[0]!.modules.map(module => module.id));
   assert.deepEqual(next.pages[0]!.modules.flatMap(module => module.kind === 'hero' || module.kind === 'rail' ? module.contentIds : []), [
-    'item_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'item_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'item_cccccccccccccccccccccccccccccccc'
+    'item_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'item_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    'item_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'item_cccccccccccccccccccccccccccccccc'
   ]);
   assert.deepEqual(spec.content, []);
   assert.equal(focusRows(tv, tv.pages[0]!.id).length, 2);

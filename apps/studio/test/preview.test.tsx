@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
+import { starterChannel } from '@firelaunch/channel-engine';
 import { televisionFromSpec, heroSpotlight, initialState, itemFocusId, navFocusId } from '@firelaunch/tv';
 import { Preview, PreviewArtwork, adequateHeroArtwork, catalogContentId, ownerBookPreviewContent } from '../src/Preview.js';
 import type { CatalogSnapshot } from '../src/api.js';
@@ -17,6 +18,17 @@ Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.
 Object.defineProperty(dom.window.HTMLMediaElement.prototype, 'pause', { value: () => {} });
 Object.defineProperty(dom.window.HTMLMediaElement.prototype, 'load', { value: () => {} });
 const { cleanup, fireEvent, render, screen, waitFor } = await import('@testing-library/react');
+
+test('empty new channel shows the featured layout without fake playable cards', () => {
+  const spec = starterChannel('New channel', `ch_${'a'.repeat(32)}`, `page_${'b'.repeat(32)}`);
+  try {
+    const view = render(createElement(Preview, { spec }));
+    assert.equal(view.container.querySelector('.tv-feature-empty')?.getAttribute('aria-label'), 'Featured layout, awaiting content');
+    assert.equal(view.container.querySelectorAll('.tv-feature-empty-card').length, 5);
+    assert.equal(view.container.querySelectorAll('.tv-card, video, audio').length, 0);
+    assert.equal(view.container.querySelector<HTMLElement>('.tv-frame')?.style.getPropertyValue('--tv-accent'), '#FF6A00');
+  } finally { cleanup(); }
+});
 
 test('paired Hero uses one focusable row and updates copy without starting playback', () => {
   const spec = fixtureChannel(), first = spec.content[0]!, page = spec.pages[0]!;
