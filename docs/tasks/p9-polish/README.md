@@ -2,13 +2,13 @@
 
 **Owner decision:** 2026-10-22  
 **Deadline:** 2026-10-23 noon (owner delivery deadline; verify authoritative timezone in final handoff)  
-**Status:** Issue collection OPEN; no Phase 9 implementation or qualification yet. Phase 8 P8C is still being finished in parallel.
+**Status:** TEN issues documented; one-issue-at-a-time manual Phase 9 prompts **AUTHORED, NOT EXECUTED**. Phase 8 P8D final closeout is NOT GREEN and `c8-hero-multimedia` correction must be reconciled first. See [active Phase 9 prompt plan](../p9/README.md).
 
 ## Scope pivot
 
 The previously authored `docs/tasks/p9/` **Live Channel Publishing & App Updates** plan is **deferred beyond the MVP deadline**. Phase 9 will instead be **MVP Polish**: make the working core product understandable, remove unfinished/planned UI paths that did not make the MVP cut, stabilize create/edit/video/export, and give testers a truthful channel experience.
 
-This issue journal records **owner-reported problems**, not implementation completion or source truth. Do not mutate old Phase 9 publishing evidence or pretend the product has been changed merely because these reports exist. The final Phase 9 implementation prompts, version contract, docs/roadmap reconciliation, and staging closeout will be organized **after collecting issues** and after reconciling Phase 8's actual final state.
+This issue journal records **owner-reported problems**, not implementation completion or source truth. Do not mutate old Phase 9 publishing evidence or pretend the product has been changed merely because these reports exist. The [new Phase 9 manual prompts](../p9/README.md), [assessment](../p9/prompt-assessment.md) and [implementation plan](../p9/implementation-plan.md) are now authored: ten prompts, exactly one owner issue each, followed by one final integrated smoke. Each agent must reconcile actual Phase 8 result, code/version and staging before execution. The previous publishing prompts have been migrated to [deferred Phase 10](../p10/README.md). No implementation, source version change or deployment is implied by prompt authoring.
 
 ## Issue index
 
@@ -38,7 +38,7 @@ Every new issue gets a permanent sequential **P9-NNN** ID and a separate Markdow
 
 The owner-approved P9-009 canyon background is preserved in the 2026-10-22 image-generation conversation, **not yet committed to this repository**; P9 implementation must acquire that exact asset rather than inventing a substitute. P9-010 is conditional on the **actual P8D multimedia baseline**, which should be independently verified at implementation time.
 
-Issue intake is **documentation only**. Don't implement an issue when it is merely reported. Group and prioritize the collected issues into the smallest safe manual/runner prompt batch after collection. `P0` = core journey broken or seriously confusing; `P1` = deadline-required usability; `P2` = optional polish only if time.
+Issue intake is **documentation only**. Don't implement an issue when it is merely reported. The ten issue IDs are stable; follow the [manual execution order](../p9/README.md) with one staged/browser-validated issue at a time (NO runner). `P0` = core journey broken or seriously confusing; `P1` = deadline-required usability; `P2` = optional polish only if time.
 
 ## Immediate MVP user journey
 
@@ -52,4 +52,4 @@ Append exactly one row to the index per new ID. Preserve the companion descripti
 
 ## Documentation and concurrency
 
-These notes live initially on a **dedicated docs branch** while Phase 8 Codex work continues; this avoids altering `main` or forcing in-progress implementation agents to reconcile a documentation-only commit. Reconcile/merge only when safe. No code changes, schema changes, staging deployment, version bump, or active publishing changes were made by recording these issues.
+This register originated on `docs/p9-polish-issue-register` and was copied to the current-main-derived `docs/p9-polish-manual-p10-deferred` planning branch. Reconcile/merge safely with live Phase 8 Codex work; no destructive reset/rebase/stash. Neither documentation branch implies active Phase 9 product source. No code changes, schema changes, staging deployment, version bump, or active publishing changes were made by issue and prompt authoring.
