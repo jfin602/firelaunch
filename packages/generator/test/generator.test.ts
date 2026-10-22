@@ -9,6 +9,27 @@ import { televisionFromSpec } from '@firelaunch/tv';
 import type { ChannelDeployment } from '@firelaunch/contracts';
 import { parse } from '@babel/parser';
 
+test('native hero stays bounded at HD and Full HD without a bottom gutter', async () => {
+  const generated = await generateProject(fixtureChannel());
+  const helper = generated.files.get('src/tv-layout.js')!;
+  const { tvLayout, scrollTarget } = await import(`data:text/javascript,${encodeURIComponent(helper)}`);
+  for (const [width, height] of [[640, 360], [960, 540]]) {
+    const layout = tvLayout(width, height);
+    assert.ok(layout.heroArtworkHeight <= height * 0.24);
+    assert.ok(layout.heroWidth <= width - layout.horizontalInset * 2);
+    assert.ok(Math.abs((layout.heroWidth - 16 * layout.scale) / layout.heroArtworkHeight - 16 / 9) < 0.01);
+    const firstRowTop = layout.topInset + 70 * layout.scale + 43 * layout.scale +
+      layout.heroArtworkHeight + 48 * layout.scale + 43 * layout.scale;
+    assert.ok(firstRowTop + layout.cardArtworkHeight < height, `first content row visible at ${width}x${height}`);
+  }
+  assert.equal(scrollTarget({ y: 100, height: 180 }, 0, 400), 0);
+  assert.equal(scrollTarget({ y: 500, height: 180 }, 0, 400), 292);
+  const source = generated.files.get('src/App.js')!;
+  assert.match(source, /useWindowDimensions/);
+  assert.match(source, /showsVerticalScrollIndicator=\{false\}/);
+  assert.doesNotMatch(source, /screen: \{ flex: 1, padding: 60 \}/);
+});
+
 test('deterministic tree contains true shared runtime, manifest and projected content', async () => {
   const spec = fixtureChannel();
   const first = await generateProject(spec);
@@ -60,7 +81,7 @@ test('native source and shared projection retain ordered static sections and foc
   assert.doesNotThrow(() => parse(source, { sourceType: 'module', plugins: ['jsx'] }));
   assert.match(source, /module\.kind === 'image-banner' \|\| module\.kind === 'image-text'/);
   assert.match(source, /module\.imageSide === 'right'/);
-  assert.match(source, /resizeMode=\{module\.crop === 'contain'/);
+  assert.match(source, /module\.kind === 'hero' \|\| module\.crop === 'contain'/);
   assert.match(source, /Unsupported TV section/);
 });
 

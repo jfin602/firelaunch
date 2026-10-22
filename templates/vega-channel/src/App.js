@@ -1,16 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BackHandler, Image, Pressable, ScrollView, StyleSheet, Text, TVEventHandler, View } from 'react-native';
+import { BackHandler, Image, Pressable, ScrollView, StyleSheet, Text, TVEventHandler, View, useWindowDimensions } from 'react-native';
 import { KeplerVideoSurfaceView, VideoPlayer } from '@amazon-devices/react-native-w3cmedia';
 import bundled from './channel.json';
 import { installRelease } from './release-client';
 import { activeItem, initialState, itemFocusId, navFocusId, transition } from './tv-runtime';
 import { createPlaybackController } from './playback-controller';
 import { createHlsPlayer, installHlsPolyfills } from './hlsjs/adapter';
+import { scrollTarget, tvLayout } from './tv-layout';
 
 function formatTime(seconds) {
   const value = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`;
 }
+
+function layoutFrame(event) { return event?.nativeEvent?.layout; }
 
 function SoundIcon({ muted }) {
   return <View style={styles.soundIcon} accessibilityLabel={muted ? 'Muted' : 'Sound on'}>
@@ -23,28 +26,31 @@ function SoundIcon({ muted }) {
   </View>;
 }
 
-function StaticArtwork({ source, crop, banner, font, color }) {
+function StaticArtwork({ source, crop, banner, font, color, layout }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [source]);
-  const artStyle = [styles.staticArt, banner && styles.bannerArt];
+  const artStyle = [styles.staticArt, banner && styles.bannerArt, { height: Math.min(160, layout.cardArtworkHeight * 1.8) }];
   if (source?.startsWith('https://') && !failed) return <Image source={{ uri: source }}
     resizeMode={crop === 'contain' ? 'contain' : 'cover'} onError={() => setFailed(true)} style={artStyle} />;
   return <View style={[artStyle, styles.missingArt]}><Text style={[font, color]}>Artwork unavailable</Text></View>;
 }
 
-function Section({ module, page, state, brand, font, focusStyle, setView }) {
+function Section({ module, page, state, brand, font, focusStyle, layout, onLayout, onRowLayout, onItemLayout, setView }) {
   const color = { color: brand.textColor };
   const aligned = { textAlign: module.alignment === 'center' ? 'center' : 'left' };
   const compact = module.spacing === 'compact';
   const surface = module.background === 'surface' ? styles.sectionSurface : null;
-  const title = module.title && <Text style={[styles.moduleTitle, font, color, aligned]}>{module.title}</Text>;
-  if (module.kind === 'text') return <View style={[styles.module, surface, compact ? styles.compactSection : styles.comfortableSection]}>
+  const moduleSpacing = { marginVertical: 8 * layout.scale };
+  const title = module.title && <Text style={[styles.moduleTitle, { fontSize: 27 * layout.scale,
+    marginBottom: 8 * layout.scale }, font, color, aligned]}>{module.title}</Text>;
+  if (module.kind === 'text') return <View style={[styles.module, moduleSpacing, surface, compact ? styles.compactSection : styles.comfortableSection]}>
     {title}<Text style={[styles.body, font, color, aligned]}>{module.body}</Text>
   </View>;
   if (module.kind === 'image-banner' || module.kind === 'image-text') {
     const art = <StaticArtwork source={module.image?.artwork} crop={module.crop}
-      banner={module.kind === 'image-banner'} font={font} color={color} />;
-    return <View style={[styles.module, styles.staticSection, surface, compact ? styles.compactSection : styles.comfortableSection]}>
+      banner={module.kind === 'image-banner'} font={font} color={color} layout={layout} />;
+    return <View style={[styles.module, moduleSpacing, styles.staticSection,
+      { minHeight: layout.cardArtworkHeight * 2 }, surface, compact ? styles.compactSection : styles.comfortableSection]}>
       {title}<View style={[styles.staticRow, module.kind === 'image-text' && module.imageSide === 'right' && styles.staticRight]}>
         {art}<Text style={[styles.body, styles.staticCopy, font, color, aligned]}>{module.body}</Text>
       </View>
@@ -52,16 +58,24 @@ function Section({ module, page, state, brand, font, focusStyle, setView }) {
   }
   if (module.kind !== 'hero' && module.kind !== 'rail' && module.kind !== 'grid')
     throw new Error(`Unsupported TV section: ${module.kind}`);
-  return <View style={[styles.module, compact && styles.compactSection]}>
-    {title}<View style={module.kind === 'grid' ? styles.grid : styles.rail}>{module.items.map(content => {
+  return <View onLayout={onLayout} style={[styles.module, moduleSpacing, compact && styles.compactSection]}>
+    {title}<View onLayout={onRowLayout} style={module.kind === 'grid' ? styles.grid : styles.rail}>{module.items.map(content => {
       const focusId = itemFocusId(page.id, module.id, content.id);
       return <Pressable key={focusId} focusable={false} onPress={() => setView(previous => ({ ...previous,
         state: transition(previous.channel, { screen: 'page', pageId: page.id, focusId }, 'select') }))}
-        style={[styles.card, module.kind === 'hero' && styles.hero,
+        onLayout={event => {
+          const frame = layoutFrame(event);
+          if (frame) onItemLayout(focusId, frame);
+        }}
+        style={[styles.card, { width: module.kind === 'hero' ? layout.heroWidth : layout.cardWidth,
+          padding: 8 * layout.scale, marginRight: 12 * layout.scale },
           compact && styles.compactCard, state.focusId === focusId && [styles.focused, focusStyle]]}>
         {content.artwork?.startsWith('https://') ? <Image source={{ uri: content.artwork }}
-          resizeMode={module.crop === 'contain' ? 'contain' : 'cover'} style={styles.artwork} />
-          : <View style={styles.artwork} />}
+          resizeMode={module.kind === 'hero' || module.crop === 'contain' ? 'contain' : 'cover'}
+          style={[styles.artwork, { height: module.kind === 'hero' ? layout.heroArtworkHeight : layout.cardArtworkHeight,
+            marginBottom: 8 * layout.scale }]} />
+          : <View style={[styles.artwork, { height: module.kind === 'hero' ? layout.heroArtworkHeight : layout.cardArtworkHeight,
+            marginBottom: 8 * layout.scale }]} />}
         <Text style={[font, color, aligned]}>{content.title}</Text>
       </Pressable>;
     })}</View>
@@ -154,14 +168,53 @@ function Playback({ item, muted, controls, activity, onBack, typography }) {
 }
 
 export default function App() {
+  const { width, height } = useWindowDimensions();
+  const layout = tvLayout(width, height);
   const [view, setView] = useState(() => ({ channel: bundled, state: initialState(bundled) }));
   const viewRef = useRef(view);
   viewRef.current = view;
   const controls = useRef(null);
   const playbackActivity = useRef(null);
+  const scrollView = useRef(null);
+  const navScroll = useRef(null);
+  const navLayouts = useRef(new Map());
+  const navOffset = useRef(0);
+  const navViewport = useRef(0);
+  const sectionLayouts = useRef(new Map());
+  const rowLayouts = useRef(new Map());
+  const itemLayouts = useRef(new Map());
+  const scrollOffset = useRef(0);
+  const indicatorTimer = useRef(null);
+  const [scrollMetrics, setScrollMetrics] = useState({ viewport: 0, content: 0, offset: 0, visible: false });
   const { channel, state } = view;
   const dispatch = command => setView(previous => ({ ...previous,
     state: transition(previous.channel, previous.state, command) }));
+  const revealFocus = (focusId, currentPage) => {
+    if (focusId.startsWith('nav:')) {
+      scrollView.current?.scrollTo({ y: 0, animated: true });
+      const item = navLayouts.current.get(focusId.slice(4));
+      if (item && item.x < navOffset.current) navScroll.current?.scrollTo({ x: item.x, animated: true });
+      else if (item && item.x + item.width > navOffset.current + navViewport.current)
+        navScroll.current?.scrollTo({ x: item.x + item.width - navViewport.current, animated: true });
+      return;
+    }
+    const module = currentPage?.modules.find(section => section.items.some(content =>
+      itemFocusId(currentPage.id, section.id, content.id) === focusId));
+    const section = sectionLayouts.current.get(module?.id);
+    const row = rowLayouts.current.get(module?.id);
+    const card = itemLayouts.current.get(focusId);
+    const focusedLayout = section && row && card
+      ? { y: section.y + row.y + card.y, height: card.height } : section;
+    const target = scrollTarget(focusedLayout, scrollOffset.current, scrollMetrics.viewport);
+    if (target !== scrollOffset.current) scrollView.current?.scrollTo({ y: target, animated: true });
+  };
+  useEffect(() => {
+    if (state.screen === 'page') revealFocus(state.focusId, channel.pages.find(candidate => candidate.id === state.pageId));
+  }, [state.screen, state.pageId, state.focusId, scrollMetrics.viewport]);
+  useEffect(() => {
+    sectionLayouts.current.clear(); rowLayouts.current.clear(); itemLayouts.current.clear(); scrollOffset.current = 0;
+  }, [state.pageId]);
+  useEffect(() => () => { if (indicatorTimer.current) clearTimeout(indicatorTimer.current); }, []);
   useEffect(() => {
     let active = true;
     const stop = installRelease(bundled, (next, nextState) => {
@@ -191,23 +244,76 @@ export default function App() {
   const page = channel.pages.find(candidate => candidate.id === state.pageId);
   const item = activeItem(channel, state);
   const brand = channel.brand;
-  const focusStyle = { borderColor: brand.primaryColor };
+  const focusStyle = { borderColor: brand.primaryColor, backgroundColor: `${brand.primaryColor}22` };
   const font = { fontFamily: brand.typography === 'serif' ? 'serif' : 'sans-serif' };
   if (state.screen === 'playback' && item) return <Playback key={item.id} item={item}
     muted={channel.playback.startMuted} controls={controls} activity={playbackActivity}
     onBack={() => dispatch('back')} typography={brand.typography} />;
-  return <View style={[styles.screen, { backgroundColor: brand.backgroundColor }]}>
+  return <View style={[styles.screen, { backgroundColor: brand.backgroundColor,
+    paddingHorizontal: layout.horizontalInset, paddingTop: layout.topInset }]}>
     {state.screen === 'page' ? <>
-      {brand.logo?.startsWith('https://') && <Image source={{ uri: brand.logo }} style={styles.brandLogo} />}
-      {brand.showTitle !== false && <Text style={[styles.heading, font, { color: brand.textColor }]}>{channel.title}</Text>}
-      <View style={styles.nav}>{channel.pages.map(target => <Pressable key={target.id}
-        focusable={false}
-        onPress={() => setView(previous => ({ ...previous, state: { screen: 'page', pageId: target.id, focusId: navFocusId(target.id) } }))}
-        style={[styles.navItem, state.focusId === navFocusId(target.id) && [styles.focused, focusStyle]]}>
-        <Text style={[font, { color: brand.textColor }]}>{target.title}</Text>
-      </Pressable>)}</View>
-      <ScrollView>{page.modules.map(module => <Section key={module.id} module={module} page={page}
-        state={state} brand={brand} font={font} focusStyle={focusStyle} setView={setView} />)}</ScrollView>
+      <View style={[styles.header, { minHeight: 58 * layout.scale, marginBottom: 12 * layout.scale }]}>
+        {brand.logo?.startsWith('https://') && <Image source={{ uri: brand.logo }}
+          style={[styles.brandLogo, { width: 120 * layout.scale, height: 58 * layout.scale }]} />}
+        {brand.showTitle !== false && <Text numberOfLines={1} style={[styles.heading,
+          { fontSize: 42 * layout.scale, marginRight: 24 * layout.scale }, font,
+          { color: brand.textColor }]}>{channel.title}</Text>}
+        <ScrollView horizontal ref={navScroll} style={styles.navScroll} contentContainerStyle={styles.nav}
+          showsHorizontalScrollIndicator={false}
+          onLayout={event => { navViewport.current = layoutFrame(event)?.width ?? navViewport.current; }}
+          onScroll={event => { navOffset.current = event?.nativeEvent?.contentOffset?.x ?? navOffset.current; }}
+          scrollEventThrottle={16}>{channel.pages.map(target => <Pressable key={target.id}
+            focusable={false}
+            onLayout={event => {
+              const frame = layoutFrame(event);
+              if (frame) navLayouts.current.set(target.id, frame);
+            }}
+            onPress={() => setView(previous => ({ ...previous, state: { screen: 'page', pageId: target.id, focusId: navFocusId(target.id) } }))}
+            style={[styles.navItem, { paddingVertical: 10 * layout.scale,
+              paddingHorizontal: 14 * layout.scale, marginRight: 12 * layout.scale },
+              state.focusId === navFocusId(target.id) && [styles.focused, focusStyle]]}>
+            <Text style={[font, { color: brand.textColor }]}>{target.title}</Text>
+          </Pressable>)}</ScrollView>
+      </View>
+      <View style={styles.scrollArea}>
+        <ScrollView key={page.id} ref={scrollView} showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
+          onLayout={event => {
+            const frame = layoutFrame(event);
+            if (frame) setScrollMetrics(previous => ({ ...previous, viewport: frame.height }));
+          }}
+          onContentSizeChange={(_, content) => setScrollMetrics(previous => ({ ...previous, content }))}
+          onScroll={event => {
+            const offset = event?.nativeEvent?.contentOffset?.y;
+            if (!Number.isFinite(offset)) return;
+            scrollOffset.current = offset;
+            setScrollMetrics(previous => ({ ...previous, offset, visible: true }));
+            if (indicatorTimer.current) clearTimeout(indicatorTimer.current);
+            indicatorTimer.current = setTimeout(() => setScrollMetrics(previous => ({ ...previous, visible: false })), 1000);
+          }}>{page.modules.map(module => <Section key={module.id} module={module} page={page}
+            state={state} brand={brand} font={font} focusStyle={focusStyle} layout={layout}
+            onLayout={event => {
+              const frame = layoutFrame(event);
+              if (!frame) return;
+              sectionLayouts.current.set(module.id, frame);
+              if (state.screen === 'page') revealFocus(state.focusId, page);
+            }} onRowLayout={event => {
+              const frame = layoutFrame(event);
+              if (!frame) return;
+              rowLayouts.current.set(module.id, frame);
+              if (state.screen === 'page') revealFocus(state.focusId, page);
+            }} onItemLayout={(focusId, itemLayout) => {
+              itemLayouts.current.set(focusId, itemLayout);
+              if (state.screen === 'page' && state.focusId === focusId) revealFocus(focusId, page);
+            }} setView={setView} />)}</ScrollView>
+        {scrollMetrics.visible && scrollMetrics.viewport > 0 && scrollMetrics.content > scrollMetrics.viewport + 2 &&
+          <View pointerEvents="none" style={[styles.scrollIndicator, {
+            height: Math.max(20, scrollMetrics.viewport ** 2 / scrollMetrics.content),
+            top: Math.max(0, Math.min(scrollMetrics.viewport - 20,
+              scrollMetrics.offset / (scrollMetrics.content - scrollMetrics.viewport) *
+              (scrollMetrics.viewport - Math.max(20, scrollMetrics.viewport ** 2 / scrollMetrics.content))))
+          }]} />}
+      </View>
     </> : <>
       <Text style={[styles.heading, font, { color: brand.textColor }]}>{item?.title}</Text>
       {state.screen === 'detail' ? <>
@@ -225,9 +331,13 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, padding: 60 }, heading: { fontSize: 48, fontWeight: 'bold' },
-  nav: { flexDirection: 'row', marginVertical: 24 }, navItem: { padding: 16, marginRight: 16 },
-  module: { marginVertical: 16 }, moduleTitle: { fontSize: 30, marginBottom: 12 },
+  screen: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', minHeight: 58, marginBottom: 12 },
+  heading: { fontSize: 42, fontWeight: 'bold', flexShrink: 1, marginRight: 24 },
+  navScroll: { flex: 1 }, nav: { flexDirection: 'row', alignItems: 'center' },
+  navItem: { paddingVertical: 10, paddingHorizontal: 14, marginRight: 12, borderWidth: 2, borderColor: 'transparent', borderRadius: 6 },
+  scrollArea: { flex: 1 }, scrollIndicator: { position: 'absolute', right: -2, width: 2,
+    borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
+  module: { marginVertical: 8 }, moduleTitle: { fontSize: 27, marginBottom: 8 },
   body: { fontSize: 22, lineHeight: 32 }, sectionSurface: { backgroundColor: '#ffffff16', borderRadius: 8 },
   compactSection: { padding: 8, marginVertical: 8 }, comfortableSection: { padding: 20 },
   staticSection: { minHeight: 170 }, staticRow: { flexDirection: 'row', alignItems: 'center' },
@@ -235,11 +345,11 @@ const styles = StyleSheet.create({
   bannerArt: { width: '60%' }, missingArt: { alignItems: 'center', justifyContent: 'center' },
   staticCopy: { flex: 1, paddingHorizontal: 24 }, compactCard: { marginRight: 8 },
   rail: { flexDirection: 'row' }, grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  card: { width: 250, padding: 12, borderWidth: 4, borderColor: 'transparent', marginRight: 16 },
-  hero: { width: 420 }, artwork: { height: 160, width: '100%', marginBottom: 12 },
+  card: { padding: 8, borderWidth: 2, borderColor: 'transparent', borderRadius: 6, marginRight: 12 },
+  artwork: { height: 124, width: '100%', marginBottom: 8 },
   brandLogo: { width: 160, height: 80, resizeMode: 'contain' },
   detailArtwork: { width: 420, height: 240, resizeMode: 'contain', marginBottom: 20 },
-  focused: { borderWidth: 4 },
+  focused: { transform: [{ scale: 1.015 }] },
   playerScreen: { flex: 1, backgroundColor: '#000000' },
   fullscreenVideo: { ...StyleSheet.absoluteFillObject },
   playerTop: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center',
