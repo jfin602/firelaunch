@@ -103,12 +103,12 @@ export function Catalog({ project, projectId: legacyProjectId, accountId, hosted
     return () => { alive = false; };
   }, [projectId, hosted, inventory?.revision]);
   useEffect(() => {
-    if (!project || initialSelection) return;
+    if (!project) return;
     let alive = true;
     void readCatalogDraft(project.id).then(draft => { if (alive && draft) { setCreator(draft.creatorType); setDraftItemIds(draft.selection.itemIds); setDraftCollectionIds(draft.selection.collectionIds); onSelectionRestored?.(draft.selection, draft.creatorType); } })
       .catch(reason => { if (alive) setError(errorText(reason)); });
     return () => { alive = false; };
-  }, [projectId, hosted]);
+  }, [projectId, hosted, project?.revision]);
   useEffect(() => { setOverride({ title: selected?.creatorOverrides?.title ?? '', description: selected?.creatorOverrides?.description ?? '', artworkUrl: selected?.creatorOverrides?.artworkUrl ?? '' }); }, [selectedId, inventory?.revision]);
   const run = async (action: () => Promise<string>) => {
     setWorking(true); setError(''); setMessage('');

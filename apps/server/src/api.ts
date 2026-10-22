@@ -21,6 +21,7 @@ import { CatalogRepository, catalogKinds, type CatalogKind } from './catalog-rep
 import { CatalogProjectionService } from './catalog-projection.js';
 import { agentCatalogGrounding } from './agent-grounding.js';
 import { composeCatalogDraft } from './catalog-composition.js';
+import { selectionAfterVideoRemoval } from './catalog-inclusion-selection.js';
 import { PublicationRepository } from './publication-repository.js';
 import { PublicReleaseResolver, publicArtworkRoute, publicReleaseRoute } from './public-resolver.js';
 import type { ManagedArtworkDelivery } from './managed-artwork.js';
@@ -525,8 +526,14 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
           }
           if (segments.length === 4 && !url.search && segments[3] === 'catalog-draft' && request.method === 'GET') {
             const prior = await hostedRepository.catalogDraftBaseline(principal, segments[2]!);
-            respond(response, 200, prior ? { creatorType: prior.kind, selection: { ...prior.selection,
-              expectedCatalogRevision: (await catalog!.read(principal, segments[2]!)).revision } } : null); return;
+            if (!prior) { respond(response, 200, null); return; }
+            const [current, inventory] = await Promise.all([
+              hostedRepository.read(principal, segments[2]!), catalog!.read(principal, segments[2]!)
+            ]);
+            const selection = prior.kind === 'video'
+              ? selectionAfterVideoRemoval(prior.selection, prior.spec, current.spec, inventory) : prior.selection;
+            respond(response, 200, { creatorType: prior.kind, selection: { ...selection,
+              expectedCatalogRevision: inventory.revision } }); return;
           }
           if (segments.length === 4 && !url.search) {
             const id = segments[2]!;
