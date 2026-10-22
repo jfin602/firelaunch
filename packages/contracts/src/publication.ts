@@ -36,7 +36,8 @@ export type PublicationApproval = z.infer<typeof publicationApprovalSchema>;
 // but still needs a separately display-cleared artwork binding. A text-only
 // release needs an explicit future ChannelSpec/TV rendering contract.
 const mediaBindingSchema = z.strictObject({
-  contentId: id('item'), catalogItemId: id('ci'), playbackAssetId: id('ma').optional(), artworkAssetId: id('ma')
+  contentId: id('item'), catalogItemId: id('ci'), playbackAssetId: id('ma').optional(),
+  audiobookAssetId: id('ma').optional(), artworkAssetId: id('ma')
 });
 export const publicationBindingsSchema = z.strictObject({
   content: z.array(mediaBindingSchema).max(500),
@@ -82,7 +83,7 @@ export const publishedManifestSchema = z.strictObject({
     channelSchemaVersion: z.literal(1)
   }),
   channel: z.lazy(() => channelSpecSchema),
-  media: z.array(publicMediaSchema).max(1002),
+  media: z.array(publicMediaSchema).max(1502),
   bindings: publicationBindingsSchema
 }).superRefine((manifest, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: 'custom', message });
@@ -110,7 +111,12 @@ export const publishedManifestSchema = z.strictObject({
     const presentation = contentPresentation(content);
     if (presentation === 'information') {
       if (binding.playbackAssetId !== undefined) issue('Informational content cannot bind playback');
-    } else requireAsset(binding.playbackAssetId, presentation, content.mediaUrl);
+      if (content.audiobook) requireAsset(binding.audiobookAssetId, 'audio', content.audiobook.mediaUrl);
+      else if (binding.audiobookAssetId !== undefined) issue('Book without audiobook cannot bind audio');
+    } else {
+      if (binding.audiobookAssetId !== undefined) issue('Only informational books can bind audiobook audio');
+      requireAsset(binding.playbackAssetId, presentation, content.mediaUrl);
+    }
     requireAsset(binding.artworkAssetId, 'artwork', content.artwork);
   }
   requireOptionalArtwork(manifest.channel.brand.logo, manifest.bindings.logoAssetId, requireAsset, issue);
@@ -133,6 +139,8 @@ export function assertClientCompatible(manifestInput: unknown, clientSchemaVersi
   const manifest = publishedManifestSchema.parse(manifestInput);
   if (!Number.isInteger(clientSchemaVersion) || clientSchemaVersion < manifest.clientCompatibility.minSchemaVersion ||
     clientSchemaVersion > manifest.clientCompatibility.maxSchemaVersion) throw new Error('Incompatible TV client schema');
+  if (manifest.channel.content.some(content => content.presentation === 'audio' || content.audiobook !== undefined))
+    throw new Error('Requires App Update: installed client does not support audio or book audiobook playback');
   return manifest;
 }
 
@@ -140,6 +148,8 @@ export function assertClientCompatible(manifestInput: unknown, clientSchemaVersi
  * Keep new layouts draft-only until a verified native upgrade is recorded. */
 export function assertInstalledLayoutCompatible(channelInput: unknown): ChannelSpec {
   const channel = channelSpecSchema.parse(channelInput);
+  if (channel.content.some(content => content.presentation === 'audio' || content.audiobook !== undefined))
+    throw new Error('Requires App Update: installed client does not support audio or book audiobook playback');
   if (channel.pages.some(page => page.modules.some(module =>
     module.kind === 'image-banner' || module.kind === 'image-text' ||
     ('crop' in module && module.crop !== undefined) ||
@@ -159,7 +169,7 @@ export function projectApprovedManifest(input: {
 }): PublishedManifest {
   const approval = publicationApprovalSchema.parse(input.approval);
   const deployment = channelDeploymentSchema.parse(input.deployment);
-  const channel = assertInstalledLayoutCompatible(input.channel);
+  const channel = channelSpecSchema.parse(input.channel);
   const inventory: CatalogInventory = catalogInventorySchema.parse(input.inventory);
   const bindings = publicationBindingsSchema.parse(input.bindings);
   if (approval.creatorAccountId !== deployment.creatorAccountId || approval.creatorAccountId !== inventory.creatorAccountId ||
@@ -198,10 +208,13 @@ export function projectApprovedManifest(input: {
   const resolvedChannel = { ...channel, content: channel.content.map(content => {
     const binding = bindings.content.find(value => value.contentId === content.id);
     const url = binding?.playbackAssetId && input.resolvedPlayback?.get(binding.playbackAssetId);
+    const audiobookUrl = binding?.audiobookAssetId && input.resolvedPlayback?.get(binding.audiobookAssetId);
     const artwork = binding?.artworkAssetId && input.resolvedArtwork?.get(binding.artworkAssetId);
     if (artwork && content.artwork !== 'assets/catalog-placeholder.png' && !sameManagedArtwork(content.artwork, artwork))
       throw new Error('Managed artwork differs from the channel draft');
-    return { ...content, ...(url ? { mediaUrl: url } : {}), ...(artwork ? { artwork } : {}) };
+    return { ...content, ...(url ? { mediaUrl: url } : {}),
+      ...(audiobookUrl && content.audiobook ? { audiobook: { mediaUrl: audiobookUrl } } : {}),
+      ...(artwork ? { artwork } : {}) };
   }) };
   for (const binding of bindings.content) {
     const content = resolvedChannel.content.find(value => value.id === binding.contentId);
@@ -216,7 +229,14 @@ export function projectApprovedManifest(input: {
       (presentation !== 'information' && presentation !== item.kind)) throw new Error('Content presentation differs from catalog');
     if (presentation === 'information') {
       if (binding.playbackAssetId !== undefined) throw new Error('Informational content cannot bind playback');
+      if (content.audiobook) {
+        if (!item.audiobook || binding.audiobookAssetId !== item.audiobook.audioAssetId ||
+          !item.mediaAssetIds.includes(binding.audiobookAssetId) || !content.audiobook.mediaUrl)
+          throw new Error('Book audiobook differs from its catalog attachment');
+        addAsset(binding.audiobookAssetId, 'audio', content.audiobook.mediaUrl, item.id);
+      } else if (binding.audiobookAssetId !== undefined) throw new Error('Book without audiobook cannot bind audio');
     } else {
+      if (binding.audiobookAssetId !== undefined) throw new Error('Only a book can bind audiobook audio');
       if (!binding.playbackAssetId || !item.mediaAssetIds.includes(binding.playbackAssetId) || !content.mediaUrl) {
         throw new Error('Content has no publishable playback media');
       }
@@ -226,6 +246,8 @@ export function projectApprovedManifest(input: {
   }
   if (channel.brand.logo && bindings.logoAssetId) addAsset(bindings.logoAssetId, 'artwork', channel.brand.logo);
   if (channel.brand.heroArtwork && bindings.heroArtworkAssetId) addAsset(bindings.heroArtworkAssetId, 'artwork', channel.brand.heroArtwork);
+  // Validate all bindings before the installed-package gate, but never emit new semantics.
+  assertInstalledLayoutCompatible(resolvedChannel);
   return publishedManifestSchema.parse({
     schemaVersion: PUBLISHED_MANIFEST_SCHEMA_VERSION,
     releaseId: input.releaseId, releaseSequence: input.releaseSequence,

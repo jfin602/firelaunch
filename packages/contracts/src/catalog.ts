@@ -93,7 +93,13 @@ export type CatalogSource = z.infer<typeof catalogSourceSchema>;
 export const catalogMetadataSchema = z.strictObject({
   title: titleSchema,
   description: descriptionSchema.optional(),
-  artworkUrl: httpsUrlSchema.optional()
+  artworkUrl: httpsUrlSchema.optional(),
+  artist: titleSchema.optional(),
+  album: titleSchema.optional(),
+  author: titleSchema.optional(),
+  isbn: z.string().regex(/^(?:[0-9]{9}[0-9X]|97[89][0-9]{10})$/, 'Expected normalized ISBN-10 or ISBN-13').optional(),
+  series: titleSchema.optional(),
+  narrator: titleSchema.optional()
 });
 export type CatalogMetadata = z.infer<typeof catalogMetadataSchema>;
 
@@ -110,8 +116,11 @@ export const creatorMetadataOverridesSchema = z.strictObject({
   title: titleSchema.optional(),
   description: descriptionSchema.optional(),
   artworkUrl: httpsUrlSchema.optional(),
+  artist: titleSchema.optional(), album: titleSchema.optional(),
+  author: titleSchema.optional(), isbn: catalogMetadataSchema.shape.isbn.optional(),
+  series: titleSchema.optional(), narrator: titleSchema.optional(),
   editedAt: z.iso.datetime()
-}).refine(value => value.title !== undefined || value.description !== undefined || value.artworkUrl !== undefined,
+}).refine(value => Object.keys(value).some(key => key !== 'editedAt'),
   'An override must contain an edited field');
 export type CreatorMetadataOverrides = z.infer<typeof creatorMetadataOverridesSchema>;
 
@@ -124,7 +133,8 @@ export const catalogItemSchema = z.strictObject({
   sourceRecord: sourceRecordSchema,
   externalIdentifiers: z.array(externalIdentifierSchema).max(20),
   creatorOverrides: creatorMetadataOverridesSchema.optional(),
-  mediaAssetIds: z.array(mediaAssetIdSchema).max(100)
+  mediaAssetIds: z.array(mediaAssetIdSchema).max(100),
+  audiobook: z.strictObject({ audioAssetId: mediaAssetIdSchema }).optional()
 }).superRefine((item, context) => {
   const identifiers = item.externalIdentifiers.map(externalKey);
   if (!identifiers.includes(externalKey(item.sourceRecord.externalId))) {
@@ -132,8 +142,26 @@ export const catalogItemSchema = z.strictObject({
   }
   if (!unique(identifiers)) context.addIssue({ code: 'custom', message: 'Duplicate external identifiers' });
   if (!unique(item.mediaAssetIds)) context.addIssue({ code: 'custom', message: 'Duplicate media asset IDs' });
+  if (item.audiobook && (item.kind !== 'book' || !item.mediaAssetIds.includes(item.audiobook.audioAssetId)))
+    context.addIssue({ code: 'custom', message: 'Audiobook must reference media on the same book' });
+  const metadata = [item.sourceRecord.metadata, item.creatorOverrides];
+  for (const value of metadata) if (value) {
+    if (item.kind !== 'audio' && (value.artist !== undefined || value.album !== undefined))
+      context.addIssue({ code: 'custom', message: 'Artist and album require an audio item' });
+    if (item.kind !== 'book' && (value.author !== undefined || value.isbn !== undefined ||
+      value.series !== undefined || value.narrator !== undefined))
+      context.addIssue({ code: 'custom', message: 'Book metadata requires a book item' });
+  }
 });
 export type CatalogItem = z.infer<typeof catalogItemSchema>;
+
+/** Creator edits win field by field; original source values remain available for reconciliation. */
+export function resolvedCatalogMetadata(item: CatalogItem): CatalogMetadata {
+  if (!item.creatorOverrides) return item.sourceRecord.metadata;
+  const { editedAt: _editedAt, ...overrides } = item.creatorOverrides;
+  return { ...item.sourceRecord.metadata, ...overrides,
+    title: overrides.title ?? item.sourceRecord.metadata.title };
+}
 
 export const mediaRightsSchema = z.strictObject({
   status: z.enum(['unknown', 'cleared', 'revoked']),
@@ -231,6 +259,7 @@ export const catalogInventorySchema = z.strictObject({
   const itemIds = new Set(inventory.items.map(item => item.id));
   const assetIds = new Set(inventory.mediaAssets.map(asset => asset.id));
   const itemById = new Map(inventory.items.map(item => [item.id, item]));
+  const assetById = new Map(inventory.mediaAssets.map(asset => [asset.id, asset]));
   for (const [label, values] of [
     ['source IDs', inventory.sources.map(source => source.id)],
     ['item IDs', inventory.items.map(item => item.id)],
@@ -263,6 +292,11 @@ export const catalogInventorySchema = z.strictObject({
     if (!inScope(asset)) context.addIssue({ code: 'custom', message: 'Media asset outside inventory scope' });
     const item = itemById.get(asset.catalogItemId);
     if (!item || !item.mediaAssetIds.includes(asset.id)) context.addIssue({ code: 'custom', message: 'Media asset must be linked by its item' });
+  }
+  for (const item of inventory.items) if (item.audiobook) {
+    const asset = assetById.get(item.audiobook.audioAssetId);
+    if (!asset || asset.kind !== 'audio' || asset.catalogItemId !== item.id || !inScope(asset))
+      context.addIssue({ code: 'custom', message: 'Audiobook asset must be audio owned by the same book' });
   }
   for (const collection of inventory.collections) {
     if (!inScope(collection)) context.addIssue({ code: 'custom', message: 'Collection outside inventory scope' });

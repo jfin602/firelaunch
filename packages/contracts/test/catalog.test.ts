@@ -4,6 +4,7 @@ import {
   CATALOG_SCHEMA_VERSION, catalogInventorySchema, catalogItemSchema, catalogSourceSchema,
   collectionSchema, externalIdentifierSchema, mediaAssetSchema, mediaRightsSchema,
   mediaUseEligible,
+  resolvedCatalogMetadata,
   type CatalogInventory
 } from '../src/index.js';
 
@@ -57,6 +58,39 @@ test('video, audio and writing inventory parses; book has no playable media', ()
   assert.equal(parsed.items[2].sourceRecord.metadata.title, 'Forest Essays');
   assert.equal(parsed.items[2].creatorOverrides?.title, 'Forest Essays: TV Edition');
   assert.equal(parsed.mediaAssets.length, 2);
+});
+
+test('optional audiobook stays on one book and metadata keeps creator precedence', () => {
+  const bookAudioId = `ma_${hex('4')}`;
+  const attachedBook = { ...book, mediaAssetIds: [bookAudioId], audiobook: { audioAssetId: bookAudioId },
+    sourceRecord: { ...book.sourceRecord, metadata: { title: 'Forest Essays', author: 'Source Author',
+      isbn: '9780306406157', series: 'Field Guides', narrator: 'Source Narrator' } },
+    creatorOverrides: { title: 'My Edition', author: 'Creator Author', narrator: 'Creator Narrator', editedAt: timestamp } };
+  const bookAudio = { ...asset(bookAudioId, book.id, 'audio'), location: { type: 'upload' as const, key: 'media/book/audio.mp3' } };
+  const parsed = catalogInventorySchema.parse({ ...inventory(), items: [video, audio, attachedBook],
+    mediaAssets: [videoAsset, audioAsset, bookAudio] });
+  assert.equal(parsed.items.length, 3);
+  assert.deepEqual(resolvedCatalogMetadata(parsed.items[2]!), { title: 'My Edition', author: 'Creator Author',
+    isbn: '9780306406157', series: 'Field Guides', narrator: 'Creator Narrator' });
+  assert.equal(catalogInventorySchema.safeParse({ ...inventory(), items: [video, audio, attachedBook],
+    mediaAssets: [videoAsset, audioAsset, { ...bookAudio, catalogItemId: audio.id }] }).success, false);
+  assert.equal(catalogInventorySchema.safeParse({ ...inventory(), items: [video, audio, attachedBook],
+    mediaAssets: [videoAsset, audioAsset, { ...bookAudio, projectId: `ch_${hex('f')}` }] }).success, false);
+  assert.equal(catalogItemSchema.safeParse({ ...book, audiobook: { audioAssetId: audioAsset.id } }).success, false);
+  assert.equal(catalogItemSchema.safeParse({ ...audio, audiobook: { audioAssetId: audioAsset.id } }).success, false);
+});
+
+test('new media metadata is bounded, typed and never a rights claim', () => {
+  assert.equal(catalogItemSchema.safeParse({ ...audio, sourceRecord: { ...audio.sourceRecord,
+    metadata: { title: 'Track', artist: 'Artist', album: 'Album' } } }).success, true);
+  assert.equal(catalogItemSchema.safeParse({ ...book, sourceRecord: { ...book.sourceRecord,
+    metadata: { title: 'Book', isbn: 'B012345678' } } }).success, false);
+  assert.equal(catalogItemSchema.safeParse({ ...book, creatorOverrides: { editedAt: timestamp,
+    narrator: 'x'.repeat(161) } }).success, false);
+  assert.equal(catalogItemSchema.safeParse({ ...video, creatorOverrides: { editedAt: timestamp,
+    author: 'Wrong kind' } }).success, false);
+  assert.equal(catalogItemSchema.safeParse({ ...book, sourceRecord: { ...book.sourceRecord,
+    metadata: { title: 'Book', isbn: '9780306406157', playbackRights: 'granted' } } }).success, false);
 });
 
 test('source matching and namespaced identifiers do not confer permission', () => {

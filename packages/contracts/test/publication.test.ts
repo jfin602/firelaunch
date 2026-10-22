@@ -149,7 +149,7 @@ test('approved writing-only release has detail artwork and no playback reference
   assert.equal(JSON.stringify(manifest).includes('playbackAssetId'), false);
 });
 
-test('mixed video, audio and informational content retains type-specific bindings', () => {
+test('new audio cannot publish to an unqualified installed client', () => {
   const base = input();
   const mixed = { ...base,
     channel: { ...base.channel, content: [...base.channel.content, audioContent(), bookContent()] },
@@ -158,14 +158,48 @@ test('mixed video, audio and informational content retains type-specific binding
     bindings: { content: [...base.bindings.content,
       { contentId: audioContent().id, catalogItemId: audioItemId, playbackAssetId: audioPlaybackId, artworkAssetId: audioArtworkId },
       bookBinding()] } };
-  const manifest = projectApprovedManifest(mixed);
-  assert.equal(manifest.media.length, 5);
-  assert.equal(assertClientCompatible(manifest, 1).channel.content.length, 3);
-  assert.equal(publishedManifestSchema.safeParse({ ...manifest, bindings: { content: [
-    manifest.bindings.content[0], { ...manifest.bindings.content[1], playbackAssetId: playbackId }, manifest.bindings.content[2]
-  ] } }).success, false);
+  assert.throws(() => projectApprovedManifest(mixed), /Requires App Update/);
+  const legacy = projectApprovedManifest(base);
+  const oldAudioManifest = { ...legacy, channel: { ...mixed.channel, content: [legacy.channel.content[0], audioContent(), bookContent()] },
+    media: [...legacy.media, { id: audioPlaybackId, kind: 'audio', url: audioPlaybackUrl },
+      { id: audioArtworkId, kind: 'artwork', url: audioArtworkUrl }, { id: bookArtworkId, kind: 'artwork', url: bookArtworkUrl }],
+    bindings: mixed.bindings };
+  assert.equal(publishedManifestSchema.safeParse(oldAudioManifest).success, true, 'prior v1 media shape remains readable');
+  assert.throws(() => assertClientCompatible(oldAudioManifest, 1), /Requires App Update/);
   assert.throws(() => projectApprovedManifest({ ...mixed, bindings: { content: [mixed.bindings.content[0],
     { ...mixed.bindings.content[1], catalogItemId }, mixed.bindings.content[2]] } }), /one-to-one/);
+});
+
+test('book audiobook binds only its own eligible audio and remains blocked until native qualification', () => {
+  const base = writingInput();
+  const audioId = `ma_${hex('6')}`;
+  const url = 'https://media.example.com/field-guide.mp3';
+  const attachedItem = { ...bookItem(), mediaAssetIds: [bookArtworkId, audioId], audiobook: { audioAssetId: audioId } };
+  const attachedAudio = { ...media()[0], id: audioId, catalogItemId: bookItemId, kind: 'audio' as const,
+    location: { type: 'https' as const, url } };
+  const candidate = { ...base,
+    channel: { ...base.channel, content: [{ ...bookContent(), audiobook: { mediaUrl: url } }] },
+    inventory: { ...base.inventory, items: [attachedItem], mediaAssets: [bookArtwork(), attachedAudio] },
+    bindings: { content: [{ ...bookBinding(), audiobookAssetId: audioId }] } };
+  assert.throws(() => projectApprovedManifest(candidate), /Requires App Update/);
+  const oldManifest = projectApprovedManifest(base);
+  const futureShape = { ...oldManifest, channel: candidate.channel,
+    media: [...oldManifest.media, { id: audioId, kind: 'audio', url }], bindings: candidate.bindings };
+  assert.equal(publishedManifestSchema.safeParse(futureShape).success, true);
+  assert.throws(() => assertClientCompatible(futureShape, 1), /Requires App Update/);
+  assert.equal(publishedManifestSchema.safeParse({ ...futureShape, bindings: base.bindings }).success, false);
+  assert.equal(publishedManifestSchema.safeParse({ ...futureShape, channel: { ...candidate.channel,
+    content: [bookContent()] } }).success, false);
+  assert.throws(() => projectApprovedManifest({ ...candidate, bindings: { content: [{ ...bookBinding(), audiobookAssetId: playbackId }] } }), /differs/);
+  assert.throws(() => projectApprovedManifest({ ...candidate, inventory: { ...candidate.inventory,
+    mediaAssets: [bookArtwork(), { ...attachedAudio, deliveryEligible: false }] } }), /Invalid, unlicensed/);
+  assert.throws(() => projectApprovedManifest({ ...candidate, inventory: { ...candidate.inventory,
+    mediaAssets: [bookArtwork(), { ...attachedAudio, catalogItemId: audioItemId }] } }));
+  assert.throws(() => projectApprovedManifest({ ...candidate, inventory: { ...candidate.inventory,
+    mediaAssets: [bookArtwork(), { ...attachedAudio, rights: { ...rights('television_playback'), status: 'revoked' },
+      deliveryEligible: false }] } }), /Invalid, unlicensed/);
+  assert.throws(() => projectApprovedManifest({ ...candidate, channel: { ...candidate.channel,
+    content: [{ ...bookContent(), audiobook: { mediaUrl: `${url}?token=secret` } }] } }));
 });
 
 test('writing publication rejects unapproved, revoked, foreign and unsafe display media', () => {

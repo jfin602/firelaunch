@@ -68,6 +68,8 @@ export const contentShapeSchema = z.strictObject({
   artwork: artworkSchema,
   presentation: z.enum(['video', 'audio', 'information']).optional(),
   mediaUrl: httpUrlSchema.optional(),
+  // A book remains informational; this is an optional intent for the shared audio transport.
+  audiobook: z.strictObject({ mediaUrl: httpUrlSchema }).optional(),
   durationSeconds: z.number().int().positive().max(86400).optional(),
   category: z.string().trim().min(1).max(80).optional(),
   series: z.string().trim().min(1).max(80).optional()
@@ -79,6 +81,8 @@ export const contentSchema = contentShapeSchema.superRefine((item, context) => {
   } else if (item.mediaUrl === undefined) {
     context.addIssue({ code: 'custom', path: ['mediaUrl'], message: 'Playable content requires a media URL' });
   }
+  if (item.audiobook && item.presentation !== 'information')
+    context.addIssue({ code: 'custom', path: ['audiobook'], message: 'Only informational books may attach audiobook audio' });
 });
 export const playbackSchema = z.strictObject({ autoplayNext: z.boolean(), startMuted: z.boolean() });
 export const channelSpecSchema = z.strictObject({
