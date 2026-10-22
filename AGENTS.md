@@ -1,5 +1,9 @@
 # FireLaunch Agent Instructions
 
+## Current staging operator access (2026-10-21)
+
+The owner approved a permanent standing sudoers grant on `muffinos` for the root-owned FireLaunch staging deploy and rollback scripts, replacing per-candidate exact-hash sudoers requests. Its versioned rule and procedure are in [scripts/staging/README.md](scripts/staging/README.md). Continue to pass and verify each candidate's SHA-256, keep all source edits in Git, run the script's backup/schema/health checks, and verify the active signed-in browser after deployment. Historical task prompts and closeouts retain the grant policy under which they ran; do not ask for a new per-hash grant solely because those dated files mention one. The deploy account can effectively run candidate code as root through this standing staging path; do not extend it to production or schema-changing releases.
+
 ## Current c8-ui3 runner — four prompts with Clean View (2026-10-21)
 
 The owner extended [c8-ui3](docs/tasks/c8-ui3/README.md) after normal-mode design approval. P1 and P2 prompt files remain untouched; NEW P3 is runner-owned FULLSCREEN: maximal borderless 16:9 TV, remote BOTTOM LEFT overlay, Exit/Hide TOP RIGHT, existing left drawer and an app-only Clean View with H/top-right-corner/Alt+E/Escape recovery. Manual P4 (not P3) is the ONLY closeout, deploying exact latest candidate to protected staging FIRST then real signed-in Codex-browser acceptance (including all fullscreen states and attached normal-mode mockup). Root and lock fields remain 0.8.10; inspect actual local HEAD/dirty prefix before invoking `npm run codex:stack:validate -- c8-ui3` / `npm run codex:stack -- c8-ui3`. Runner commits P1–P3, stops before P4. No /activate; don't rerun finished prompts or old c8-ui2 P4. Phase 8 OPEN.
