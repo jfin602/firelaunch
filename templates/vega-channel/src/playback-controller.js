@@ -57,7 +57,7 @@ export function createPlaybackController({ createVideo, createHls, installPolyfi
       if (closed || video) return;
       const mine = ++generation;
       surface = handle;
-      report('loading', 'Loading video');
+      report('loading', item.presentation === 'audio' ? 'Loading audio' : 'Loading video');
       try {
         const instance = createVideo();
         video = instance;
@@ -69,7 +69,7 @@ export function createPlaybackController({ createVideo, createHls, installPolyfi
         instance.muted = muted;
         for (const [name, listener] of [['playing', onPlaying], ['pause', onPause],
           ['waiting', onWaiting], ['error', onError], ['ended', onEnded]]) instance.addEventListener(name, listener);
-        if (/\.m3u8$/i.test(new URL(item.mediaUrl).pathname)) {
+        if (item.presentation !== 'audio' && /\.m3u8$/i.test(new URL(item.mediaUrl).pathname)) {
           installPolyfills(instance);
           const adaptive = createHls();
           hls = adaptive;

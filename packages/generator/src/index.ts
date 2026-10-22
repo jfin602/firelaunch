@@ -6,7 +6,7 @@ import { isIP } from 'node:net';
 import { channelDeploymentSchema, channelSpecSchema, type ChannelSpec, type ChannelDeployment } from '@firelaunch/contracts';
 import { televisionFromSpec } from '@firelaunch/tv';
 
-export const TEMPLATE_VERSION = '0.0.3';
+export const TEMPLATE_VERSION = '0.0.4';
 const templateRoot = fileURLToPath(new URL('../../../templates/vega-channel/', import.meta.url));
 const runtimeFile = fileURLToPath(new URL('../../tv/dist/runtime.js', import.meta.url));
 export type GeneratedProject = { fingerprint: string; files: ReadonlyMap<string, string> };

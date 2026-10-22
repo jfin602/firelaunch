@@ -5,6 +5,7 @@ import { channelDeploymentSchema } from './creator.js';
 
 export const PUBLISHED_MANIFEST_SCHEMA_VERSION = 1 as const;
 export const TV_CLIENT_SCHEMA_VERSION = 1 as const;
+export const MIXED_MEDIA_TV_CLIENT_SCHEMA_VERSION = 2 as const;
 const id = (prefix: string) => z.string().regex(new RegExp(`^${prefix}_[a-f0-9]{32}$`));
 const revisionSchema = z.number().int().positive();
 const publicUrlSchema = z.string().max(2048).refine(value => {
@@ -78,8 +79,8 @@ export const publishedManifestSchema = z.strictObject({
   approvedContentRevision: revisionPairSchema,
   approvalId: id('ap'),
   clientCompatibility: z.strictObject({
-    minSchemaVersion: z.literal(TV_CLIENT_SCHEMA_VERSION),
-    maxSchemaVersion: z.literal(TV_CLIENT_SCHEMA_VERSION),
+    minSchemaVersion: z.union([z.literal(TV_CLIENT_SCHEMA_VERSION), z.literal(MIXED_MEDIA_TV_CLIENT_SCHEMA_VERSION)]),
+    maxSchemaVersion: z.union([z.literal(TV_CLIENT_SCHEMA_VERSION), z.literal(MIXED_MEDIA_TV_CLIENT_SCHEMA_VERSION)]),
     channelSchemaVersion: z.literal(1)
   }),
   channel: z.lazy(() => channelSpecSchema),
@@ -88,6 +89,8 @@ export const publishedManifestSchema = z.strictObject({
 }).superRefine((manifest, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: 'custom', message });
   if (manifest.releaseId === manifest.previousReleaseId) issue('Release cannot point to itself');
+  if (manifest.clientCompatibility.minSchemaVersion > manifest.clientCompatibility.maxSchemaVersion)
+    issue('Client compatibility range is inverted');
   if (manifest.releaseSequence === 1 && manifest.previousReleaseId) issue('First release cannot have a predecessor');
   if (manifest.releaseSequence > 1 && !manifest.previousReleaseId) issue('Later release needs a predecessor');
   if (manifest.channel.id !== manifest.deployment.channelId) issue('Channel differs from deployment');
@@ -138,8 +141,10 @@ function requireOptionalArtwork(
 export function assertClientCompatible(manifestInput: unknown, clientSchemaVersion: number): PublishedManifest {
   const manifest = publishedManifestSchema.parse(manifestInput);
   if (!Number.isInteger(clientSchemaVersion) || clientSchemaVersion < manifest.clientCompatibility.minSchemaVersion ||
-    clientSchemaVersion > manifest.clientCompatibility.maxSchemaVersion) throw new Error('Incompatible TV client schema');
-  if (manifest.channel.content.some(content => content.presentation === 'audio' || content.audiobook !== undefined))
+    clientSchemaVersion > manifest.clientCompatibility.maxSchemaVersion)
+    throw new Error('Incompatible TV client schema');
+  if (clientSchemaVersion < MIXED_MEDIA_TV_CLIENT_SCHEMA_VERSION &&
+    manifest.channel.content.some(content => content.presentation === 'audio' || content.audiobook !== undefined))
     throw new Error('Requires App Update: installed client does not support audio or book audiobook playback');
   return manifest;
 }
@@ -254,7 +259,10 @@ export function projectApprovedManifest(input: {
     previousReleaseId: input.previousReleaseId, publishedAt: input.publishedAt,
     deployment: { id: deployment.id, projectId: deployment.projectId, channelId: deployment.channelId, packageId: deployment.packageId },
     approvedContentRevision: approval.revisions, approvalId: approval.approvalId,
-    clientCompatibility: { minSchemaVersion: TV_CLIENT_SCHEMA_VERSION, maxSchemaVersion: TV_CLIENT_SCHEMA_VERSION, channelSchemaVersion: SCHEMA_VERSION },
+    clientCompatibility: { minSchemaVersion: resolvedChannel.content.some(content => content.presentation === 'audio' || content.audiobook)
+      ? MIXED_MEDIA_TV_CLIENT_SCHEMA_VERSION : TV_CLIENT_SCHEMA_VERSION,
+      maxSchemaVersion: resolvedChannel.content.some(content => content.presentation === 'audio' || content.audiobook)
+        ? MIXED_MEDIA_TV_CLIENT_SCHEMA_VERSION : TV_CLIENT_SCHEMA_VERSION, channelSchemaVersion: SCHEMA_VERSION },
     channel: resolvedChannel, media: [...publicMedia.values()], bindings
   });
 }

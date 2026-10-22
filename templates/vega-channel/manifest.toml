@@ -2,7 +2,7 @@ schema-version = 1
 
 [package]
 id = FIRELAUNCH_APP_ID
-version = "0.0.2"
+version = "0.0.4"
 title = FIRELAUNCH_APP_NAME
 
 [os.version]

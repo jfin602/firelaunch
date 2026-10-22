@@ -54,6 +54,45 @@ test('generated client verifies releases and retains last-known-good across fail
         sha256: digest(bytes) }, bytes, manifest };
     };
     const first = release(1, 'First');
+    const bookId = id('item', 'a');
+    const bookArtId = id('ma', 'a'), bookAudioId = id('ma', 'b');
+    const bookArt = 'https://media.example.org/book-cover.jpg';
+    const bookAudio = 'https://media.example.org/releases/book-audio.mp3';
+    const book = { id: bookId, title: 'Field Guide', description: 'An original book',
+      artwork: bookArt, presentation: 'information', author: 'A. Writer',
+      audiobook: { mediaUrl: bookAudio } };
+    const audioId = id('item', 'b'), audioArtId = id('ma', 'c'), audioMediaId = id('ma', 'd');
+    const audioArt = 'https://media.example.org/album-cover.jpg';
+    const audioUrl = 'https://media.example.org/releases/album-track.mp3';
+    const audio = { id: audioId, title: 'Album Track', description: 'Original recording',
+      artwork: audioArt, presentation: 'audio', mediaUrl: audioUrl };
+    const mixedManifest = { ...first.manifest,
+      clientCompatibility: { minSchemaVersion: 2, maxSchemaVersion: 2, channelSchemaVersion: 1 },
+      channel: { ...first.manifest.channel,
+        content: [...first.manifest.channel.content, book, audio],
+        pages: first.manifest.channel.pages.map(page => ({ ...page, modules: [...page.modules,
+          { id: id('mod', 'a'), kind: 'rail', title: 'Bookshelf and albums', contentIds: [bookId, audioId] }] })) },
+      media: [...first.manifest.media, { id: bookArtId, kind: 'artwork', url: bookArt },
+        { id: bookAudioId, kind: 'audio', url: bookAudio },
+        { id: audioArtId, kind: 'artwork', url: audioArt }, { id: audioMediaId, kind: 'audio', url: audioUrl }],
+      bindings: { content: [...first.manifest.bindings.content,
+        { contentId: bookId, catalogItemId: id('ci', 'a'), artworkAssetId: bookArtId, audiobookAssetId: bookAudioId },
+        { contentId: audioId, catalogItemId: id('ci', 'b'), artworkAssetId: audioArtId, playbackAssetId: audioMediaId }] } };
+    const mixedBytes = canonicalBytes(mixedManifest);
+    const mixedPointer = { ...first.pointer, sha256: digest(mixedBytes) };
+    assert.equal(verifyRelease(mixedPointer, mixedBytes, config).channel.pages[0].modules
+      .some((module: { items: { id: string }[] }) => module.items.some(item => item.id === bookId)), true);
+    assert.equal(verifyRelease(mixedPointer, mixedBytes, config).channel.pages[0].modules
+      .some((module: { items: { id: string }[] }) => module.items.some(item => item.id === audioId)), true);
+    for (const altered of [
+      { ...mixedManifest, clientCompatibility: first.manifest.clientCompatibility },
+      { ...mixedManifest, bindings: first.manifest.bindings },
+      { ...mixedManifest, channel: { ...mixedManifest.channel,
+        content: [...first.manifest.channel.content, { ...book, audiobook: { mediaUrl: `${bookAudio}?token=private` } }] } }
+    ]) {
+      const bytes = canonicalBytes(altered);
+      assert.throws(() => verifyRelease({ ...mixedPointer, sha256: digest(bytes) }, bytes, config));
+    }
     const staticChannel = { ...first.manifest.channel, pages: first.manifest.channel.pages.map(page => ({
       ...page, modules: [...page.modules, { id: id('mod', '9'), kind: 'image-text', title: 'About', body: 'A note',
         imageContentId: original.content[0]!.id, imageSide: 'right', crop: 'contain', spacing: 'compact' }]

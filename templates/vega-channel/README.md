@@ -25,6 +25,13 @@ offline clients cannot receive revocations or deletion requests until they recon
 These source files and their storage dependency have not by themselves been qualified
 on a real installed VPKG.
 
+Template 0.0.4 can parse capability-2 mixed-media releases. Its single W3C URL-mode
+audio transport handles standalone MP3 and a book's optional audiobook; a book
+without audio remains informational. The publication service still requires a
+verified compatible installed package and approved immutable, public audio
+delivery before such a release can go live. Generated source and local player
+tests do not establish installed-device playback or public MP3 delivery.
+
 The generated AsyncStorage alias pins the package version listed in its
 `kepler-compatibility.json` for the tested SDK. The Babel namespace-export transform
 lets Metro compile Zod's published `export * as` syntax while retaining the strict

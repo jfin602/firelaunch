@@ -187,6 +187,11 @@ test('book audiobook binds only its own eligible audio and remains blocked until
     media: [...oldManifest.media, { id: audioId, kind: 'audio', url }], bindings: candidate.bindings };
   assert.equal(publishedManifestSchema.safeParse(futureShape).success, true);
   assert.throws(() => assertClientCompatible(futureShape, 1), /Requires App Update/);
+  const mixedClientShape = { ...futureShape, clientCompatibility: {
+    minSchemaVersion: 2, maxSchemaVersion: 2, channelSchemaVersion: 1 } };
+  assert.equal(publishedManifestSchema.safeParse(mixedClientShape).success, true);
+  assert.throws(() => assertClientCompatible(mixedClientShape, 1), /Incompatible/);
+  assert.equal(assertClientCompatible(mixedClientShape, 2).channel.content[0]?.audiobook?.mediaUrl, url);
   assert.equal(publishedManifestSchema.safeParse({ ...futureShape, bindings: base.bindings }).success, false);
   assert.equal(publishedManifestSchema.safeParse({ ...futureShape, channel: { ...candidate.channel,
     content: [bookContent()] } }).success, false);
@@ -276,6 +281,8 @@ test('draft state and incompatible clients cannot publish or activate', () => {
   assert.throws(() => assertClientCompatible(manifest, 2), /Incompatible/);
   assert.equal(publishedManifestSchema.safeParse({ ...manifest, schemaVersion: 2 }).success, false);
   assert.equal(publishedManifestSchema.safeParse({ ...manifest, clientCompatibility: { ...manifest.clientCompatibility, minSchemaVersion: 2 } }).success, false);
+  assert.equal(publishedManifestSchema.safeParse({ ...manifest, clientCompatibility: {
+    minSchemaVersion: 2, maxSchemaVersion: 2, channelSchemaVersion: 1 } }).success, true);
 });
 
 test('public parser rejects secrets, private records, executable fields and unsafe URLs', () => {

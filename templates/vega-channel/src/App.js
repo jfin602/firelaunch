@@ -71,19 +71,20 @@ function Section({ module, page, state, brand, font, focusStyle, layout, onLayou
           padding: 8 * layout.scale, marginRight: 12 * layout.scale },
           compact && styles.compactCard, state.focusId === focusId && [styles.focused, focusStyle]]}>
         {content.artwork?.startsWith('https://') ? <Image source={{ uri: content.artwork }}
-          resizeMode={module.kind === 'hero' || module.crop === 'contain' ? 'contain' : 'cover'}
-          style={[styles.artwork, { height: module.kind === 'hero' ? layout.heroArtworkHeight : layout.cardArtworkHeight,
+          resizeMode={content.presentation === 'information' || content.presentation === 'audio' || module.kind === 'hero' || module.crop === 'contain' ? 'contain' : 'cover'}
+          style={[styles.artwork, { height: content.presentation === 'information' ? layout.cardArtworkHeight * 1.5 : module.kind === 'hero' ? layout.heroArtworkHeight : layout.cardArtworkHeight,
             marginBottom: 8 * layout.scale }]} />
           : <View style={[styles.artwork, { height: module.kind === 'hero' ? layout.heroArtworkHeight : layout.cardArtworkHeight,
             marginBottom: 8 * layout.scale }]} />}
         <Text style={[font, color, aligned]}>{content.title}</Text>
+        <Text style={[styles.cardType, font, color]}>{content.presentation === 'information' ? 'Book' : content.presentation === 'audio' ? 'Audio' : 'Video'}</Text>
       </Pressable>;
     })}</View>
   </View>;
 }
 
 function Playback({ item, muted, controls, activity, onBack, typography }) {
-  const [playback, setPlayback] = useState({ status: 'loading', message: 'Loading video' });
+  const [playback, setPlayback] = useState({ status: 'loading', message: item.presentation === 'audio' ? 'Loading audio' : 'Loading video' });
   const [position, setPosition] = useState({ currentTime: 0, duration: 0, paused: true, muted });
   const [overlayVisible, setOverlayVisible] = useState(true);
   const controller = useRef(null);
@@ -145,6 +146,7 @@ function Playback({ item, muted, controls, activity, onBack, typography }) {
           <Text style={styles.playerBack}>‹</Text>
         </Pressable>
         <Text style={[styles.playerTitle, font]} numberOfLines={1}>{item.title}</Text>
+        {audio && <Text style={[styles.playerCreator, font]} numberOfLines={1}>{item.narrator || item.author || item.category || ''}</Text>}
       </View>
       <View style={styles.playerCenter}>
         <View style={styles.playerAction}><Text style={styles.playerActionText}>
@@ -176,6 +178,7 @@ export default function App() {
   const controls = useRef(null);
   const playbackActivity = useRef(null);
   const scrollView = useRef(null);
+  const detailScroll = useRef(null);
   const navScroll = useRef(null);
   const navLayouts = useRef(new Map());
   const navOffset = useRef(0);
@@ -235,6 +238,12 @@ export default function App() {
         if (event?.eventType === 'pause') { controls.current?.pause(); return; }
         if (event?.eventType === 'up' || event?.eventType === 'down') { controls.current?.toggleMute(); return; }
       }
+      if (viewRef.current.state.screen === 'detail' && event?.eventType === 'down') {
+        detailScroll.current?.scrollToEnd({ animated: true }); return;
+      }
+      if (viewRef.current.state.screen === 'detail' && event?.eventType === 'up') {
+        detailScroll.current?.scrollTo({ y: 0, animated: true }); return;
+      }
       const command = { up: 'up', down: 'down', left: 'left', right: 'right', select: 'select', enter: 'select' }[event?.eventType];
       if (command) dispatch(command);
     });
@@ -246,7 +255,8 @@ export default function App() {
   const brand = channel.brand;
   const focusStyle = { borderColor: brand.primaryColor };
   const font = { fontFamily: brand.typography === 'serif' ? 'serif' : 'sans-serif' };
-  if (state.screen === 'playback' && item) return <Playback key={item.id} item={item}
+  if (state.screen === 'playback' && item) return <Playback key={item.id}
+    item={item.audiobook ? { ...item, presentation: 'audio', mediaUrl: item.audiobook.mediaUrl } : item}
     muted={channel.playback.startMuted} controls={controls} activity={playbackActivity}
     onBack={() => dispatch('back')} typography={brand.typography} />;
   return <View style={[styles.screen, { backgroundColor: brand.backgroundColor,
@@ -317,15 +327,20 @@ export default function App() {
     </> : <>
       <Text style={[styles.heading, font, { color: brand.textColor }]}>{item?.title}</Text>
       {state.screen === 'detail' ? <>
-        {item?.artwork?.startsWith('https://') && <Image source={{ uri: item.artwork }} style={styles.detailArtwork} />}
-        <Text style={[font, { color: brand.textColor }]}>{item?.description}</Text>
-        {item?.presentation === 'information' ? <Pressable focusable={false} style={[styles.card, styles.focused, focusStyle]} onPress={() => dispatch('back')}>
-          <Text style={[font, { color: brand.textColor }]}>Back to channel</Text>
-        </Pressable> : <Pressable focusable={false} style={[styles.card, styles.focused, focusStyle]} onPress={() => dispatch('select')}>
-          <Text style={[font, { color: brand.textColor }]}>{item?.presentation === 'audio' ? 'Play audio' : 'Play film'}</Text>
-        </Pressable>}
+        <ScrollView ref={detailScroll} style={styles.detailScroll}>
+          {item?.artwork?.startsWith('https://') && <Image source={{ uri: item.artwork }}
+            style={item.presentation === 'information' ? styles.bookDetailArtwork : styles.detailArtwork} />}
+          {item?.author && <Text style={[styles.detailMeta, font, { color: brand.textColor }]}>By {item.author}</Text>}
+          {item?.series && <Text style={[styles.detailMeta, font, { color: brand.textColor }]}>{item.series}</Text>}
+          {item?.publicationDate && <Text style={[styles.detailMeta, font, { color: brand.textColor }]}>{item.publicationDate}</Text>}
+          <Text style={[styles.detailCopy, font, { color: brand.textColor }]}>{item?.description}</Text>
+        </ScrollView>
+        {(item?.presentation !== 'information' || item?.audiobook) &&
+          <Pressable focusable={false} style={[styles.card, styles.focused, focusStyle]} onPress={() => dispatch('select')}>
+            <Text style={[font, { color: brand.textColor }]}>{item?.audiobook ? 'Listen to Audiobook' : item?.presentation === 'audio' ? 'Listen' : 'Play film'}</Text>
+          </Pressable>}
       </> : null}
-      <Pressable focusable={false} onPress={() => dispatch('back')}><Text style={[font, { color: brand.textColor }]}>Back</Text></Pressable>
+      <Pressable focusable={false} onPress={() => dispatch('back')}><Text style={[font, { color: brand.textColor }]}>Back to channel</Text></Pressable>
     </>}
   </View>;
 }
@@ -347,8 +362,12 @@ const styles = StyleSheet.create({
   rail: { flexDirection: 'row' }, grid: { flexDirection: 'row', flexWrap: 'wrap' },
   card: { padding: 8, borderWidth: 2, borderColor: 'transparent', borderRadius: 6, marginRight: 12 },
   artwork: { height: 124, width: '100%', marginBottom: 8 },
+  cardType: { fontSize: 16, marginTop: 4 },
   brandLogo: { width: 160, height: 80, resizeMode: 'contain' },
   detailArtwork: { width: 420, height: 240, resizeMode: 'contain', marginBottom: 20 },
+  bookDetailArtwork: { width: 260, height: 370, resizeMode: 'contain', marginBottom: 20 },
+  detailScroll: { flex: 1 }, detailMeta: { fontSize: 24, marginBottom: 8 },
+  detailCopy: { fontSize: 22, lineHeight: 32, marginBottom: 24 },
   focused: {},
   playerScreen: { flex: 1, backgroundColor: '#000000' },
   fullscreenVideo: { ...StyleSheet.absoluteFillObject },
@@ -357,6 +376,7 @@ const styles = StyleSheet.create({
   playerBackButton: { width: 32, marginRight: 24, alignItems: 'flex-start' },
   playerBack: { color: '#FFFFFF', fontSize: 30, lineHeight: 34 },
   playerTitle: { color: '#FFFFFF', fontSize: 24, fontWeight: 'bold', flex: 1 },
+  playerCreator: { color: '#FFFFFF', fontSize: 18, maxWidth: 300, marginLeft: 20 },
   playerCenter: { position: 'absolute', top: '42%', left: 0, right: 0, alignItems: 'center' },
   playerAction: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: '#FFFFFF',
     backgroundColor: 'rgba(0,0,0,0.72)', alignItems: 'center', justifyContent: 'center' },

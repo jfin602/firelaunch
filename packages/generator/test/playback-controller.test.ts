@@ -51,6 +51,44 @@ test('adaptive HLS uses MSE, plays with sound, seeks, pauses and cleans up on Ba
   assert.ok(states.includes('paused'));
 });
 
+test('standalone MP3 and a book audiobook use the same flat-file player lifecycle', async () => {
+  for (const label of ['standalone audio', 'book audiobook']) {
+    const events = new Map<string, () => void>();
+    const calls: string[] = [];
+    const player = { paused: true, muted: false, currentTime: 0, duration: 90,
+      initialize: async () => calls.push('initialize'), deinitialize: async () => calls.push('deinitialize'),
+      setSurfaceHandle: () => calls.push('surface'), clearSurfaceHandle: () => calls.push('clear'),
+      addEventListener: (event: string, handler: () => void) => events.set(event, handler),
+      removeEventListener: (event: string) => events.delete(event),
+      load: () => calls.push('load'),
+      play: async () => { player.paused = false; calls.push('play'); events.get('playing')?.(); },
+      pause: () => { player.paused = true; calls.push('pause'); events.get('pause')?.(); },
+      src: '' };
+    const states: string[] = [];
+    const controller = createPlaybackController({ createVideo: () => player,
+      createHls: () => { throw new Error('MP3 must not use HLS'); },
+      installPolyfills: () => { throw new Error('MP3 must not install HLS polyfills'); },
+      onState: ({ status }: { status: string }) => states.push(status) });
+    const mediaUrl = `https://media.example.org/releases/${label === 'standalone audio' ? 'track' : 'book'}.mp3`;
+    await controller.start('surface', { presentation: 'audio', mediaUrl }, false);
+    assert.equal(player.src, mediaUrl);
+    assert.deepEqual(calls.slice(0, 4), ['initialize', 'surface', 'load', 'play']);
+    controller.seek(10);
+    assert.equal(player.currentTime, 10);
+    await controller.toggle();
+    assert.equal(player.paused, true);
+    await controller.toggle();
+    assert.equal(player.paused, false);
+    events.get('ended')?.();
+    assert.equal(states.at(-1), 'ended');
+    await controller.toggle();
+    assert.equal(player.currentTime, 0);
+    await controller.stop();
+    assert.equal(events.size, 0);
+    assert.deepEqual(calls.slice(-3), ['pause', 'clear', 'deinitialize']);
+  }
+});
+
 test('generated source carries patched HLS player and public artwork rendering', async () => {
   const generated = await generateProject(fixtureChannel());
   const app = generated.files.get('src/App.js')!;

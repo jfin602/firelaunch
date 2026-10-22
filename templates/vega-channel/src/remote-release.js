@@ -24,9 +24,12 @@ const artwork = publicUrl;
 const content = z.strictObject({
   id: id('item'), title, description: z.string().max(2000), artwork,
   presentation: z.enum(['video', 'audio', 'information']).optional(), mediaUrl: publicUrl.optional(),
+  audiobook: z.strictObject({ mediaUrl: publicUrl }).optional(),
   durationSeconds: positive.max(86400).optional(), category: z.string().trim().min(1).max(80).optional(),
-  series: z.string().trim().min(1).max(80).optional()
-}).refine(item => item.presentation === 'information' ? !item.mediaUrl && !item.durationSeconds : !!item.mediaUrl);
+  series: z.string().trim().min(1).max(80).optional(),
+  author: title.optional(), narrator: title.optional(), publicationDate: z.iso.date().optional()
+}).refine(item => item.presentation === 'information'
+  ? !item.mediaUrl && !item.durationSeconds : !!item.mediaUrl && !item.audiobook);
 const moduleSchema = z.discriminatedUnion('kind', [
   z.strictObject({ id: id('mod'), kind: z.literal('hero'), title: title.optional(), contentIds: z.array(id('item')).max(1),
     crop: z.enum(['cover', 'contain']).optional(), alignment: z.enum(['left', 'center']).optional(),
@@ -63,15 +66,16 @@ const channel = z.strictObject({
     context.addIssue({ code: 'custom', message: 'Invalid channel references' });
 });
 const binding = z.strictObject({ contentId: id('item'), catalogItemId: id('ci'),
-  playbackAssetId: id('ma').optional(), artworkAssetId: id('ma') });
+  playbackAssetId: id('ma').optional(), audiobookAssetId: id('ma').optional(), artworkAssetId: id('ma') });
 const manifestSchema = z.strictObject({
   schemaVersion: z.literal(1), releaseId: id('rel'), releaseSequence: positive,
   previousReleaseId: id('rel').optional(), publishedAt: z.iso.datetime(),
   deployment: z.strictObject({ id: id('dep'), projectId: id('ch'), channelId: id('ch'),
     packageId: z.string().min(5).max(255).regex(/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){2,}$/) }),
   approvedContentRevision: z.strictObject({ channel: positive, catalog: positive }), approvalId: id('ap'),
-  clientCompatibility: z.strictObject({ minSchemaVersion: z.literal(1), maxSchemaVersion: z.literal(1), channelSchemaVersion: z.literal(1) }),
-  channel, media: z.array(z.strictObject({ id: id('ma'), kind: z.enum(['video', 'audio', 'artwork']), url: publicUrl })).max(1002),
+  clientCompatibility: z.strictObject({ minSchemaVersion: z.union([z.literal(1), z.literal(2)]),
+    maxSchemaVersion: z.union([z.literal(1), z.literal(2)]), channelSchemaVersion: z.literal(1) }),
+  channel, media: z.array(z.strictObject({ id: id('ma'), kind: z.enum(['video', 'audio', 'artwork']), url: publicUrl })).max(1502),
   bindings: z.strictObject({ content: z.array(binding).max(500), logoAssetId: id('ma').optional(), heroArtworkAssetId: id('ma').optional() })
 });
 const pointerSchema = z.strictObject({ deploymentId: id('dep'), releaseId: id('rel'),
@@ -90,6 +94,10 @@ export function verifyRelease(pointerInput, bytes, config) {
     manifest.releaseSequence !== pointer.releaseSequence || manifest.deployment.id !== config.deploymentId ||
     manifest.deployment.projectId !== config.channelId || manifest.deployment.channelId !== config.channelId ||
     manifest.channel.id !== config.channelId || manifest.deployment.packageId !== config.packageId ||
+    manifest.clientCompatibility.minSchemaVersion > 2 ||
+    manifest.clientCompatibility.minSchemaVersion > manifest.clientCompatibility.maxSchemaVersion ||
+    (manifest.channel.content.some(item => item.presentation === 'audio' || item.audiobook) &&
+      manifest.clientCompatibility.minSchemaVersion < 2) ||
     (manifest.releaseSequence === 1 ? !!manifest.previousReleaseId : !manifest.previousReleaseId) ||
     manifest.releaseId === manifest.previousReleaseId) fail();
   const media = new Map(manifest.media.map(asset => [asset.id, asset]));
@@ -106,8 +114,14 @@ export function verifyRelease(pointerInput, bytes, config) {
   for (const item of manifest.channel.content) {
     const entry = bindings.get(item.id);
     if (!entry) fail();
-    if (item.presentation === 'information') { if (entry.playbackAssetId) fail(); }
-    else requireMedia(entry.playbackAssetId, item.presentation || 'video', item.mediaUrl);
+    if (item.presentation === 'information') {
+      if (entry.playbackAssetId) fail();
+      if (item.audiobook) requireMedia(entry.audiobookAssetId, 'audio', item.audiobook.mediaUrl);
+      else if (entry.audiobookAssetId) fail();
+    } else {
+      if (entry.audiobookAssetId) fail();
+      requireMedia(entry.playbackAssetId, item.presentation || 'video', item.mediaUrl);
+    }
     requireMedia(entry.artworkAssetId, 'artwork', item.artwork);
   }
   for (const [url, assetId] of [[manifest.channel.brand.logo, manifest.bindings.logoAssetId],
