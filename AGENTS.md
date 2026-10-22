@@ -1,3 +1,11 @@
+## OWNER-APPROVED NEXT PHASE DOCUMENTATION — P9 POLISH, P10 PUBLISHING DEFERRED (2026-10-22)
+
+**Documentation-only plan, NOT P9 implementation.** [New P9 manual prompt stack](docs/tasks/p9/README.md) contains ten targeted issue prompts plus one final integrated smoke. The issues are in [owner register](docs/tasks/p9-polish/README.md). EACH P1–P10 agent runs **manually with connected Codex browser**, implements one issue, tests, commits its own source/version, deploys exact SHA by guarded standing staging procedure, and only THEN verifies fresh signed-in owner browser and commits truthful evidence. **NO runner, validator, /activate or runner-owned P9 commits.** The old planned Live Channel Publishing & App Updates P9 files moved to [P10 DEFERRED](docs/tasks/p10/README.md), explicitly NOT runnable until re-assessed after P9. Per-video Publish in new P9 means private-draft inclusion/fresh export, not installed-device remote update. Preserve public approved FREE #1 untouched.
+
+**Entry gate:** Latest documented `main` root/lock 0.8.17, current schema 15, P8D/Phase 8 NOT GREEN and c8-hero-multimedia pending. **Do not interrupt the ongoing c8-hero-multimedia correction or mark it GREEN from this authoring.** Confirm real local HEAD/dirty status/origin, root+two lock versions, actual hero closeout, stage grant/backup/rollback and compatibility before any P9 source patch or staged deployment. Historical entries below are dated evidence, not contradictory active P9 instruction.
+
+---
+
 # FireLaunch Agent Instructions
 
 ## CURRENT NEXT EXECUTION — c8-hero-multimedia CORRECTION (2026-10-22)
