@@ -87,33 +87,35 @@ test('Hero Watch is reachable by remote Select and Back restores its focus', () 
   } finally { cleanup(); }
 });
 
-test('Hero art contains each shape and falls back for small or failed images', () => {
+test('Hero art contains each shape and falls back for small or failed images', async () => {
   for (const [width, height, expected] of [[320, 180, true], [200, 200, true], [180, 270, true],
     [100, 100, false], [0, 0, false]] as const) assert.equal(adequateHeroArtwork(width, height), expected);
+  const previousImage = globalThis.Image;
+  let width = 100, height = 100;
+  class TestImage {
+    naturalWidth = width; naturalHeight = height;
+    onload: (() => void) | null = null; onerror: (() => void) | null = null;
+    referrerPolicy = '';
+    set src(_url: string) { queueMicrotask(() => this.onload?.()); }
+    decode() { return Promise.resolve(); }
+  }
+  globalThis.Image = TestImage as unknown as typeof Image;
   const spec = fixtureChannel(), page = spec.pages[0]!;
   spec.pages[0] = { ...page, modules: [page.modules[0]!,
     { id: `mod_${'c'.repeat(32)}`, kind: 'rail', title: 'Browse', contentIds: [spec.content[0]!.id] }] };
   try {
     const view = render(createElement(Preview, { spec }));
     const art = view.container.querySelector('.tv-feature-art')!;
-    const image = art.querySelector('img')!;
-    Object.defineProperties(image, { naturalWidth: { value: 100 }, naturalHeight: { value: 100 } });
-    fireEvent.load(image);
-    assert.ok(art.querySelector('[aria-label="Artwork unavailable"]'));
-    assert.equal(art.querySelector('img'), null);
+    await waitFor(() => assert.ok(art.querySelector('[aria-label="Artwork unavailable"]')));
+    assert.equal(art.querySelector('.tv-feature-art-layer'), null);
   } finally { cleanup(); }
   try {
+    width = 800; height = 1200;
     const view = render(createElement(Preview, { spec }));
     const art = view.container.querySelector<HTMLElement>('.tv-feature-art')!;
-    const image = art.querySelector('img')!;
-    Object.defineProperties(image, { naturalWidth: { value: 800 }, naturalHeight: { value: 1200 } });
-    fireEvent.load(image);
-    assert.ok(art.classList.contains('has-art'));
-    assert.match(art.style.backgroundImage, /ocean\.jpg/);
-    fireEvent.error(image);
-    assert.ok(art.querySelector('[aria-label="Artwork unavailable"]'));
-    assert.equal(art.style.backgroundImage, '');
-  } finally { cleanup(); }
+    await waitFor(() => assert.match(art.querySelector<HTMLElement>('.tv-feature-art-layer')?.style.backgroundImage ?? '', /ocean\.jpg/));
+    assert.ok(art.querySelector('.tv-feature-art-layer img'), 'portrait cover stays contained in the foreground');
+  } finally { cleanup(); globalThis.Image = previousImage; }
 });
 
 test('Hero and first selector fit HD and FHD stages without vertical reveal scrolling', () => {
@@ -125,11 +127,60 @@ test('Hero and first selector fit HD and FHD stages without vertical reveal scro
   assert.match(css, /\.tv-feature-art::after\{[^}]*var\(--tv-bg\)/);
   assert.doesNotMatch(css.match(/\.tv-feature-selector\{[^}]*\}/)?.[0] ?? '', /background:/);
   assert.match(css, /\.tv-feature-selector \.tv-items\{[^}]*overflow-x:auto;overflow-y:hidden/);
-  assert.match(css, /\.tv-feature-art img\{[^}]*object-fit:contain/);
+  assert.match(css, /\.tv-feature-art-layer img\{[^}]*object-fit:contain/);
   for (const height of [720, 1080]) {
     assert.ok((.13 + .87) * height <= height);
     assert.ok(.51 * height + (.87 - .51) * height <= .87 * height);
   }
+});
+
+test('delayed and rapid row navigation keeps the old hero coherent until the newest art is ready', async () => {
+  const priorImage = globalThis.Image;
+  const pending = new Map<string, () => void>(), requests: string[] = [];
+  class DeferredImage {
+    naturalWidth = 960; naturalHeight = 540;
+    onload: (() => void) | null = null; onerror: (() => void) | null = null;
+    referrerPolicy = '';
+    set src(url: string) { requests.push(url); pending.set(url, () => this.onload?.()); }
+    decode() { return Promise.resolve(); }
+  }
+  globalThis.Image = DeferredImage as unknown as typeof Image;
+  const spec = fixtureChannel(), base = spec.content[0]!, page = spec.pages[0]!;
+  const hero = page.modules[0]!;
+  if (hero.kind !== 'hero') throw new Error('Expected Hero fixture');
+  spec.content = Array.from({ length: 5 }, (_, index) => ({ ...base, id: `item_${String(index).repeat(32)}`,
+    title: `Film ${index}`, description: `Story ${index}`, artwork: `https://art.example/${index}.jpg` }));
+  spec.pages[0] = { ...page, modules: [{ ...hero, contentIds: [spec.content[0]!.id] }, { id: `mod_${'f'.repeat(32)}`, kind: 'rail',
+    title: 'Browse', contentIds: spec.content.map(item => item.id) }] };
+  try {
+    const view = render(createElement(Preview, { spec }));
+    const art = view.container.querySelector('.tv-feature-art')!;
+    const copy = () => view.container.querySelector('.tv-feature-copy')?.textContent ?? '';
+    await waitFor(() => assert.ok(pending.has(spec.content[0]!.artwork)));
+    pending.get(spec.content[0]!.artwork)!();
+    await waitFor(() => assert.match(art.querySelector<HTMLElement>('.tv-feature-art-layer')?.style.backgroundImage ?? '', /0\.jpg/));
+    fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    assert.match(copy(), /Film 0.*Story 0/s, 'copy stays with the displayed image on a miss');
+    assert.match(art.querySelector<HTMLElement>('.tv-feature-art-layer')?.style.backgroundImage ?? '', /0\.jpg/);
+    await waitFor(() => assert.ok(pending.has(spec.content[1]!.artwork)));
+    pending.get(spec.content[1]!.artwork)!();
+    await waitFor(() => assert.match(copy(), /Film 1.*Story 1/s));
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    assert.match(copy(), /Film 1.*Story 1/s);
+    await waitFor(() => assert.ok(pending.has(spec.content[3]!.artwork)));
+    pending.get(spec.content[3]!.artwork)!();
+    await waitFor(() => assert.match(copy(), /Film 3.*Story 3/s));
+    pending.get(spec.content[2]!.artwork)?.();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.match(copy(), /Film 3.*Story 3/s, 'stale completion cannot replace the newest selection');
+    fireEvent.click(screen.getByRole('button', { name: 'Left' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Left' }));
+    await waitFor(() => assert.match(copy(), /Film 1.*Story 1/s));
+    assert.equal(requests.filter(url => url === spec.content[1]!.artwork).length, 1, 'warm revisit does not refetch');
+  } finally { cleanup(); globalThis.Image = priorImage; }
 });
 
 test('paired selector rejects revoked artwork while Rows and Grid keep their existing rendering', () => {

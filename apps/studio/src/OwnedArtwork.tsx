@@ -3,6 +3,26 @@ import type { CatalogItem, MediaAsset } from '@firelaunch/contracts';
 import { readPrivateThumbnail } from './api.js';
 import { safeArtwork } from './artwork-url.js';
 
+const ownedUrls = new Map<string, { users: number; retired: boolean; timer?: ReturnType<typeof setTimeout> }>();
+function retireOwnedUrl(url: string): void {
+  const entry = ownedUrls.get(url);
+  if (!entry) return;
+  entry.retired = true;
+  if (entry.timer) clearTimeout(entry.timer);
+  entry.timer = setTimeout(() => {
+    if (entry.users || !entry.retired) return;
+    URL.revokeObjectURL(url); ownedUrls.delete(url);
+  }, 0);
+}
+/** Keep a private blob alive while the hero is showing or fading it. */
+export function retainOwnedArtworkUrl(url: string | null): () => void {
+  const entry = url ? ownedUrls.get(url) : undefined;
+  if (!entry) return () => undefined;
+  if (entry.timer) clearTimeout(entry.timer);
+  entry.users++;
+  return () => { entry.users--; if (entry.retired) retireOwnedUrl(url!); };
+}
+
 export function ownedArtworkObject(item: CatalogItem | undefined, assets: MediaAsset[], projectId: string, accountId: string | null): string | null {
   if (!item || !accountId || item.projectId !== projectId || item.creatorAccountId !== accountId) return null;
   for (const id of [...item.mediaAssetIds].reverse()) {
@@ -25,11 +45,12 @@ export function useOwnedArtwork(projectId: string, accountId: string | null, obj
     const show = (blob: Blob) => {
       if (controller.signal.aborted) return;
       created = URL.createObjectURL(blob);
+      ownedUrls.set(created, { users: 0, retired: false });
       setImage({ scope, url: created });
     };
     if (accountId && localFile && ['image/png', 'image/jpeg'].includes(localFile.type) && localFile.size > 0 && localFile.size <= 1_000_000) show(localFile);
     else if (accountId && objectId) void readPrivateThumbnail(projectId, objectId, controller.signal).then(show).catch(() => undefined);
-    return () => { controller.abort(); if (created) URL.revokeObjectURL(created); };
+    return () => { controller.abort(); if (created) retireOwnedUrl(created); };
   }, [scope, projectId, accountId, objectId, localFile]);
   return image?.scope === scope ? image.url : null;
 }

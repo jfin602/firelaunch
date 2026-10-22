@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { BackHandler, Image, Pressable, ScrollView, StyleSheet, Text, TVEventHandler, View, useWindowDimensions } from 'react-native';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, BackHandler, Image, Pressable, ScrollView, StyleSheet, Text, TVEventHandler, View, useWindowDimensions } from 'react-native';
 import { KeplerVideoSurfaceView, VideoPlayer } from '@amazon-devices/react-native-w3cmedia';
 import bundled from './channel.json';
 import { installRelease } from './release-client';
@@ -7,6 +7,7 @@ import { accentTextColor, activeItem, heroActionFocusId, heroSelector, heroSpotl
 import { createPlaybackController } from './playback-controller';
 import { createHlsPlayer, installHlsPolyfills } from './hlsjs/adapter';
 import { audioArtworkFrame, featureArtworkFrame, featureScrollTarget, tvLayout } from './tv-layout';
+import { HeroImageQueue, heroArtworkGroups } from './hero-image-queue';
 
 function formatTime(seconds) {
   const value = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
@@ -43,12 +44,19 @@ function heroAction(content) {
 
 // The selected card fills the TV canvas; translucent strips fade its edges into
 // the channel's chosen background color.
-function HeroBackdrop({ source, backgroundColor }) {
-  const [failedSource, setFailedSource] = useState(null);
-  const visible = source?.startsWith('https://') && source !== failedSource;
+function HeroBackdrop({ source, outgoingSource, backgroundColor, reduceMotion }) {
+  const fade = useRef(new Animated.Value(1)).current;
+  useLayoutEffect(() => {
+    if (reduceMotion || !outgoingSource || outgoingSource === source) { fade.setValue(1); return; }
+    fade.setValue(0);
+    const animation = Animated.timing(fade, { toValue: 1, duration: 160, useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [source, outgoingSource, reduceMotion]);
   return <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-    {visible && <Image key={source} source={{ uri: source }} resizeMode="cover"
-      onError={() => setFailedSource(source)} style={styles.heroBackdropImage} />}
+    {outgoingSource?.startsWith('https://') && <Image source={{ uri: outgoingSource }} resizeMode="cover" style={styles.heroBackdropImage} />}
+    {source?.startsWith('https://') && <Animated.Image source={{ uri: source }} resizeMode="cover"
+      style={[styles.heroBackdropImage, { opacity: fade }]} />}
     <View style={[styles.featureDim, { backgroundColor }]} />
     {Array.from({ length: 24 }, (_, index) => <React.Fragment key={`edge:${index}`}>
       <View style={{ position: 'absolute', top: 0, bottom: 0, left: `${index * 2.5}%`, width: '2.6%',
@@ -62,9 +70,46 @@ function HeroBackdrop({ source, backgroundColor }) {
   </View>;
 }
 
-function Feature({ content, brand, font, layout, actionFocused, focusStyle, onAction }) {
+// Both sizes are decoded before the visible artwork and its copy change together.
+function PendingHero({ content, layout, queue, onReady }) {
+  const source = content.artwork;
+  const needsForeground = content.presentation !== 'video';
+  const [warmed, setWarmed] = useState(false);
+  const loaded = useRef({ back: false, front: !needsForeground, done: false });
+  useEffect(() => {
+    loaded.current = { back: false, front: !needsForeground, done: false };
+    setWarmed(false);
+    if (!source?.startsWith('https://')) { onReady(false); return; }
+    let active = true;
+    // The installed RN 0.83 Image API exposes prefetch; the hidden Image then confirms decode.
+    void queue.request(source, 0).then(() => { if (active) setWarmed(true); });
+    return () => { active = false; };
+  }, [source, needsForeground]);
+  if (!source?.startsWith('https://') || !warmed) return null;
+  const fail = () => { if (!loaded.current.done) { loaded.current.done = true; onReady(false); } };
+  const complete = (part, event) => {
+    const image = event?.nativeEvent?.source;
+    if (Number.isFinite(image?.width) && Number.isFinite(image?.height) &&
+      (image.width < 180 || image.height < 120 || image.width * image.height < 40000)) { fail(); return; }
+    loaded.current[part] = true;
+    if (loaded.current.back && loaded.current.front && !loaded.current.done) {
+      loaded.current.done = true; onReady(true);
+    }
+  };
+  const frame = featureArtworkFrame(layout, content.presentation);
+  return <View pointerEvents="none" style={styles.pendingHero}>
+    <Image source={{ uri: source }} resizeMode="cover" style={styles.heroBackdropImage}
+      onLoad={event => complete('back', event)} onError={fail} />
+    {needsForeground && <Image source={{ uri: source }} resizeMode="contain"
+      style={{ width: frame.width, height: frame.height, opacity: 0 }}
+      onLoad={event => complete('front', event)} onError={fail} />}
+  </View>;
+}
+
+function Feature({ content, brand, font, layout, actionFocused, focusStyle, onAction, artPending = false }) {
   const [failedSource, setFailedSource] = useState(null);
   const source = content.artwork?.startsWith('https://') ? content.artwork : null;
+  useEffect(() => setFailedSource(null), [source]);
   const visible = source && source !== failedSource;
   const frame = featureArtworkFrame(layout, content.presentation);
   const meta = [content.author, content.publicationDate?.slice(0, 4), content.category, content.series].filter(Boolean);
@@ -81,9 +126,9 @@ function Feature({ content, brand, font, layout, actionFocused, focusStyle, onAc
       </Pressable>
     </View>
     {content.presentation !== 'video' && <View style={[styles.featureFrame, { width: layout.contentWidth * 0.42 }]}>
-      {visible ? <Image key={`front:${source}`} source={{ uri: source }} resizeMode="contain"
+      {visible ? <Image source={{ uri: source }} resizeMode="contain"
         onError={() => setFailedSource(source)} style={{ width: frame.width, height: frame.height }} />
-        : <Text style={[font, styles.featureFallback]}>Artwork unavailable</Text>}
+        : artPending ? null : <Text style={[font, styles.featureFallback]}>Artwork unavailable</Text>}
     </View>}
   </View>;
 }
@@ -245,6 +290,17 @@ export default function App() {
   const { width, height } = useWindowDimensions();
   const layout = tvLayout(width, height);
   const [view, setView] = useState(() => ({ channel: bundled, state: initialState(bundled) }));
+  const artQueue = useRef(null);
+  if (!artQueue.current) artQueue.current = new HeroImageQueue(url => Image.prefetch(url), 2, 24);
+  const [presentedHero, setPresentedHero] = useState(null);
+  const [outgoingArt, setOutgoingArt] = useState(null);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (active) setReduceMotion(value); }).catch(() => undefined);
+    const listener = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => { active = false; listener.remove(); };
+  }, []);
   const viewRef = useRef(view);
   viewRef.current = view;
   const controls = useRef(null);
@@ -339,6 +395,33 @@ export default function App() {
   const page = channel.pages.find(candidate => candidate.id === state.pageId);
   const heroPair = page && heroSelector(page);
   const spotlight = page && heroSpotlight(page, state);
+  const heroScope = useMemo(() => channel.id + ':' + state.pageId + ':' + channel.pages.map(p =>
+    p.modules.map(m => m.items.map(i => i.id + ':' + i.artwork + ':' + i.title + ':' + i.description).join('|')).join('|')).join('|'),
+    [channel, state.pageId]);
+  const selectedHeroKey = spotlight && heroScope + ':' + spotlight.id + ':' + spotlight.artwork;
+  const presented = presentedHero?.scope === heroScope ? presentedHero : null;
+  const shownHero = spotlight && (presented?.content ?? { ...spotlight, artwork: '' });
+  const selectedRef = useRef(selectedHeroKey);
+  selectedRef.current = selectedHeroKey;
+  useEffect(() => {
+    artQueue.current.clear();
+    setPresentedHero(null); setOutgoingArt(null);
+  }, [channel, state.pageId]);
+  useEffect(() => {
+    if (!page || !spotlight || !heroPair || state.screen !== 'page') return;
+    const row = heroPair.selector.items.map(item => item.artwork).filter(url => url?.startsWith('https://'));
+    const remaining = [...page.modules.filter(module => module !== heroPair.hero && module !== heroPair.selector)
+      .flatMap(module => [...module.items.map(item => item.artwork), module.image?.artwork]),
+      ...channel.pages.filter(other => other.id !== page.id).flatMap(other => other.modules.flatMap(module =>
+        [...module.items.map(item => item.artwork), module.image?.artwork]))]
+      .filter(url => url?.startsWith('https://'));
+    artQueue.current.schedule(heroArtworkGroups(spotlight.artwork, row, remaining));
+  }, [channel, state.pageId, state.screen, spotlight?.id, spotlight?.artwork]);
+  useEffect(() => {
+    if (!outgoingArt) return;
+    const timer = setTimeout(() => setOutgoingArt(null), 180);
+    return () => clearTimeout(timer);
+  }, [outgoingArt]);
   const item = activeItem(channel, state);
   const brand = channel.brand;
   const focusStyle = { borderColor: brand.primaryColor };
@@ -349,8 +432,15 @@ export default function App() {
     onBack={() => dispatch('back')} typography={brand.typography} />;
   return <View style={[styles.screen, { backgroundColor: brand.backgroundColor,
     paddingHorizontal: layout.horizontalInset, paddingTop: layout.topInset }]}>
-    {state.screen === 'page' && heroPair && spotlight && <HeroBackdrop source={spotlight.artwork}
-      backgroundColor={brand.backgroundColor} />}
+    {state.screen === 'page' && heroPair && shownHero && <HeroBackdrop source={shownHero.artwork}
+      outgoingSource={outgoingArt} backgroundColor={brand.backgroundColor} reduceMotion={reduceMotion} />}
+    {state.screen === 'page' && heroPair && spotlight && presented?.key !== selectedHeroKey &&
+      <PendingHero key={selectedHeroKey} content={spotlight} layout={layout} queue={artQueue.current} onReady={ready => {
+        if (selectedRef.current !== selectedHeroKey) return;
+        setOutgoingArt(ready && presented?.content.artwork?.startsWith('https://') ? presented.content.artwork : null);
+        setPresentedHero({ scope: heroScope, key: selectedHeroKey,
+          content: ready ? spotlight : { ...spotlight, artwork: '' } });
+      }} />}
     {state.screen === 'page' ? <>
       <View style={[styles.header, { minHeight: 58 * layout.scale, marginBottom: 12 * layout.scale }]}>
         {brand.logo?.startsWith('https://') && <Image source={{ uri: brand.logo }}
@@ -390,8 +480,9 @@ export default function App() {
             setScrollMetrics(previous => ({ ...previous, offset, visible: true }));
             if (indicatorTimer.current) clearTimeout(indicatorTimer.current);
             indicatorTimer.current = setTimeout(() => setScrollMetrics(previous => ({ ...previous, visible: false })), 1000);
-          }}>{page.modules.map(module => module === heroPair?.selector ? null : module === heroPair?.hero && spotlight ?
-            <React.Fragment key={module.id}><Feature content={spotlight} brand={brand} font={font} layout={layout}
+          }}>{page.modules.map(module => module === heroPair?.selector ? null : module === heroPair?.hero && shownHero ?
+            <React.Fragment key={module.id}><Feature content={shownHero} brand={brand} font={font} layout={layout}
+              artPending={!presented}
               actionFocused={state.focusId === heroActionFocusId(page.id)} focusStyle={focusStyle}
               onAction={() => setView(previous => ({ ...previous, state: transition(previous.channel,
                 { screen: 'page', pageId: page.id, focusId: heroActionFocusId(page.id),
@@ -465,6 +556,7 @@ const styles = StyleSheet.create({
     borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
   feature: { flexDirection: 'row', overflow: 'hidden', marginBottom: 2 },
   heroBackdropImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: '10%' },
+  pendingHero: { ...StyleSheet.absoluteFillObject, opacity: 0 },
   featureDim: { ...StyleSheet.absoluteFillObject, opacity: 0.12 },
   featureCopy: { justifyContent: 'center', zIndex: 1 },
   featureKicker: { color: '#E5EEE9', fontSize: 14, fontWeight: 'bold', borderLeftWidth: 4, paddingLeft: 8 },

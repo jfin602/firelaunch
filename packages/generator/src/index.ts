@@ -9,6 +9,7 @@ import { televisionFromSpec } from '@firelaunch/tv';
 export const TEMPLATE_VERSION = '0.0.4';
 const templateRoot = fileURLToPath(new URL('../../../templates/vega-channel/', import.meta.url));
 const runtimeFile = fileURLToPath(new URL('../../tv/dist/runtime.js', import.meta.url));
+const heroQueueFile = fileURLToPath(new URL('../../tv/dist/hero-image-queue.js', import.meta.url));
 export type GeneratedProject = { fingerprint: string; files: ReadonlyMap<string, string> };
 
 async function templateFiles(root: string, prefix = ''): Promise<Map<string, string>> {
@@ -46,9 +47,11 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
   const tv = televisionFromSpec(bundled);
   const files = await templateFiles(templateRoot);
   const runtime = (await readFile(runtimeFile, 'utf8')).replace(/\n\/\/# sourceMappingURL=.*\n?$/, '\n');
+  const heroQueue = (await readFile(heroQueueFile, 'utf8')).replace(/\n\/\/# sourceMappingURL=.*\n?$/, '\n');
   const templateHash = createHash('sha256');
   for (const [name, body] of files) templateHash.update(name).update('\0').update(body).update('\0');
   templateHash.update('src/tv-runtime.js').update('\0').update(runtime);
+  templateHash.update('src/hero-image-queue.js').update('\0').update(heroQueue);
   const templateFingerprint = templateHash.digest('hex');
   const publicBinding = bound ? { deploymentId: bound.id, channelId: valid.id, packageId: bound.packageId, origin } : null;
   const appName = bound?.appName ?? valid.title;
@@ -78,6 +81,7 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
     .replaceAll('FIRELAUNCH_COMPONENT_ID', JSON.stringify(`${applicationId}.main`))
     .replaceAll('FIRELAUNCH_APP_NAME', JSON.stringify(appName)));
   files.set('src/tv-runtime.js', runtime);
+  files.set('src/hero-image-queue.js', heroQueue);
   files.set('src/channel.json', json(tv));
   if (bound) {
     files.set('babel.config.js', `module.exports = {\n  presets: ['module:@react-native/babel-preset'],\n  plugins: ['@babel/plugin-transform-export-namespace-from']\n};\n`);

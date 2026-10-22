@@ -998,11 +998,13 @@ body:has(.preview-fullscreen){overflow:hidden}
 .tv-screen-featured .tv-header{border-bottom:0}
 .tv-feature-display{position:relative;height:51cqh;flex:none;display:flex;align-items:center;overflow:hidden;background:transparent}
 .tv-feature-art{position:absolute;inset:0 0 10%;z-index:0;background-size:cover;background-position:60% center;background-color:var(--tv-bg);isolation:isolate;pointer-events:none}
-.tv-feature-art::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,var(--tv-bg) 0%,color-mix(in srgb,var(--tv-bg) 94%,transparent) 8%,color-mix(in srgb,var(--tv-bg) 87%,transparent) 20%,color-mix(in srgb,var(--tv-bg) 67%,transparent) 38%,color-mix(in srgb,var(--tv-bg) 20%,transparent) 60%,transparent 78%,color-mix(in srgb,var(--tv-bg) 47%,transparent) 100%)}
-.tv-feature-art::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,var(--tv-bg) 0%,color-mix(in srgb,var(--tv-bg) 65%,transparent) 8%,transparent 21%)}
-.tv-feature-art img{position:absolute;right:7%;top:17%;width:35%;height:45%;object-fit:contain;filter:drop-shadow(0 .6em 1.2em #000b)}
-.tv-feature-art.is-wide img{visibility:hidden}
-.tv-feature-art:not(.has-art) img{visibility:hidden}
+.tv-feature-art-layer{position:absolute;inset:0;background-size:cover;background-position:60% center}
+.tv-feature-art-enter{animation:tv-hero-enter 160ms ease-out both}
+@keyframes tv-hero-enter{from{opacity:0}to{opacity:1}}
+.tv-feature-art::before{content:"";position:absolute;inset:0;z-index:2;background:linear-gradient(90deg,var(--tv-bg) 0%,color-mix(in srgb,var(--tv-bg) 94%,transparent) 8%,color-mix(in srgb,var(--tv-bg) 87%,transparent) 20%,color-mix(in srgb,var(--tv-bg) 67%,transparent) 38%,color-mix(in srgb,var(--tv-bg) 20%,transparent) 60%,transparent 78%,color-mix(in srgb,var(--tv-bg) 47%,transparent) 100%)}
+.tv-feature-art::after{content:"";position:absolute;inset:0;z-index:2;background:linear-gradient(0deg,var(--tv-bg) 0%,color-mix(in srgb,var(--tv-bg) 65%,transparent) 8%,transparent 21%)}
+.tv-feature-art-layer img{position:absolute;z-index:3;right:7%;top:17%;width:35%;height:45%;object-fit:contain;filter:drop-shadow(0 .6em 1.2em #000b)}
+.tv-feature-art-layer.is-wide img{visibility:hidden}
 .tv-feature-art img:not([src]){display:none}
 .tv-feature-art-fallback{margin:auto;color:color-mix(in srgb,var(--tv-accent) 45%,white);opacity:.55;font-size:5em}
 .tv-feature-copy{position:relative;z-index:1;width:56%;min-width:0;padding:0 0 0 4%;color:#f5f7f4;text-shadow:0 2px 12px #000b}
@@ -1031,6 +1033,7 @@ body:has(.preview-fullscreen){overflow:hidden}
 .tv-feature-empty-card:first-child{box-shadow:inset 0 0 0 2px var(--tv-accent)}
 .preview-fullscreen .tv-feature{max-height:none}
 @media(prefers-reduced-motion:reduce){.tv-feature-art.has-art::before{filter:brightness(.6)}}
+@media(prefers-reduced-motion:reduce){.tv-feature-art-enter{animation:none}}
 
 /* Page controls remain available when the compact page strip has more pages than fit. */
 .channel-editor .layout-page-rail{display:flex;flex-direction:column;gap:8px}

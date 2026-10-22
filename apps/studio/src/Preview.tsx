@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { contentPresentation, isPlayableContent, mediaUseEligible, type ChannelSpec, type ContentItem } from '@firelaunch/contracts';
 import { accentTextColor, activeItem, heroActionFocusId, heroSelector, heroSpotlight, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
 import { keyboardCommand, navigate, reconcile } from './preview-state.js';
@@ -7,7 +7,8 @@ import { AudioPlayer, type AudioPlayerHandle } from './AudioPlayer.js';
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
 import { readCatalog, type CatalogSnapshot } from './api.js';
-import { OwnedArtwork, ownedArtworkObject, useOwnedArtwork } from './OwnedArtwork.js';
+import { OwnedArtwork, ownedArtworkObject, retainOwnedArtworkUrl, useOwnedArtwork } from './OwnedArtwork.js';
+import { HeroImageQueue, heroArtworkGroups } from '@firelaunch/tv/hero-image-queue';
 
 function artwork(url: string): string {
   return url.startsWith('assets/') ? `/media/${url.slice(7)}` : url;
@@ -57,19 +58,21 @@ export function eligibleStaticImageContent(spec: ChannelSpec, inventory: Catalog
 
 function usePreviewArtworkSource(contentId: string, source: string, inventory: CatalogSnapshot | null, projectId?: string, accountId?: string | null, requireCleared = false) {
   const item = inventory?.items.find(value => catalogContentId(value.id) === contentId);
-  const cleared = !requireCleared || !item || !!inventory?.mediaAssets.some(asset => item.mediaAssetIds.includes(asset.id) &&
+  const cleared = !requireCleared || !accountId || !!(item && inventory && inventory.projectId === projectId && inventory.creatorAccountId === accountId && inventory.mediaAssets.some(asset => item.mediaAssetIds.includes(asset.id) &&
     asset.kind === 'artwork' && asset.catalogItemId === item.id && asset.projectId === projectId &&
-    asset.creatorAccountId === accountId && mediaUseEligible(asset, 'television_display'));
+    asset.creatorAccountId === accountId && mediaUseEligible(asset, 'television_display')));
   const objectId = cleared && projectId && inventory ? ownedArtworkObject(item, inventory.mediaAssets, projectId, accountId ?? null) : null;
   const privateUrl = useOwnedArtwork(projectId ?? '', accountId ?? null, objectId, null, contentId);
   const [failed, setFailed] = useState('');
   const url = !cleared ? null : requireCleared && objectId ? privateUrl
     : privateUrl && privateUrl !== failed ? privateUrl : artwork(source);
-  return { url: url === failed ? null : url, setFailed };
+  return { url: url === failed ? null : url, pending: !!objectId && !privateUrl, setFailed };
 }
 
-export function PreviewArtwork({ contentId, source, inventory, projectId, accountId, requireCleared = false }: { contentId: string; source: string; inventory: CatalogSnapshot | null; projectId?: string; accountId?: string | null | undefined; requireCleared?: boolean }) {
-  const { url, setFailed } = usePreviewArtworkSource(contentId, source, inventory, projectId, accountId, requireCleared);
+type ResolvedArt = { url: string | null; pending: boolean };
+export function PreviewArtwork({ contentId, source, inventory, projectId, accountId, requireCleared = false, onSource }: { contentId: string; source: string; inventory: CatalogSnapshot | null; projectId?: string; accountId?: string | null | undefined; requireCleared?: boolean; onSource?: (id: string, value: ResolvedArt) => void }) {
+  const { url, pending, setFailed } = usePreviewArtworkSource(contentId, source, inventory, projectId, accountId, requireCleared);
+  useEffect(() => { onSource?.(contentId, { url, pending }); }, [contentId, url, pending, onSource]);
   return !url ? <span className="preview-artwork-fallback" role="img" aria-label="Artwork unavailable">▣</span>
     : <img src={url} alt="" onError={() => setFailed(url)}/>;
 }
@@ -78,19 +81,71 @@ export function adequateHeroArtwork(width: number, height: number): boolean {
   return width >= 180 && height >= 120 && width * height >= 40_000;
 }
 
-function HeroArtwork({ content, inventory, projectId, accountId }: { content: ContentItem; inventory: CatalogSnapshot | null; projectId: string; accountId?: string | null | undefined }) {
-  const { url, setFailed } = usePreviewArtworkSource(content.id, content.artwork, inventory, projectId, accountId, true);
-  const [ready, setReady] = useState<{ url: string; wide: boolean } | null>(null);
-  const visible = !!url && ready?.url === url;
-  return <div className={'tv-feature-art' + (visible ? ' has-art' : '') + (visible && ready.wide ? ' is-wide' : '')}
-    style={visible ? { backgroundImage: `linear-gradient(color-mix(in srgb, var(--tv-bg) 12%, transparent), color-mix(in srgb, var(--tv-bg) 12%, transparent)), url("${url.replaceAll('"', '%22')}")` } : undefined}>
-    {url && <img key={url} src={url} alt="" referrerPolicy="no-referrer" onLoad={event => {
-      if (adequateHeroArtwork(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight))
-        setReady({ url, wide: event.currentTarget.naturalWidth / event.currentTarget.naturalHeight >= 1.35 });
-      else setFailed(url);
-    }} onError={() => setFailed(url)}/>}
-    {!visible && <span className="tv-feature-art-fallback" role="img" aria-label="Artwork unavailable">▣</span>}
+function HeroArtwork({ content, source, queue, imageMeta, onVisible }: { content: ContentItem; source: ResolvedArt | undefined;
+  queue: HeroImageQueue; imageMeta: Map<string, { wide: boolean; image: HTMLImageElement }>; onVisible: (content: ContentItem) => void }) {
+  const [shown, setShown] = useState<{ content: ContentItem; url: string | null; wide: boolean } | null>(null);
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+  const [outgoing, setOutgoing] = useState<typeof shown>(null);
+  const latest = useRef('');
+  const key = `${content.id}:${content.artwork}:${source?.url ?? ''}`;
+  latest.current = key;
+  useEffect(() => {
+    if (!source || source.pending) {
+      const timer = setTimeout(() => { if (latest.current === key) { setOutgoing(null); setShown({ content, url: null, wide: false }); onVisible(content); } }, 8000);
+      return () => clearTimeout(timer);
+    }
+    if (!source.url) { setOutgoing(null); setShown({ content, url: null, wide: false }); onVisible(content); return; }
+    const url = source.url;
+    void queue.request(url, 0).then(ready => {
+      if (latest.current !== key) return;
+      const image = imageMeta.get(url);
+      setOutgoing(ready ? shownRef.current : null);
+      setShown({ content, url: ready ? url : null, wide: ready && !!image?.wide });
+      onVisible(content);
+    });
+  }, [key, source?.pending, queue]);
+  useEffect(() => {
+    if (!outgoing) return;
+    const timer = setTimeout(() => setOutgoing(null), 180);
+    return () => clearTimeout(timer);
+  }, [outgoing]);
+  useEffect(() => {
+    const releases = [...new Set([shown?.url, outgoing?.url].filter((url): url is string => !!url))]
+      .map(retainOwnedArtworkUrl);
+    return () => releases.forEach(release => release());
+  }, [shown?.url, outgoing?.url]);
+  const layer = (entry: typeof shown, active: boolean) => entry?.url ? <div key={entry.url + (active ? ':active' : ':old')}
+    className={'tv-feature-art-layer has-art' + (entry.wide ? ' is-wide' : '') + (active ? ' tv-feature-art-enter' : '')}
+    style={{ backgroundImage: `linear-gradient(color-mix(in srgb, var(--tv-bg) 12%, transparent), color-mix(in srgb, var(--tv-bg) 12%, transparent)), url("${entry.url.replaceAll('"', '%22')}")` }}>
+    {!entry.wide && <img src={entry.url} alt="" referrerPolicy="no-referrer"/>}</div> : null;
+  return <div className="tv-feature-art">{layer(outgoing, false)}{layer(shown, true)}
+    {shown && !shown.url && <span className="tv-feature-art-fallback" role="img" aria-label="Artwork unavailable">▣</span>}
   </div>;
+}
+
+async function preloadHeroImage(url: string, imageMeta: Map<string, { wide: boolean; image: HTMLImageElement }>, protectedUrls: Set<string>): Promise<boolean> {
+  const image = new Image();
+  image.referrerPolicy = 'no-referrer';
+  return new Promise(resolve => {
+    image.onload = () => {
+      if (!adequateHeroArtwork(image.naturalWidth, image.naturalHeight)) { resolve(false); return; }
+      const finish = () => {
+        imageMeta.delete(url);
+        imageMeta.set(url, { wide: image.naturalWidth / image.naturalHeight >= 1.35, image });
+        while (imageMeta.size > 24) {
+          const victim = [...imageMeta.keys()].find(key => !protectedUrls.has(key));
+          if (!victim) break;
+          imageMeta.delete(victim);
+        }
+        resolve(true);
+      };
+      if (image.decode) void image.decode().then(finish, finish);
+      else finish();
+    };
+    image.onerror = () => resolve(false);
+    image.src = url;
+  });
 }
 
 function heroAction(content: ContentItem): string {
@@ -100,6 +155,12 @@ function heroAction(content: ContentItem): string {
 }
 
 export function Preview({ spec, selectedPageId, hosted = false, accountId, libraryRevision = 0, fullscreen = false, controlsVisible = true, onHideControls, onEnterFullscreen, onExitFullscreen, enterButtonRef, exitButtonRef }: { spec: ChannelSpec; selectedPageId?: string | undefined; hosted?: boolean; accountId?: string | null | undefined; libraryRevision?: number; fullscreen?: boolean; controlsVisible?: boolean; onHideControls?: () => void; onEnterFullscreen?: () => void; onExitFullscreen?: () => void; enterButtonRef?: React.Ref<HTMLButtonElement>; exitButtonRef?: React.Ref<HTMLButtonElement> }) {
+  const imageMeta = useRef(new Map<string, { wide: boolean; image: HTMLImageElement }>());
+  const protectedUrls = useRef(new Set<string>());
+  const heroQueue = useRef<HeroImageQueue | null>(null);
+  if (!heroQueue.current) heroQueue.current = new HeroImageQueue(url => preloadHeroImage(url, imageMeta.current, protectedUrls.current), 2, 24);
+  const [artSources, setArtSources] = useState<{ scope: string; values: Record<string, ResolvedArt> }>({ scope: '', values: {} });
+  const [heroCopy, setHeroCopy] = useState<{ scope: string; content: ContentItem } | null>(null);
   const [inventory, setInventory] = useState<CatalogSnapshot | null>(null);
   useEffect(() => {
     setInventory(null);
@@ -208,6 +269,36 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
   const emptyFeature = !heroPair && page.modules.length === 2 && page.modules[0]?.kind === 'hero' &&
     page.modules[1]?.kind === 'rail' && !page.modules[0].items.length && !page.modules[1].items.length;
   const spotlight = heroSpotlight(page, current);
+  const artScope = useMemo(() => `${accountId ?? ''}:${spec.id}:${libraryRevision}:${page.id}:${spec.content.map(value => `${value.id}:${value.artwork}:${value.title}:${value.description}`).join('|')}`,
+    [accountId, spec.id, spec.content, libraryRevision, page.id]);
+  const sources = artSources.scope === artScope ? artSources.values : {};
+  const recordArtSource = useCallback((id: string, value: ResolvedArt) => setArtSources(previous => {
+    const values = previous.scope === artScope ? previous.values : {};
+    const old = values[id];
+    return old?.url === value.url && old.pending === value.pending && previous.scope === artScope ? previous
+      : { scope: artScope, values: { ...values, [id]: value } };
+  }), [artScope]);
+  useEffect(() => {
+    heroQueue.current?.clear(); imageMeta.current = new Map(); protectedUrls.current = new Set(); setHeroCopy(null);
+  }, [artScope]);
+  useEffect(() => {
+    if (!spotlight || !heroPair || current.screen !== 'page') return;
+    const currentUrl = sources[spotlight.id]?.url ?? '';
+    const row = heroPair.selector.items.map(value => sources[value.id]?.url ?? '').filter(Boolean);
+    const eligible = hosted ? eligibleStaticImageContent(spec, inventory, accountId ?? undefined) : spec.content;
+    const allowed = new Set(eligible.map(value => value.id));
+    const remaining = [...page.modules.filter(module => module !== heroPair.hero && module !== heroPair.selector)
+      .flatMap(module => [...module.items.map(value => value.id), module.image?.id]),
+      ...tv.pages.filter(other => other.id !== page.id).flatMap(other => other.modules.flatMap(module =>
+        [...module.items.map(value => value.id), module.image?.id]))]
+      .filter((id): id is string => !!id && allowed.has(id))
+      .map(id => spec.content.find(value => value.id === id)?.artwork ?? '')
+      .map(artwork).filter(url => url.startsWith('https://'));
+    const groups = heroArtworkGroups(currentUrl, row, remaining);
+    protectedUrls.current = new Set(groups.slice(0, 2).flat());
+    heroQueue.current?.schedule(groups);
+  }, [artScope, sources, spotlight?.id, current.screen, inventory]);
+  const displayedSpotlight = heroCopy?.scope === artScope ? heroCopy.content : spotlight;
   const item = activeItem(tv, current);
   const privateDrafts = hosted && inventory ? inventory.items.filter(value => value.kind === 'video' && !spec.content.some(content => content.id === catalogContentId(value.id))).slice(0, 8) : [];
   const focus = (id: string) => current.focusId === id ? ' focused' : '';
@@ -218,7 +309,9 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
     <div className="tv-frame" ref={frameRef} tabIndex={0} style={style} aria-label={`TV screen, use arrow keys, Enter and ${fullscreen ? 'Backspace' : 'Escape'}`}>
       <div className={'tv-screen' + (current.screen === 'page' && heroPair && spotlight ? ' tv-screen-featured' : '')} ref={screenRef}>
         {current.screen === 'page' ? <>
-          {heroPair && spotlight && <HeroArtwork content={spotlight} inventory={inventory} projectId={spec.id} accountId={accountId}/>}
+          {heroPair && spotlight && <HeroArtwork key={artScope} content={spotlight} source={sources[spotlight.id]}
+            queue={heroQueue.current!} imageMeta={imageMeta.current}
+            onVisible={content => setHeroCopy({ scope: artScope, content })}/>}
           <header className="tv-header">
             {tv.brand.showTitle && <strong className="tv-logo">{tv.brand.logo && <img src={artwork(tv.brand.logo)} alt=""/>}{tv.title}</strong>}
             <nav className="tv-nav" aria-label="TV pages">{tv.pages.map(target => <button key={target.id} data-tv-focus={navFocusId(target.id)} className={'tv-nav-button' + focus(navFocusId(target.id))} onClick={() => setState({ screen: 'page', pageId: target.id, focusId: navFocusId(target.id) })}>{target.title}</button>)}</nav>
@@ -236,11 +329,11 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
                     <span className="tv-feature-empty-card" key={index} />)}</div></div>
               </section> : module === heroPair?.selector ? null : module === heroPair?.hero && spotlight ? <section className="tv-feature" key={module.id} aria-label="Featured title and selector">
               <div className="tv-feature-display">
-                <div className="tv-feature-copy"><span className="tv-feature-kicker">FEATURED</span><h2>{spotlight.title}</h2>
-                  <p>{spotlight.description.length > 220 ? `${spotlight.description.slice(0, 217).trimEnd()}…` : spotlight.description}</p>
-                  <div className="tv-feature-meta">{[spotlight.author, spotlight.publicationDate?.slice(0, 4), spotlight.category, spotlight.series].filter(Boolean).map((part, index) => <span key={index}>{part}</span>)}</div>
+                <div className="tv-feature-copy"><span className="tv-feature-kicker">FEATURED</span><h2>{displayedSpotlight?.title}</h2>
+                  <p>{displayedSpotlight && (displayedSpotlight.description.length > 220 ? `${displayedSpotlight.description.slice(0, 217).trimEnd()}…` : displayedSpotlight.description)}</p>
+                  <div className="tv-feature-meta">{[displayedSpotlight?.author, displayedSpotlight?.publicationDate?.slice(0, 4), displayedSpotlight?.category, displayedSpotlight?.series].filter(Boolean).map((part, index) => <span key={index}>{part}</span>)}</div>
                   <button data-tv-focus={heroActionFocusId(page.id)} className={'tv-feature-action' + focus(heroActionFocusId(page.id))}
-                    onClick={() => selectFocus(heroActionFocusId(page.id))}>{heroAction(spotlight)} <span aria-hidden="true">→</span></button>
+                    onClick={() => selectFocus(heroActionFocusId(page.id))}>{heroAction(displayedSpotlight ?? spotlight)} <span aria-hidden="true">→</span></button>
                 </div>
               </div>
               <div className="tv-feature-selector" aria-label={heroPair.selector.title ?? 'Browse titles'}>
@@ -248,7 +341,7 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
                   const id = itemFocusId(page.id, heroPair.selector.id, content.id);
                   const presentation = contentPresentation(content);
                   return <button key={id} data-tv-focus={id} className={'tv-card' + (presentation === 'information' ? ' tv-book-card' : presentation === 'audio' ? ' tv-audio-card' : '') + focus(id)} onClick={() => selectFocus(id)} aria-label={`Open ${content.title}`}>
-                    <span className="tv-art"><PreviewArtwork contentId={content.id} source={content.artwork} inventory={inventory} projectId={spec.id} accountId={accountId} requireCleared/></span><span className="tv-card-caption">{content.title}</span>
+                    <span className="tv-art"><PreviewArtwork contentId={content.id} source={content.artwork} inventory={inventory} projectId={spec.id} accountId={accountId} requireCleared onSource={recordArtSource}/></span><span className="tv-card-caption">{content.title}</span>
                   </button>;
                 })}</div>
               </div>

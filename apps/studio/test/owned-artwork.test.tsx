@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
-import { OwnedArtwork, ownedArtworkObject } from '../src/OwnedArtwork.js';
+import { OwnedArtwork, ownedArtworkObject, retainOwnedArtworkUrl } from '../src/OwnedArtwork.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://studio.example/' });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement });
@@ -55,6 +55,27 @@ test('art lookup rejects foreign, project-mismatched, unlinked and revoked recor
   assert.equal(ownedArtworkObject(item, [asset], otherProject, owner), null);
   assert.equal(ownedArtworkObject(item, [{ ...asset, catalogItemId: `ci_${'2'.repeat(32)}` }], project, owner), null);
   assert.equal(ownedArtworkObject(item, [{ ...asset, tvDisplayRights: { status: 'revoked' } }], project, owner), null);
+});
+
+test('a hero lease delays private blob revocation until its outgoing layer is gone', async () => {
+  const oldFetch = globalThis.fetch, create = URL.createObjectURL, revoke = URL.revokeObjectURL;
+  const revoked: string[] = [];
+  URL.createObjectURL = () => 'blob:https://studio.example/leased';
+  URL.revokeObjectURL = value => { revoked.push(value); };
+  globalThis.fetch = (async (input: RequestInfo | URL) => String(input).endsWith('/capability')
+    ? json({ capability: 'lease' }) : new Response(new Uint8Array([0xff, 0xd8, 0xff]),
+      { headers: { 'content-type': 'image/jpeg' } })) as typeof fetch;
+  try {
+    const props = { item, assets: [asset], projectId: project, accountId: owner, className: 'art', fallback };
+    const view = render(createElement(OwnedArtwork, props));
+    await waitFor(() => assert.equal(view.container.querySelector('img')?.getAttribute('src'), 'blob:https://studio.example/leased'));
+    const release = retainOwnedArtworkUrl('blob:https://studio.example/leased');
+    view.rerender(createElement(OwnedArtwork, { ...props, accountId: foreign }));
+    await new Promise(resolve => setTimeout(resolve, 5));
+    assert.deepEqual(revoked, []);
+    release();
+    await waitFor(() => assert.deepEqual(revoked, ['blob:https://studio.example/leased']));
+  } finally { cleanup(); globalThis.fetch = oldFetch; URL.createObjectURL = create; URL.revokeObjectURL = revoke; }
 });
 
 test('local custom thumbnail takes priority without a private request', async () => {
@@ -117,11 +138,11 @@ test('replacing the linked thumbnail paints the new private image and revokes th
     view.rerender(createElement(OwnedArtwork, { ...props, item: { ...item, mediaAssetIds: [assetId, nextAssetId] },
       assets: [asset, { ...asset, id: nextAssetId, location: { type: 'private_object', objectId: nextObjectId } }] }));
     await waitFor(() => assert.equal(view.container.querySelector('img')?.getAttribute('src'), 'blob:https://studio.example/art-2'));
-    assert.deepEqual(revoked, ['blob:https://studio.example/art-1']);
+    await waitFor(() => assert.deepEqual(revoked, ['blob:https://studio.example/art-1']));
     assert.equal(view.container.querySelectorAll('img').length, 1);
     assert.ok(requested.some(path => path.includes(nextObjectId)));
     assert.doesNotMatch(view.container.innerHTML, /header-only|private-objects/);
     view.unmount();
-    assert.ok(revoked.includes('blob:https://studio.example/art-2'));
+    await waitFor(() => assert.ok(revoked.includes('blob:https://studio.example/art-2')));
   } finally { cleanup(); globalThis.fetch = previousFetch; URL.createObjectURL = create; URL.revokeObjectURL = revoke; }
 });
