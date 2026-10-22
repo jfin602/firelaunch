@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { contentPresentation, isPlayableContent, mediaUseEligible, type ChannelSpec, type ContentItem } from '@firelaunch/contracts';
-import { activeItem, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
+import { activeItem, heroSelector, heroSpotlight, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
 import { keyboardCommand, navigate, reconcile } from './preview-state.js';
 import { VideoPlayer } from './VideoPlayer.js';
 import { AudioPlayer, type AudioPlayerHandle } from './AudioPlayer.js';
@@ -55,14 +55,46 @@ export function eligibleStaticImageContent(spec: ChannelSpec, inventory: Catalog
 }
 
 
-export function PreviewArtwork({ contentId, source, inventory, projectId, accountId }: { contentId: string; source: string; inventory: CatalogSnapshot | null; projectId?: string; accountId?: string | null | undefined }) {
+function usePreviewArtworkSource(contentId: string, source: string, inventory: CatalogSnapshot | null, projectId?: string, accountId?: string | null, requireCleared = false) {
   const item = inventory?.items.find(value => catalogContentId(value.id) === contentId);
-  const objectId = projectId && inventory ? ownedArtworkObject(item, inventory.mediaAssets, projectId, accountId ?? null) : null;
+  const cleared = !requireCleared || !item || !!inventory?.mediaAssets.some(asset => item.mediaAssetIds.includes(asset.id) &&
+    asset.kind === 'artwork' && asset.catalogItemId === item.id && asset.projectId === projectId &&
+    asset.creatorAccountId === accountId && mediaUseEligible(asset, 'television_display'));
+  const objectId = cleared && projectId && inventory ? ownedArtworkObject(item, inventory.mediaAssets, projectId, accountId ?? null) : null;
   const privateUrl = useOwnedArtwork(projectId ?? '', accountId ?? null, objectId, null, contentId);
   const [failed, setFailed] = useState('');
-  const url = privateUrl && privateUrl !== failed ? privateUrl : artwork(source);
-  return url === failed ? <span className="preview-artwork-fallback" role="img" aria-label="Artwork unavailable">▣</span>
+  const url = !cleared ? null : requireCleared && objectId ? privateUrl
+    : privateUrl && privateUrl !== failed ? privateUrl : artwork(source);
+  return { url: url === failed ? null : url, setFailed };
+}
+
+export function PreviewArtwork({ contentId, source, inventory, projectId, accountId, requireCleared = false }: { contentId: string; source: string; inventory: CatalogSnapshot | null; projectId?: string; accountId?: string | null | undefined; requireCleared?: boolean }) {
+  const { url, setFailed } = usePreviewArtworkSource(contentId, source, inventory, projectId, accountId, requireCleared);
+  return !url ? <span className="preview-artwork-fallback" role="img" aria-label="Artwork unavailable">▣</span>
     : <img src={url} alt="" onError={() => setFailed(url)}/>;
+}
+
+export function adequateHeroArtwork(width: number, height: number): boolean {
+  return width >= 180 && height >= 120 && width * height >= 40_000;
+}
+
+function HeroArtwork({ content, inventory, projectId, accountId }: { content: ContentItem; inventory: CatalogSnapshot | null; projectId: string; accountId?: string | null | undefined }) {
+  const { url, setFailed } = usePreviewArtworkSource(content.id, content.artwork, inventory, projectId, accountId, true);
+  const [ready, setReady] = useState('');
+  const visible = !!url && ready === url;
+  return <div className={'tv-feature-art' + (visible ? ' has-art' : '')} style={visible ? { backgroundImage: `linear-gradient(90deg, #090d12e8, #090d12bd), url("${url.replaceAll('"', '%22')}")` } : undefined}>
+    {url && <img key={url} src={url} alt="" referrerPolicy="no-referrer" onLoad={event => {
+      if (adequateHeroArtwork(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)) setReady(url);
+      else setFailed(url);
+    }} onError={() => setFailed(url)}/>}
+    {!visible && <span className="tv-feature-art-fallback" role="img" aria-label="Artwork unavailable">▣</span>}
+  </div>;
+}
+
+function heroAction(content: ContentItem): string {
+  if (content.audiobook) return 'Listen to Audiobook';
+  if (contentPresentation(content) === 'information') return 'Explore';
+  return contentPresentation(content) === 'audio' ? 'Listen' : 'Watch';
 }
 
 export function Preview({ spec, selectedPageId, hosted = false, accountId, libraryRevision = 0, fullscreen = false, controlsVisible = true, onHideControls, onEnterFullscreen, onExitFullscreen, enterButtonRef, exitButtonRef }: { spec: ChannelSpec; selectedPageId?: string | undefined; hosted?: boolean; accountId?: string | null | undefined; libraryRevision?: number; fullscreen?: boolean; controlsVisible?: boolean; onHideControls?: () => void; onEnterFullscreen?: () => void; onExitFullscreen?: () => void; enterButtonRef?: React.Ref<HTMLButtonElement>; exitButtonRef?: React.Ref<HTMLButtonElement> }) {
@@ -142,7 +174,16 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
   useEffect(() => {
     const focused = Array.from(screenRef.current?.querySelectorAll<HTMLElement>('[data-tv-focus]') ?? [])
       .find(element => element.dataset.tvFocus === current.focusId);
-    if (current.screen === 'page') focused?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    if (current.screen !== 'page' || !focused) return;
+    const selector = focused.closest<HTMLElement>('.tv-feature-selector');
+    if (selector) {
+      const row = focused.closest<HTMLElement>('.tv-items');
+      if (row) {
+        if (focused.offsetLeft < row.scrollLeft) row.scrollLeft = focused.offsetLeft;
+        else if (focused.offsetLeft + focused.offsetWidth > row.scrollLeft + row.clientWidth)
+          row.scrollLeft = focused.offsetLeft + focused.offsetWidth - row.clientWidth;
+      }
+    } else focused.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }, [current.focusId, current.pageId, current.screen]);
 
   useEffect(() => () => { if (scrollIndicatorTimer.current) clearTimeout(scrollIndicatorTimer.current); }, []);
@@ -161,6 +202,8 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
   };
 
   const page = tv.pages.find(candidate => candidate.id === current.pageId)!;
+  const heroPair = heroSelector(page);
+  const spotlight = heroSpotlight(page, current);
   const item = activeItem(tv, current);
   const privateDrafts = hosted && inventory ? inventory.items.filter(value => value.kind === 'video' && !spec.content.some(content => content.id === catalogContentId(value.id))).slice(0, 8) : [];
   const focus = (id: string) => current.focusId === id ? ' focused' : '';
@@ -177,7 +220,25 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
           </header>
           <div className="tv-content-wrap" key={page.id}><div className="tv-content" onScroll={showScrollPosition}>
             {page.modules.length === 0 && <div className="tv-empty">Your channel is ready for content.<small>Add content to light up this screen.</small></div>}
-            {page.modules.map(module => <section className={`tv-module tv-${module.kind} tv-crop-${module.crop ?? 'cover'} tv-align-${module.alignment ?? 'left'}`} key={module.id}>
+            {page.modules.map(module => module === heroPair?.selector ? null : module === heroPair?.hero && spotlight ? <section className="tv-feature" key={module.id} aria-label="Featured title and selector">
+              <div className="tv-feature-display">
+                <div className="tv-feature-copy"><span className="tv-feature-kicker">FEATURED</span><h2>{spotlight.title}</h2>
+                  <p>{spotlight.description.length > 220 ? `${spotlight.description.slice(0, 217).trimEnd()}…` : spotlight.description}</p>
+                  <div className="tv-feature-meta">{[spotlight.author, spotlight.publicationDate?.slice(0, 4), spotlight.category, spotlight.series].filter(Boolean).map((part, index) => <span key={index}>{part}</span>)}</div>
+                  <span className="tv-feature-action">{heroAction(spotlight)} <span aria-hidden="true">→</span></span>
+                </div>
+                <HeroArtwork content={spotlight} inventory={inventory} projectId={spec.id} accountId={accountId}/>
+              </div>
+              <div className="tv-feature-selector" aria-label={heroPair.selector.title ?? 'Browse titles'}>
+                <h3>{heroPair.selector.title}</h3><div className="tv-items">{heroPair.selector.items.map(content => {
+                  const id = itemFocusId(page.id, heroPair.selector.id, content.id);
+                  const presentation = contentPresentation(content);
+                  return <button key={id} data-tv-focus={id} className={'tv-card' + (presentation === 'information' ? ' tv-book-card' : presentation === 'audio' ? ' tv-audio-card' : '') + focus(id)} onClick={() => selectFocus(id)} aria-label={`Open ${content.title}`}>
+                    <span className="tv-art"><PreviewArtwork contentId={content.id} source={content.artwork} inventory={inventory} projectId={spec.id} accountId={accountId} requireCleared/></span><span className="tv-card-caption">{content.title}</span>
+                  </button>;
+                })}</div>
+              </div>
+            </section> : <section className={`tv-module tv-${module.kind} tv-crop-${module.crop ?? 'cover'} tv-align-${module.alignment ?? 'left'}`} key={module.id}>
               {module.title && <h3>{module.title}</h3>}
               {module.kind === 'image-banner' || module.kind === 'image-text' ? <div className={`tv-static tv-static-${module.kind} tv-static-${module.imageSide ?? 'left'} tv-static-${module.spacing ?? 'comfortable'} tv-static-${module.background ?? 'theme'} tv-static-${module.alignment ?? 'left'} tv-static-${module.crop ?? 'cover'}`}>
                 {module.image && (!hosted || (accountId && eligibleStaticImageContent(spec, inventory, accountId).some(item => item.id === module.image?.id))) &&

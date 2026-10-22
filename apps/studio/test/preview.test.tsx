@@ -5,7 +5,7 @@ import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
 import { televisionFromSpec, heroSpotlight, initialState, itemFocusId, navFocusId } from '@firelaunch/tv';
-import { Preview, PreviewArtwork, catalogContentId, ownerBookPreviewContent } from '../src/Preview.js';
+import { Preview, PreviewArtwork, adequateHeroArtwork, catalogContentId, ownerBookPreviewContent } from '../src/Preview.js';
 import type { CatalogSnapshot } from '../src/api.js';
 import { keyboardCommand, navigate, reconcile } from '../src/preview-state.js';
 import { studioVideoSource } from '../src/VideoPlayer.js';
@@ -17,6 +17,130 @@ Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.
 Object.defineProperty(dom.window.HTMLMediaElement.prototype, 'pause', { value: () => {} });
 Object.defineProperty(dom.window.HTMLMediaElement.prototype, 'load', { value: () => {} });
 const { cleanup, fireEvent, render, screen, waitFor } = await import('@testing-library/react');
+
+test('paired Hero uses one focusable row and updates copy without starting playback', () => {
+  const spec = fixtureChannel(), first = spec.content[0]!, page = spec.pages[0]!;
+  const audio = { ...first, id: `item_${'a'.repeat(32)}`, title: 'Soundscape', description: 'A recording',
+    artwork: 'assets/album.jpg', presentation: 'audio' as const, author: 'The Artist', category: 'Music' };
+  const book = { id: `item_${'b'.repeat(32)}`, title: 'Field Guide', description: 'A book to explore',
+    artwork: 'assets/book.jpg', presentation: 'information' as const, author: 'A. Writer',
+    publicationDate: '2025-04-02', series: 'Nature Library' };
+  const rail = { id: `mod_${'c'.repeat(32)}`, kind: 'rail' as const, title: 'Browse', contentIds: [first.id, audio.id, book.id] };
+  const later = { id: `mod_${'d'.repeat(32)}`, kind: 'rail' as const, title: 'More', contentIds: [book.id] };
+  spec.content = [first, audio, book]; spec.pages[0] = { ...page, modules: [page.modules[0]!, rail, later] };
+  try {
+    const view = render(createElement(Preview, { spec }));
+    const feature = view.container.querySelector('.tv-feature')!;
+    assert.equal(view.container.querySelectorAll('.tv-feature').length, 1);
+    assert.equal(view.container.querySelectorAll('.tv-hero').length, 0, 'old giant Hero card is absent');
+    assert.equal(feature.querySelectorAll('.tv-card').length, 3);
+    assert.equal(view.container.querySelectorAll('.tv-module.tv-rail').length, 1, 'later authored row remains');
+    assert.match(feature.querySelector('.tv-feature-copy')?.textContent ?? '', /Oceans.*Watch/s);
+    const content = view.container.querySelector<HTMLElement>('.tv-content')!;
+    fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    assert.match(feature.querySelector('.tv-feature-copy')?.textContent ?? '', /Soundscape.*A recording.*The Artist.*Music.*Listen/s);
+    assert.ok(feature.querySelector('.tv-audio-card.focused'));
+    assert.equal(content.scrollTop, 0, 'focus on the first selector stays in the initial viewport');
+    assert.equal(view.container.querySelector('video, audio'), null);
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    assert.match(feature.querySelector('.tv-feature-copy')?.textContent ?? '', /Field Guide.*A book to explore.*A. Writer.*2025.*Nature Library.*Explore/s);
+    assert.doesNotMatch(feature.querySelector('.tv-feature-copy')?.textContent ?? '', /Play/);
+    assert.ok(feature.querySelector('.tv-book-card.focused'));
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+    assert.equal(view.container.querySelector('.tv-detail-copy h2')?.textContent, 'Field Guide');
+    assert.equal(view.container.querySelector('video, audio'), null);
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    assert.ok(view.container.querySelector('.tv-book-card.focused'));
+    assert.equal(view.container.querySelector('.tv-feature-copy h2')?.textContent, 'Field Guide');
+  } finally { cleanup(); }
+});
+
+test('Hero art contains each shape and falls back for small or failed images', () => {
+  for (const [width, height, expected] of [[320, 180, true], [200, 200, true], [180, 270, true],
+    [100, 100, false], [0, 0, false]] as const) assert.equal(adequateHeroArtwork(width, height), expected);
+  const spec = fixtureChannel(), page = spec.pages[0]!;
+  spec.pages[0] = { ...page, modules: [page.modules[0]!,
+    { id: `mod_${'c'.repeat(32)}`, kind: 'rail', title: 'Browse', contentIds: [spec.content[0]!.id] }] };
+  try {
+    const view = render(createElement(Preview, { spec }));
+    const art = view.container.querySelector('.tv-feature-art')!;
+    const image = art.querySelector('img')!;
+    Object.defineProperties(image, { naturalWidth: { value: 100 }, naturalHeight: { value: 100 } });
+    fireEvent.load(image);
+    assert.ok(art.querySelector('[aria-label="Artwork unavailable"]'));
+    assert.equal(art.querySelector('img'), null);
+  } finally { cleanup(); }
+  try {
+    const view = render(createElement(Preview, { spec }));
+    const art = view.container.querySelector<HTMLElement>('.tv-feature-art')!;
+    const image = art.querySelector('img')!;
+    Object.defineProperties(image, { naturalWidth: { value: 800 }, naturalHeight: { value: 1200 } });
+    fireEvent.load(image);
+    assert.ok(art.classList.contains('has-art'));
+    assert.match(art.style.backgroundImage, /ocean\.jpg/);
+    fireEvent.error(image);
+    assert.ok(art.querySelector('[aria-label="Artwork unavailable"]'));
+    assert.equal(art.style.backgroundImage, '');
+  } finally { cleanup(); }
+});
+
+test('Hero and first selector fit HD and FHD stages without vertical reveal scrolling', () => {
+  const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
+  assert.match(css, /\.tv-feature\{height:87cqh;max-height:calc\(100% - 1px\)/);
+  assert.match(css, /\.tv-feature-display\{[^}]*height:45cqh/);
+  assert.match(css, /\.tv-feature-selector \.tv-items\{[^}]*overflow-x:auto;overflow-y:hidden/);
+  assert.match(css, /\.tv-feature-art img\{[^}]*object-fit:contain/);
+  for (const height of [720, 1080]) {
+    assert.ok((.13 + .87) * height <= height);
+    assert.ok(.45 * height + (.87 - .45) * height <= .87 * height);
+  }
+});
+
+test('paired selector rejects revoked artwork while Rows and Grid keep their existing rendering', () => {
+  const spec = fixtureChannel(), content = spec.content[0]!;
+  const itemId = `ci_${'b'.repeat(32)}`, owner = `cr_${'a'.repeat(32)}`;
+  const inventory = { projectId: spec.id, creatorAccountId: owner,
+    items: [{ id: itemId, projectId: spec.id, creatorAccountId: owner,
+      mediaAssetIds: [`ma_${'c'.repeat(32)}`] }],
+    mediaAssets: [{ id: `ma_${'c'.repeat(32)}`, projectId: spec.id, creatorAccountId: owner,
+      catalogItemId: itemId, kind: 'artwork', tvDisplayRights: { status: 'revoked' } }] } as unknown as CatalogSnapshot;
+  try {
+    const view = render(createElement(PreviewArtwork, { contentId: catalogContentId(itemId), source: content.artwork,
+      inventory, projectId: spec.id, accountId: owner, requireCleared: true }));
+    assert.equal(view.container.querySelector('img'), null);
+    assert.ok(view.container.querySelector('[aria-label="Artwork unavailable"]'));
+  } finally { cleanup(); }
+  spec.pages[0] = { ...spec.pages[0]!, modules: [{ id: `mod_${'c'.repeat(32)}`, kind: 'grid', title: 'Films', contentIds: [content.id] }] };
+  try {
+    const view = render(createElement(Preview, { spec }));
+    assert.equal(view.container.querySelector('.tv-feature'), null);
+    assert.equal(view.container.querySelectorAll('.tv-grid .tv-card').length, 1);
+  } finally { cleanup(); }
+  spec.pages[0] = { ...spec.pages[0]!, modules: [
+    { id: `mod_${'d'.repeat(32)}`, kind: 'rail', title: 'First', contentIds: [content.id] },
+    { id: `mod_${'e'.repeat(32)}`, kind: 'rail', title: 'Second', contentIds: [content.id] }
+  ] };
+  try {
+    const view = render(createElement(Preview, { spec }));
+    assert.equal(view.container.querySelector('.tv-feature'), null);
+    assert.equal(view.container.querySelectorAll('.tv-module.tv-rail').length, 2);
+  } finally { cleanup(); }
+});
+
+test('book audiobook uses Listen to Audiobook in the hero without starting audio', () => {
+  const spec = fixtureChannel(), book = { id: `item_${'b'.repeat(32)}`, title: 'Field Guide',
+    description: 'A book', artwork: 'assets/book.jpg', presentation: 'information' as const,
+    audiobook: { mediaUrl: 'https://example.org/book.mp3' } };
+  spec.content.push(book);
+  spec.pages[0]!.modules.push({ id: `mod_${'c'.repeat(32)}`, kind: 'rail', title: 'Browse', contentIds: [book.id] });
+  try {
+    const view = render(createElement(Preview, { spec }));
+    fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+    assert.match(view.container.querySelector('.tv-feature-copy')?.textContent ?? '', /Field Guide.*Listen to Audiobook/s);
+    assert.equal(view.container.querySelector('audio, video'), null);
+  } finally { cleanup(); }
+});
 
 test('preview state follows row focus, keeps detail/Back, and clears stale selection', () => {
   const spec = fixtureChannel(), page = spec.pages[0]!, first = spec.content[0]!;
