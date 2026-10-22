@@ -22,6 +22,8 @@ This issue journal records **owner-reported problems**, not implementation compl
 | **P9-006** | P1 required | Formal image uploads for logo, channel-wide and per-page backgrounds (with Apply to all pages), and image sections; Vega export parity | Reported — amended 2026-10-22 | [P9-006 details](issues/P9-006-channel-branding-image-uploads.md) |
 | **P9-007** | P1 required | Standardize every Studio popup on New Page modal style, including all media and upload workflows and illustrative choice graphics where useful | Reported | [P9-007 details](issues/P9-007-unified-desert-heat-modal-design.md) |
 | **P9-008** | P1 required | Fix clipped foreground artwork in interactive/fullscreen Vega Preview and export; support non-16:9 aspect ratios without breaking TV layout | Reported | [P9-008 details](issues/P9-008-prevent-preview-image-clipping.md) |
+| **P9-009** | P1 required | Redesign login with the owner-approved cyberpunk Desert Heat canyon image and a compact centered Google sign-in card | Reported; visual approved | [P9-009 details](issues/P9-009-login-page-redesign.md) |
+| **P9-010** | P1 required | After P8D, formalize Library sections for Videos, Audio, Books and non-content Assets (logos/backgrounds/section art) | Reported; depends on P8D | [P9-010 details](issues/P9-010-multimedia-library-formalization.md) |
 
 ## Per-issue companion-file contract
 
@@ -33,6 +35,8 @@ Every new issue gets a permanent sequential **P9-NNN** ID and a separate Markdow
 - Boundaries protecting already-working features, existing data, rights, ownership and releases.
 - Practical, testable **acceptance criteria**.
 - Priority, status, dependencies and overlap with unfinished Phase 8 work.
+
+The owner-approved P9-009 canyon background is preserved in the 2026-10-22 image-generation conversation, **not yet committed to this repository**; P9 implementation must acquire that exact asset rather than inventing a substitute. P9-010 is conditional on the **actual P8D multimedia baseline**, which should be independently verified at implementation time.
 
 Issue intake is **documentation only**. Don't implement an issue when it is merely reported. Group and prioritize the collected issues into the smallest safe manual/runner prompt batch after collection. `P0` = core journey broken or seriously confusing; `P1` = deadline-required usability; `P2` = optional polish only if time.
 
