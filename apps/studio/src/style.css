@@ -877,7 +877,7 @@ body { min-width: 0; }
 .preview-fullscreen .fullscreen-controls{display:flex;align-items:center;gap:8px;padding:5px;background:#11191be8;border-radius:8px}
 .preview-fullscreen .fullscreen-controls button{min-height:40px;padding:7px 12px;border:1px solid #728082;border-radius:6px;background:#293436;color:#fff;font-size:13px;font-weight:700}
 .preview-fullscreen .fullscreen-controls .preview-exit{border-color:#d87951;background:#a84c2e}
-.preview-fullscreen .channel-tv-stage .remote-bar{position:absolute;z-index:4;left:auto;right:12px;bottom:12px;order:0;display:flex;align-self:auto;align-items:center;gap:10px;width:auto;margin:0;padding:8px;background:#11191be8;border-radius:8px}
+.preview-fullscreen .channel-tv-stage .remote-bar{position:absolute;z-index:4;left:auto;right:12px;bottom:12px;order:0;display:grid;align-self:auto;justify-content:center;justify-items:center;gap:6px;width:min(220px,calc(100vw - 24px));margin:0;padding:8px;background:#11191be8;border-radius:8px}
 .preview-fullscreen .channel-tv-stage .remote-bar>div:first-child{display:grid;text-align:left}
 .preview-fullscreen .channel-tv-stage .remote-bar span{max-width:180px}
 .preview-fullscreen .channel-tv-stage .remote button{min-width:40px;min-height:40px}
