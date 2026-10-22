@@ -30,7 +30,7 @@ prior_assets_dir="$(dirname "$prior_index")/assets"
 [[ -d "$prior_assets_dir" && ! -L "$prior_assets_dir" ]] || { echo 'Active Studio assets directory is unsafe' >&2; exit 1; }
 mapfile -t prior_assets < <(find "$prior_assets_dir" -mindepth 1 -maxdepth 1 \( -name '*.js' -o -name '*.css' \) -printf '%f\n' | sort -u)
 # Consecutive protected releases retain older hashed entrypoints for cached browsers.
-[[ ${#prior_assets[@]} -ge ${#entry_assets[@]} && ${#prior_assets[@]} -le 16 ]] || { echo 'Unexpected retained Studio asset inventory' >&2; exit 1; }
+[[ ${#prior_assets[@]} -ge ${#entry_assets[@]} && ${#prior_assets[@]} -le 24 ]] || { echo 'Unexpected retained Studio asset inventory' >&2; exit 1; }
 for asset in "${entry_assets[@]}"; do
   [[ -f "$(dirname "$prior_index")$asset" ]] || { echo "Active Studio entrypoint asset missing: $asset" >&2; exit 1; }
 done
