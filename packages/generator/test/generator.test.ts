@@ -30,6 +30,27 @@ test('native hero stays bounded at HD and Full HD without a bottom gutter', asyn
   assert.doesNotMatch(source, /screen: \{ flex: 1, padding: 60 \}/);
 });
 
+test('native audio artwork remains centered and preserves portrait book covers', async () => {
+  const generated = await generateProject(fixtureChannel());
+  const helper = generated.files.get('src/tv-layout.js')!;
+  const { audioArtworkFrame } = await import(`data:text/javascript,${encodeURIComponent(helper)}`);
+  for (const [width, height] of [[640, 360], [960, 540], [1920, 1080]]) {
+    for (const portrait of [false, true]) {
+      const frame = audioArtworkFrame(width, height, portrait);
+      const stageHeight = height - frame.top - frame.bottom;
+      assert.ok(frame.width <= width * 0.55);
+      assert.ok(frame.height < stageHeight);
+      assert.ok(Math.abs(frame.width / frame.height - (portrait ? 2 / 3 : 1)) < 0.001);
+      const artworkTop = frame.top + (stageHeight - frame.height) / 2;
+      assert.ok(artworkTop >= frame.top && artworkTop + frame.height <= height - frame.bottom);
+    }
+  }
+  const source = generated.files.get('src/App.js')!;
+  assert.match(source, /audioArtworkStage/);
+  assert.match(source, /resizeMode="contain"/);
+  assert.doesNotMatch(source, /marginTop: 220/);
+});
+
 test('deterministic tree contains true shared runtime, manifest and projected content', async () => {
   const spec = fixtureChannel();
   const first = await generateProject(spec);

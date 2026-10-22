@@ -10,6 +10,16 @@ export function tvLayout(width, height) {
   return { scale, horizontalInset, topInset, heroArtworkHeight, heroWidth, cardWidth, cardArtworkHeight };
 }
 
+export function audioArtworkFrame(width, height, portrait) {
+  const top = Math.max(50, Math.min(86, height * 0.16));
+  const bottom = Math.max(70, Math.min(96, height * 0.18));
+  const availableHeight = Math.max(0, height - top - bottom);
+  const artworkHeight = Math.min(availableHeight * 0.78, height * 0.54,
+    width * 0.55 * (portrait ? 1.5 : 1));
+  return { top, bottom, width: portrait ? artworkHeight * 2 / 3 : artworkHeight,
+    height: artworkHeight };
+}
+
 export function scrollTarget(layout, offset, viewportHeight) {
   if (!layout || viewportHeight <= 0) return offset;
   const margin = 12;

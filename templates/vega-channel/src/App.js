@@ -6,7 +6,7 @@ import { installRelease } from './release-client';
 import { activeItem, initialState, itemFocusId, navFocusId, transition } from './tv-runtime';
 import { createPlaybackController } from './playback-controller';
 import { createHlsPlayer, installHlsPolyfills } from './hlsjs/adapter';
-import { scrollTarget, tvLayout } from './tv-layout';
+import { audioArtworkFrame, scrollTarget, tvLayout } from './tv-layout';
 
 function formatTime(seconds) {
   const value = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
@@ -84,6 +84,7 @@ function Section({ module, page, state, brand, font, focusStyle, layout, onLayou
 }
 
 function Playback({ item, muted, controls, activity, onBack, typography }) {
+  const { width, height } = useWindowDimensions();
   const [playback, setPlayback] = useState({ status: 'loading', message: item.presentation === 'audio' ? 'Loading audio' : 'Loading video' });
   const [position, setPosition] = useState({ currentTime: 0, duration: 0, paused: true, muted });
   const [overlayVisible, setOverlayVisible] = useState(true);
@@ -124,11 +125,17 @@ function Playback({ item, muted, controls, activity, onBack, typography }) {
     else { setOverlayVisible(true); if (hideTimer.current) clearTimeout(hideTimer.current); }
   }, [playback.status]);
   const audio = item.presentation === 'audio';
+  const artworkFrame = audioArtworkFrame(width, height, Boolean(item.audiobook));
   const font = { fontFamily: typography === 'serif' ? 'serif' : 'sans-serif' };
   const progress = position.duration > 0 ? Math.min(100, position.currentTime / position.duration * 100) : 0;
   return <View style={styles.playerScreen}>
-    {audio && (item.artwork.startsWith('https://')
-      ? <Image source={{ uri: item.artwork }} style={styles.audioArtwork} /> : <View style={styles.audioArtwork} />)}
+    {audio && <View pointerEvents="none" style={[styles.audioArtworkStage,
+      { top: artworkFrame.top, bottom: artworkFrame.bottom }]}>
+      {item.artwork.startsWith('https://')
+        ? <Image source={{ uri: item.artwork }} resizeMode="contain"
+          style={{ width: artworkFrame.width, height: artworkFrame.height }} />
+        : <View style={{ width: artworkFrame.width, height: artworkFrame.height }} />}
+    </View>}
     <KeplerVideoSurfaceView style={audio ? styles.audioSurface : styles.fullscreenVideo}
       onSurfaceViewCreated={async handle => {
         await stopping.current;
@@ -401,6 +408,6 @@ const styles = StyleSheet.create({
   speakerWaveOuter: { position: 'absolute', left: 19, top: 2, width: 13, height: 20, borderWidth: 2,
     borderColor: 'transparent', borderRightColor: '#D7D7D7', borderRadius: 12 },
   speakerOff: { position: 'absolute', left: 19, top: -4, color: '#D7D7D7', fontSize: 25 },
-  audioArtwork: { width: 320, height: 320, alignSelf: 'center', marginTop: 220 },
+  audioArtworkStage: { position: 'absolute', left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   audioSurface: { width: 1, height: 1, opacity: 0 }
 });
