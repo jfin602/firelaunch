@@ -59,16 +59,29 @@ export function itemFocusId(pageId: string, moduleId: string, itemId: string): s
   return `item:${pageId}:${moduleId}:${itemId}`;
 }
 
-/** A Hero is presentation when its immediately following authored module is a selector. */
+/** Pair a Hero with its first content row, keeping display-only modules after the row on TV. */
 export function heroSelector(page: TvPage): { hero: TvModule; selector: TvModule } | undefined {
-  const index = page.modules.findIndex((module, at) => module.kind === 'hero' &&
-    !!page.modules[at + 1]?.items.length &&
-    (page.modules[at + 1]?.kind === 'rail' || page.modules[at + 1]?.kind === 'grid'));
-  if (index < 0) return undefined;
-  const hero = page.modules[index]!;
-  const selector = page.modules[index + 1];
-  return selector && (selector.kind === 'rail' || selector.kind === 'grid') && selector.items.length
-    ? { hero, selector } : undefined;
+  for (let index = 0; index < page.modules.length; index++) {
+    const hero = page.modules[index]!;
+    if (hero.kind !== 'hero') continue;
+    for (let next = index + 1; next < page.modules.length; next++) {
+      const selector = page.modules[next]!;
+      if (selector.kind === 'hero') break;
+      if ((selector.kind === 'rail' || selector.kind === 'grid') && selector.items.length)
+        return { hero, selector };
+    }
+  }
+  return undefined;
+}
+
+/** Readable label color for an action filled with the creator's focus accent. */
+export function accentTextColor(hex: string): '#101812' | '#FFFFFF' {
+  const channels = [1, 3, 5].map(index => {
+    const value = Number.parseInt(hex.slice(index, index + 2), 16) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+  return luminance >= 0.179 ? '#101812' : '#FFFFFF';
 }
 
 /** Resolve the featured item from existing page/focus state, without saving a second selection. */

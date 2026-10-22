@@ -1008,7 +1008,7 @@ body:has(.preview-fullscreen){overflow:hidden}
 .tv-feature-copy p{font-size:.95em;line-height:1.35;max-width:46em;max-height:4.1em;overflow:hidden;margin:.5em 0;color:#f0f3f1}
 .tv-feature-meta{display:flex;flex-wrap:wrap;gap:.4em 1em;font-size:.78em;color:#d0d9d3}
 .tv-feature-meta span+span::before{content:"·";margin-right:1em}
-.tv-feature-action{display:inline-block;margin-top:.8em;padding:.45em .9em;border-left:.35em solid var(--tv-accent);border-radius:.25em;background:#f2f4f0;color:#101812;text-shadow:none;font-weight:800;font-size:.85em}
+.tv-feature-action{display:inline-block;margin-top:.8em;padding:.45em .9em;border-radius:.25em;background:var(--tv-accent);color:var(--tv-accent-ink);text-shadow:none;font-weight:800;font-size:.85em}
 .tv-feature-selector{min-height:0;flex:1;padding:1.2% 0 0;overflow:hidden}
 .tv-feature-selector h3{font-size:1em;margin:0 0 .5em}
 .tv-feature-selector .tv-items{height:calc(100% - 2em);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-inline:contain;align-items:flex-start}

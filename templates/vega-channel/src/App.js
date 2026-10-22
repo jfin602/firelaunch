@@ -3,7 +3,7 @@ import { BackHandler, Image, Pressable, ScrollView, StyleSheet, Text, TVEventHan
 import { KeplerVideoSurfaceView, VideoPlayer } from '@amazon-devices/react-native-w3cmedia';
 import bundled from './channel.json';
 import { installRelease } from './release-client';
-import { activeItem, heroSelector, heroSpotlight, initialState, itemFocusId, navFocusId, transition } from './tv-runtime';
+import { accentTextColor, activeItem, heroSelector, heroSpotlight, initialState, itemFocusId, navFocusId, transition } from './tv-runtime';
 import { createPlaybackController } from './playback-controller';
 import { createHlsPlayer, installHlsPolyfills } from './hlsjs/adapter';
 import { audioArtworkFrame, featureArtworkFrame, featureScrollTarget, tvLayout } from './tv-layout';
@@ -56,7 +56,8 @@ function Feature({ content, brand, font, layout }) {
       <Text numberOfLines={2} style={[styles.featureTitle, font, { fontSize: 36 * layout.scale }]}>{content.title}</Text>
       <Text numberOfLines={3} style={[styles.featureDescription, font, { fontSize: 18 * layout.scale }]}>{content.description}</Text>
       {meta.length > 0 && <Text numberOfLines={1} style={[styles.featureMeta, font]}>{meta.join('  ·  ')}</Text>}
-      <Text style={[styles.featureAction, font, { borderColor: brand.primaryColor }]}>{heroAction(content)}  →</Text>
+      <Text style={[styles.featureAction, font, { backgroundColor: brand.primaryColor,
+        color: accentTextColor(brand.primaryColor) }]}>{heroAction(content)}  →</Text>
     </View>
     <View style={[styles.featureFrame, { width: layout.contentWidth * 0.42 }]}>
       {visible ? <Image key={`front:${source}`} source={{ uri: source }} resizeMode="contain"
@@ -439,8 +440,8 @@ const styles = StyleSheet.create({
   featureTitle: { color: '#FFFFFF', fontWeight: 'bold', marginTop: 8 },
   featureDescription: { color: '#F0F3F1', lineHeight: 25, marginTop: 6 },
   featureMeta: { color: '#D0D9D3', fontSize: 17, marginTop: 8 },
-  featureAction: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold', marginTop: 12,
-    borderLeftWidth: 4, paddingLeft: 8 },
+  featureAction: { alignSelf: 'flex-start', fontSize: 18, fontWeight: 'bold', marginTop: 12,
+    borderRadius: 5, paddingHorizontal: 14, paddingVertical: 7 },
   featureFrame: { alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   featureFallback: { color: '#E5EEE9', fontSize: 18 },
   module: { marginVertical: 8 }, moduleTitle: { fontSize: 27, marginBottom: 8 },

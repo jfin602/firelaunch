@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { fixtureChannel } from '../../channel-engine/test/fixtures.js';
-import { televisionFromSpec, focusRows, heroSelector, heroSpotlight, initialState, transition, itemFocusId, navFocusId } from '../src/index.js';
+import { accentTextColor, televisionFromSpec, focusRows, heroSelector, heroSpotlight, initialState, transition, itemFocusId, navFocusId } from '../src/index.js';
 
 test('projects ordered navigation and resolves modules/content without mutation', () => {
   const spec = fixtureChannel();
@@ -132,6 +132,10 @@ test('Hero selector falls back safely for empty, lone and unrelated sections', (
   assert.equal(heroSpotlight(tv.pages[0]!, initialState(tv))?.id, spec.content[0]!.id);
   const separated = televisionFromSpec({ ...spec, pages: [{ ...page, modules: [hero,
     { id: `mod_${'d'.repeat(32)}`, kind: 'text', title: 'Story', body: 'Story' }, rail] }] });
-  assert.equal(heroSelector(separated.pages[0]!), undefined);
-  assert.equal(focusRows(separated, page.id).length, 3);
+  assert.equal(heroSelector(separated.pages[0]!)?.selector.id, rail.id);
+  assert.equal(focusRows(separated, page.id).length, 2);
+  assert.equal(transition(separated, initialState(separated), 'down').focusId,
+    itemFocusId(page.id, rail.id, spec.content[0]!.id));
+  assert.equal(accentTextColor('#ff6a00'), '#101812');
+  assert.equal(accentTextColor('#1c2840'), '#FFFFFF');
 });
