@@ -1,5 +1,16 @@
 # FireLaunch MVP Roadmap
 
+## CURRENT ROADMAP — P8D multimedia before P9 (owner decision 2026-10-22)
+
+1. **P8C** final closeout **NOT GREEN** at source `0.8.13` ([exact dated evidence](../tasks/p8/closeout.md)); owner **defers** its Vega static Image Banner/Image+Text device and hero art-composition acceptance as **entry gates for P8D only**. Do not turn them GREEN or erase the historical closeout.
+2. **P8D ACTIVE NEXT — CLEARED TO START P1 NOW**: [multi-media design](../design/multi-media-creator-experience.md), [assessed](../tasks/p8d/prompt-assessment.md), [planned](../tasks/p8d/implementation-plan.md), [five manual prompts](../tasks/p8d/README.md) committed; target versions P1 0.8.14 media contracts, P2 0.8.15 Audio/MP3, P3 0.8.16 Book Showcase + optional same-book audiobook MP3, P4 0.8.17 native mixed-media, P5 unchanged 0.8.17 real browser/device closeout. No P8D code/deploy or native claim from docs authoring; individual manual Codex agents own Git commits and browser/debug safety. **No runner.**
+3. **P9** [Live publishing and app updates](../tasks/p9/README.md) remains planned/NOT STARTED; its 0.9.0 entry needs an explicit owner decision after P8D. Retain old installed-client compatibility safeguards and public FREE release #1.
+
+Product decision: Video Watch unchanged; Audio Listen from MP3; author Book Showcase with portrait cover/synopsis/bookcase, optional MP3 audiobook using the SAME audio player, no TV EPUB/PDF/page reader, no duplicate audio item. Audio/book experience delivered via one ChannelSpec/native renderer and rights-safe validated media URLs. Real Vega qualification remains necessary for claims of device playback, irrespective of deferred P8C gap.
+
+---
+
+
 ## Active c8-ui3 four-step correction — immersive fullscreen (October 21)
 
 Approved addendum to [c8-ui3](../tasks/c8-ui3/README.md): P1/P2 implement previously accepted normal Channel mockup unchanged; NEW P3 adds **actual full-viewport 16:9 app**, bottom-left Virtual remote, top-right Exit/Hide, existing left editing drawer and Clean View hiding ALL Studio overlays, with safe recovery by H, top-right corner, Alt+E and Escape. P4 now owns manual exact-source protected staging deployment FIRST, then owner-authenticated Codex browser qualification of normal and all three fullscreen states. Version remains 0.8.10 and previously completed P1/P2 must not be rerun or rewritten. c8-ui2 P4 superseded. Phase 8 remains OPEN; no code or staging action occurred in this documentation update.
