@@ -15,7 +15,7 @@ test('native hero stays bounded at HD and Full HD without a bottom gutter', asyn
   const { tvLayout, scrollTarget } = await import(`data:text/javascript,${encodeURIComponent(helper)}`);
   for (const [width, height] of [[640, 360], [960, 540]]) {
     const layout = tvLayout(width, height);
-    assert.ok(layout.heroArtworkHeight <= height * 0.30);
+    assert.ok(layout.heroArtworkHeight <= height * 0.24);
     assert.ok(layout.heroWidth <= width - layout.horizontalInset * 2);
     assert.ok(Math.abs((layout.heroWidth - 16 * layout.scale) / layout.heroArtworkHeight - 16 / 9) < 0.01);
     const firstRowTop = layout.topInset + 70 * layout.scale + 43 * layout.scale +
