@@ -16,6 +16,7 @@ This issue journal records **owner-reported problems**, not implementation compl
 | --- | --- | --- | --- | --- |
 | **P9-001** | P1 required | Remove second "02 First look" page from channel creation and go straight to Channel Editor | Reported | [P9-001 details](issues/P9-001-simplify-channel-creation.md) |
 | **P9-002** | P0 critical | Private video pool and one-click Publish/Remove for Vega channel inclusion; delete private-draft artwork preview | Reported | [P9-002 details](issues/P9-002-video-channel-inclusion.md) |
+| **P9-003** | P1 required | Reorder Home quick actions: orange Edit Channel, Add Media to Library, one-click View fullscreen | Reported | [P9-003 details](issues/P9-003-home-quick-actions.md) |
 
 ## Per-issue companion-file contract
 
