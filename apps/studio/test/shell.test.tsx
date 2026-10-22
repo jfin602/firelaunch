@@ -47,6 +47,7 @@ test('every Studio destination starts without a topbar and the card owns workspa
     render(createElement(App));
     const card = await screen.findByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` });
     assert.match(card.textContent ?? '', /REV 3 · PRIVATE/);
+    assert.match(card.textContent ?? '', /SAVED PRIVATELY/);
     assert.equal(document.querySelector('.topbar'), null);
     assert.equal(document.querySelector('.project-select'), null);
     for (const destination of ['Home', 'Library', 'Channel', 'Publish', 'Export']) {
