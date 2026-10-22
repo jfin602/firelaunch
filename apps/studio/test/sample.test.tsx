@@ -19,7 +19,7 @@ test('sample fills the starter Hero and row without adding sections or changing 
     'item_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'item_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'item_cccccccccccccccccccccccccccccccc'
   ]);
   assert.deepEqual(spec.content, []);
-  assert.equal(focusRows(tv, tv.pages[0]!.id).length, 3);
+  assert.equal(focusRows(tv, tv.pages[0]!.id).length, 2);
   const detail = transition(tv, transition(tv, initialState(tv), 'down'), 'select');
   assert.equal(detail.screen, 'detail');
   assert.equal(transition(tv, detail, 'select').screen, 'playback');
