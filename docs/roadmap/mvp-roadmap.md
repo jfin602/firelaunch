@@ -1,5 +1,14 @@
 # FireLaunch MVP Roadmap
 
+## CURRENT — Runner-compatible P8D start (2026-10-22)
+
+Owner converted [P8D](../tasks/p8d/README.md) from all-manual prompt ownership to a RUNNER-RECOGNIZED continuation. Start `npm run codex:stack:validate -- p8d`, then `npm run codex:stack -- p8d` from verified root/lock `0.8.13`. P1 `0.8.14` is run/committed by runner; P2 Audio `0.8.15`, P3 Book Showcase optional same-book MP3 `0.8.16`, P4 mixed native `0.8.17` are browser-required and run MANUALLY after runner's intentional stop. Use **exact-version Git commit subjects** for those manual implementation checkpoints, rerunning runner between each. P5 independent browser/Vega closeout has assigned grammar `0.8.18` but **actual product remains 0.8.17**. No all-automatic browser execution. Older manual/no-runner statements below are superseded. No P8D code has yet been implemented by this prompt conversion.
+
+[P8C NOT GREEN](../tasks/p8/closeout.md) static-device/hero art is deferred as entry debt, not relabeled or silently waived as P8D P5 real-native evidence. Phase 9 remains planned without 0.9.0 entry.
+
+---
+
+
 ## CURRENT ROADMAP — P8D multimedia before P9 (owner decision 2026-10-22)
 
 1. **P8C** final closeout **NOT GREEN** at source `0.8.13` ([exact dated evidence](../tasks/p8/closeout.md)); owner **defers** its Vega static Image Banner/Image+Text device and hero art-composition acceptance as **entry gates for P8D only**. Do not turn them GREEN or erase the historical closeout.
