@@ -1,5 +1,14 @@
 # P8 — Creative Studio UX & Pipeline Confirmation
 
+## LATEST — P8D P5 will own the TRUE final Phase 8 closeout (2026-10-22)
+
+The owner replaced P8D P5's bounded media-only closeout with the **single integrated Phase 8** [manual staging-first P5](../p8d/P5-multimedia-closeout.txt). P5 tests video/Wave 1, P8B layout/native, P8C creator/editor/hero, P8D audio/books/mixed publishing and real Vega device; it **deploys exact committed source to staging BEFORE live acceptance** and may perform up to **eight observed correction cycles**, with a new protected release and fresh live browser/device retest after EACH code change. The final aggregate must match last settled source.
+
+The original P8C P4 **NOT GREEN** report has been [preserved verbatim](../p8c/closeout-2026-10-22-not-green.md). **The current `closeout.md` remains that historical P8C result until P5 truly runs**; ONLY THEN replace it with an evidence-backed authoritative Phase 8 GREEN/NOT GREEN and write a detailed P8D appendix. P5 is independently manual, actual version stays 0.8.17 (parser metadata assigned 0.8.18); P8D P1–P4 runner/browser handoffs and no automatic P9 activation are unchanged. Deferring P8C missing evidence as an entry gate never equated to native passing.
+
+---
+
+
 ## CURRENT — P8D runner entry after P8C NOT GREEN (2026-10-22)
 
 [Historical P8C Phase 8 closeout](closeout.md) remains **NOT GREEN** on missing real Vega static-section device proof and disputed hero composition. Owner explicitly DEFERRED those as **P8D entry**, not acceptance; do not modify the closeout. [P8D](../p8d/README.md) converted to RUNNER grammar: from clean root/lock `0.8.13`, validator+runner automatically execute and commit P1 `0.8.14`; P2/P3/P4 are browser-required and stop for manual Codex tasks with Git commit subjects exactly `0.8.15`/`0.8.16`/`0.8.17`; P5 uses grammar closeout slot `0.8.18` but actual project 0.8.17 unchanged. Video / MP3 Audio / Book Showcase (optional same-book audiobook) with NO TV reader. Phase 9 still requires explicit owner approval. Earlier P8C active handoff and all-manual P8D text below is historical.
