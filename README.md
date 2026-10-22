@@ -1,5 +1,12 @@
 # FireLaunch
 
+## Current FireLaunch roadmap — October 22, 2026
+
+**Phase 9 is now MVP POLISH**, not installed-client publishing. [Ten documented issues](docs/tasks/p9-polish/README.md) have [manual one-issue Codex/browser prompts](docs/tasks/p9/README.md), each owning focused test/commit, protected exact-hash staging deploy and subsequent owner-browser acceptance. Previous planned [live publishing/app updates](docs/tasks/p10/README.md) are **DEFERRED to Phase 10**. Document authoring does **not** deploy or bump root version. Phase 8 P8D closeout remains NOT GREEN at 0.8.17/schema15 evidence; reconcile the c8-hero-multimedia correction before P9 source changes. See [current state](docs/CURRENT-STATE.md) for authoritative handoff.
+
+---
+
+
 ## Current creative UX direction — Phase 8 Wave 2 (2026-10-21)
 
 [Wave 1](docs/tasks/p8/wave1-closeout.md) is **GREEN / DEPLOYED** for the tested navigation, contextual editor and native Export workflow at root/lock `0.8.4`; Phase 8 is **still OPEN**. Owner-approved Wave 2 is the [human-first Page Layout and Full-Screen Preview design](docs/design/page-layout-human-first.md), with [`p8b` planning README](docs/tasks/p8b/README.md): Hero/Grid/Rows starting layouts, Pages & Layout editing, six constrained TV sections and an expandable same-state interactive Preview. **Design only:** no Wave 2 executable prompts, version change, runtime code or staging deploy yet. See [current state](docs/CURRENT-STATE.md) for latest dated operational evidence.
