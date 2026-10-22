@@ -1,5 +1,12 @@
 # P8 — Creative Studio UX & Pipeline Confirmation
 
+## CURRENT — P8D runner entry after P8C NOT GREEN (2026-10-22)
+
+[Historical P8C Phase 8 closeout](closeout.md) remains **NOT GREEN** on missing real Vega static-section device proof and disputed hero composition. Owner explicitly DEFERRED those as **P8D entry**, not acceptance; do not modify the closeout. [P8D](../p8d/README.md) converted to RUNNER grammar: from clean root/lock `0.8.13`, validator+runner automatically execute and commit P1 `0.8.14`; P2/P3/P4 are browser-required and stop for manual Codex tasks with Git commit subjects exactly `0.8.15`/`0.8.16`/`0.8.17`; P5 uses grammar closeout slot `0.8.18` but actual project 0.8.17 unchanged. Video / MP3 Audio / Book Showcase (optional same-book audiobook) with NO TV reader. Phase 9 still requires explicit owner approval. Earlier P8C active handoff and all-manual P8D text below is historical.
+
+---
+
+
 ## NEW PRIORITY — P8D cleared before P9 (2026-10-22)
 
 [This phase's definitive historical P8C closeout](closeout.md) was actually executed and is **NOT GREEN** at `0.8.13`. The scope-tested Studio deployment passed, but Vega native Image Banner/Image + Text evidence and hero artwork composition acceptance were missing. **Owner explicitly authorizes [P8D](../p8d/README.md) to start now**, deferring those prior gates for **entry**, not changing this P8C closeout or claiming full Phase 8 GREEN. P8D has five manual prompts written at versions `0.8.14`–`0.8.17` (P5 closeout unchanged). P8D is the new audio/book multi-media implementation milestone preceding [P9](../p9/README.md): Audio MP3, Book Showcase with optional MP3 audiobook, one shared audio player and type-aware Vega application. **No TV reader**. Historical P8C authoring instructions below are superseded as current execution; P1 P8D is the next task. No code/stack was executed from this documentation write, package version remains 0.8.13.
