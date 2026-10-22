@@ -79,7 +79,7 @@ test('book saves and reopens without Play, then attaches one MP3 to the same boo
     fireEvent.click(screen.getByLabelText('Attach audiobook MP3'));
     fireEvent.change(screen.getByLabelText('NARRATOR'), { target: { value: 'A. Narrator' } });
     fireEvent.change(screen.getByLabelText(/AUDIOBOOK MP3/), { target: { files: [new File([new Uint8Array(2048)], 'story.mp3', { type: 'audio/mpeg' })] } });
-    fireEvent.click(screen.getByLabelText(/independent TV playback rights/));
+    fireEvent.click(screen.getByLabelText(/I confirm I own or have permission/));
     fireEvent.click(screen.getByRole('button', { name: 'Save book draft' }));
     await waitFor(() => {
       assert.equal(screen.queryByRole('alert')?.textContent ?? '', '', `book save error; writes: ${writes.map(value => `${value.method} ${value.url}`).join(', ')}`);

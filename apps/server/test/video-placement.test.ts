@@ -70,6 +70,15 @@ const base = process.env.FIRELAUNCH_TEST_DATABASE_URL;
     await assert.rejects(catalog.mutate(owner, project.id, 'items', 'POST', 5, itemInput), { code: 'INVALID_INPUT' });
     await assert.rejects(catalog.mutate(foreign, project.id, 'collections', 'POST', 5,
       { schemaVersion: 1, kind: 'series', title: 'Foreign', itemIds: [item.id] }), { code: 'NOT_FOUND' });
+    const replacement = { ...uploadInput, idempotencyKey: 'placement-replacement-001', expectedSha256: 'd'.repeat(64) };
+    await assert.rejects(pipeline.createUpload(owner, project.id, asset.id, replacement), { code: 'CONFLICT' });
+    const { id: _assetId, creatorAccountId: _assetOwner, projectId: _assetProject, ...savedAsset } = asset;
+    const renewedAt = new Date(Date.now() + 1000).toISOString();
+    await catalog.mutate(owner, project.id, 'media-assets', 'PUT', 5, { ...savedAsset,
+      tvDisplayRights: { ...claim('television_display'), assertedAt: renewedAt, attestationVersion: 'channel-media-v1' },
+      tvPlaybackRights: { ...claim('television_playback'), assertedAt: renewedAt, attestationVersion: 'channel-media-v1' }
+    }, asset.id);
+    assert.equal((await pipeline.createUpload(owner, project.id, asset.id, replacement)).state, 'initiated');
     await first.pool.end(); first = undefined;
 
     restarted = await HostedProjectRepository.connect(url.toString());
@@ -89,7 +98,7 @@ const base = process.env.FIRELAUNCH_TEST_DATABASE_URL;
     assert.equal(stored.collections[0]?.projectId, project.id);
     assert.equal(stored.mediaAssets[0]?.tvDisplayRights?.status, 'cleared');
     assert.equal(stored.mediaAssets[0]?.tvPlaybackRights?.status, 'cleared');
-    assert.equal((await after.rightsEvents(owner, project.id, asset.id)).length, 1);
+    assert.equal((await after.rightsEvents(owner, project.id, asset.id)).length, 2);
     assert.equal((await new MediaPipelineRepository(restarted).upload(owner, project.id, asset.id, upload.id)).state, 'completed');
     await assert.rejects(after.read(foreign, project.id), { code: 'NOT_FOUND' });
     await assert.rejects(new MediaPipelineRepository(restarted).upload(foreign, project.id, asset.id, upload.id), { code: 'NOT_FOUND' });

@@ -44,7 +44,8 @@ export class MediaPipelineRepository {
       WHERE project_id = $1 AND creator_account_id = $2 FOR UPDATE`, [projectId, principal.accountId]);
     if (!owner.rowCount) missing();
     const asset = await client.query<{ item_id: string; record: { kind?: string; rights?: { status?: string };
-      tvPlaybackRights?: { status?: string } } }>(`SELECT item_id, record FROM catalog_media_assets
+      tvDisplayRights?: { status?: string; assertedAt?: string; attestationVersion?: string };
+      tvPlaybackRights?: { status?: string; assertedAt?: string; attestationVersion?: string } } }>(`SELECT item_id, record FROM catalog_media_assets
       WHERE id = $1 AND project_id = $2 AND creator_account_id = $3`, [assetId, projectId, principal.accountId]);
     const row = asset.rows[0];
     if (!row) throw new RepositoryError('NOT_FOUND', 'Media asset not found');
@@ -56,7 +57,7 @@ export class MediaPipelineRepository {
       [assetId, projectId, principal.accountId]);
       if (lifecycle.rowCount) missing();
     }
-    return { owner: principal.accountId, itemId: row.item_id };
+    return { owner: principal.accountId, itemId: row.item_id, rights: row.record };
   }
 
   async createUpload(principal: AuthenticatedPrincipal, projectId: string, assetId: string, request: {
@@ -69,7 +70,7 @@ export class MediaPipelineRepository {
     if (new Date(request.expiresAt).getTime() <= Date.now() ||
       new Date(request.expiresAt).getTime() > Date.now() + 86_400_000) conflict('Upload expiry must be within 24 hours');
     return this.transaction(async client => {
-      const { owner, itemId } = await this.owned(client, principal, projectId, assetId);
+      const { owner, itemId, rights } = await this.owned(client, principal, projectId, assetId);
       // Serialize the account-wide quota across projects.
       await client.query('SELECT 1 FROM creator_accounts WHERE id = $1 FOR UPDATE', [owner]);
       const existing = await client.query<{ id: string; original_key: string; state: string; expected_bytes: string;
@@ -84,6 +85,17 @@ export class MediaPipelineRepository {
           (row.part_size ?? undefined) !== request.partSize || (row.part_count ?? undefined) !== request.partCount)
           conflict('Upload idempotency key reused with different input');
         return { id: row.id, originalKey: row.original_key, state: row.state };
+      }
+      const previous = await client.query<{ expected_sha256: string; created_at: Date }>(`
+        SELECT expected_sha256, created_at FROM media_upload_sessions
+        WHERE creator_account_id = $1 AND project_id = $2 AND asset_id = $3
+        ORDER BY created_at DESC, id DESC LIMIT 1`, [owner, projectId, assetId]);
+      if (previous.rows[0] && previous.rows[0].expected_sha256 !== request.expectedSha256) {
+        const laterThanPrior = (claim: typeof rights.tvDisplayRights) => claim?.status === 'cleared' &&
+          claim.attestationVersion === 'channel-media-v1' && !!claim.assertedAt &&
+          Date.parse(claim.assertedAt) > previous.rows[0]!.created_at.getTime();
+        if (!laterThanPrior(rights.tvDisplayRights) || !laterThanPrior(rights.tvPlaybackRights))
+          conflict('Confirm rights for the replacement video before uploading');
       }
       if (request.partCount !== undefined) {
         const usage = await client.query<{ active: string; bytes: string }>(`SELECT count(*) AS active,

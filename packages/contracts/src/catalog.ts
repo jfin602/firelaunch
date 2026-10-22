@@ -172,6 +172,7 @@ export const mediaRightsSchema = z.strictObject({
   basis: z.enum(['none', 'creator_asserted', 'license_documented']),
   permittedUse: z.enum(['none', 'television_playback', 'television_display']),
   assertedAt: z.iso.datetime().optional(),
+  attestationVersion: z.literal('channel-media-v1').optional(),
   evidenceId: evidenceIdSchema.optional()
 }).superRefine((rights, context) => {
   if (rights.status === 'cleared' && (rights.basis === 'none' || rights.permittedUse === 'none' || !rights.assertedAt)) {

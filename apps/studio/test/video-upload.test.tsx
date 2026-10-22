@@ -218,6 +218,12 @@ test('private video draft links one item and asset; failed part retries without 
       return json({ revision: ++inventory.revision, record: inventory.collections[1] }); }
     if (url.endsWith('/catalog/media-assets')) { counts.asset++; assert.equal(body.record.tvDisplayRights.status, 'cleared'); assert.equal(body.record.tvPlaybackRights.status, 'cleared');
       inventory.mediaAssets.push({ id: assetId, ...body.record }); return json({ revision: ++inventory.revision, record: inventory.mediaAssets[0] }, 201); }
+    if (url.endsWith(`/catalog/media-assets/${assetId}`) && init?.method === 'PUT') {
+      assert.equal(body.record.tvDisplayRights.attestationVersion, 'channel-media-v1');
+      assert.equal(body.record.tvPlaybackRights.attestationVersion, 'channel-media-v1');
+      inventory.mediaAssets[0] = { id: assetId, ...body.record };
+      return json({ revision: ++inventory.revision, record: inventory.mediaAssets[0] });
+    }
     if (url.endsWith('/media-uploads') && init?.method === 'POST') { counts.upload++; assert.equal(body.claimedDurationSeconds, 12);
       assert.equal(new Headers(init.headers).get('x-csrf-token'), 'csrf-proof');
       return json({ id: uploadId, state: 'initiated', partSize: 8_388_608, partCount: 1, expiresAt: new Date(Date.now() + 300000).toISOString() }, 201); }
@@ -284,7 +290,7 @@ test('processing-disabled upload remains private and cannot be labeled ready or 
     expiresAt: new Date().toISOString(), partSize: 1, partCount: 1 } as const;
   assert.match(videoProcessingMessage({ ...base, processingAvailable: false, processing: null }), /cannot be played or published/);
   assert.match(videoProcessingMessage({ ...base, processing: { state: 'failed', failureCode: 'encode_failed' } }), /Needs attention/);
-  assert.match(videoProcessingMessage({ ...base, processing: { state: 'ready', failureCode: null } }), /separate creator approval/);
+  assert.match(videoProcessingMessage({ ...base, processing: { state: 'ready', failureCode: null } }), /Ready/);
 });
 
 test('saved video status refreshes while visible and gives truthful next actions for long processing, failure and revocation', async () => {
@@ -298,13 +304,13 @@ test('saved video status refreshes while visible and gives truthful next actions
   }) as typeof fetch;
   try {
     render(createElement(VideoLibraryStatus, { projectId, assetId }));
-    await screen.findByText('Processing privately · check back later');
+    await screen.findByText('Processing');
     state = 'failed';
     fireEvent(document, new dom.window.Event('visibilitychange'));
-    await screen.findByText('Processing failed · open to retry or replace');
+    await screen.findByText('Needs attention · processing failed; open to retry or replace');
     state = 'revoked';
     fireEvent(document, new dom.window.Event('visibilitychange'));
-    await screen.findByText('Revoked · publication blocked; open to review');
+    await screen.findByText('Needs attention · permission revoked; open for details');
     assert.equal(reads, 3);
   } finally { cleanup(); globalThis.fetch = previous; }
 });
@@ -322,8 +328,8 @@ test('concurrent saved videos keep independent status and project-scoped reads',
     render(createElement(Fragment, null,
       createElement(VideoLibraryStatus, { projectId, assetId }),
       createElement(VideoLibraryStatus, { projectId, assetId: otherAsset })));
-    await screen.findByText('Processing privately · check back later');
-    await screen.findByText('Processing failed · open to retry or replace');
+    await screen.findByText('Processing');
+    await screen.findByText('Needs attention · processing failed; open to retry or replace');
     assert.deepEqual(seen.sort(), [assetId, otherAsset].sort());
   } finally { cleanup(); globalThis.fetch = previous; }
 });
@@ -352,6 +358,28 @@ test('reopened unfinished draft explains file loss and requires selection before
     assert.equal((screen.getByRole('button', { name: 'Replace video' }) as HTMLButtonElement).disabled, true);
     assert.equal(writes, 0);
   } finally { cleanup(); globalThis.fetch = previous; }
+});
+
+test('confirmed video rights stay quiet on edit and require a fresh check for a replacement file', () => {
+  const item = { id: itemId, kind: 'video', sourceRecord: { metadata: { title: 'Saved film' } }, mediaAssetIds: [assetId] } as any;
+  const inventory = { revision: 3, sources: [], collections: [], items: [item], mediaAssets: [{
+    id: assetId, catalogItemId: itemId, kind: 'video', location: { type: 'managed_hls' },
+    tvDisplayRights: { status: 'cleared', permittedUse: 'television_display', assertedAt: new Date().toISOString() },
+    tvPlaybackRights: { status: 'cleared', permittedUse: 'television_playback', assertedAt: new Date().toISOString() }
+  }] } as any;
+  try {
+    const props = { accountId: owner, projectId, inventory, existingItem: item, refresh: async () => inventory,
+      onCreated: () => {}, onClose: () => {} };
+    const view = render(createElement(NewVideoUpload, { ...props, page: 'details' }));
+    assert.equal(screen.queryByRole('checkbox'), null);
+    view.rerender(createElement(NewVideoUpload, props));
+    assert.equal(screen.queryByRole('checkbox'), null);
+    fireEvent.change(screen.getByLabelText('Video file'), { target: { files: [validFile()] } });
+    assert.equal((screen.getByRole('checkbox') as HTMLInputElement).checked, false);
+    assert.equal((screen.getByRole('button', { name: 'Replace video' }) as HTMLButtonElement).disabled, true);
+    fireEvent.click(screen.getByRole('checkbox'));
+    assert.equal((screen.getByRole('button', { name: 'Replace video' }) as HTMLButtonElement).disabled, false);
+  } finally { cleanup(); }
 });
 
 test('later thumbnail replacement creates a private draft asset and preserves prior live artwork', async () => {
@@ -389,6 +417,8 @@ test('later thumbnail replacement creates a private draft asset and preserves pr
     const thumbnail = new File(['png'], 'cover.png', { type: 'image/png' });
     Object.defineProperty(thumbnail, 'arrayBuffer', { value: async () => new Uint8Array([137, 80, 78, 71]).buffer });
     fireEvent.change(screen.getByLabelText(/Thumbnail \(PNG or JPEG/), { target: { files: [thumbnail] } });
+    assert.equal((screen.getByRole('button', { name: 'Save thumbnail' }) as HTMLButtonElement).disabled, true);
+    fireEvent.click(screen.getByLabelText(/permission to show this replacement thumbnail/));
     assert.equal((screen.getByRole('button', { name: 'Save thumbnail' }) as HTMLButtonElement).disabled, false);
     fireEvent.click(screen.getByRole('button', { name: 'Save thumbnail' }));
     await waitFor(() => assert.equal(inventory.mediaAssets.length, 2));

@@ -7,7 +7,8 @@ import { startVideoTransfer, stopVideoTransfer, subscribeVideoTransfers, videoTr
 import type { VideoPage } from './video-pages.js';
 
 const claim = (use: 'television_display' | 'television_playback', assertedAt: string) =>
-  ({ status: 'cleared' as const, basis: 'creator_asserted' as const, permittedUse: use, assertedAt });
+  ({ status: 'cleared' as const, basis: 'creator_asserted' as const, permittedUse: use, assertedAt,
+    attestationVersion: 'channel-media-v1' as const });
 const unknown = () =>
   ({ status: 'unknown' as const, basis: 'none' as const, permittedUse: 'none' as const });
 
@@ -85,7 +86,7 @@ export function videoProcessingMessage(session: VideoUploadStatus): string {
   switch (session.processing?.state) {
     case 'pending': return 'Processing · private. Publication is unavailable until output is verified.';
     case 'leased': return 'Needs attention · legacy processing is incomplete. Contact the operator.';
-    case 'ready': return 'Processed · private. Check artwork, rights and channel readiness before separate creator approval.';
+    case 'ready': return 'Ready · saved privately.';
     case 'failed': return 'Needs attention · processing failed. Retry processing or upload a replacement.';
     case 'revoked': return 'Needs attention · rights or processing were revoked. Publication is blocked.';
     default: return session.processingAvailable === false
@@ -113,12 +114,12 @@ export function VideoLibraryStatus({ projectId, assetId }: { projectId: string; 
             'Upload incomplete · open to retry with your file'); return;
         }
         switch (value.processing?.state) {
-          case 'ready': setStatus('Processed privately · open to review rights and channel readiness'); break;
-          case 'failed': setStatus('Processing failed · open to retry or replace'); break;
-          case 'revoked': setStatus('Revoked · publication blocked; open to review'); break;
-          case 'leased': setStatus('Processing needs operator attention · open for details'); break;
-          default: setStatus(value.processingAvailable === false ? 'Processing unavailable · open for details' :
-            'Processing privately · check back later');
+          case 'ready': setStatus('Ready'); break;
+          case 'failed': setStatus('Needs attention · processing failed; open to retry or replace'); break;
+          case 'revoked': setStatus('Needs attention · permission revoked; open for details'); break;
+          case 'leased': setStatus('Needs attention · processing stalled; open for details'); break;
+          default: setStatus(value.processingAvailable === false ? 'Needs attention · processing unavailable' :
+            'Processing');
         }
       }).catch(() => { if (alive) setStatus('Status unavailable · open to retry'); })
         .finally(() => { pending = false; });
@@ -153,6 +154,10 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
   const thumbnailObjectId = ownedArtworkObject(inventory.items.find(value => value.id === (existingItem?.id ?? itemId)), inventory.mediaAssets, projectId, accountId);
+  const savedVideo = inventory.mediaAssets.find(value => value.catalogItemId === (existingItem?.id ?? itemId) &&
+    value.kind === 'video' && value.location.type === 'managed_hls');
+  const savedRights = savedVideo?.tvDisplayRights?.status === 'cleared' &&
+    savedVideo.tvPlaybackRights?.status === 'cleared';
   const artworkItem = inventory.items.find(value => value.id === (existingItem?.id ?? itemId));
   const artworkPreview = (alt: string) => <OwnedArtwork item={artworkItem} assets={inventory.mediaAssets} projectId={projectId} accountId={accountId}
     localFile={thumbnail ?? (thumbnailObjectId ? null : generatedThumbnail)} className="video-thumbnail-art" imageClassName="video-thumbnail-preview" alt={alt}
@@ -205,7 +210,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
   }, [projectId, assetId, session?.id, session?.state, session?.processing?.state, session?.processingAvailable]);
   const chooseFile = (next: File | null) => {
     if (!next) return;
-    try { validateVideoFile(next); setFile(next); if (!titleEdited && !itemId) setTitle(titleFromFilename(next.name)); setError(''); }
+    try { validateVideoFile(next); setFile(next); setRightsConfirmed(false); if (!titleEdited && !itemId) setTitle(titleFromFilename(next.name)); setError(''); }
     catch (reason) { setFile(null); setError(reason instanceof Error ? reason.message : String(reason)); }
   };
   const setWorking = (value: boolean) => { busyRef.current = value; setBusy(value); onBusyChange?.(value); };
@@ -219,7 +224,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
       validateVideoFile(file);
       if (!title.trim()) throw new Error('Enter a video title on Details.');
       if (title.trim().length > 160) throw new Error('Keep the title under 160 characters.');
-      if (!rightsConfirmed) throw new Error('Confirm your television display, artwork and playback rights.');
+      if (!rightsConfirmed) throw new Error('Confirm you have permission to show and play this video in your channel.');
       if (thumbnail && (!['image/jpeg', 'image/png'].includes(thumbnail.type) || thumbnail.size < 1 || thumbnail.size > 1_000_000))
         throw new Error('Choose a PNG or JPEG thumbnail under 1 MB.');
       const inspectedDurationSeconds = await readVideoDuration(file);
@@ -278,6 +283,12 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
         const existing = current.mediaAssets.find(value => value.id === ownedAssetId)!;
         if (existing.tvDisplayRights?.status !== 'cleared' || existing.tvPlaybackRights?.status !== 'cleared')
           throw new Error('Video rights were revoked or need review. Resolve rights in the library before replacing this upload.');
+        const assertedAt = new Date().toISOString();
+        const { id, creatorAccountId: _owner, projectId: _project, ...record } = existing;
+        await writeCatalog(projectId, 'media-assets', current.revision, { ...record,
+          tvDisplayRights: claim('television_display', assertedAt),
+          tvPlaybackRights: claim('television_playback', assertedAt) }, id);
+        current = await refresh();
       }
       void startVideoTransfer({ accountId, projectId, itemId: ownedItemId, assetId: ownedAssetId, file,
         durationSeconds: inspectedDurationSeconds, sha256: externalId })
@@ -349,7 +360,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
       {file && <p className="video-file" role="status">Selected: {file.name} · {(file.size / 1_000_000).toFixed(1)} MB</p>}
       {artworkPreview('Video thumbnail preview')}
       {!title.trim() && file && <p role="status">Add a title on Details before starting the upload.</p>}
-      <label className="check video-rights"><input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)}/> I own or license this video and thumbnail for TV display and streaming.</label>
+      {(!existingItem || file || !savedRights) && <label className="check video-rights"><input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)}/> I confirm I own or have permission to show and play this video and its thumbnail in my channel.</label>}
       <div className="button-row"><button className="primary" disabled={busy || transfer?.state === 'uploading' || !file || !title.trim() || !rightsConfirmed} onClick={() => void submit()}>{busy ? 'Preparing…' : existingItem ? 'Replace video' : 'Upload video'}</button>
         {session?.processing?.state === 'failed' && <button type="button" disabled={busy} onClick={() => void retry()}>Retry processing</button>}
         {transfer?.state === 'uploading' && <button type="button" onClick={() => stopVideoTransfer(accountId, projectId, itemId)}>Stop upload</button>}</div>
@@ -362,14 +373,14 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
       <h3>Video details</h3><p>Edit details while your video uploads or processes.</p>
       <label className="field"><span>Title *</span><input required maxLength={160} value={title} onChange={event => { setTitleEdited(true); setTitle(event.target.value); }}/></label>
       <label className="field"><span>Description (optional)</span><textarea maxLength={4000} value={description} onChange={event => setDescription(event.target.value)}/></label>
-      <label className="field"><span>Thumbnail (PNG or JPEG, up to 1 MB)</span><input type="file" accept="image/png,image/jpeg" onChange={event => setThumbnail(event.target.files?.[0] ?? null)}/></label>
+      <label className="field"><span>Thumbnail (PNG or JPEG, up to 1 MB)</span><input type="file" accept="image/png,image/jpeg" onChange={event => { setThumbnail(event.target.files?.[0] ?? null); setRightsConfirmed(false); }}/></label>
       {artworkPreview('Uploaded thumbnail preview')}
-      <p className="video-file">{thumbnail ? `Selected thumbnail: ${thumbnail.name}` : thumbnailObjectId ? 'Uploaded thumbnail saved privately.' : 'No uploaded thumbnail yet.'} TV display requires approval on Publish.</p>
+      <p className="video-file">{thumbnail ? `Selected thumbnail: ${thumbnail.name}` : thumbnailObjectId ? 'Uploaded thumbnail saved privately.' : 'No uploaded thumbnail yet.'}</p>
       {thumbnailNotice && <p role="status" className="video-upload-notice">{thumbnailNotice}</p>}
       {existingItem ? <div className="button-row"><button type="button" disabled={busy} onClick={() => void saveDetails()}>Save details</button>
         {thumbnail && <button type="button" disabled={busy || !rightsConfirmed} onClick={() => void updateThumbnail()}>Save thumbnail</button>}</div>
         : <p role="status">Choose an MP4 on Video to create this draft. Its title and thumbnail will be saved with the upload.</p>}
-      {existingItem && thumbnail && !rightsConfirmed && <p>Confirm video and thumbnail rights on Video before saving a new thumbnail.</p>}
+      {existingItem && thumbnail && <label className="check video-rights"><input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)}/> I confirm I own or have permission to show this replacement thumbnail in my channel.</label>}
     </>}
     {page === 'channel' && <>
       <h3>Channel category</h3>

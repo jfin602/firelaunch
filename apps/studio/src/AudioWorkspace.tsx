@@ -8,7 +8,7 @@ import { OwnedArtwork } from './OwnedArtwork.js';
 
 const unknown = () => ({ status: 'unknown' as const, basis: 'none' as const, permittedUse: 'none' as const });
 const claim = (use: 'television_display' | 'television_playback', cleared: boolean) => cleared
-  ? { status: 'cleared' as const, basis: 'creator_asserted' as const, permittedUse: use, assertedAt: new Date().toISOString() }
+  ? { status: 'cleared' as const, basis: 'creator_asserted' as const, permittedUse: use, assertedAt: new Date().toISOString(), attestationVersion: 'channel-media-v1' as const }
   : unknown();
 const reason = (error: unknown) => error instanceof ApiError && error.status === 409
   ? 'The library changed in another tab. Review the latest saved draft and retry.'
@@ -32,8 +32,7 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
   const [collectionKind, setCollectionKind] = useState<'album' | 'playlist'>('album');
   const [cover, setCover] = useState<File | null>(null);
   const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [displayRights, setDisplayRights] = useState(false);
-  const [playbackRights, setPlaybackRights] = useState(false);
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [audioUrl, setAudioUrl] = useState('');
   const [listening, setListening] = useState(false);
   const dialog = useRef<HTMLDivElement>(null);
@@ -59,8 +58,7 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
     setAlbum(metadata.album ?? ''); setEpisode(metadata.episode ?? ''); setTrackNumber(String(metadata.trackNumber ?? ''));
     setCollectionId(inventory.collections.find(value => value.itemIds.includes(itemId) && ['album', 'playlist'].includes(value.kind))?.id ?? '');
     const ownedAudio = [...inventory.mediaAssets].reverse().find(value => value.catalogItemId === itemId && value.kind === 'audio' && value.location.type === 'private_object');
-    setDisplayRights(ownedAudio?.tvDisplayRights?.status === 'cleared');
-    setPlaybackRights(ownedAudio?.tvPlaybackRights?.status === 'cleared');
+    setRightsConfirmed(ownedAudio?.tvDisplayRights?.status === 'cleared' && ownedAudio.tvPlaybackRights?.status === 'cleared');
   }, [inventory, itemId, busy]);
   useEffect(() => {
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -81,6 +79,7 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
   };
   const save = (event: FormEvent) => { event.preventDefault(); void doWork(async () => {
     if (!title.trim() || !artist.trim()) throw new Error('Title and artist are required.');
+    if ((cover || audioFile) && !rightsConfirmed) throw new Error('Confirm permission for the new media before saving.');
     if (trackNumber && (!/^[1-9][0-9]{0,3}$/.test(trackNumber) || Number(trackNumber) > 9999)) throw new Error('Track number must be 1–9999.');
     let current = await refresh();
     let ownedId = itemId ?? '';
@@ -120,7 +119,7 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
       const uploaded = await uploadPrivateMedia(projectId, cover);
       try { await writeCatalog(projectId, 'media-assets', current.revision, { schemaVersion: 1,
         catalogItemId: ownedId, kind: 'artwork', location: { type: 'private_object', objectId: uploaded.id },
-        tvDisplayRights: claim('television_display', displayRights), tvPlaybackRights: unknown(), deliveryEligible: false }); }
+        tvDisplayRights: claim('television_display', rightsConfirmed), tvPlaybackRights: unknown(), deliveryEligible: false }); }
       catch (error) { await deletePrivateObject(projectId, uploaded.id).catch(() => undefined); throw error; }
       current = await refresh(); setCover(null);
     }
@@ -143,8 +142,8 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
       try {
         await writeCatalog(projectId, 'media-assets', current.revision, { schemaVersion: 1,
           catalogItemId: ownedId, kind: 'audio', location: { type: 'private_object', objectId: uploaded.id },
-          tvDisplayRights: claim('television_display', displayRights),
-          tvPlaybackRights: claim('television_playback', playbackRights), deliveryEligible: false });
+          tvDisplayRights: claim('television_display', rightsConfirmed),
+          tvPlaybackRights: claim('television_playback', rightsConfirmed), deliveryEligible: false });
         attached = true; current = await refresh();
       } catch (error) { if (!attached) await deletePrivateObject(projectId, uploaded.id).catch(() => undefined); throw error; }
       if (old) {
@@ -155,11 +154,11 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
     } else {
       const existingAudio = [...current.mediaAssets].reverse().find(value => value.catalogItemId === ownedId && value.kind === 'audio' && value.location.type === 'private_object' && value.tvPlaybackRights?.status !== 'revoked');
       if (existingAudio && !existingAudio.deliveryEligible &&
-        (displayRights !== (existingAudio.tvDisplayRights?.status === 'cleared') || playbackRights !== (existingAudio.tvPlaybackRights?.status === 'cleared'))) {
+        rightsConfirmed && (existingAudio.tvDisplayRights?.status !== 'cleared' || existingAudio.tvPlaybackRights?.status !== 'cleared')) {
         const { id, creatorAccountId: _owner, projectId: _project, ...record } = existingAudio;
         await writeCatalog(projectId, 'media-assets', current.revision, { ...record,
-          tvDisplayRights: claim('television_display', displayRights),
-          tvPlaybackRights: claim('television_playback', playbackRights), deliveryEligible: false }, id);
+          tvDisplayRights: claim('television_display', rightsConfirmed),
+          tvPlaybackRights: claim('television_playback', rightsConfirmed), deliveryEligible: false }, id);
         current = await refresh();
       }
     }
@@ -177,7 +176,7 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
       }
     }
     await refresh();
-    return 'Audio draft saved privately. TV rights claims and live delivery require separate review.';
+    return 'Audio draft saved privately.';
   }); };
   const listen = () => void doWork(async () => {
     if (!audioAsset || audioAsset.location.type !== 'private_object') throw new Error('Save a private MP3 first.');
@@ -218,11 +217,10 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
         <div className="audio-workspace-fields"><label className="field">ALBUM<input maxLength={160} value={album} onChange={event => setAlbum(event.target.value)}/></label>
           <label className="field">EPISODE<input maxLength={160} value={episode} onChange={event => setEpisode(event.target.value)}/></label>
           <label className="field">TRACK NUMBER<input inputMode="numeric" value={trackNumber} onChange={event => setTrackNumber(event.target.value)}/></label></div>
-        <label className="field">MP3 FILE · UP TO 2 HOURS / 320 MB<input type="file" accept=".mp3,audio/mpeg" onChange={event => setAudioFile(event.target.files?.[0] ?? null)}/></label>
-        <label className="field">SQUARE COVER · PNG OR JPEG · UNDER 1 MB<input type="file" accept="image/png,image/jpeg" onChange={event => setCover(event.target.files?.[0] ?? null)}/></label>
+        <label className="field">MP3 FILE · UP TO 2 HOURS / 320 MB<input type="file" accept=".mp3,audio/mpeg" onChange={event => { setAudioFile(event.target.files?.[0] ?? null); setRightsConfirmed(false); }}/></label>
+        <label className="field">SQUARE COVER · PNG OR JPEG · UNDER 1 MB<input type="file" accept="image/png,image/jpeg" onChange={event => { setCover(event.target.files?.[0] ?? null); setRightsConfirmed(false); }}/></label>
         {item && <OwnedArtwork item={item} assets={inventory.mediaAssets} projectId={projectId} accountId={accountId} className="audio-workspace-cover" fallback={<span>♫</span>}/>}
-        <label className="check"><input type="checkbox" checked={displayRights} onChange={event => setDisplayRights(event.target.checked)}/> I have TV display rights for the cover and audio presentation.</label>
-        <label className="check"><input type="checkbox" checked={playbackRights} onChange={event => setPlaybackRights(event.target.checked)}/> I have independent TV playback rights for this MP3.</label>
+        {(cover || audioFile || (audioAsset && (audioAsset.tvDisplayRights?.status !== 'cleared' || audioAsset.tvPlaybackRights?.status !== 'cleared'))) && <label className="check"><input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)}/> I confirm I own or have permission to show the cover and play this MP3 in my channel.</label>}
         <label className="field">ALBUM OR PLAYLIST<select value={collectionId} onChange={event => setCollectionId(event.target.value)}><option value="">No collection</option>
           {inventory.collections.filter(value => ['album', 'playlist'].includes(value.kind)).map(value => <option key={value.id} value={value.id}>{value.title} · {value.kind}</option>)}</select></label>
         <div className="audio-workspace-fields"><label className="field">NEW COLLECTION<input maxLength={160} value={newCollection} onChange={event => setNewCollection(event.target.value)}/></label>
@@ -230,7 +228,7 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
         <button className="primary" disabled={busy}>{busy ? 'Saving privately…' : 'Save audio draft'}</button>
       </form>}
       {item && <div className="audio-workspace-summary"><strong>Saved status: PRIVATE</strong>
-        <p>MP3: {audioAsset ? 'uploaded privately' : 'not uploaded'} · TV display: {audioAsset?.tvDisplayRights?.status ?? 'unknown'} · TV playback: {audioAsset?.tvPlaybackRights?.status ?? 'unknown'} · Delivery: blocked · Live: no</p>
+        <p>{!audioAsset ? 'Add an MP3 to continue.' : audioAsset.tvPlaybackRights?.status === 'revoked' ? 'Needs attention · playback permission revoked.' : audioAsset.tvPlaybackRights?.status !== 'cleared' ? 'Needs attention · confirm playback permission.' : 'MP3 saved privately.'}</p>
         {audioAsset && <div className="button-row"><button type="button" disabled={busy || audioAsset.tvPlaybackRights?.status === 'revoked'} onClick={listen}>Listen privately</button>
           <button type="button" disabled={busy || audioAsset.tvPlaybackRights?.status === 'revoked'} onClick={() => revoke(audioAsset)}>Revoke playback rights</button></div>}
         {listening && audioUrl && audioAsset?.tvPlaybackRights?.status !== 'revoked' &&

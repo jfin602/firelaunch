@@ -69,7 +69,7 @@ test('video generation reports missing eligible media and does not submit', asyn
     render(createElement(Catalog, { project, hosted: true }));
     await screen.findByRole('combobox', { name: 'Creator type' });
     fireEvent.click(screen.getByLabelText('First Book · video'));
-    assert.ok(screen.getByText(/lack eligible playback media or rights/));
+    assert.ok(screen.getByText(/First Book: Add a playable file/));
     assert.equal((screen.getByRole('button', { name: 'Generate video draft →' }) as HTMLButtonElement).disabled, true);
     assert.equal(posted, false);
   } finally { cleanup(); globalThis.fetch = previous; }

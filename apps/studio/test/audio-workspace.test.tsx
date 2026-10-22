@@ -56,24 +56,24 @@ test('Add Audio saves one private item, independent rights, and reopens with tru
     fireEvent.change(screen.getByLabelText('ARTIST OR CREATOR'), { target: { value: 'The Owner' } });
     const mp3 = new File([new Uint8Array(2048)], 'drive.mp3', { type: 'audio/mpeg' });
     fireEvent.change(screen.getByLabelText(/MP3 FILE/), { target: { files: [mp3] } });
-    fireEvent.click(screen.getByLabelText(/independent TV playback rights/));
+    fireEvent.click(screen.getByLabelText(/I confirm I own or have permission/));
     fireEvent.click(screen.getByRole('button', { name: 'Save audio draft' }));
     await waitFor(() => assert.equal(inventory.items.length, 1));
     await screen.findByRole('dialog', { name: 'Night Drive' });
-    assert.equal((screen.getByLabelText(/independent TV playback rights/) as HTMLInputElement).checked, true,
+    assert.equal((screen.getByLabelText(/I confirm I own or have permission/) as HTMLInputElement).checked, true,
       'creating the item must not clear the rights selection while its MP3 uploads');
     continueUpload?.();
-    await waitFor(() => assert.match(document.body.textContent ?? '', /MP3: uploaded privately/));
+    await waitFor(() => assert.match(document.body.textContent ?? '', /MP3 saved privately/));
     assert.equal(inventory.items.length, 1);
     assert.equal(inventory.mediaAssets.length, 1);
     assert.equal(inventory.items[0].sourceRecord.metadata.artist, 'The Owner');
-    assert.equal(inventory.mediaAssets[0].tvDisplayRights.status, 'unknown');
+    assert.equal(inventory.mediaAssets[0].tvDisplayRights.status, 'cleared');
     assert.equal(inventory.mediaAssets[0].tvPlaybackRights.status, 'cleared');
     assert.equal(inventory.mediaAssets[0].deliveryEligible, false);
     assert.ok(!writes.some(value => value.url.includes('/publication/')));
     view.unmount();
     render(<AudioWorkspace projectId={projectId} accountId={owner} itemId={itemId} onIdentity={() => {}} onClose={() => {}}/>);
     await screen.findByRole('dialog', { name: 'Night Drive' });
-    assert.match(screen.getByText(/MP3: uploaded privately/).textContent ?? '', /Delivery: blocked · Live: no/);
+    assert.equal(screen.queryByLabelText(/I confirm I own or have permission/), null, 'saved rights should not be requested again');
   } finally { cleanup(); globalThis.fetch = priorFetch; }
 });

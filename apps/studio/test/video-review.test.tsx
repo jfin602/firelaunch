@@ -88,7 +88,7 @@ test('READY owned video remains a private draft until its stable content is plac
   } finally { cleanup(); globalThis.fetch = prior; }
 });
 
-test('missing source provenance and approved artwork block channel preview linking', async () => {
+test('private preview reuses confirmed asset rights without source or artwork reapproval', async () => {
   const prior = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const route = String(input);
@@ -100,9 +100,9 @@ test('missing source provenance and approved artwork block channel preview linki
     render(createElement(VideoReview, { page: 'channel', onNavigate: () => {}, project: { ...project, spec: { ...project.spec, content: [] } }, item,
       inventory: { ...inventory, sources: [{ ...source, state: 'discovered', permission: { retrieval: 'unknown', tvDisplay: 'unknown' } }], mediaAssets: [video] },
       refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await screen.findByText(/Confirm source permission on Publish/);
-    assert.ok(screen.getByText(/Approve your uploaded thumbnail on Publish/));
-    assert.equal(screen.queryByRole('button', { name: 'Add to channel preview' }), null);
+    await screen.findByRole('button', { name: 'Add to channel preview' });
+    assert.equal(screen.queryByText(/Confirm source permission on Publish/), null);
+    assert.equal(screen.queryByText(/Approve your uploaded thumbnail on Publish/), null);
     assert.equal(screen.queryByRole('button', { name: 'Review live channel' }), null);
   } finally { cleanup(); globalThis.fetch = prior; }
 });

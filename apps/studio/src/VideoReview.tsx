@@ -88,7 +88,7 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
     return 'Uploaded thumbnail approved for TV review. It remains private until channel publication.';
   });
   const linkDraft = () => void act(async () => {
-    if (!sourceReady || !publicArtwork || !ready) throw new Error('Confirm source and thumbnail permissions and wait for video processing before adding it to the channel preview.');
+    if (!ready) throw new Error('Wait for verified video processing and confirmed playback permission before adding it to the channel preview.');
     const prior = await readCatalogDraft(project.id);
     if (prior && prior.creatorType !== 'video') throw new Error('This channel uses another draft type. Review its layout in Catalog before changing it.');
     const latestCatalog = await refresh();
@@ -109,9 +109,7 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
       <p>{linked ? 'This video is in your private channel preview.' : 'When this video is ready, add it to the private channel preview. Your collection choice above is saved separately.'}</p>
       {!linked && <>
         {!ready && <p role="status">{!managed ? 'Upload your video on Video first.' : video?.processing?.state === 'failed' ? 'Processing failed. Retry on Video.' : video?.processing?.state === 'revoked' ? 'Video rights were revoked; publication is blocked.' : 'Wait for private video processing to finish on Video.'}</p>}
-        {!sourceReady && <p role="status">Confirm source permission on Publish before adding this video.</p>}
-        {!publicArtwork && <p role="status">Approve your uploaded thumbnail on Publish before adding this video.</p>}
-        {ready && sourceReady && publicArtwork && <button disabled={busy} onClick={linkDraft}>Add to channel preview</button>}
+        {ready && <button disabled={busy} onClick={linkDraft}>Add to channel preview</button>}
       </>}
     </>}
     {page === 'publish' && <>
