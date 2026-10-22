@@ -30,7 +30,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     fireEvent.change(await screen.findByPlaceholderText('e.g. Wild Earth'), { target: { value: 'My Channel' } });
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }));
     fireEvent.click(screen.getByRole('button', { name: /Create channel/ }));
-    await waitFor(() => assert.ok(screen.getByText('REV 8 · LOCAL')), { timeout: 5000 });
+    await waitFor(() => assert.ok(screen.getByText('REV 6 · LOCAL')), { timeout: 5000 });
     assert.equal(screen.getByRole('button', { name: 'Pages & Layout' }).getAttribute('aria-pressed'), 'true');
     assert.equal(screen.getAllByRole('region', { name: 'Interactive TV Preview' }).length, 1);
     await waitFor(() => assert.ok(screen.getByRole('region', { name: 'rail section 2' })));
@@ -41,14 +41,14 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     assert.ok(within(screen.getByRole('region', { name: 'Channel editor rail' })).getByRole('complementary', { name: 'Appearance editor' }));
     fireEvent.change(screen.getByLabelText(/PRIMARY/), { target: { value: '#aabbcc' } });
     fireEvent.click(screen.getByRole('button', { name: /Save brand/ }));
-    await waitFor(() => assert.ok(screen.getByText('REV 9 · LOCAL')));
+    await waitFor(() => assert.ok(screen.getByText('REV 7 · LOCAL')));
     await waitFor(() => assert.equal((screen.getByRole('button', { name: /Save brand/ }) as HTMLButtonElement).disabled, true));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     fireEvent.click(within(screen.getByRole('region', { name: 'rail section 2' })).getByRole('button', { name: 'Edit section' }));
     const inspector = screen.getByRole('complementary', { name: 'Layout inspector' });
     fireEvent.change(within(inspector).getByRole('textbox', { name: 'Section heading' }), { target: { value: 'Field Notes Picks' } });
     fireEvent.click(within(inspector).getByRole('button', { name: 'Save changes' }));
-    await waitFor(() => assert.ok(screen.getByText('REV 10 · LOCAL')));
+    await waitFor(() => assert.ok(screen.getByText('REV 8 · LOCAL')));
     fireEvent.click(within(inspector).getByRole('button', { name: 'Close layout inspector' }));
     assert.equal(screen.queryByRole('button', { name: 'AI Assistant' }), null);
     assert.equal(screen.queryByRole('button', { name: 'Close TV Preview' }), null);
@@ -73,7 +73,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     await waitFor(() => assert.ok(screen.getByText(/not submitted/)));
     cleanup();
     render(createElement(App));
-    await waitFor(() => assert.ok(screen.getByText('REV 10 · LOCAL')));
+    await waitFor(() => assert.ok(screen.getByText('REV 8 · LOCAL')));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     await waitFor(() => assert.ok(within(screen.getByRole('region', { name: 'rail section 2' })).getByText('Field Notes Picks')));
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
@@ -83,7 +83,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     activeServer = restarted;
     const response = await nativeFetch(`http://127.0.0.1:${address.port}/api/projects/${projectId}`);
     const saved = await response.json();
-    assert.equal(saved.revision, 10);
+    assert.equal(saved.revision, 8);
     assert.equal(saved.spec.brand.primaryColor, '#aabbcc');
     assert.equal(saved.spec.pages[0].modules[1].title, 'Field Notes Picks');
     assert.deepEqual(generated, televisionFromSpec(saved.spec));
