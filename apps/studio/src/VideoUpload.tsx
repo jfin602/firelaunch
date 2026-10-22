@@ -351,7 +351,7 @@ export function NewVideoUpload({ accountId, projectId, inventory, refresh, onCre
   if (page === 'publish') return null;
   return <section className="video-upload-panel" aria-label={page === 'video' ? existingItem ? 'Replace video' : 'Add Video' : page === 'details' ? 'Video details' : 'Channel category'}>
     {page === 'video' && <>
-      <h3>{existingItem ? 'Video upload' : 'Add your video'}</h3><p>Your video stays private until you approve and publish the channel.</p>
+      <h3>{existingItem ? 'Video upload' : 'Add your video'}</h3><p>Your video stays private until you add it to your channel.</p>
       <div className={`video-dropzone${dragging ? ' dragging' : ''}`} onDragEnter={event => { event.preventDefault(); setDragging(true); }} onDragOver={event => event.preventDefault()}
         onDragLeave={event => { event.preventDefault(); setDragging(false); }} onDrop={event => { event.preventDefault(); setDragging(false); chooseFile(event.dataTransfer.files[0] ?? null); }}>
         <strong>Drop an MP4 here</strong><span>or choose a file · up to 2 GB · 2 hours</span>
