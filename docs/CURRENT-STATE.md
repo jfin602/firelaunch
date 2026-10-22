@@ -1,5 +1,14 @@
 # FireLaunch Current State
 
+## CURRENT — P8D P5 AUTHORITATIVE PHASE 8 CLOSEOUT OVERRIDE (2026-10-22)
+
+The owner requested P8D [P5](tasks/p8d/P5-multimedia-closeout.txt) be the **true final Phase 8 closeout**, **run manually**, with **fresh protected staging deployment before live browser testing** and up to **8 observed correction cycles**. Every code change must be locally tested, committed, packaged with new SHA-256 and guarded **redeployed BEFORE any live Codex-browser/device retest**. P5 then writes one canonical `docs/tasks/p8/closeout.md` covering P8 Wave 1 through P8D and `docs/tasks/p8d/closeout.md` as a media evidence appendix. Its runner-assigned `0.8.18` is only grammar; actual product remains `0.8.17`. NO `--closeout` browser bypass. Existing P1–P4 runner/browser execution ownership, exact version subjects and safety gates are unchanged. No source product or staging work occurred through this docs edit.
+
+**Historical P8C NOT GREEN preserved verbatim** at [dated P8C archival closeout](tasks/p8c/closeout-2026-10-22-not-green.md). Existing `docs/tasks/p8/closeout.md` remains the P8C closeout **until P5 executes and replaces it**. P8C static-section Vega device/hero discrepancies must be reported transparently in the new final acceptance, not retroactively passed. Deploy/rollback permission only via current guarded standing `muffinos` workflow; immutable public FREE release #1, owner rights, schema14 and native proof still required. P9 not started.
+
+---
+
+
 ## CURRENT — P8D RUNNER CONVERSION COMPLETED (2026-10-22)
 
 Owner selected the RUNNER after the initial P8D `Browser required must be exactly yes. or no.` grammar failure. The [P8D prompt set](tasks/p8d/README.md), [assessment](tasks/p8d/prompt-assessment.md), [implementation plan](tasks/p8d/implementation-plan.md) and five executable files are now revised for the actual runner grammar and commit policy. Run `npm run codex:stack:validate -- p8d` then `npm run codex:stack -- p8d`. P1 `0.8.14` is browser=no and RUNNER-OWNED (NO self-commit). P2 `0.8.15`, P3 `0.8.16`, P4 `0.8.17` are browser=yes, so the runner STOPS before each for manual Codex browser testing. Those manual implementations self-commit exactly `0.8.15`, `0.8.16`, `0.8.17` as Git SUBJECTS and return control to the resumed runner. P5 manual browser closeout has assigned parser metadata `0.8.18` but ACTUAL source/lock stays `0.8.17` (no bump). Current P8D prompt AUTHORING only: no new product implementation/version/deploy was carried out. **Older all-manual/no-runner claims below are superseded for P8D.**
