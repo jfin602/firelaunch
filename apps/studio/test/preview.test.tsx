@@ -113,8 +113,8 @@ test('Hero art contains each shape and falls back for small or failed images', a
     width = 800; height = 1200;
     const view = render(createElement(Preview, { spec }));
     const art = view.container.querySelector<HTMLElement>('.tv-feature-art')!;
-    await waitFor(() => assert.match(art.querySelector<HTMLElement>('.tv-feature-art-layer')?.style.backgroundImage ?? '', /ocean\.jpg/));
-    assert.ok(art.querySelector('.tv-feature-art-layer img'), 'portrait cover stays contained in the foreground');
+    await waitFor(() => assert.match(art.querySelector<HTMLImageElement>('.tv-feature-art-backdrop')?.src ?? '', /ocean\.jpg/));
+    assert.ok(art.querySelector('.tv-feature-art-foreground'), 'portrait cover stays contained in the foreground');
   } finally { cleanup(); globalThis.Image = previousImage; }
 });
 
@@ -127,7 +127,7 @@ test('Hero and first selector fit HD and FHD stages without vertical reveal scro
   assert.match(css, /\.tv-feature-art::after\{[^}]*var\(--tv-bg\)/);
   assert.doesNotMatch(css.match(/\.tv-feature-selector\{[^}]*\}/)?.[0] ?? '', /background:/);
   assert.match(css, /\.tv-feature-selector \.tv-items\{[^}]*overflow-x:auto;overflow-y:hidden/);
-  assert.match(css, /\.tv-feature-art-layer img\{[^}]*object-fit:contain/);
+  assert.match(css, /\.tv-feature-art-layer \.tv-feature-art-foreground\{[^}]*object-fit:contain/);
   for (const height of [720, 1080]) {
     assert.ok((.13 + .87) * height <= height);
     assert.ok(.51 * height + (.87 - .51) * height <= .87 * height);
@@ -158,12 +158,12 @@ test('delayed and rapid row navigation keeps the old hero coherent until the new
     const copy = () => view.container.querySelector('.tv-feature-copy')?.textContent ?? '';
     await waitFor(() => assert.ok(pending.has(spec.content[0]!.artwork)));
     pending.get(spec.content[0]!.artwork)!();
-    await waitFor(() => assert.match(art.querySelector<HTMLElement>('.tv-feature-art-layer')?.style.backgroundImage ?? '', /0\.jpg/));
+    await waitFor(() => assert.match(art.querySelector<HTMLImageElement>('.tv-feature-art-backdrop')?.src ?? '', /0\.jpg/));
     fireEvent.click(screen.getByRole('button', { name: 'Down' }));
     fireEvent.click(screen.getByRole('button', { name: 'Down' }));
     fireEvent.click(screen.getByRole('button', { name: 'Right' }));
     assert.match(copy(), /Film 0.*Story 0/s, 'copy stays with the displayed image on a miss');
-    assert.match(art.querySelector<HTMLElement>('.tv-feature-art-layer')?.style.backgroundImage ?? '', /0\.jpg/);
+    assert.match(art.querySelector<HTMLImageElement>('.tv-feature-art-backdrop')?.src ?? '', /0\.jpg/);
     await waitFor(() => assert.ok(pending.has(spec.content[1]!.artwork)));
     pending.get(spec.content[1]!.artwork)!();
     await waitFor(() => assert.match(copy(), /Film 1.*Story 1/s));
@@ -200,7 +200,7 @@ test('initial featured artwork loads when its title is outside the selector row'
     { id: `mod_${'b'.repeat(32)}`, kind: 'rail', title: 'Browse', contentIds: [second.id] }] };
   try {
     const view = render(createElement(Preview, { spec }));
-    await waitFor(() => assert.match(view.container.querySelector<HTMLElement>('.tv-feature-art-layer')?.style.backgroundImage ?? '', /ocean\.jpg/));
+    await waitFor(() => assert.match(view.container.querySelector<HTMLImageElement>('.tv-feature-art-backdrop')?.src ?? '', /ocean\.jpg/));
     fireEvent.click(screen.getByRole('button', { name: 'Down' }));
     fireEvent.click(screen.getByRole('button', { name: 'Down' }));
     await waitFor(() => assert.equal(view.container.querySelector('.tv-feature-copy h2')?.textContent, 'Next film'));

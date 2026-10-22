@@ -88,6 +88,7 @@ function HeroArtwork({ content, source, inSelector, inventory, projectId, accoun
   onSource: (id: string, value: ResolvedArt) => void; onVisible: (content: ContentItem) => void }) {
   const own = usePreviewArtworkSource(content.id, content.artwork, inventory, projectId, accountId, true, !inSelector);
   const resolved = inSelector ? source : { url: own.url, pending: own.pending };
+  useEffect(() => retainOwnedArtworkUrl(resolved?.url ?? null), [resolved?.url]);
   useEffect(() => { if (!inSelector) onSource(content.id, { url: own.url, pending: own.pending }); },
     [inSelector, content.id, own.url, own.pending, onSource]);
   const [shown, setShown] = useState<{ content: ContentItem; url: string | null; wide: boolean } | null>(null);
@@ -123,9 +124,10 @@ function HeroArtwork({ content, source, inSelector, inventory, projectId, accoun
     return () => releases.forEach(release => release());
   }, [shown?.url, outgoing?.url]);
   const layer = (entry: typeof shown, active: boolean) => entry?.url ? <div key={entry.url + (active ? ':active' : ':old')}
-    className={'tv-feature-art-layer has-art' + (entry.wide ? ' is-wide' : '') + (active ? ' tv-feature-art-enter' : '')}
-    style={{ backgroundImage: `linear-gradient(color-mix(in srgb, var(--tv-bg) 12%, transparent), color-mix(in srgb, var(--tv-bg) 12%, transparent)), url("${entry.url.replaceAll('"', '%22')}")` }}>
-    {!entry.wide && <img src={entry.url} alt="" referrerPolicy="no-referrer"/>}</div> : null;
+    className={'tv-feature-art-layer has-art' + (entry.wide ? ' is-wide' : '') + (active ? ' tv-feature-art-enter' : '')}>
+    <img className="tv-feature-art-backdrop" src={entry.url} alt="" referrerPolicy="no-referrer"
+      onError={() => { if (active && latest.current === key) { setOutgoing(null); setShown({ ...entry, url: null }); onVisible(entry.content); } }}/>
+    {!entry.wide && <img className="tv-feature-art-foreground" src={entry.url} alt="" referrerPolicy="no-referrer"/>}</div> : null;
   return <div className="tv-feature-art">{layer(outgoing, false)}{layer(shown, true)}
     {shown && !shown.url && <span className="tv-feature-art-fallback" role="img" aria-label="Artwork unavailable">▣</span>}
   </div>;
