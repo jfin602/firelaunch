@@ -1,5 +1,12 @@
 # FireLaunch Vision
 
+## Current P8D multi-media scope — owner approved 2026-10-22
+
+Video creators keep the established Watch workflow. Audio creators receive a simple MP3 Add Audio form, albums/playlists and a dedicated TV listening player. Writers receive a **Book Showcase** (cover, author, synopsis, bookshelf) and may attach one optional audiobook MP3, playing through the **same** audio player while remaining a single book item. **No ebook/EPUB/PDF television reader.** These experiences share one branded ChannelSpec app and existing creator ownership, display/playback rights and publication approval. Implementation is P8D ([plan](tasks/p8d/README.md)) before Phase 9. The previously documented [P8C NOT GREEN](tasks/p8/closeout.md) native static-layout/hero evidence is owner-deferred **for P8D entry only**, not relabeled. No source features/qualification are asserted merely by this vision update.
+
+---
+
+
 ## Problem and audience
 
 Video, audio, and writing professionals who already sell work in the Amazon ecosystem want a branded television destination without learning Fire TV development, focus navigation, packaging, or Appstore submission.
