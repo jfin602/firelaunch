@@ -1,0 +1,27 @@
+TASK: Correction 8 / P1 — Shared focus-driven hero model
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.17`.
+
+TYPE
+Bounded CORRECTION implementation. RUNNER OWNS the commit. Do NOT self-commit, push, deploy, invoke browser, bump package versions or run `/activate`.
+
+MISSION
+Make one canonical selected hero item follow the FOCUSED card in the FIRST row directly beneath an eligible Hero, using existing TV state, without changing stored ChannelSpec or creating a second focus system. D-pad focus updates top hero content only; Select opens that item's existing detail; Back returns to the focused row card.
+
+PREFLIGHT
+Read `AGENTS.md`, `docs/tasks/c8-hero-multimedia/{README.md,prompt-assessment.md,implementation-plan.md}` and `docs/design/c8-hero-multimedia.md`. Inspect `packages/tv/src/runtime.ts`, Studio `preview-state.ts`, current `templates/vega-channel/src/App.js` and affected tests. Check real HEAD/status, runner correction prefix, root package and BOTH root lock fields exactly 0.8.17. Preserve parallel dirty work without reset/force/stash; stop and report conflicting source rather than overwrite. P8 final recovery `docs/tasks/p8/closeout.md` remains NOT GREEN; it is NOT a gate for implementing this bounded correction.
+
+IMPLEMENT
+1. Introduce one small pure, testable focus-to-spotlight resolver in the SHARED `packages/tv` projection/runtime, working from current projected page, existing one-item Hero candidate and the first appropriate ordered rail/grid selector. Avoid duplicate cards when a Hero item is already in the first populated row. Honor creator ordering; no invented media, IDs, media URL or migration. If no eligible hero/selector, return safe normal-section fallback; do not rewrite non-Hero pages.
+2. On eligible Hero pages, selecting a card via D-pad Left/Right changes the hero display immediately. Focus remains visibly on the bottom row card. Merely focusing MUST NOT open details or start audio/video. Select/Enter on card opens that exact content's existing detail; secondary Select on permitted action opens existing video/audio/audiobook playback; Back from detail returns to original card and hero. Preserve nav focus and scroll history where possible.
+3. Determine a deterministic initial selected item from authored Hero/first associated content row, with safe fallback if missing/empty. Keep selection transient in TV presentation state, not persisted to ChannelSpec, CatalogItem or publication. Switching pages/brand/releases and removed/revoked/foreign content must clear or reconcile stale selection; preserve older installed client data/old ChannelSpec schema.
+4. Expose only narrow typed helper(s) needed by Studio/native. Do NOT implement visual hero CSS or native layout here. Keep regular Rows/Grid, additional authored modules, text/static image sections and all P8D audio/book rights unchanged.
+5. Add directly affected `packages/tv` and `apps/studio/src/preview-state` unit tests for first row focus→featured item, initial fallback, no duplicate Hero+row, one-item-only/empty, page switch and stale item, keyboard/remote navigation and detail/Back. Check other old focus tests remain passing.
+
+VALIDATION AND HANDOFF
+Run only affected tests and changed package typechecks + `git diff --check`; no full root aggregate, staging, browser, native package rebuild or AWS. Root package and both root-lock versions remain 0.8.17. LEAVE tested changes UNCOMMITTED for runner's single checkpoint commit; final answer with exact tests/files and P2 shared helper API. <=8 minute implementation goal, <=15 minute scoped stop with truthful blocker. Do not fabricate acceptance.
