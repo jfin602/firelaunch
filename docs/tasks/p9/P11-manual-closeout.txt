@@ -1,0 +1,24 @@
+TASK: Phase 9 Polish P11 — final MVP integration smoke + honest closeout
+MODEL: GPT-6 Sol High
+MODE: MANUAL CODEX WITH CONNECTED BROWSER. NO runner, no /activate, no product version bump by default.
+ENTRY: after P1–P10 or the subset actually completed, with accurate per-issue evidence and the final committed/verified staging release. If any P0 issue remains NOT GREEN, close Phase 9 as NOT GREEN, not silently passed.
+
+MISSION
+Conduct ONE coherent end-to-end MVP smoke, based on actual committed source/deployed staging, without using this prompt as an eleventh catch-all implementation phase. Confirm exactly what works, what is unproved, and what remains deferred to Phase 10. Preserve Phase 8 dated NOT GREEN closeout and any c8-hero-multimedia historical result.
+
+PRECHECK
+Read AGENTS.md; docs/tasks/p9/{README.md,implementation-plan.md,prompt-assessment.md}; per-issue P1–P10 evidence and issue companion files; docs/tasks/p8/closeout.md; docs/tasks/p8d/closeout.md; c8-hero-multimedia actual result; scripts/staging/README.md. Inspect local HEAD/status/origin, root package + BOTH root-lock versions, latest committed source SHA, staging active release/JS/CSS/API/worker/schema (last known 15), protected backups/rollback and approved FREE release #1 pointer/digest unchanged. Do not assume ten GREEN results based on ten files.
+
+FINAL SINGLE AGGREGATE / EVIDENCE
+Run ONE final `npm run test` on the settled source (including build/typechecks as scripts define), and diff integrity, unless a documented already-run exact-source aggregate can be safely reused. Document skips/DB prerequisites distinctly. If source changed since stage, do one proper focused test + committed exact-hash guarded protected staging deployment BEFORE browser acceptance; no untested/uncommitted staging sources.
+
+CONNECTED CODEX BROWSER — AFTER THE EXACT CANDIDATE IS STAGED
+With fresh owner auth and no cached old release, walk: signed-out canyon Google login -> create named private draft directly into Channel Editor -> Add Media from Home -> Library categories Video/Audio/Books/Assets -> upload existing-supported media with one stored rights attestation -> publish only READY/rights-valid video to current channel draft -> Remove restores private Library state -> upload/select logo, global+per-page backgrounds and section image -> responsive/keyboard New Page and layout reorder -> interactive TV Preview + fullscreen -> play video and tested MP3/book showcase navigation -> fresh Export job/owner ZIP state. Repeat essential reload/relogin and independent channel isolation checks. Do not force public distribution or previously approved immutable live release update. If a feature was not implemented, note exactly its limitation instead of bypassing with synthetic success.
+
+Where a **new export/native layout/media contract** changed, verify same saved draft against newly generated Vega package/VirtualDevice. Distinguish native proven / native unqualified / browser only. Avoid redoing expensive historical already-GREEN playback gates unless changed; never invent full native proof. Include at least one 16:9 fullscreen 720p or 1080p visual with non-16:9 imagery, one focus/Back/Select and one show/hide/exit recovery. If no native device available, record BLOCKED proof (do not manufacture screenshots).
+
+RELEASE SAFETY
+Read active staging deployed source and health, rollback candidate, schema compatibility, assets and immutable FREE #1 unchanged. No P10 installed app auto update/immutable public release, no AWS paid jobs, no production, no Amazon submission, no new schema migration without separate reviewed approval. On critical staged regression, authorized guarded rollback only.
+
+CLOSEOUT
+Write and COMMIT `docs/tasks/p9/closeout.md` with exact product source vs evidence SHA, version, list of P9-001...P9-010 statuses, final test counts, active staging/archive/backups, real owner-browser artifacts/log references (private screenshots remain outside public Git), 16:9/native evidence, protected public #1 digest comparison, known residuals and explicit Phase 9 GREEN / NOT GREEN / BLOCKED. GREEN only if critical creator workflow safely works, all accepted P0/required owner criteria for the closeout have evidence, and no disqualifying rights/tenant/export/native compatibility defect is hidden. Defer P10 explicitly. No version bump for documentation-only closeout. If repairs needed, provide a focused follow-up request and DO NOT bury unbounded implementation in P11.
