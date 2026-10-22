@@ -1,5 +1,16 @@
 # FireLaunch Agent Instructions
 
+## LATEST OWNER DIRECTIVE — P8D P5 IS TRUE PHASE 8 CLOSEOUT (2026-10-22)
+
+P8D [P5 manual closeout](docs/tasks/p8d/P5-multimedia-closeout.txt) now OWNS the single authoritative final **Phase 8** decision across video/Export, P8B static layout, P8C editor/hero and P8D audio/book/mixed media. Only P5 changes; runner P1 `0.8.14` and browser-required/manual P2 `0.8.15`, P3 `0.8.16`, P4 `0.8.17` retain existing exact-commit-subject handoffs. P5 remains **Browser required: yes.**, independently MANUAL (NO CLI `--closeout`), assigned grammar slot `0.8.18` but real product remains **0.8.17 unchanged**. [P8D README](docs/tasks/p8d/README.md) is the current operating contract.
+
+P5 execution MUST deploy an exact committed tested candidate into protected staging **FIRST**, after minimum source/security/integrity/build smoke but **BEFORE** real owner Codex browser acceptance. Permit at most **EIGHT R1–R8 evidence-driven correction cycles**. Every source fix: local patch → focused safety test → commit at unchanged 0.8.17 → new archive SHA → approved guarded backup/redeploy to staging → verify active release/JS/CSS → **then** fresh signed-in browser/native retest. Never claim an old stage is the new code; rollback any unsafe release. Final `npm run test` must match the exact last source; repeat/rollback/redeploy if final changes. This does not authorize new production/cloud/rights privileges.
+
+**History vs final report:** P8C's original [NOT GREEN](docs/tasks/p8c/closeout-2026-10-22-not-green.md) was copied verbatim to a separate archive. Leave the current `docs/tasks/p8/closeout.md` intact during prompt authoring and P1–P4. **P5 replaces it only AFTER actual final tested staging acceptance** and writes `docs/tasks/p8d/closeout.md` as supporting evidence appendix. A new final Phase 8 GREEN requires actual native and security proof; owner-deferred P8C gaps were only an ENTRY waiver. P9 remains blocked pending explicit next owner decision.
+
+---
+
+
 ## ACTIVE P8D EXECUTION — RUNNER COMPATIBLE (2026-10-22)
 
 Owner corrected the earlier **all-manual P8D** authoring: [P8D README](docs/tasks/p8d/README.md), [assessment](docs/tasks/p8d/prompt-assessment.md), [plan](docs/tasks/p8d/implementation-plan.md) and P1–P5 files are now **runner-grammar compatible**. **SAFE COMMANDS:** `npm run codex:stack:validate -- p8d` then `npm run codex:stack -- p8d` from coherent clean 0.8.13 checkout. P1 (0.8.14, browser=no) is runner-executed and RUNNER-COMMITTED — **P1 agent must NOT self-commit**. P2 (0.8.15), P3 (0.8.16), P4 (0.8.17) have browser=yes; the runner deliberately STOPS before each. Invoke manually in Codex with browser, then commit each accepted product/version checkpoint using **exact Git subject `0.8.15` / `0.8.16` / `0.8.17`**, and rerun runner to recognize the completed prefix. P5 browser-required final closeout has **proposed grammar metadata 0.8.18** but ACTUAL accepted project version remains **0.8.17** with independent doc-only closeout. No `--closeout` browser bypass. Runner's P1 commit uses `git add -A`; inspect untracked files/secrets before starting. The previous "NO RUNNER p8d" guidance in dated entries is SUPERSEDED.
