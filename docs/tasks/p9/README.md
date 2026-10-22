@@ -1,5 +1,14 @@
 # P9 — Live Channel Publishing & App Updates
 
+## CURRENT P9 PRECONDITION — final Phase 8 P8D P5 after staging-first qualification (2026-10-22)
+
+P8D [P5 closeout](../p8d/P5-multimedia-closeout.txt) now owns the **true Phase 8 final closeout** across P8 Wave 1 through P8D. Its runner browser-required metadata and `0.8.18` proposed slot stay intact but P5 is MANUAL and actual product remains `0.8.17`. It MUST deploy committed tested source to protected staging BEFORE real browser acceptance and protected redeploy after **every** source-changing correction, up to **eight** targeted correction cycles, with new SHA/backup/schema14/rollback/owner-browser recheck. Final canonical `../p8/closeout.md` is updated only after actual evidence, plus P8D appendix. [Historical P8C NOT GREEN](../p8c/closeout-2026-10-22-not-green.md) is preserved, and owner-deferred P8C gates cannot be claimed passed without proof or explicitly documented scoped exception.
+
+Phase 9 is still PLANNED, NOT STARTED; its `0.9.0` entry requires separate owner approval after the actual new Phase 8 final report. P1–P4 P8D runner/browser handoffs remain unchanged; no code or staging changes occurred from this docs update.
+
+---
+
+
 ## CURRENT PRE-P9 — P8D runner checkpoint conversion (2026-10-22)
 
 [Owner-cleared P8D](../p8d/README.md) now uses **runner P1** at `0.8.14` then intentional browser-required/manual stops for P2 `0.8.15`, P3 `0.8.16`, P4 `0.8.17` (manual implementation commits with exact version subjects), followed by P5 browser-required independent closeout with grammar assigned `0.8.18` but product staying `0.8.17`. No automatic runner browser emulation and no Phase 9 `0.9.0` version transition. P8C historical NOT GREEN is owner-deferred for P8D ENTRY, not relabeled as passed. Installed Vega clients without new MP3/book player capability remain **Requires App Update / Blocked**; P9 follows explicit owner approval. Dated no-runner P8D instructions below are superseded.
