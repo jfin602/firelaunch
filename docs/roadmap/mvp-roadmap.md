@@ -1,5 +1,14 @@
 # FireLaunch MVP Roadmap
 
+## CURRENT — P8D P5 replaces historical Phase 8 closeout after staging-first acceptance (2026-10-22)
+
+[Owner-updated P8D P5](../tasks/p8d/P5-multimedia-closeout.txt) is the one MANUAL final Phase 8 acceptance (not only a P8D feature closeout). **P1–P4 workflow stays runner/browser hybrid** with version targets 0.8.14–0.8.17; P5 final source stays 0.8.17 (grammar slot 0.8.18). P5 must stage fresh committed safe source FIRST, then run genuine owner Codex browser/native tests on THAT staging release. Up to **eight** diagnosed correction cycles R1–R8; EVERY changed candidate must be committed, SHA-verified, protected redeployed and verified active **before** retesting; final aggregate on last source. The final document is canonical `docs/tasks/p8/closeout.md` plus P8D appendix, only written after actual testing, not now.
+
+The initial P8C NOT GREEN closeout remains [archived verbatim](../tasks/p8c/closeout-2026-10-22-not-green.md). Its native static-layout device and hero-composition failures are deferred for P8D ENTRY only, not automatically waived as final native/UI pass. If final criteria remain unproved after eight cycles, record final Phase 8 NOT GREEN. Keep public FREE release #1, owner security, stage rollback and no automatic P9 activation.
+
+---
+
+
 ## CURRENT — Runner-compatible P8D start (2026-10-22)
 
 Owner converted [P8D](../tasks/p8d/README.md) from all-manual prompt ownership to a RUNNER-RECOGNIZED continuation. Start `npm run codex:stack:validate -- p8d`, then `npm run codex:stack -- p8d` from verified root/lock `0.8.13`. P1 `0.8.14` is run/committed by runner; P2 Audio `0.8.15`, P3 Book Showcase optional same-book MP3 `0.8.16`, P4 mixed native `0.8.17` are browser-required and run MANUALLY after runner's intentional stop. Use **exact-version Git commit subjects** for those manual implementation checkpoints, rerunning runner between each. P5 independent browser/Vega closeout has assigned grammar `0.8.18` but **actual product remains 0.8.17**. No all-automatic browser execution. Older manual/no-runner statements below are superseded. No P8D code has yet been implemented by this prompt conversion.
