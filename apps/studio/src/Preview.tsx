@@ -56,15 +56,15 @@ export function eligibleStaticImageContent(spec: ChannelSpec, inventory: Catalog
 }
 
 
-function usePreviewArtworkSource(contentId: string, source: string, inventory: CatalogSnapshot | null, projectId?: string, accountId?: string | null, requireCleared = false) {
+function usePreviewArtworkSource(contentId: string, source: string, inventory: CatalogSnapshot | null, projectId?: string, accountId?: string | null, requireCleared = false, enabled = true) {
   const item = inventory?.items.find(value => catalogContentId(value.id) === contentId);
-  const cleared = !requireCleared || !accountId || !!(item && inventory && inventory.projectId === projectId && inventory.creatorAccountId === accountId && inventory.mediaAssets.some(asset => item.mediaAssetIds.includes(asset.id) &&
+  const cleared = !requireCleared || !item || !!inventory?.mediaAssets.some(asset => item.mediaAssetIds.includes(asset.id) &&
     asset.kind === 'artwork' && asset.catalogItemId === item.id && asset.projectId === projectId &&
-    asset.creatorAccountId === accountId && mediaUseEligible(asset, 'television_display')));
-  const objectId = cleared && projectId && inventory ? ownedArtworkObject(item, inventory.mediaAssets, projectId, accountId ?? null) : null;
+    asset.creatorAccountId === accountId && mediaUseEligible(asset, 'television_display'));
+  const objectId = enabled && cleared && projectId && inventory ? ownedArtworkObject(item, inventory.mediaAssets, projectId, accountId ?? null) : null;
   const privateUrl = useOwnedArtwork(projectId ?? '', accountId ?? null, objectId, null, contentId);
   const [failed, setFailed] = useState('');
-  const url = !cleared ? null : requireCleared && objectId ? privateUrl
+  const url = !enabled || !cleared ? null : requireCleared && objectId ? privateUrl
     : privateUrl && privateUrl !== failed ? privateUrl : artwork(source);
   return { url: url === failed ? null : url, pending: !!objectId && !privateUrl, setFailed };
 }
@@ -81,22 +81,29 @@ export function adequateHeroArtwork(width: number, height: number): boolean {
   return width >= 180 && height >= 120 && width * height >= 40_000;
 }
 
-function HeroArtwork({ content, source, queue, imageMeta, onVisible }: { content: ContentItem; source: ResolvedArt | undefined;
-  queue: HeroImageQueue; imageMeta: Map<string, { wide: boolean; image: HTMLImageElement }>; onVisible: (content: ContentItem) => void }) {
+function HeroArtwork({ content, source, inSelector, inventory, projectId, accountId, queue, imageMeta, onSource, onVisible }: {
+  content: ContentItem; source: ResolvedArt | undefined; inSelector: boolean; inventory: CatalogSnapshot | null;
+  projectId: string; accountId?: string | null | undefined; queue: HeroImageQueue;
+  imageMeta: Map<string, { wide: boolean; image: HTMLImageElement }>;
+  onSource: (id: string, value: ResolvedArt) => void; onVisible: (content: ContentItem) => void }) {
+  const own = usePreviewArtworkSource(content.id, content.artwork, inventory, projectId, accountId, true, !inSelector);
+  const resolved = inSelector ? source : { url: own.url, pending: own.pending };
+  useEffect(() => { if (!inSelector) onSource(content.id, { url: own.url, pending: own.pending }); },
+    [inSelector, content.id, own.url, own.pending, onSource]);
   const [shown, setShown] = useState<{ content: ContentItem; url: string | null; wide: boolean } | null>(null);
   const shownRef = useRef(shown);
   shownRef.current = shown;
   const [outgoing, setOutgoing] = useState<typeof shown>(null);
   const latest = useRef('');
-  const key = `${content.id}:${content.artwork}:${source?.url ?? ''}`;
+  const key = `${content.id}:${content.artwork}:${resolved?.url ?? ''}`;
   latest.current = key;
   useEffect(() => {
-    if (!source || source.pending) {
+    if (!resolved || resolved.pending) {
       const timer = setTimeout(() => { if (latest.current === key) { setOutgoing(null); setShown({ content, url: null, wide: false }); onVisible(content); } }, 8000);
       return () => clearTimeout(timer);
     }
-    if (!source.url) { setOutgoing(null); setShown({ content, url: null, wide: false }); onVisible(content); return; }
-    const url = source.url;
+    if (!resolved.url) { setOutgoing(null); setShown({ content, url: null, wide: false }); onVisible(content); return; }
+    const url = resolved.url;
     void queue.request(url, 0).then(ready => {
       if (latest.current !== key) return;
       const image = imageMeta.get(url);
@@ -104,7 +111,7 @@ function HeroArtwork({ content, source, queue, imageMeta, onVisible }: { content
       setShown({ content, url: ready ? url : null, wide: ready && !!image?.wide });
       onVisible(content);
     });
-  }, [key, source?.pending, queue]);
+  }, [key, resolved?.pending, queue]);
   useEffect(() => {
     if (!outgoing) return;
     const timer = setTimeout(() => setOutgoing(null), 180);
@@ -310,7 +317,9 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
       <div className={'tv-screen' + (current.screen === 'page' && heroPair && spotlight ? ' tv-screen-featured' : '')} ref={screenRef}>
         {current.screen === 'page' ? <>
           {heroPair && spotlight && <HeroArtwork key={artScope} content={spotlight} source={sources[spotlight.id]}
-            queue={heroQueue.current!} imageMeta={imageMeta.current}
+            inSelector={heroPair.selector.items.some(value => value.id === spotlight.id)}
+            inventory={inventory} projectId={spec.id} accountId={accountId}
+            queue={heroQueue.current!} imageMeta={imageMeta.current} onSource={recordArtSource}
             onVisible={content => setHeroCopy({ scope: artScope, content })}/>}
           <header className="tv-header">
             {tv.brand.showTitle && <strong className="tv-logo">{tv.brand.logo && <img src={artwork(tv.brand.logo)} alt=""/>}{tv.title}</strong>}

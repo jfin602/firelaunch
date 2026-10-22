@@ -183,6 +183,30 @@ test('delayed and rapid row navigation keeps the old hero coherent until the new
   } finally { cleanup(); globalThis.Image = priorImage; }
 });
 
+test('initial featured artwork loads when its title is outside the selector row', async () => {
+  const priorImage = globalThis.Image;
+  class ReadyImage {
+    naturalWidth = 960; naturalHeight = 540;
+    onload: (() => void) | null = null; onerror: (() => void) | null = null;
+    referrerPolicy = '';
+    set src(_url: string) { queueMicrotask(() => this.onload?.()); }
+    decode() { return Promise.resolve(); }
+  }
+  globalThis.Image = ReadyImage as unknown as typeof Image;
+  const spec = fixtureChannel(), first = spec.content[0]!, page = spec.pages[0]!;
+  const second = { ...first, id: `item_${'a'.repeat(32)}`, title: 'Next film', artwork: 'https://art.example/next.jpg' };
+  spec.content = [first, second];
+  spec.pages[0] = { ...page, modules: [page.modules[0]!,
+    { id: `mod_${'b'.repeat(32)}`, kind: 'rail', title: 'Browse', contentIds: [second.id] }] };
+  try {
+    const view = render(createElement(Preview, { spec }));
+    await waitFor(() => assert.match(view.container.querySelector<HTMLElement>('.tv-feature-art-layer')?.style.backgroundImage ?? '', /ocean\.jpg/));
+    fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+    await waitFor(() => assert.equal(view.container.querySelector('.tv-feature-copy h2')?.textContent, 'Next film'));
+  } finally { cleanup(); globalThis.Image = priorImage; }
+});
+
 test('paired selector rejects revoked artwork while Rows and Grid keep their existing rendering', () => {
   const spec = fixtureChannel(), content = spec.content[0]!;
   const itemId = `ci_${'b'.repeat(32)}`, owner = `cr_${'a'.repeat(32)}`;
