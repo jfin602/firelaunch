@@ -1,4 +1,25 @@
-# P8D P5 evidence appendix — 2026-10-22
+# P8D final recovery evidence appendix — 2026-10-22
+
+**Recovery disposition: PHASE 8 NOT GREEN.** The [canonical closeout](../p8/closeout.md) supersedes the P5 snapshot retained below. No R3–R5 source correction was used.
+
+## Recovery ledger
+
+| Step | Exact evidence | Result |
+| --- | --- | --- |
+| Entry | Clean `main` HEAD `8120897ef150bbb52e0f1102778ad54e05a97ad1`, two local commits ahead of `origin/main`: `bf70d0a` original original HTTPS fixtures and `8120897` portrait fix; root and both lock fields `0.8.17` | Existing work preserved; R2 not reimplemented. |
+| R1 carried proof | Protected release `20261022T162235Z-5c04d5984a92`, archive SHA-256 `5c04d5984a92f9fe0a95084983b5f95cb10e60fc46bdbcdd6d807f20e6f5e7e5`; real device standalone MP3 and same-book audiobook had audible original tones and measured pause/resume/seek | Native audio fixture qualification retained. |
+| R2 staged | Local archive and checksum `7510f7405d6c258aa7b6b2383d0704f988df109a6ddce994e1d999867a84615b`; changed `App.js` / `tv-layout.js` SHA-256 `c6150f6dcad1f96e7b68acb6e81d56d9d222c65f465b8189411a23076134d9df` / `09ebc4b074eaa999cc8240a356e13f6e39d7e974f30aff9a6b745533062d6da3` matched committed source and active stage. The original incoming upload was partial (different hash); a complete verified upload under a new filename was used. | Guarded deploy activated `20261022T165021Z-7510f7405d6c`, schema 15→15, previous R1 release retained; both services active. |
+| Backup and assets | Guarded encrypted backup `/var/backups/firelaunch-staging/20261022T165021Z-7510f7405d6c-pre-deploy-schema-15.flrec`, SHA-256 `89564ea991ca805875fa47ed7672b431f4a8a587e9383eb2d2e055045771e291`, 24 private objects. Active index `cf464d06b8525fc9f5428fb92f5f405feecfb1f9631064458d829221d9a66c5b`; JS `a422a8c22d7c69be4c744dbede7cfa0e812ee2ac9ae6fdca98b33ce3e8923fad`; CSS `aa9302c529c1ab3c325809fe2f63fe72018d72df35f364ec427881052e2d5982`; all matched local and HTTPS responses. | Backup and active source verified. |
+| Owner browser | Fresh Google owner sign-in opened `P8C P2 Private Flow 2026-10-22`, revision 8; Home said standalone audio playback rights asserted and book cover display/playback rights asserted with audiobook attached. Library reopened the book with title, author, synopsis, series, attached audiobook and separate rights, with delivery still blocked. | R2 stage browser smoke passed; no new publication. |
+| Native R2 | Original book PNG and 24-second MP3 returned matching source hashes over HTTPS; MP3 range `bytes=100-199` returned `206`, `audio/mpeg`, 100 bytes and `Content-Range: bytes 100-199/288750`. Exact R2 source built VPT-valid x86_64 VPKG SHA-256 `cb12ec22fccbc34e4851ba550688215615bac6c6eab8977244d037b281f3f35e`, installed and launched on running VirtualDevice `amazon-34bb27f8dce87e75`. Device `screenshooter` and `gwsi-tool-screenshooter` produced zero-byte PNGs; the computer-use session exposed no native display window. | Build/install/run qualified; portrait, book-only and hero visuals NOT GREEN. No screenshot or D-pad result was fabricated. |
+| Final tests | One captured final `npm run test`: kernel 181 pass/16 skip; Studio 91 pass; runner 104 pass. Total **376 pass, 16 skip, 0 fail**; builds/typechecks and `git diff --check` passed. | Product source settled at `8120897`; DB-dependent publication integration remained skipped. |
+| Public preservation | FREE release #1 pointer SHA-256 `d1c398ec9a8028fcb3cefbc5d7fedaf47d6b39a7f9adbd3e1fea68d27469a059`; immutable manifest SHA-256 `b7336f0807a49232be2b5575cbaf94808db45afe57b37b663f1b6473f5d09426` after R2 deployment. | Byte-identical; no public test content added. |
+
+No separate immutable mixed-media test release was approved or published. The existing private project has no public identity, and the static staging media fixture does not satisfy the approved public delivery contract. Direct comparison with the final owner hero mockup was unavailable in this handoff. These are acceptance blockers, not source defects to consume R3–R5 cycles.
+
+---
+
+## Historical P8D P5 appendix, before recovery
 
 **Supporting evidence for the [single final Phase 8 closeout](../p8/closeout.md): overall NOT GREEN.** P5 ran manually with a connected Codex browser and real Vega VirtualDevice. P1–P4 source/history is in [P4 evidence](P4-evidence.md); the archived [P8C NOT GREEN](../p8c/closeout-2026-10-22-not-green.md) remains byte-for-byte the prior canonical report. No P9 activation or public media approval occurred.
 

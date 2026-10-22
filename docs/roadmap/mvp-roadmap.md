@@ -1,5 +1,13 @@
 # FireLaunch MVP Roadmap
 
+## CURRENT — Phase 8 recovery disposition and Phase 9 gate (2026-10-22)
+
+The [canonical Phase 8 closeout](../tasks/p8/closeout.md) remains **NOT GREEN** after the [final recovery](../tasks/p8d/closeout.md). At clean source `8120897ef150bbb52e0f1102778ad54e05a97ad1`, actual version **0.8.17**, R1 native MP3/audiobook tones, pause/resume and seek were qualified. R2's portrait source fix was protected-deployed as `20261022T165021Z-7510f7405d6c` and built/installed on the real VirtualDevice; native visual capture was unavailable, so portrait/book-only and hero acceptance remain open. No separate immutable, rights-cleared mixed-media test publication or compatible-client upgrade was qualified. Final aggregate: **376 pass, 16 skip, 0 fail**; approved public FREE release #1 is unchanged.
+
+**P9 remains planned and unstarted.** Maintain `Requires App Update / Blocked` for incompatible installed clients and keep unqualified new-media publication closed. A working device capture, attached approved hero reference and separate approved mixed-media test release are the next Phase 8 evidence steps. Phase 9 `0.9.0`, production and cloud rights require an explicit owner decision. Dated sections below are historical snapshots.
+
+---
+
 ## CURRENT — Phase 8 final result and P9 gate (2026-10-22)
 
 The [authoritative Phase 8 closeout](../tasks/p8/closeout.md) is **NOT GREEN** at tested product source `0d6c6db16478485e879052a8d58e545e4d3b3250`, actual version **0.8.17**. [P8D P5 evidence](../tasks/p8d/closeout.md) records staging-first deployment, two corrected/redeployed Home rights defects, final **375 pass / 16 skip / 0 fail**, signed-in private Studio acceptance and current-generator Vega device proof for static sections and approved HLS. Native MP3/audiobook playback, owner-saved static/hero acceptance and compatible mixed-media publication remain open; original FREE release #1 is unchanged. [Historical P8C NOT GREEN](../tasks/p8c/closeout-2026-10-22-not-green.md) remains archived verbatim.

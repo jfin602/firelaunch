@@ -1,5 +1,13 @@
 # FireLaunch Current State
 
+## CURRENT — Phase 8 recovery completed, NOT GREEN (2026-10-22 16:57 UTC)
+
+The [canonical final recovery closeout](tasks/p8/closeout.md) and [P8D recovery evidence](tasks/p8d/closeout.md) supersede the earlier P5 snapshot below. Clean product HEAD `8120897ef150bbb52e0f1102778ad54e05a97ad1`, root and both lock fields **0.8.17**. R1 qualified native standalone MP3 and same-book audiobook audible tones with pause/resume/seek. R2's committed portrait fix was built into a native package and guarded-deployed to staging as `20261022T165021Z-7510f7405d6c` (archive SHA-256 `7510f7405d6c258aa7b6b2383d0704f988df109a6ddce994e1d999867a84615b`); schema **15→15**, verified encrypted backup and retained R1 rollback, both services active. Signed-in owner Studio and active assets passed. Final `npm run test`: **376 pass, 16 skip, 0 fail**. Public FREE release #1 remains byte-identical.
+
+R2's real VirtualDevice package installed/launched, but screenshot commands yielded empty files and this session had no accessible native window. Portrait/book-only and hero visual acceptance therefore remain unqualified. The latest approved owner mockup was not attached for direct comparison; no separately approved immutable mixed-media test publication or compatible installed-client acceptance occurred. Overall **Phase 8 NOT GREEN**; preserve successful native audio proof and fail closed for unqualified public new media. Phase 9 `0.9.0` still requires a separate owner decision. The P8C historical archive remains unchanged.
+
+---
+
 ## CURRENT — final Phase 8 P5 executed; overall NOT GREEN (2026-10-22)
 
 The [single canonical Phase 8 closeout](tasks/p8/closeout.md) now covers Wave 1, P8B, P8C and P8D; the detailed [P8D evidence appendix](tasks/p8d/closeout.md) records P5. Tested product source `0d6c6db16478485e879052a8d58e545e4d3b3250` and root/both lock fields remain **0.8.17**. Final `npm run test` passed **375**, skipped **16**, failed **0**. Protected staging was deployed first and, after two observed Home-rights corrections with fresh commits/archives/backups, final release `20261022T154910Z-c991c12b770a` is active at schema **15→15**, with both services active and previous release retained. Signed-in owner browser accepted the private Studio audio/book flow and corrected rights summary. Public FREE release #1 bytes remain unchanged.

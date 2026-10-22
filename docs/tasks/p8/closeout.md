@@ -1,4 +1,20 @@
-# Phase 8 final closeout — 2026-10-22
+# Phase 8 final recovery closeout — 2026-10-22
+
+**PHASE 8: NOT GREEN.** R1 qualified native standalone MP3 and same-book audiobook playback. R2's committed portrait correction was protected-deployed and its native package installed, but real-device visual capture was unavailable. The owner-approved hero comparison and a distinct mixed-media test publication also remain open. Phase 9 is not activated. The [P8D recovery appendix](../p8d/closeout.md) has the release and test receipts. The [P8C archive](../p8c/closeout-2026-10-22-not-green.md) remains unchanged.
+
+The final clean product commit is `8120897ef150bbb52e0f1102778ad54e05a97ad1`, after original HTTPS fixture commit `bf70d0a`. Root package and both root-lock version fields remain **0.8.17**. The R2 archive SHA-256 is `7510f7405d6c258aa7b6b2383d0704f988df109a6ddce994e1d999867a84615b`. Its complete remote upload and changed native source matched the local archive and commit; an earlier incomplete upload at the original filename was never deployed. Guarded release `20261022T165021Z-7510f7405d6c` is active, with R1 release `20261022T162235Z-5c04d5984a92` retained for rollback. The encrypted backup was verified at `/var/backups/firelaunch-staging/20261022T165021Z-7510f7405d6c-pre-deploy-schema-15.flrec`, SHA-256 `89564ea991ca805875fa47ed7672b431f4a8a587e9383eb2d2e055045771e291`. Schema remained **15→15** and both staging and worker services were active. The request's schema-14 wording was stale relative to the already approved schema-15 installation.
+
+The signed-in owner browser loaded the R2 Studio and the saved private book/audio project; it showed separate cover and audiobook rights correctly. Active HTML/JS/CSS hashes matched the local production build and HTTPS MIME types. The approved public FREE release #1 pointer and immutable manifest still hash to `d1c398ec9a8028fcb3cefbc5d7fedaf47d6b39a7f9adbd3e1fea68d27469a059` and `b7336f0807a49232be2b5575cbaf94808db45afe57b37b663f1b6473f5d09426`.
+
+R2 source centers and bounds the cover and uses `resizeMode="contain"`; focused tests check square and portrait geometry at HD and Full HD. An exact-R2 x86_64 package (SHA-256 `cb12ec22fccbc34e4851ba550688215615bac6c6eab8977244d037b281f3f35e`) built, installed and launched on the running VirtualDevice. Its screenshot commands returned empty files and this session had no accessible device display window. **Portrait placement/cropping, book-only no-Play, unobscured metadata/actions and D-pad/Back cannot be accepted visually from this run.** R1's audible tones, pause/resume and seek remain qualified for its package. The original staging HTTPS MP3 returned `206`, `audio/mpeg` and the requested byte range; it is a fixture, not a creator-approved immutable public media release.
+
+The final settled-source `npm run test` passed **376**, skipped **16**, failed **0** (kernel 181 pass/16 skip; Studio 91 pass; runner 104 pass), including builds/typechecks. `git diff --check` passed. The PostgreSQL-dependent publication integration remains skipped. No R3–R5 correction cycle was used. The owner-saved static composition, direct approved hero image comparison, and a separate rights-cleared mixed-media Publish/Export and installed-client compatibility test remain unqualified. Existing incompatible clients stay `Requires App Update / Blocked`; FREE release #1 was not republished.
+
+**Smallest next action:** obtain a working VirtualDevice display capture for the R2 portrait/book-only and hero checks, with the approved owner mockup attached; then authorize a separate immutable, rights-cleared mixed-media test release and test current/older clients. Phase 9 `0.9.0` needs a separate owner decision.
+
+---
+
+## Historical P8D P5 closeout, before recovery
 
 **OVERALL PHASE 8: NOT GREEN. Protected staging: DEPLOYED; scoped signed-in Studio acceptance: GREEN; complete native multimedia and final visual acceptance: NOT GREEN.** This is the single authoritative Phase 8 decision across Wave 1, P8B, P8C and P8D. The earlier P8C result remains [archived verbatim](../p8c/closeout-2026-10-22-not-green.md); its entry waiver allowed P8D work, not final acceptance. [P8D P5 evidence](../p8d/closeout.md) gives the release, correction, browser and device receipts. Phase 9 is not activated.
 
