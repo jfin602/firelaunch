@@ -1,40 +1,31 @@
-TASK: Phase 8 / P5 — Independent P8D Multi-Media closeout
+TASK: Phase 8 / P5 — Independent P8D multi-media closeout
+
 MODEL / REASONING / USAGE
 - Recommended configuration: `GPT-6 Sol High`.
-- Browser required: yes (real signed-in Codex browser + actual Vega VirtualDevice for native claim).
+- Browser required: yes.
 
 VERSIONING
-- REQUIRED UNCHANGED ROOT+LOCK `0.8.17` (no `0.8.18` and no automatic `0.9.0`).
+- This prompt's assigned project version is `0.8.18`.
 
 TYPE
-Independent MANUAL closeout; agent owns truthful evidence commit in `docs/tasks/p8d/closeout.md`. P8C P4 historical NOT GREEN remains deferred, separate and untouched.
+Independent MANUAL, BROWSER-REQUIRED FINAL CLOSEOUT for P8D. **0.8.18 is a RUNNER GRAMMAR / PROPOSED CLOSEOUT SLOT, NOT an instruction to bump**: the actual accepted source and root+both lock versions MUST REMAIN `0.8.17`. The regular `npm run codex:stack -- p8d` stops with P5 manual; do NOT invoke `--closeout` to bypass the browser gate.
 
 MISSION
-Prove the complete audio/book/mixed channel workflows and native installed-device behavior with actual rights-safe media. One final aggregate, protected staging readback, one owner browser creator journey and independent Vega actual MP3/book experience. No production or Amazon submission.
+One final full aggregate and true owner+native independent acceptance for first-class MP3 Audio, Book Showcase with optional same-book audiobook, and mixed-media TV/approval. Honest P8D GREEN/NOT GREEN separate from deferred historical P8C NOT GREEN. Never fabricate native Vega playback when device is down.
 
-ENTRY / SOURCE
-1. Do NOT use `npm run codex:stack -- p8d`, its validator or `/activate`. Read P8D design/README/plan, P1–P4 evidence, current catalog/ChannelSpec/publisher/generator, latest `docs/tasks/p8/closeout.md` (NOT GREEN, deferred), C7 R4 prior video proof, standing staging runbook. Inspect actual local HEAD/origin/dirty, all three root/lock `0.8.17` version fields and each source/evidence commit. Preserve any parallel work.
-2. Run **ONE final `npm run test`** on exact final source (includes full build/typechecks), `git diff --check`, verify changed cross-package rights/old-client/foreign/CSRF/revocation tests. Don't add redundant `npm run build` or `npm run check`. If final source changes, focused checks plus repeat aggregate on changed tree only.
+PREFLIGHT
+Read `AGENTS.md`, `docs/tasks/p8d/{README.md,prompt-assessment.md,implementation-plan.md}`, `docs/design/multi-media-creator-experience.md`, P1–P4 evidence, prior C7 R4 and [historical P8C NOT GREEN](../p8/closeout.md). Inspect real local HEAD, exact SOURCE implementation commits with version subjects `0.8.14`/`0.8.15`/`0.8.16`/`0.8.17`, root+lock all `0.8.17`, dirty/origin state, current protected stage/archive/backup/schema14/previous rollback/worker/public FREE #1 hash. P8C external failures are deferred as ENTRY gates, not relabeled as GREEN. Resolve any source divergence safely; do not reset/force/stash.
 
-PROTECTED STAGING + OWNER CODEX BROWSER
-3. If current active staging truly matches P4 exact source/0.8.17, reuse protected archive/backup readback instead of redeploying identical bytes; otherwise guarded SHA-verified deploy of committed tested source, retained JS/CSS/visible-root smoke, encrypted backup/schema14/signed-out/root/sign-in/fresh asset checks, safe previous rollback. No new schema/cloud rights permissions without separate authorization. Preserve public FREE release #1 byte hashes, worker and previous rollback. On critical regression use authorized rollback and report NOT GREEN.
-4. ONE real signed-in owner journey on `https://firelaunch.jfin.dev/`: Add Audio MP3 → cover/artist/album/rights → private save/reopen/seek audio Preview; Add Book without MP3 → portrait cover/author/synopsis/bookshelf → Studio/TV detail with NO Play; attach or create second book with MP3 → SAME book ID + narrator/audio rights → Listen to Audiobook using SAME audio player; mixed page with film/audio/book → preview/select/D-pad/Back; check responsive spots, private vs eligible vs live, missing file/foreign/revoked denial. Use only owner-licensed fixtures and minimize new costly jobs. Do not public-publish against release #1 just to qualify.
-5. Independently inspect immutable publication and export from an approved **safe test release/fixture** if authorized: only content with matching rights, cover and MP3 delivery available for a device; no private token leaks, unsupported old installed app blocks update; book-only no MP3 binding. If no approved safe test publication, call this external gate NOT GREEN, not claimed passed from deterministic tests.
+VALIDATION
+1. Run ONE final `npm run test` on exact final settled product source (builds/typechecks included) and `git diff --check`. Do not duplicate `npm run check` or `npm run build`. If a directly observed defect needs limited repair, focused tests and repeat aggregate only after changed source. At most two narrowly justified repairs; no AWS/production/policy bypass.
+2. Verify active protected staging release identity matches tested committed 0.8.17 code or redeploy exact source only via standing guarded hash workflow (new+retained JS/CSS/production-bundle smoke, encrypted backup, schema14, previous rollback, signed-out + signed-in fresh root, worker/service). Approved public FREE release #1 remains untouched.
+3. In CONNECTED CODEX BROWSER on actual signed-in staging, one creator journey: **Add Audio** licensed MP3 → cover/artist/album → rights/private save/reopen → Studio player and seek; **Add Book** cover/author/synopsis/bookshelf → details **no Play**; optional MP3 audiobook attached to SAME book → Listen launches shared player and returns to book on Back; mix video/audio/book in Channel Hero/Rows/Grid and preview; Publish vs Export with rights, old-client and unauthorized content denied. Separate tests for empty/missing/revoked audio and owner/foreign/CSRF. Do NOT publish arbitrary owner catalog or mutate release #1 solely for testing.
+4. Rights-safe explicitly approved TEST delivery/public release if authorized: original private tokens excluded from manifest/VPKG, actual byte-range seek, old installed app requires native update. If approval or suitable fixture missing, record that gate NOT GREEN, do not silently assume validity.
+5. One actual x86_64 Vega VirtualDevice installed VPKG with **one standalone MP3, book-only and same-book MP3 audiobook**, real title/artwork/author, D-pad/select/Back/restart, audible audio loopback or equivalent objective verification, pause/resume/seek and error cleanup. Record CLI/SDK/VPKG SHA/install/remote/screen/audio evidence. Current `running:false`/`qemu:-1` is known: if it recurs, mark NATIVE P8D NOT GREEN (no fictitious screenshots), but preserve completed code checks. Reuse unchanged historical C7 video playback only for its exact source boundary.
 
-REAL VEGA DEVICE QUALIFICATION
-6. On an actual x86_64 Vega VirtualDevice, build/install/launch the current tested media-capable VPKG from owner-bound source. Capture device/SDK versions, build/job/ZIP/VPKG SHA-256, package identity, launch screenshot/logs for album cover/audio detail and book cover/detail, audible MP3 (loopback or equivalent objective measurement), pause/resume/seek, D-pad/Back, restart and no Play on book-only; optional audiobook returns to same book. Measure byte-range seek network where possible. Unavailable `vega virtual-device` (`qemu:-1`) => **NATIVE AUDIO/BOOK PARITY NOT GREEN** with exact error, not a local screenshot substitute. Reuse C7 R4 *unchanged video* media proof without new video encode.
-7. At most TWO narrow directly observed repairs, each with focused tests, changed source commit at unchanged `0.8.17`, final aggregate on corrected tree, new archive/hash/guarded redeploy/browser/device proof. No unapproved AWS, production, public release mutation or open-ended device chase.
-
-CLOSEOUT / COMMIT
-8. Create `docs/tasks/p8d/closeout.md` only from actual evidence: P1–P4 commits and root/lock versions, test pass/fail/skip, exact tested source vs docs HEAD, active staging/archive hash/backup/schema14/rollback, owner/browser and content IDs (private as needed), rights/publication media/old-client negatives, actual Vega VPKG/hashes/audio/book or blockers. Distinguish:
-   - ADD AUDIO / PRIVATE UPLOAD: GREEN / NOT GREEN
-   - BOOK SHOWCASE / OPTIONAL AUDIOBOOK: GREEN / NOT GREEN
-   - MIXED-MEDIA UI / RIGHTS / PUBLISHING: GREEN / NOT GREEN
-   - STAGING: DEPLOYED / NOT DEPLOYED / ROLLED BACK
-   - NATIVE AUDIO/BOOK VEGA PARITY: GREEN / NOT GREEN
-   - OVERALL P8D: GREEN / NOT GREEN
-Record P8C static layout device + hero scaling as **deferred historical NOT GREEN debts**; do not change old closeout, mark them qualified or quietly delete. Separate scoped owner acceptance from missing objective device evidence. Phase 9 needs fresh explicit owner authorization/0.9.0.
-9. **YOU MUST COMMIT** final P8D report and any minimal docs handoff at unchanged 0.8.17, normal push if authorized; if commit/host/browser/device blocked report exact state, never claim success. No P9 stack launch, Amazon submission or phase-version bump.
+EVIDENCE AND GIT
+6. Write `docs/tasks/p8d/closeout.md` with distinct source vs evidence HEAD, versions, P1–P4 results, focused and final test counts, signed-in browser/owner project, publication and rights negatives, archive/hash/staging backup/schema/rollback, device evidence or exact blocker, unchanged free #1 hashes and deferred P8C static-layout/hero differences. Explicit separate dispositions: Audio Private Upload; Book/Audiobook; Mixed UI & Publish; Staging; Real Vega Native; OVERALL P8D **GREEN / NOT GREEN**. The old `docs/tasks/p8/closeout.md` remains NOT GREEN unchanged; no Phase 9 activation, no automatic `0.9.0`.
+7. P5 runs MANUALLY outside runner: commit truthful evidence/doc-only closeout with descriptive subject and no version bump; if a P5-repaired 0.8.17 source is changed, commit/test/archive/new-hash/requalify independently with clear source provenance. Normal push only if authorized; preserve parallel work. Do not report commit, published content or device proof without actual observation.
 
 SCOPE
-Book Showcase ONLY, no EPUB/PDF reader, chapters, DRM/paid access or external Amazon imports. Single book item with optional attached MP3 and common audio player. Preserve source rights, future revocation/rollback and approved FREE release #1.
+Book Showcase only, no EPUB/PDF TV reader, automatic Amazon imports, DRM, paid content, new public rights policies without approved operator action, or Appstore submission. Do not force prior P8C failures to block new source work or to disappear from history.
