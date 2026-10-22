@@ -956,10 +956,12 @@ body:has(.preview-fullscreen){overflow:hidden}
 .tv-scroll-indicator.is-scrolling{opacity:.55}
 .tv-screen .focused{border-color:transparent!important;box-shadow:inset 0 0 0 2px var(--tv-accent);outline:0}
 .tv-screen :is(.tv-nav-button,.tv-card,.tv-play):focus-visible{outline:0}
-.tv-hero .tv-card,.preview-fullscreen .tv-hero .tv-card{width:min(58%,60.44cqh)}
+.tv-hero .tv-card,.preview-fullscreen .tv-hero .tv-card{width:min(58%,53.33cqh)}
 .tv-rail .tv-card,.tv-grid .tv-card,.preview-fullscreen .tv-rail .tv-card,.preview-fullscreen .tv-grid .tv-card{width:min(26%,30.22cqh)}
 .tv-hero .tv-art img{object-fit:contain}
 .tv-hero .tv-card-caption{position:static;padding:.45em .5em;background:none;text-shadow:none;font-size:.9em}
-.tv-module{margin-bottom:1.5%}
+.tv-module{margin-bottom:.75%}
+.tv-module h3{margin-bottom:.35em}
+.tv-module :is(.tv-text-comfortable,.tv-text-compact){max-width:none;padding:.15em;margin:.1em 0}
 .preview-fullscreen .tv-content-wrap{height:auto;flex:1;padding-top:clamp(12px,2vh,32px)}
 .preview-fullscreen .tv-content{height:100%;padding-top:0;flex:none}

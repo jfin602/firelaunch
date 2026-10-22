@@ -43,7 +43,7 @@ function Section({ module, page, state, brand, font, focusStyle, layout, onLayou
   const moduleSpacing = { marginVertical: 8 * layout.scale };
   const title = module.title && <Text style={[styles.moduleTitle, { fontSize: 27 * layout.scale,
     marginBottom: 8 * layout.scale }, font, color, aligned]}>{module.title}</Text>;
-  if (module.kind === 'text') return <View style={[styles.module, moduleSpacing, surface, compact ? styles.compactSection : styles.comfortableSection]}>
+  if (module.kind === 'text') return <View style={[styles.module, moduleSpacing, surface, { padding: 8 * layout.scale }]}>
     {title}<Text style={[styles.body, font, color, aligned]}>{module.body}</Text>
   </View>;
   if (module.kind === 'image-banner' || module.kind === 'image-text') {
