@@ -1,5 +1,12 @@
 # FireLaunch Architecture
 
+## Current P8D execution boundary: runner + browser handoffs (2026-10-22)
+
+The [P8D multimedia design and contracts](tasks/p8d/README.md) stay unchanged; owner switched from all-manual to RUNNER recognition. CLI runner implements/commits only browser=no P1 contract checkpoint `0.8.14`; browser-required P2 Audio, P3 same-book optional MP3 Book Showcase and P4 native publishing remain manually executed with version subjects `0.8.15`/`0.8.16`/`0.8.17` for resume, and browser-required P5 proposed metadata `0.8.18` does not bump actual 0.8.17. All true native/device, immutable-media/rights, installed-client compatibility and guarded staging gates persist; none can be bypassed by setting a false browser flag. Older no-runner P8D instructions below are execution history, not current authority.
+
+---
+
+
 ## CURRENT IMPLEMENTATION BOUNDARY — P8D multi-media (2026-10-22)
 
 Owner-cleared [P8D](tasks/p8d/README.md) from root/lock **0.8.13**, with [design contract](design/multi-media-creator-experience.md) and P1–P5 manual prompts ready. The prior [P8C closeout](tasks/p8/closeout.md) remains historically **NOT GREEN**; owner defers its two external/visual gates **for starting P8D**, not for declaring them qualified. No code changed by this documentation action.
