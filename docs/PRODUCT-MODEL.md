@@ -1,5 +1,12 @@
 # FireLaunch Product Model
 
+## Current P8D runner handoff update (2026-10-22)
+
+Multi-media design in [P8D](tasks/p8d/README.md) is unchanged: Video Watch, Audio Listen MP3, Book Showcase with optional SAME-book attached MP3/shared player, no EPUB/PDF/TV reader. The owner changed execution to **runner-compatible P8D**: P1 `0.8.14` automatically runner-owned, P2/P3/P4 browser-required manually committed using exact `0.8.15`/`0.8.16`/`0.8.17` subjects; P5 manual closeout grammar slot `0.8.18`, actual project 0.8.17 unchanged. No product changes implied by metadata. Prior P8C NOT GREEN remains deferred for P8D entry only.
+
+---
+
+
 ## CURRENT PRODUCT DECISION — P8D audio and book showcase (2026-10-22)
 
 [Multi-media creator design](design/multi-media-creator-experience.md) and [P8D execution plan](tasks/p8d/README.md) are owner-approved and authored, NOT implemented by this documentation update. Three TV experiences share ONE ChannelSpec/Library/Publish/Export: **Video Watch** (existing), **Audio Listen** (MP3 + album/playlist cover and native player), and **Book Showcase** (portrait cover, author, synopsis/bookshelf, optional single MP3 audiobook linked to SAME CatalogItem). A book without audio has **no playback action**; a book with eligible audio offers **Listen to Audiobook**, launching the SAME player as standalone audio. No TV e-reader, EPUB/PDF reader, pages, book excerpt renderer, Kindle/KDP scraping or second audiobook CatalogItem.
