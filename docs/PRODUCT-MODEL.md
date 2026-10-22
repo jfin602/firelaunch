@@ -1,5 +1,14 @@
 # FireLaunch Product Model
 
+## CURRENT OWNER HERO BEHAVIOR — c8-hero-multimedia (2026-10-22)
+
+[Focus-driven hero design](design/c8-hero-multimedia.md) replaces the *presentation* of eligible existing Hero + first associated rail/grid in the original TV app, not the stored `ChannelSpec` structure. **Top featured display changes to match FOCUSED bottom card**; Select enters existing detail and Back restores card/spotlight. Exactly one first row is visible below hero at 1280x720 and 1920x1080 without forced vertical scroll; later authored sections aren't deleted or made unreachable. Safe video/album/book cover ratios keep crisp uncropped foreground and controlled dim/blur/fade backdrop derived from the SAME rights-approved asset. No automatic video/audio playback on focus, no second hero editor, no proprietary generated artwork or data/schema migration. Creator branding is independent of FireLaunch's own Studio theme.
+
+[c8-hero-multimedia prompts](tasks/c8-hero-multimedia/README.md) P1–P3 runner implementation, P4 manual authenticated browser + attached owner mock artwork and real Vega device visual acceptance, all **0.8.17 unchanged**. Historical Phase 8 [NOT GREEN](tasks/p8/closeout.md) persists; visual correction does not independently qualify mixed-media publication or launch P9.
+
+---
+
+
 ## Current P8D runner handoff update (2026-10-22)
 
 Multi-media design in [P8D](tasks/p8d/README.md) is unchanged: Video Watch, Audio Listen MP3, Book Showcase with optional SAME-book attached MP3/shared player, no EPUB/PDF/TV reader. The owner changed execution to **runner-compatible P8D**: P1 `0.8.14` automatically runner-owned, P2/P3/P4 browser-required manually committed using exact `0.8.15`/`0.8.16`/`0.8.17` subjects; P5 manual closeout grammar slot `0.8.18`, actual project 0.8.17 unchanged. No product changes implied by metadata. Prior P8C NOT GREEN remains deferred for P8D entry only.
