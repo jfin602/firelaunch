@@ -87,6 +87,27 @@ test('single channel form keeps its name on failure and blocks repeated pending 
   } finally { cleanup(); globalThis.fetch = previous; dom.window.history.replaceState(null, '', '/'); }
 });
 
+test('invalid create response explains how to fix the name without clearing it', async () => {
+  const previous = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === '/api/auth/session') return Response.json(session);
+    if (url === '/api/projects' && init?.method === 'POST') return Response.json({ error: { message: 'Invalid string: must match pattern' } }, { status: 400 });
+    if (url === '/api/projects') return Response.json([first]);
+    return Response.json(null, { status: 404 });
+  }) as typeof fetch;
+  try {
+    render(createElement(App));
+    await screen.findByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` });
+    fireEvent.click(screen.getByRole('button', { name: 'New channel' }));
+    const input = screen.getByLabelText('CHANNEL NAME') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '😀' } });
+    fireEvent.click(screen.getByRole('button', { name: /Create Channel/ }));
+    assert.match((await screen.findByRole('alert')).textContent ?? '', /letter or number/);
+    assert.equal(input.value, '😀');
+  } finally { cleanup(); globalThis.fetch = previous; dom.window.history.replaceState(null, '', '/'); }
+});
+
 test('every Studio destination starts without a topbar and the card owns workspace actions', async () => {
   const restore = mockApi([first, second]);
   try {

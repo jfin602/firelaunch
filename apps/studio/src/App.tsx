@@ -64,7 +64,9 @@ function Intro({ onCreate }: { onCreate: (title: string, id: string) => Promise<
     setCreating(true);
     setError('');
     try { await onCreate(name, requestId.current); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not create the channel. Check your connection and try again.'); }
+    catch (reason) { setError(reason instanceof ApiError && reason.status === 400
+      ? 'Use at least one letter or number in the channel name, then try again.'
+      : reason instanceof Error ? reason.message : 'Could not create the channel. Check your connection and try again.'); }
     finally { creatingRef.current = false; setCreating(false); }
   };
   return <div className="welcome"><div className="welcome-symbol">✳</div><span className="eyebrow">YOUR CHANNEL STARTS HERE</span><h1>Stories belong<br/><em>on the big screen.</em></h1><p>Shape your brand, curate a collection, and explore the TV experience before writing a line of code.</p>
