@@ -1,5 +1,16 @@
 # FireLaunch Architecture
 
+## CURRENT IMPLEMENTATION BOUNDARY — P8D multi-media (2026-10-22)
+
+Owner-cleared [P8D](tasks/p8d/README.md) from root/lock **0.8.13**, with [design contract](design/multi-media-creator-experience.md) and P1–P5 manual prompts ready. The prior [P8C closeout](tasks/p8/closeout.md) remains historically **NOT GREEN**; owner defers its two external/visual gates **for starting P8D**, not for declaring them qualified. No code changed by this documentation action.
+
+Retain one canonical `CatalogItem` (`video|audio|book`) + `MediaAsset` (`video|audio|artwork`) and immutable owner rights. A standalone audio item and optional audiobook audio asset attached to a SINGLE book item use the same MP3 ingest, release delivery and TV audio player; book-only informational presentation has no player. P8D adds narrowly optional book-specific audio binding (not arbitrary `information.mediaUrl`), validates matching book/project/creator/asset rights in immutable PublishedManifest and makes older incompatible native app **Requires App Update/Blocked**. No second ChannelSpec/TV state or direct private URL in ZIP/manifest. Add Audio and Add Book are first-class creator-friendly Library modals reusing existing video uploader patterns; Book Showcase presents covers/synopsis, no EPUB/PDF/TV reader. Native templates `templates/vega-channel`, Studio Preview and TV runtime must agree in semantics before device success is claimed. Preserve prior video HLS paths, existing public release #1 and last-known-good.
+
+At P8D authoring only P1 is cleared to execute; P2–P5 need accepted predecessor commits and measured environment. Guarded `muffinos` standing sudoers only authorizes the preinstalled exact-hash staging deploy/rollback workflow; schema/cloud policy/production changes still require separate owner/operator approval.
+
+---
+
+
 ## Fullscreen overlay state addition — c8-ui3 P3 (2026-10-21)
 
 Scoped to existing `apps/studio/src/App.tsx` fullscreenRoot/previewFullscreen/dockVisible, `Preview.tsx` remote/Exit presentation and fullscreen CSS only. Preserve ONE Preview/VideoPlayer, SAME mounted left editor, Fullscreen API/fallback, TV focus and keyboard commands. In fullscreen render TV at maximum fitting 16:9 without reserved control space; Virtual remote BOTTOM LEFT, Exit/Hide TOP RIGHT as overlays. Additional Clean View visibility mode hides all Studio overlays and uses H, top-right corner, Alt+E or Escape for safe recovery while never intercepting input fields/TV interactions. Existing P1/P2 normal-mode corrections unchanged. P4 protected deploy-first Codex-browser qualification, not P3. No ChannelSpec/native/runtime/rights/schema changes; Phase 8 OPEN.
