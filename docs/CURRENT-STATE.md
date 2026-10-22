@@ -1,5 +1,16 @@
 # FireLaunch Current State
 
+## CURRENT — c8-hero-multimedia correction AUTHORED, NOT EXECUTED (2026-10-22)
+
+**Next approved work:** [c8-hero-multimedia](tasks/c8-hero-multimedia/README.md) [design](design/c8-hero-multimedia.md), [assessment](tasks/c8-hero-multimedia/prompt-assessment.md), [plan](tasks/c8-hero-multimedia/implementation-plan.md) and four executable prompts checked into GitHub; no implementation, new staging deployment or native qualification occurred from this docs authoring. **Source root+both lock remains `0.8.17`**; [current Phase 8 recovery closeout](tasks/p8/closeout.md) remains **NOT GREEN**. Current dated R2 staging `20261022T165021Z-7510f7405d6c`, schema15, 376 pass/16 skip/0 fail; this is historical host evidence, not live source proof. Phase 9 not started.
+
+Owner TV target: actual simple `snabble tv` channel with creator branding; **one featured hero display plus ONE visible selector row underneath**. Bottom D-pad focus immediately changes top selected art/title/description without autoplay; Select opens same item detail, Back returns to focused row. Video landscape, audio square album and portrait book covers remain sharp/uncropped in foreground; darkened/soft background derived from the SAME authorized art, honest fallback. First viewport 16:9 HD/FHD no forced scrolling to row, preserve any additional authored modules below and existing video/audio/book rights.
+
+**Execution:** check local worktree/origin/version, run `npm run codex:stack:validate -- c8-hero-multimedia`, `npm run codex:stack -- c8-hero-multimedia`: P1 shared focus, P2 Studio Preview, P3 native implementation are RUNNER-COMMITTED and browser=no; P4 is browser=yes, deliberately manual. **Owner will ATTACH the approved mock artwork to the P4 Codex run**; do not invent a path or treat concept art as attached. P4 deploys exact tested source to guarded staging **before** signed-in browser comparison, then qualifies actual Vega visual output; previous device screenshot tool produced zero-byte files, so missing native visual capture remains NOT GREEN. P4 closes this correction only; separate Phase 8 mixed-media publication and P9 gate remain independently outstanding.
+
+---
+
+
 ## CURRENT — Phase 8 recovery completed, NOT GREEN (2026-10-22 16:57 UTC)
 
 The [canonical final recovery closeout](tasks/p8/closeout.md) and [P8D recovery evidence](tasks/p8d/closeout.md) supersede the earlier P5 snapshot below. Clean product HEAD `8120897ef150bbb52e0f1102778ad54e05a97ad1`, root and both lock fields **0.8.17**. R1 qualified native standalone MP3 and same-book audiobook audible tones with pause/resume/seek. R2's committed portrait fix was built into a native package and guarded-deployed to staging as `20261022T165021Z-7510f7405d6c` (archive SHA-256 `7510f7405d6c258aa7b6b2383d0704f988df109a6ddce994e1d999867a84615b`); schema **15→15**, verified encrypted backup and retained R1 rollback, both services active. Signed-in owner Studio and active assets passed. Final `npm run test`: **376 pass, 16 skip, 0 fail**. Public FREE release #1 remains byte-identical.
