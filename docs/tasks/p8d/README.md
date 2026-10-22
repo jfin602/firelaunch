@@ -1,40 +1,42 @@
 # P8D — Multi-Media Creator Support
 
-**Owner-approved 2026-10-22 — /docs-apply + /prompt-ass + /prompt-plan + /prompt-write AUTHORED, NOT EXECUTED.** **READY FOR MANUAL P1 ENTRY** from verified root/lock `0.8.13`. The owner explicitly **defers P8C's NOT GREEN requirements as entry gates**, without reclassifying or modifying [historical Phase 8 closeout](../p8/closeout.md). P8D starts now, before [Phase 9](../p9/README.md); no P9 source/version activation implied.
+**2026-10-22 — RUNNER-COMPATIBLE PROMPTS AUTHORED, PRODUCT WORK NOT STARTED.** Owner converted P8D from the originally authored all-manual stack to the checked-in FireLaunch runner workflow. **P1 can start now from a coherent, clean root/lock 0.8.13 checkout**. [P8C historical closeout](../p8/closeout.md) remains **NOT GREEN**, but the owner explicitly DEFERS its Vega static-layout and hero artwork acceptance as P8D ENTRY gates; do not erase it or claim the failures passed.
 
-[Design contract](../../design/multi-media-creator-experience.md) · [Prompt assessment](prompt-assessment.md) · [Implementation plan](implementation-plan.md) · [Current state](../../CURRENT-STATE.md)
+[Multi-media design](../../design/multi-media-creator-experience.md) · [Assessment](prompt-assessment.md) · [Implementation plan](implementation-plan.md) · [Current state](../../CURRENT-STATE.md)
 
-## Five sequential manual Codex prompts
+## Runner plan and manual browser handoffs
 
-| Prompt | Version | Responsibility | Execution |
+| Prompt | Assigned grammar version | Browser metadata | Actual execution/commit owner |
 | --- | --- | --- | --- |
-| [P1 — Media contracts and compatibility](P1-media-contracts.txt) | **0.8.14** | Additive optional audiobook binding, type-safe author/audio metadata, rights/compatibility | Manual source commit, focused tests |
-| [P2 — Audio upload and player](P2-audio-workflow.txt) | **0.8.15** | Add Audio modal, private durable MP3 upload, cover/rights, common audio player and provisional delivery | Manual Codex browser, protected staging |
-| [P3 — Book showcase and optional audiobook](P3-book-showcase.txt) | **0.8.16** | Add Book modal, portrait bookshelf/detail, optional SAME audio asset/player, no reader | Manual Codex browser, protected staging |
-| [P4 — Mixed-media native and publication integration](P4-native-mixed-media.txt) | **0.8.17** | Shared layouts, generated Vega semantics, native audio renderer, compatibility/immutable release delivery | Manual Codex browser, bounded native testing |
-| [P5 — Independent multi-media closeout](P5-multimedia-closeout.txt) | **0.8.17 unchanged** | One final aggregate, signed-in creator/browser, actual device MP3/book playback/parity, P8D status | Manual Codex browser + real Vega VirtualDevice |
+| [P1 — Contracts](P1-media-contracts.txt) | **0.8.14** | **no.** | **RUNNER** executes + commits subject `0.8.14` |
+| [P2 — Audio](P2-audio-workflow.txt) | **0.8.15** | **yes.** | Runner **STOPS**; manual Codex browser implements + commits exact subject `0.8.15` |
+| [P3 — Books](P3-book-showcase.txt) | **0.8.16** | **yes.** | Runner **STOPS**; manual Codex browser implements + commits exact subject `0.8.16` |
+| [P4 — Mixed Native](P4-native-mixed-media.txt) | **0.8.17** | **yes.** | Runner **STOPS**; manual Codex browser implements + commits exact subject `0.8.17` |
+| [P5 — Independent closeout](P5-multimedia-closeout.txt) | **0.8.18 proposed metadata ONLY** | **yes.** | MANUAL browser/device closeout at **unchanged actual 0.8.17**; commits evidence only |
 
-**Manual workflow selected:** P8D spans cloud audio delivery, Studio UI and new native presentation requiring browser/device debugging; all five prompt files are **manual**. Do **NOT** use `npm run codex:stack -- p8d` or its validator, nor `/activate`. Each P1–P4 running agent owns its scoped code/versions and Git commits, preserves uncommitted parallel work, and writes a dated handoff. P5 owns independent `docs/tasks/p8d/closeout.md` and commits it without a version bump. Only P1 begins now; the rest follow actual accepted predecessor evidence. The files being authored are not implementation/qualification.
+**Why P5 has 0.8.18 metadata:** the checked-in continuation parser requires P1–P5 assigned versions to increase sequentially. Like P8B's independently executed closeout, the final prompt's assigned grammar slot **does not authorize a product version bump**; P5 records exact accepted 0.8.17 source and leaves root/lock unchanged.
 
-**Version:** P1 `0.8.13 → 0.8.14`; P2 `0.8.14 → 0.8.15`; P3 `0.8.15 → 0.8.16`; P4 `0.8.16 → 0.8.17`; P5 unchanged `0.8.17`. Update only root `package.json.version`, `package-lock.json.version`, and lock `packages[""].version` together. No separate `0.8.14` entry-only bump. Leave workspace versions/schema 14 untouched unless a narrowly justified, separately authorized data migration is actually necessary; no unapproved schema upgrade.
+### How to execute
 
-## P8C disposition and immediate entry
+1. Safely synchronize checked-in prompt updates, inspect real `git status --short`, HEAD/origin and root `package.json.version` plus two root `package-lock.json` version fields; require coherent 0.8.13. P8C NOT GREEN is intentionally **not a blocker**. Do not reset/stash/force-overwrite unrelated work.
+2. Execute **`npm run codex:stack:validate -- p8d`** followed by **`npm run codex:stack -- p8d`**. The CLI runs **P1 only**, validates the 0.8.14 source, then automatically commits P1 with subject `0.8.14`. **P1 must not self-commit, push, deploy or run a browser.** Runner's commit staging is `git add -A`, so do not leave secrets/unrelated files untracked.
+3. The runner next reports **P2 browser execution required**. This is an INTENDED safe stop, not another grammar failure. Invoke [P2](P2-audio-workflow.txt) manually in Codex with its real connected browser. Its agent self-commits the accepted SOURCE and 0.8.15 package/lock version with **exact Git subject `0.8.15`** (and may add a separate descriptive evidence commit). Do not use a different source commit subject or the runner will not recognize it.
+4. Rerun **`npm run codex:stack -- p8d`** after P2's exact subject is reachable and root+lock are at 0.8.15. It recognizes P1/P2 as previously completed and **stops at P3**. Manually run P3, self-commit exact `0.8.16`, repeat runner for P4, manually run P4, self-commit exact `0.8.17`, then rerun runner for completed-prefix/handoff.
+5. P5 is the **only manual final closeout**. Run P5 independently using real browser + Vega VirtualDevice; report `docs/tasks/p8d/closeout.md` GREEN/NOT GREEN and make a descriptive evidence-only commit. Do not bump to 0.8.18 or activate P9; do not use `--closeout` as a substitute for its required browser.
 
-[2026-10-22 P8C P4](../p8/closeout.md): overall **NOT GREEN**; tested `0.8.13` Studio source/staging and existing rights security passed in scope, but real Vega Image Banner/Image + Text couldn't be verified because the VirtualDevice stopped (`running:false`, `qemu:-1`), and TV hero image remains smaller than the historical approved composition. **Explicit owner decision:** defer those acceptance items, proceed with P8D now. They stay separate issues; P8D does not inherit their GREEN, automatically repair them, or rewrite the original document. A broken VirtualDevice does **not prevent P8D P1–P4 source work**; any external qualification that requires it stays NOT GREEN until actually observed.
-
-At docs authoring, GitHub main source HEAD is `d0814e3ef739`, root and root-lock versions `0.8.13`. The P8C final aggregate passed kernel/server 174, Studio 85, runner 104, with 15 skipped; this is historical coverage of the `0.8.13` tree, **not** validation of P8D. P1 must recheck its actual local HEAD/status/lock versions and any later commits, not assume the host or laptop matches GitHub.
+If P2/P3/P4 is NOT GREEN, source/target version is inconsistent, staged candidate unqualified, or expected version marker absent, **STOP with an accurate handoff** instead of manufacturing a marker to advance runner. The runner can resume only from genuine Git-proven completion.
 
 ## Product scope
 
-- **Video:** preserve Add Video and video HLS player exactly.
-- **Audio:** simple first-class **Add Audio** using MP3, title, artist, cover, album/playlist; safe private upload/rights, accurate status and seekable device playback; shared player for any book audiobook.
-- **Book:** simple first-class **Add Book** with portrait cover, title, author, synopsis, optional ISBN/series/published date/Bookshelf and an **optional audiobook MP3 attached to the SAME book**. No EPUB/PDF upload, reader, pages, chapter parsing or duplicate audio CatalogItem. Without eligible audio, the book has details only and NO Play.
-- Mixed channels use one ChannelSpec, same six sections/TV editor, type-appropriate cards, and installed-app compatibility fail-closed. No automatic Amazon import, external cover scraping, paid entitlement, DRM or Appstore changes.
+- **Video Watch:** preserve existing working Add Video / HLS.
+- **Audio Listen:** first-class Add Audio MP3 upload, artist/album or playlist, rights/cover, one common audio-player transport in Studio/native.
+- **Book Showcase:** Add Book with portrait cover, title/author/synopsis/bookshelf and **optional MP3 audiobook attached to the SAME book CatalogItem**. No separate audiobook catalog entry; no Play for book-only. Optional Listen launches the SAME shared audio player. No EPUB/PDF/TV reader.
+- **Mixed Channel:** one ChannelSpec and TV engine, type-aware native cards/details, protected immutable release, compatibility guard so old installed applications **Requires App Update / Blocked** for unsupported new audio/book capability.
 
-## Safety, staging and acceptance
+## Safety, evidence and acceptance
 
-P1 works locally on contracts/tests before UI; P2/P3 use real Codex browser debugging against signed-in **protected staging** on tested source and may deploy via current [standing staging runbook](../../../scripts/staging/README.md). The standing sudoers grant is **shared-host privileged**, not permission to run unreviewed scripts, expose private objects or change production/AWS/IAM. Reverify actual grant, exact archive hash, retained frontend assets, visible-root smoke, backup, schema14/rollback, public FREE release #1 preserved. If real CDN/release audio delivery needs new cloud permissions/policies, STOP that operation and report an explicit operator-approval handoff; never fabricate playable public audio.
+P1 gets only affected source tests/typechecks, not the full root aggregate. P2–P4 use Codex browser debugging for actual signed-in `https://firelaunch.jfin.dev/` after guarded staging deployment as needed. The [standing staging runbook](../../../scripts/staging/README.md) requires source commit, exact SHA-256, protected backup/schema14/rollback and preserved FREE release #1; no automatic AWS/IAM/CDN policy or production changes. Missing privileges/device/approved media mean NOT QUALIFIED, never workaround permissions.
 
-P4 owns real native projection, playable delivery and protected publication negatives; P5 owns **one final build-backed `npm run test`**, one end-to-end signed-in creator journey for audio/book/mixed channels, x86_64 Vega device evidence, source hashes and independent P8D GREEN/NOT GREEN. Browser-only `<audio>` and local renderer tests are insufficient to claim Vega native playback.
+P5 owns ONE final `npm run test`, real signed-in creator workflow and **actual native Vega VirtualDevice** audio/book proof, separate scoped GREEN/NOT GREEN, historical P8C deferred debt recorded unchanged. A browser-preview MP3 is not native Vega playback proof.
 
-**Deadline context:** owner delivery target Fri 2026-10-23 12:00 America/Chicago remains the earlier video-MVP milestone; P8D is an expanded scope and is not retroactively claimed complete within it. Prioritize high-signal forward progress and truthful qualification.
+**Deadline context:** Oct 23 noon America/Chicago was the previous video-MVP target. P8D is expanded scope and not retroactively declared delivered.
