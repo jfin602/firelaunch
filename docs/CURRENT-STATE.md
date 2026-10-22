@@ -1,3 +1,11 @@
+# Owner roadmap override — 2026-10-22: Phase 9 Polish, former Publishing → Phase 10
+
+**Plan authored on a dedicated documentation branch; no source code, root version, schema, live release, or staging change from this plan.** [Phase 9](tasks/p9/README.md) is ten separate manually invoked Codex-browser issue prompts + one final smoke; [owner issue register](tasks/p9-polish/README.md). Each changes ONLY one issue, runs focused tests, commits its own tested candidate, **protected deploy exact committed SHA first**, and verifies fresh real authenticated staging in Codex browser afterward. One issue/status/evidence file per prompt. No P9 runner or `/activate`. [Original P9 live publishing](tasks/p10/README.md) is now **DEFERRED Phase 10**, with original five prompts preserved but NOT runnable as written.
+
+**Important entry:** current documented main 0.8.17 and schema15, [P8D final Phase 8](tasks/p8/closeout.md) NOT GREEN. [c8-hero-multimedia](tasks/c8-hero-multimedia/README.md) must be reconciled/finished or truthfully owner-deferred before Phase 9 code entry; no historical GREEN claim. Existing public FREE #1 untouched. The actual working source, stage and schema need fresh verification at prompt execution. Historical “P9 Publishing now” references below are superseded as execution routing, preserved as dated evidence only.
+
+---
+
 # FireLaunch Current State
 
 ## CURRENT — c8-hero-multimedia correction AUTHORED, NOT EXECUTED (2026-10-22)
