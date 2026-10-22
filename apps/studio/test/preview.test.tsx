@@ -334,8 +334,8 @@ test('hosted Preview projects saved private artwork visually without changing Ch
     assert.doesNotMatch(JSON.stringify(spec), /blob:|secret|private-objects/);
     assert.equal(paths.filter(path => path.endsWith('/catalog')).length, 1);
     view.rerender(createElement(Preview, { spec: fixtureChannel(), hosted: true, accountId: owner }));
-    await waitFor(() => assert.equal(view.container.querySelector('.studio-private-artwork img')?.getAttribute('src'), 'blob:http://localhost/studio-art'));
-    assert.match(view.container.querySelector('.studio-private-artwork')?.textContent ?? '', /artwork preview only/);
+    assert.equal(view.container.querySelector('.studio-private-artwork'), null, 'unpublished Library video has no TV row');
+    assert.doesNotMatch(view.container.textContent ?? '', /Private video drafts|artwork preview only/);
   } finally { cleanup(); globalThis.fetch = previousFetch; URL.createObjectURL = create; URL.revokeObjectURL = revoke; }
 });
 

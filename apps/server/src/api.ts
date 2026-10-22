@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import { isIP } from 'node:net';
 import { ZodError, z } from 'zod';
 import { applyMutation, mutationSchema } from '@firelaunch/channel-engine';
-import { channelDeploymentSchema, createProjectSchema, publicationBindingsSchema, updateProjectSchema } from '@firelaunch/contracts';
+import { channelDeploymentSchema, createProjectSchema, publicationBindingsSchema, sourceUseEligible, updateProjectSchema } from '@firelaunch/contracts';
 import { agentRequestSchema, BedrockProvider, ChannelAgent, MockProvider, OpenAIProvider, providerStatus, type AgentProvider } from '@firelaunch/agent';
 import { ProjectRepository, RepositoryError } from './repository.js';
 import { WorkspaceService } from './workspace.js';
@@ -48,6 +48,9 @@ const feedApproveSchema = feedPreviewSchema.extend({ content: z.string().max(512
 const draftSchema = z.strictObject({ creatorType: z.enum(['video', 'audio', 'writing']), expectedRevision: z.number().int().positive(),
   expectedCatalogRevision: z.number().int().nonnegative(), itemIds: z.array(z.string().regex(/^ci_[a-f0-9]{32}$/)).max(500),
   collectionIds: z.array(z.string().regex(/^col_[a-f0-9]{32}$/)).max(100) });
+const videoInclusionSchema = z.strictObject({ expectedRevision: z.number().int().positive(),
+  expectedCatalogRevision: z.number().int().nonnegative(), itemId: z.string().regex(/^ci_[a-f0-9]{32}$/),
+  action: z.enum(['publish', 'remove']) });
 const releaseIdSchema = z.string().regex(/^rel_[a-f0-9]{32}$/);
 const publicationSnapshotSchema = z.strictObject({
   revisions: z.strictObject({ channel: z.number().int().positive(), catalog: z.number().int().nonnegative() }),
@@ -452,6 +455,51 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             const input = mutationRequestSchema.parse(await body(request));
             if (current.revision !== input.expectedRevision) throw new RepositoryError('CONFLICT', 'Project revision changed');
             respond(response, 200, await hostedRepository.update(principal, current.id, input.expectedRevision, applyMutation(current.spec, input.mutation))); return;
+          }
+          if (segments.length === 4 && !url.search && segments[3] === 'video-inclusion' && projection && catalog && request.method === 'POST') {
+            const id = segments[2]!;
+            const input = videoInclusionSchema.parse(await body(request));
+            const [current, inventory] = await Promise.all([hostedRepository.read(principal, id), catalog.read(principal, id)]);
+            if (current.revision !== input.expectedRevision || inventory.revision !== input.expectedCatalogRevision)
+              throw new RepositoryError('CONFLICT', 'Project or catalog changed; reopen this video');
+            const item = inventory.items.find(value => value.id === input.itemId && value.kind === 'video');
+            if (!item) throw new RepositoryError('NOT_FOUND', 'Video not found in this channel');
+            const contentId = `item_${createHash('sha256').update('catalog-content-v1\0').update(item.id).digest('hex').slice(0, 32)}`;
+            let spec = current.spec;
+            if (input.action === 'remove') {
+              if (spec.content.some(value => value.id === contentId)) spec = applyMutation(spec, { type: 'removeContent', contentId });
+            } else {
+              const source = inventory.sources.find(value => value.id === item.sourceRecord.sourceId);
+              const playable = inventory.mediaAssets.find(value => item.mediaAssetIds.includes(value.id) &&
+                value.catalogItemId === item.id && value.kind === 'video' && value.location.type === 'managed_hls' &&
+                value.deliveryEligible && !!source && sourceUseEligible(source, value, 'television_playback'));
+              if (!playable) throw new RepositoryError('CONFLICT', 'Video source or playback permission is unavailable');
+              const selected = await projection.project(principal, id, { expectedProjectRevision: current.revision,
+                expectedCatalogRevision: inventory.revision, itemIds: [item.id], collectionIds: [] });
+              const binding = selected.bindings[0];
+              if (!binding?.baseline || binding.baseline.presentation !== 'video')
+                throw new RepositoryError('CONFLICT', 'Video is not ready with cleared playback rights');
+              if (!spec.content.some(value => value.id === contentId)) spec = applyMutation(spec, { type: 'addContent', content: binding.baseline });
+              const placed = spec.pages.some(page => page.modules.some(module =>
+                (module.kind === 'hero' || module.kind === 'rail' || module.kind === 'grid') && module.contentIds.includes(contentId)));
+              if (!placed) {
+                const home = spec.pages.find(page => page.id === spec.navigation[0]);
+                if (!home) throw new RepositoryError('CONFLICT', 'Channel has no home page');
+                const shelfTitles = new Set(inventory.collections.filter(collection => collection.itemIds.includes(item.id))
+                  .map(collection => collection.title));
+                const shelf = spec.pages.flatMap(page => page.modules.filter(module =>
+                  (module.kind === 'rail' || module.kind === 'grid') && module.contentIds.length < 100 &&
+                  shelfTitles.has(module.title)).map(module => ({ page, module })))[0];
+                const targetPage = shelf?.page ?? home;
+                const rail = shelf?.module ?? home.modules.find(module => module.kind === 'rail' && module.contentIds.length < 100);
+                if (rail && (rail.kind === 'rail' || rail.kind === 'grid')) spec = applyMutation(spec, { type: 'updateModule', pageId: targetPage.id,
+                  module: { ...rail, contentIds: [...rail.contentIds, contentId] } });
+                else spec = applyMutation(spec, { type: 'addModule', pageId: home.id,
+                  module: { id: `mod_${createHash('sha256').update(`video-inclusion-v1\0${id}`).digest('hex').slice(0, 32)}`,
+                    kind: 'rail', title: 'Videos', contentIds: [contentId] } });
+              }
+            }
+            respond(response, 200, spec === current.spec ? current : await hostedRepository.update(principal, id, current.revision, spec)); return;
           }
           if (segments.length === 4 && !url.search && segments[3] === 'catalog-draft' && projection && request.method === 'POST') {
             const id = segments[2]!;

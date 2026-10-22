@@ -54,6 +54,12 @@ export async function createProject(title: string, id?: string): Promise<Channel
 export async function mutateProject(project: ChannelProject, mutation: ChannelMutation): Promise<ChannelProject> {
   return projectSchema.parse(await request(`/${project.id}/mutations`, json({ expectedRevision: project.revision, mutation })));
 }
+export async function setVideoInclusion(project: ChannelProject, catalogRevision: number, itemId: string,
+  action: 'publish' | 'remove'): Promise<ChannelProject> {
+  return projectSchema.parse(await request(`/${project.id}/video-inclusion`, json({
+    expectedRevision: project.revision, expectedCatalogRevision: catalogRevision, itemId, action
+  })));
+}
 
 export async function agentStatus(id: string): Promise<{ provider: string; configured: boolean; message: string }> {
   return await request(`/${id}/agent-status`) as { provider: string; configured: boolean; message: string };

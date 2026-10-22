@@ -7,7 +7,7 @@ import { AudioPlayer, type AudioPlayerHandle } from './AudioPlayer.js';
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
 import { readCatalog, type CatalogSnapshot } from './api.js';
-import { OwnedArtwork, ownedArtworkObject, retainOwnedArtworkUrl, useOwnedArtwork } from './OwnedArtwork.js';
+import { ownedArtworkObject, retainOwnedArtworkUrl, useOwnedArtwork } from './OwnedArtwork.js';
 import { HeroImageQueue, heroArtworkGroups } from '@firelaunch/tv/hero-image-queue';
 
 function artwork(url: string): string {
@@ -309,7 +309,6 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
   }, [artScope, sources, spotlight?.id, current.screen, inventory]);
   const displayedSpotlight = heroCopy?.scope === artScope ? heroCopy.content : spotlight;
   const item = activeItem(tv, current);
-  const privateDrafts = hosted && inventory ? inventory.items.filter(value => value.kind === 'video' && !spec.content.some(content => content.id === catalogContentId(value.id))).slice(0, 8) : [];
   const focus = (id: string) => current.focusId === id ? ' focused' : '';
   const selectFocus = (focusId: string) => setState(transition(tv, { screen: 'page', pageId: page.id, focusId }, 'select'));
   const style = { '--tv-accent': tv.brand.primaryColor, '--tv-accent-ink': accentTextColor(tv.brand.primaryColor), '--tv-bg': tv.brand.backgroundColor, '--tv-text': tv.brand.textColor, fontFamily: tv.brand.typography === 'serif' ? 'Georgia, serif' : 'inherit' } as React.CSSProperties;
@@ -370,10 +369,6 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
                 </button>;
               })}</div>}
             </section>)}
-            {privateDrafts.length > 0 && <section className="tv-module tv-grid studio-private-artwork" aria-label="Private video draft artwork">
-              <h3>Private video drafts · artwork preview only</h3><div className="tv-items">{privateDrafts.map(draft =>
-                <div className="tv-card" key={draft.id}><span className="tv-art"><OwnedArtwork item={draft} assets={inventory!.mediaAssets} projectId={spec.id} accountId={accountId ?? null} className="studio-draft-art" fallback={<span aria-label="Artwork unavailable">▣</span>}/></span><span className="tv-card-caption">{draft.creatorOverrides?.title ?? draft.sourceRecord.metadata.title}</span></div>)}</div>
-            </section>}
           </div><span className="tv-scroll-indicator" ref={scrollIndicatorRef} aria-hidden="true" /></div>
         </> : item && <div className={'tv-overlay tv-' + current.screen}>
           {current.screen === 'detail' ? <>

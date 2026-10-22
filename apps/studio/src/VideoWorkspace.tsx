@@ -97,7 +97,7 @@ export function VideoWorkspace({ selection, project, onIdentity, onClose, onProj
       {page === 'video' && item && <div className="video-workspace-summary"><div><strong>{title}</strong><p>{asset ? <VideoLibraryStatus projectId={selection.projectId} assetId={asset.id}/> : 'Add an MP4 to continue'}</p></div></div>}
       {inventory && (!selection.itemId || item || createdId.current === selection.itemId) && <NewVideoUpload accountId={selection.accountId} projectId={selection.projectId} inventory={inventory} refresh={refresh} page={page} {...(item ? { existingItem: item } : {})} onCreated={id => { createdId.current = id; rememberVideoPage(videoPageKey(selection.accountId, selection.projectId, id), page); onIdentity(id); }} onClose={requestClose} onBusyChange={value => { uploadingRef.current = value; setUploading(value); }}/ >}
       {page === 'details' && item && asset && <VideoSubtitles key={`${selection.accountId}:${selection.projectId}:${item.id}:${asset.id}`} projectId={selection.projectId} itemId={item.id} videoAssetId={asset.id}/>}
-      {page === 'publish' && !item && inventory && <p>Upload a video on the Video page before reviewing publication.</p>}
+      {page === 'publish' && !item && inventory && <p>Upload a video on the Video page before adding it to this channel.</p>}
       {inventory && item && (page === 'channel' || page === 'publish') && <VideoReview page={page} project={project} item={item} inventory={inventory} refresh={refresh} onProjectUpdate={onProjectUpdate} onNavigate={selectPage}/>}
       {uploading && <p role="status" className="video-workspace-lock">Keep this workspace open while the private draft is being prepared. You can close it once transfer begins.</p>}
     </div>

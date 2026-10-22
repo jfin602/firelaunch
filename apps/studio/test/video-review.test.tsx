@@ -23,149 +23,72 @@ const art = { schemaVersion: 1, id: artId, creatorAccountId: owner, projectId, c
 const inventory = { schemaVersion: 1, creatorAccountId: owner, projectId, revision: 5, sources: [source], items: [item], mediaAssets: [video, art], collections: [] } as any;
 const response = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
 
-test('unverified, failed and revoked media cannot enter the guided publication control', async () => {
+
+test('private READY video offers one Publish action without a live release wizard', async () => {
   const prior = globalThis.fetch;
-  let state = 'failed';
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
-    const route = String(input);
-    if (route.endsWith('/media-uploads')) return response({ uploadId: id('up', '1'), uploadState: state === 'unverified' ? 'completed' : 'verified', processing: { state } });
-    if (route.endsWith('/deployment')) return response({ error: { message: 'Not found' } }, 404);
-    throw new Error(route);
+  const privateProject = { ...project, spec: { ...project.spec, content: [], pages: [{ ...project.spec.pages[0], modules: [] }] } };
+  const requests: { path: string; body?: any }[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input);
+    if (path.endsWith('/media-uploads')) return response({ uploadId: id('up', '1'), uploadState: 'verified', processing: { state: 'ready' } });
+    if (path.endsWith('/video-inclusion')) {
+      requests.push({ path, body: JSON.parse(String(init?.body)) });
+      return response({ ...privateProject, revision: 4, spec: project.spec });
+    }
+    throw new Error(path);
   }) as typeof fetch;
   try {
-    const mounted = render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item, inventory, refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await screen.findByText(/Processing failed/);
+    let updated = 0;
+    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project: privateProject, item, inventory,
+      refresh: async () => inventory, onProjectUpdate: () => { updated++; } }));
+    await waitFor(() => assert.equal(screen.getByRole('button', { name: 'Publish' }).hasAttribute('disabled'), false));
+    assert.ok(screen.getByText('Private'));
+    assert.equal(screen.queryByText(/Private video drafts/), null);
     assert.equal(screen.queryByRole('button', { name: 'Review live channel' }), null);
-    assert.equal(screen.queryByRole('button', { name: 'Add to channel preview' }), null);
-    mounted.unmount(); state = 'revoked';
-    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item, inventory, refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await screen.findByText(/Video rights were revoked/);
-    assert.equal(screen.queryByRole('button', { name: 'Review live channel' }), null);
+    fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+    await waitFor(() => assert.equal(updated, 1));
+    assert.deepEqual(requests[0]?.body, { expectedRevision: 3, expectedCatalogRevision: 5, itemId, action: 'publish' });
   } finally { cleanup(); globalThis.fetch = prior; }
 });
 
-test('pending video status does not falsely say a confirmed video needs processing', () => {
+test('included video offers Remove without deleting its Library record', async () => {
   const prior = globalThis.fetch;
+  const requests: any[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input);
+    if (path.endsWith('/media-uploads')) return response({ uploadId: id('up', '1'), uploadState: 'verified', processing: { state: 'ready' } });
+    if (path.endsWith('/video-inclusion')) { requests.push(JSON.parse(String(init?.body))); return response({ ...project, revision: 4 }); }
+    throw new Error(path);
+  }) as typeof fetch;
+  try {
+    let updated = 0;
+    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item, inventory,
+      refresh: async () => inventory, onProjectUpdate: () => { updated++; } }));
+    assert.ok(screen.getByText('In Channel'));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove from Channel' }));
+    await waitFor(() => assert.equal(updated, 1));
+    assert.equal(requests[0]?.action, 'remove');
+    assert.equal(requests[0]?.itemId, itemId);
+  } finally { cleanup(); globalThis.fetch = prior; }
+});
+
+test('unready and revoked private videos cannot Publish', async () => {
+  const prior = globalThis.fetch;
+  const privateProject = { ...project, spec: { ...project.spec, content: [], pages: [{ ...project.spec.pages[0], modules: [] }] } };
+  let state = 'failed';
   globalThis.fetch = (async (input: RequestInfo | URL) => {
-    if (String(input).endsWith('/media-uploads')) return new Promise<Response>(() => {});
-    if (String(input).endsWith('/deployment')) return response({ error: { message: 'Not found' } }, 404);
+    if (String(input).endsWith('/media-uploads')) return response({ uploadId: id('up', '1'), uploadState: 'verified', processing: { state } });
     throw new Error(String(input));
   }) as typeof fetch;
   try {
-    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item, inventory,
+    const first = render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project: privateProject, item, inventory,
       refresh: async () => inventory, onProjectUpdate: () => {} }));
-    assert.ok(screen.getByText('Checking video status…'));
-    assert.equal(screen.queryByText(/Private video processing must finish/), null);
-    assert.equal(screen.queryByRole('button', { name: 'Review live channel' }), null);
-  } finally { cleanup(); globalThis.fetch = prior; }
-});
-
-test('owned release summary distinguishes published video from later private draft changes', async () => {
-  const prior = globalThis.fetch;
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
-    const route = String(input);
-    if (route.endsWith('/media-uploads')) return response({ uploadId: id('up', '1'), uploadState: 'verified', processing: { state: 'ready' } });
-    if (route.endsWith('/deployment')) return response({ schemaVersion: 1, id: deploymentId, creatorAccountId: owner, projectId, channelId: projectId, appName: 'Films', packageId: 'com.creator.films', releaseControl: 'creator', nativeReleaseApproval: 'pending_creator', consoleEvidence: { state: 'none' } });
-    if (route.endsWith('/current-summary')) return response({ releaseId: id('rel', '2'), sequence: 2, revisions: { channel: 2, catalog: 4 }, catalogItemIds: [itemId] });
-    throw new Error(route);
-  }) as typeof fetch;
-  try {
-    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item, inventory, refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await screen.findByText(/Published in live release #2 · newer private draft changes await approval/);
-    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Review live channel' })));
-  } finally { cleanup(); globalThis.fetch = prior; }
-});
-
-test('READY owned video remains a private draft until its stable content is placed on a shelf and separately published', async () => {
-  const prior = globalThis.fetch;
-  const unplaced = { ...project, spec: { ...project.spec, pages: [{ ...project.spec.pages[0], modules: [] }] } };
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
-    const route = String(input);
-    if (route.endsWith('/media-uploads')) return response({ uploadId: id('up', '1'), uploadState: 'verified', processing: { state: 'ready' } });
-    if (route.endsWith('/deployment')) return response({ error: { message: 'Not found' } }, 404);
-    throw new Error(route);
-  }) as typeof fetch;
-  try {
-    const firstView = render(createElement(VideoReview, { page: 'channel', onNavigate: () => {}, project: unplaced, item, inventory,
+    await screen.findByText(/Processing failed/);
+    assert.equal(screen.getByRole('button', { name: 'Publish' }).hasAttribute('disabled'), true);
+    first.unmount(); state = 'revoked';
+    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project: privateProject, item, inventory,
       refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Add to channel preview' })));
-    assert.match(screen.getByText(/When this video is ready/).textContent ?? '', /collection choice.*saved separately/);
-    firstView.unmount();
-    const shelved = render(createElement(VideoReview, { page: 'channel', onNavigate: () => {}, project, item, inventory,
-      refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await screen.findByText('This video is in your private channel preview.');
-    assert.equal(screen.queryByRole('button', { name: 'Add to channel preview' }), null);
-    shelved.unmount();
-    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item, inventory,
-      refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await screen.findByText('Private draft · this video is not in the current live release.');
-    assert.equal(item.id, itemId);
-    assert.equal(project.spec.pages[0].modules[0].contentIds[0], contentId);
-  } finally { cleanup(); globalThis.fetch = prior; }
-});
-
-test('private preview reuses confirmed asset rights without source or artwork reapproval', async () => {
-  const prior = globalThis.fetch;
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
-    const route = String(input);
-    if (route.endsWith('/media-uploads')) return response({ uploadId: id('up', '1'), uploadState: 'verified', processing: { state: 'ready' } });
-    if (route.endsWith('/deployment')) return response({ error: { message: 'Not found' } }, 404);
-    throw new Error(route);
-  }) as typeof fetch;
-  try {
-    render(createElement(VideoReview, { page: 'channel', onNavigate: () => {}, project: { ...project, spec: { ...project.spec, content: [] } }, item,
-      inventory: { ...inventory, sources: [{ ...source, state: 'discovered', permission: { retrieval: 'unknown', tvDisplay: 'unknown' } }], mediaAssets: [video] },
-      refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await screen.findByRole('button', { name: 'Add to channel preview' });
-    assert.equal(screen.queryByText(/Confirm source permission on Publish/), null);
-    assert.equal(screen.queryByText(/Approve your uploaded thumbnail on Publish/), null);
-    assert.equal(screen.queryByRole('button', { name: 'Review live channel' }), null);
-  } finally { cleanup(); globalThis.fetch = prior; }
-});
-
-test('Publish reuses one upload consent for its video and thumbnail', async () => {
-  const prior = globalThis.fetch;
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
-    const route = String(input);
-    if (route.endsWith('/media-uploads')) return response({ uploadId: id('up', '1'), uploadState: 'verified', processing: { state: 'ready' } });
-    if (route.endsWith('/deployment')) return response({ error: { message: 'Not found' } }, 404);
-    throw new Error(route);
-  }) as typeof fetch;
-  try {
-    const scoped = (use: string) => ({ ...rights(use), attestationVersion: 'channel-media-v1' });
-    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item,
-      inventory: { ...inventory, sources: [{ ...source, type: 'creator_upload', state: 'discovered',
-        permission: { retrieval: 'unknown', tvDisplay: 'unknown' } }], mediaAssets: [
-        { ...video, tvDisplayRights: scoped('television_display'), tvPlaybackRights: scoped('television_playback') },
-        { ...art, tvDisplayRights: scoped('television_display') }] },
-      refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await screen.findByText('Private draft · this video is not in the current live release.');
-    assert.equal(screen.queryByText('Confirm your source'), null);
-    assert.equal(screen.queryByText('Approve your thumbnail'), null);
-    assert.equal(screen.queryByRole('checkbox'), null);
-    assert.ok(screen.getByRole('button', { name: 'Review live channel' }));
-  } finally { cleanup(); globalThis.fetch = prior; }
-});
-
-test('stale channel revision blocks generation without writing a new draft', async () => {
-  const prior = globalThis.fetch;
-  let writes = 0;
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const route = String(input);
-    if (route.endsWith('/media-uploads')) return response({ uploadId: id('up', '1'), uploadState: 'verified', processing: { state: 'ready' } });
-    if (route.endsWith('/deployment')) return response({ error: { message: 'Not found' } }, 404);
-    if (route.endsWith('/catalog-draft') && init?.method !== 'POST') return response(null);
-    if (route.endsWith('/catalog-draft') && init?.method === 'POST') { writes++; throw new Error('Unexpected draft write'); }
-    if (route.endsWith('/catalog')) return response(inventory);
-    if (route.endsWith(`/${projectId}`)) return response({ ...project, revision: 4 });
-    throw new Error(route);
-  }) as typeof fetch;
-  try {
-    render(createElement(VideoReview, { page: 'channel', onNavigate: () => {}, project: { ...project, spec: { ...project.spec, content: [] } }, item, inventory,
-      refresh: async () => inventory, onProjectUpdate: () => {} }));
-    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Add to channel preview' })));
-    fireEvent.click(screen.getByRole('button', { name: 'Add to channel preview' }));
-    await screen.findByText(/Catalog or channel changed elsewhere/);
-    assert.equal(writes, 0);
+    await screen.findByText(/Video rights were revoked/);
+    assert.equal(screen.getByRole('button', { name: 'Publish' }).hasAttribute('disabled'), true);
   } finally { cleanup(); globalThis.fetch = prior; }
 });
