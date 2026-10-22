@@ -1,5 +1,14 @@
 # P9 — Live Channel Publishing & App Updates
 
+## NEW PRE-P9 DEPENDENCY — P8D multimedia implementation (owner decision 2026-10-22)
+
+**Phase 9 remains PLANNED / NOT ACTIVATED; do not bump `0.9.0` yet.** Owner authorized [P8D](../p8d/README.md) **now**, to support Audio MP3 and Book Showcase with optional SAME-book audiobook MP3 (no TV reader), before larger P9 installed-app publication/update polishing. Its five manually executed Codex checkpoints target `0.8.14`/0.8.15/0.8.16/0.8.17 plus unchanged P5 closeout 0.8.17; **P1 ready now**. P8C [historical final closeout](../p8/closeout.md) is **NOT GREEN** for unproved static-section Vega parity and hero art composition; the owner explicitly defers those as P8D ENTRY gates without changing past evidence or waiving native proof for P8D. P9 compatibility decisions must account for the new audiobook binding/player, unknown installed renderer capabilities defaulting to `Requires App Update/Blocked`, and separately approved native package version lineage. Phase 9 entry remains a future explicit owner authorization after P8D.
+
+Older P8C "not yet executed" notes below are dated history, superseded by actual P8C closeout + this P8D priority.
+
+---
+
+
 ## Current P9 gate: manually executed P8C acceptance is pending (2026-10-21 local / 2026-10-22 UTC)
 
 [Phase 8's final P8C](../p8c/README.md) is now an AUTHORED four-prompt **manual Codex-browser stack, no runner**. Its agents own separate version bumps/commits/protected staged browser checks at 0.8.11, 0.8.12 and 0.8.13; P4 remains unchanged 0.8.13, validates new Vega Image Banner/Image+Text parity plus final staged owner journey and writes/commits `docs/tasks/p8/closeout.md` with evidence-backed result. **Not executed yet. Phase 8 remains OPEN; P9 not activated.** Start 0.9.0 only after an explicit owner-approved Phase 8 source/handoff decision; do not infer approval from document or prompt writing. C7 R4 earlier tested playback and c8-ui3 0.8.10 deployed/NOT GREEN remain separate dated evidence. Earlier P8C *planning only* notes below are superseded for prompt-authoring status.
