@@ -57,7 +57,7 @@ function Intro({ onCreate, busy, hosted }: { onCreate: (title: string, sample: b
   return <div className="welcome"><div className="welcome-symbol">✳</div><span className="eyebrow">YOUR CHANNEL STARTS HERE</span><h1>Stories belong<br/><em>on the big screen.</em></h1><p>Shape your brand, curate a collection, and explore the TV experience before writing a line of code.</p>
     <div className="welcome-form"><div className="steps"><span className={step === 0 ? 'current' : ''}>01 Identity</span><span className={step === 1 ? 'current' : ''}>02 First look</span></div>
       {step === 0 ? <form onSubmit={event => { event.preventDefault(); if (title.trim()) setStep(1); }}><Field label="CHANNEL NAME"><input autoFocus required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} placeholder="e.g. Wild Earth" /></Field><button className="primary" type="submit">Continue <span>→</span></button></form>
-        : <div><h2>{title}</h2>{hosted && <><label className="check"><input type="radio" name="entry" checked={catalog} onChange={() => setCatalog(true)}/> Start with my catalog</label><label className="check"><input type="radio" name="entry" checked={!catalog} onChange={() => setCatalog(false)}/> Start with a prompt</label></>}{catalog ? <p>Create a private channel workspace, then add a creator-controlled file, feed snapshot or manual first item. Inventory stays draft until separately approved for TV.</p> : <><p>{hosted ? 'Start a blank private draft, then attach your reviewed catalog media. No demo video is added to hosted channels.' : 'Start with original concept artwork and a procedural local demo clip, or begin blank.'}</p>{!hosted && <label className="check"><input type="checkbox" checked={sample} onChange={event => setSample(event.target.checked)} /> Add rights-safe demo collection</label>}<Field label="INITIAL AGENT REQUEST (OPTIONAL)"><textarea maxLength={2000} value={request} onChange={event => setRequest(event.target.value)} placeholder="e.g. Add page Explore" /></Field></>}<div className="button-row"><button onClick={() => setStep(0)}>← Back</button><button className="primary" disabled={busy} onClick={() => void onCreate(title.trim(), !catalog && sample, catalog ? '' : request.trim(), catalog)}>{busy ? 'Creating…' : 'Create channel →'}</button></div></div>}
+        : <div><h2>{title}</h2>{hosted && <><label className="check"><input type="radio" name="entry" checked={catalog} onChange={() => setCatalog(true)}/> Start with my catalog</label><label className="check"><input type="radio" name="entry" checked={!catalog} onChange={() => setCatalog(false)}/> Start with a prompt</label></>}{catalog ? <p>Your private Home starts with one Hero and one empty content row. Add owned content in Library, then choose it in Channel → Pages & Layout. Nothing is published automatically.</p> : <><p>{hosted ? 'Your private Home starts with one Hero and one empty content row. Add reviewed, owned content in Library before choosing it for TV Preview. No demo video is added.' : 'Start with original concept artwork and a procedural local demo clip, or begin blank.'}</p>{!hosted && <label className="check"><input type="checkbox" checked={sample} onChange={event => setSample(event.target.checked)} /> Add rights-safe demo collection</label>}<Field label="INITIAL AGENT REQUEST (OPTIONAL)"><textarea maxLength={2000} value={request} onChange={event => setRequest(event.target.value)} placeholder="e.g. Add page Explore" /></Field></>}<div className="button-row"><button onClick={() => setStep(0)}>← Back</button><button className="primary" disabled={busy} onClick={() => void onCreate(title.trim(), !catalog ? sample : false, catalog ? '' : request.trim(), catalog)}>{busy ? 'Creating…' : 'Create channel →'}</button></div></div>}
     </div></div>;
 }
 
@@ -191,7 +191,14 @@ function Content({ project, commit, onDirtyChange, accountId, libraryRevision, p
     if (spec.pages.some(candidate => candidate.title.toLocaleLowerCase() === title.toLocaleLowerCase())) {
       setPageError('A page with this name already exists. Choose another name.'); pageName.current?.focus(); return;
     }
-    const next = createPageFromTemplate(newId('page'), title, pageTemplate);
+    let next = createPageFromTemplate(newId('page'), title, pageTemplate);
+    const usedIds = new Set(spec.pages.flatMap(candidate => [candidate.id, ...candidate.modules.map(module => module.id)]));
+    for (let attempt = 0; attempt < 5 && [next.id, ...next.modules.map(module => module.id)].some(id => usedIds.has(id)); attempt++) {
+      next = createPageFromTemplate(newId('page'), title, pageTemplate);
+    }
+    if ([next.id, ...next.modules.map(module => module.id)].some(id => usedIds.has(id))) {
+      setPageError('Could not make a unique page. Try again.'); return;
+    }
     pageSubmitting.current = true; setPageSaving(true); setPageError('');
     try {
       if (await commit({ type: 'addPage', page: next })) {
@@ -215,7 +222,7 @@ function Content({ project, commit, onDirtyChange, accountId, libraryRevision, p
     {pageDialogOpen && <div className="page-dialog-backdrop"><div ref={pageDialog} role="dialog" aria-modal="true" aria-labelledby="new-page-heading" className="page-dialog" onKeyDown={onPageDialogKeyDown}>
       <h3 id="new-page-heading">Create a page</h3><p>Name your page and choose a starting layout. You can choose content after creating it.</p>
       <form onSubmit={event => void createPage(event)}><label htmlFor="new-page-name">Page name</label><input ref={pageName} id="new-page-name" maxLength={120} required value={newPage} onChange={event => { setNewPage(event.target.value); setPageError(''); }} />
-        <fieldset><legend>Starting layout</legend><div className="page-template-options">{(['hero', 'grid', 'rows'] as const).map(choice => <label key={choice} className={`page-template-option ${pageTemplate === choice ? 'selected' : ''}`}><input type="radio" name="page-template" value={choice} checked={pageTemplate === choice} onChange={() => setPageTemplate(choice)} /><span className={`page-template-preview ${choice}`} aria-hidden="true"><i/><i/><i/><i/></span><strong>{choice === 'hero' ? 'Hero' : choice === 'grid' ? 'Grid' : 'Rows'}</strong><small>{choice === 'hero' ? 'A featured video and a row' : choice === 'grid' ? 'A collection of video tiles' : 'Two video rows'}</small></label>)}</div></fieldset>
+        <fieldset><legend>Starting layout</legend><div className="page-template-options">{(['hero', 'grid', 'rows'] as const).map(choice => <label key={choice} className={`page-template-option ${pageTemplate === choice ? 'selected' : ''}`}><input type="radio" name="page-template" value={choice} checked={pageTemplate === choice} onChange={() => setPageTemplate(choice)} /><span className={`page-template-preview ${choice}`} aria-hidden="true"><i/><i/><i/><i/></span><strong>{choice === 'hero' ? 'Hero' : choice === 'grid' ? 'Grid' : 'Rows'}</strong><small>{choice === 'hero' ? 'One featured item and a content row' : choice === 'grid' ? 'A grid of content tiles' : 'Two content rows'}</small></label>)}</div></fieldset>
         {pageError && <p className="page-dialog-error" role="alert">{pageError}</p>}
         <div className="button-row"><button type="button" onClick={closePageDialog} disabled={pageSaving}>Cancel</button><button className="primary" type="submit" disabled={pageSaving}>{pageSaving ? 'Creating…' : 'Create page'}</button></div>
       </form></div></div>}
@@ -426,7 +433,7 @@ export default function App() {
     try {
       const created = await createProject(title);
       select(created); setVideoSelection(null); setProjects(previous => [...previous, created]); setNewChannel(false); setSurface(catalog ? 'Library' : 'Channel'); setChannelView('Pages & Layout');
-      if (sample && !session) for (const mutation of sampleMutations(created, [newId('item'), newId('item'), newId('item')], [newId('mod'), newId('mod'), newId('mod'), newId('mod')])) if (!(await commit(mutation))) break;
+      if (sample && !session) for (const mutation of sampleMutations(created, [newId('item'), newId('item'), newId('item')])) if (!(await commit(mutation))) break;
       if (request && projectRef.current?.id === created.id) {
         const result = await askAgent(projectRef.current, request);
         acceptProject(result.project);
