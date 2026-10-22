@@ -91,6 +91,36 @@ test('many projects and creator artwork are scoped; broken artwork falls back', 
   } finally { mock.restore(); }
 });
 
+test('Home reports saved audio rights and a book audiobook from their own assets', async () => {
+  const audioId = `ci_${'1'.repeat(32)}`, bookId = `ci_${'2'.repeat(32)}`;
+  const trackId = `ma_${'3'.repeat(32)}`, audiobookId = `ma_${'4'.repeat(32)}`, coverId = `ma_${'5'.repeat(32)}`;
+  const { creatorOverrides: _overrides, ...base } = film(firstId);
+  const item = (id: string, kind: 'audio' | 'book', title: string, mediaAssetIds: string[]) => ({ ...base,
+    id, kind, mediaAssetIds, sourceRecord: { ...base.sourceRecord,
+      externalId: { ...base.sourceRecord.externalId, value: id }, metadata: { title } },
+    externalIdentifiers: [{ ...base.sourceRecord.externalId, value: id }] });
+  const rights = (use: 'television_display' | 'television_playback') => ({ status: 'cleared', basis: 'creator_asserted',
+    permittedUse: use, assertedAt: '2026-10-20T00:00:00.000Z' });
+  const unknown = { status: 'unknown', basis: 'none', permittedUse: 'none' };
+  const asset = (id: string, catalogItemId: string, kind: 'audio' | 'artwork') => ({ schemaVersion: 1, id,
+    creatorAccountId: owner, projectId: firstId, catalogItemId, kind,
+    location: { type: 'https', url: `https://art.example/${id}.jpg` }, deliveryEligible: false,
+    tvDisplayRights: kind === 'artwork' ? rights('television_display') : unknown,
+    tvPlaybackRights: kind === 'audio' ? rights('television_playback') : unknown });
+  const mock = setup([first], () => json({ ...empty(firstId), sources: [source],
+    items: [item(audioId, 'audio', 'Private Track', [trackId]),
+      { ...item(bookId, 'book', 'Private Book', [audiobookId, coverId]), audiobook: { audioAssetId: audiobookId } }],
+    mediaAssets: [asset(trackId, audioId, 'audio'), asset(audiobookId, bookId, 'audio'), asset(coverId, bookId, 'artwork')] }));
+  try {
+    render(createElement(App));
+    const audioCard = await screen.findByRole('button', { name: 'Open Private Track in Library' });
+    const bookCard = screen.getByRole('button', { name: 'Open Private Book in Library' });
+    assert.match(audioCard.textContent ?? '', /Playback rights asserted/);
+    assert.match(bookCard.textContent ?? '', /Book · audiobook attached/);
+    assert.match(bookCard.textContent ?? '', /Cover display rights asserted · playback rights asserted/);
+  } finally { mock.restore(); }
+});
+
 test('video workspace opens directly from Home and Library, traps focus, and restores its opener', async () => {
   const mock = setup([first], () => json({ ...empty(firstId), sources: [source], items: [film(firstId)] }));
   try {

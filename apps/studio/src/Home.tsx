@@ -58,7 +58,7 @@ export function Home({ project, projects, accountId, hosted, libraryRevision = 0
             (item.kind === 'audio' || (item.kind === 'book' && value.id === item.audiobook?.audioAssetId)));
           const coverAsset = catalog?.mediaAssets.find(value => value.catalogItemId === item.id && value.kind === 'artwork');
           const title = item.creatorOverrides?.title ?? item.sourceRecord.metadata.title;
-          const playback = (item.kind === 'audio' ? audioAsset : asset)?.tvPlaybackRights?.status;
+          const playback = (item.kind === 'audio' || item.kind === 'book' ? audioAsset : asset)?.tvPlaybackRights?.status;
           const rights = playback === 'revoked' ? 'Playback rights revoked' : playback === 'cleared' ? 'Playback rights asserted' : 'Playback rights unknown';
           const coverRights = coverAsset?.tvDisplayRights?.status === 'revoked' ? 'Cover display rights revoked' :
             coverAsset?.tvDisplayRights?.status === 'cleared' ? 'Cover display rights asserted' : 'Cover display rights unknown';
