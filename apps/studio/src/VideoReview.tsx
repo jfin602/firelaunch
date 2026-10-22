@@ -31,6 +31,9 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
     ? privateArtwork.deliveryEligible && privateArtwork.tvDisplayRights?.status === 'cleared' ? privateArtwork : undefined
     : assets.find(value => value.kind === 'artwork' && value.location.type === 'https' && value.deliveryEligible && value.tvDisplayRights?.status === 'cleared');
   const sourceReady = !!source && !!managed && sourceUseEligible(source, managed, 'television_playback');
+  const completingArtwork = !!source && !!managed && !!privateArtwork && !privateArtwork.deliveryEligible &&
+    sourceReady && sourceUseEligible(source, privateArtwork, 'television_display') &&
+    privateArtwork.tvDisplayRights?.attestationVersion === 'channel-media-v1';
   const ready = !!managed && video?.uploadState === 'verified' && video.processing?.state === 'ready' &&
     managed.tvDisplayRights?.status === 'cleared' && managed.tvPlaybackRights?.status === 'cleared' && managed.deliveryEligible;
   const stableId = `item_${bytesToHex(sha256(new TextEncoder().encode(`catalog-content-v1\0${item.id}`))).slice(0, 32)}`;
@@ -135,7 +138,8 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
           <label className="check"><input type="checkbox" checked={sourceApproved} onChange={event => setSourceApproved(event.target.checked)}/> I control this video source and have TV display permission.</label>
           {sourceApproved && sourceEvidence ? <button disabled={busy} onClick={verifySource}>Save source permission</button> : <p>Choose proof and confirm permission to continue.</p>}</>
           : <p>Review this source’s permission in Catalog before publishing.</p>}</div>}
-      {!publicArtwork && <div className="video-review-requirement"><h4>Approve your thumbnail</h4>
+      {completingArtwork && !error && <p role="status">Preparing your confirmed thumbnail for channel review…</p>}
+      {!publicArtwork && (!completingArtwork || !!error) && <div className="video-review-requirement"><h4>Approve your thumbnail</h4>
         {privateArtwork?.tvDisplayRights?.status === 'cleared' ? <><p>Your uploaded thumbnail is private. Confirm it may appear on TV; FireLaunch will deliver the approved image when the channel goes live.</p>
           <label className="check"><input type="checkbox" checked={artworkApproved} onChange={event => setArtworkApproved(event.target.checked)}/> I approve TV display of this uploaded thumbnail.</label>
           {artworkApproved && <button disabled={busy} onClick={approveThumbnail}>Save thumbnail approval</button>}</>
