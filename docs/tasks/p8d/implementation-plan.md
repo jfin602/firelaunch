@@ -1,5 +1,16 @@
 # P8D — Runner plan with browser-required manual continuation
 
+## P5 OWNER OVERRIDE — final Phase 8 staging-first qualification (2026-10-22)
+
+[P5](P5-multimedia-closeout.txt) is an independently MANUALLY run, real-Codex-browser + native Vega **TRUE FINAL PHASE 8** closeout at actual unchanged `0.8.17` (metadata remains parser-assigned `0.8.18`). It **replaces the canonical `docs/tasks/p8/closeout.md` only after execution**, with a detailed P8D appendix at `docs/tasks/p8d/closeout.md`. Original P8C P4 `0.8.13` NOT GREEN evidence has already been copied verbatim to `docs/tasks/p8c/closeout-2026-10-22-not-green.md`. Do not rewrite that archive or relabel old status.
+
+Execution order is strict: (1) source/rights/operator/integrity preflight and minimum release smoke; (2) **FRESH protected staging deployment** of tested exact committed `0.8.17` candidate (even if previous current version matches), backup/schema14/rollback/old release protections; (3) **ONLY THEN** real owner Codex browser + native device acceptance across ALL Phase 8 waves; (4) up to **EIGHT targeted observed correction cycles R1–R8**, EACH: diagnose → local patch + focused safety tests → commit unchanged `0.8.17` → new hashed archived package → guarded backup/redeploy → fresh active source/JS/CSS readback → **then** staging browser/native retest; (5) one final aggregate `npm run test` on exact final source, with any post-aggregate code fix requiring another counted redeploy/retest; (6) final canonical Phase 8 report with independent gate statuses and P9 handoff. If physical Vega device remains down or owner/rights gates cannot pass, final report is NOT GREEN rather than fabricated. Eight cycles are a CAP, not a quota, and do not expand credentials/production/AWS authority.
+
+Earlier P5 language below describing just P8D's closeout or two repairs is superseded by this decision.
+
+---
+
+
 **2026-10-22.** Revised after the owner's explicit **convert-to-runner** decision. The prior plan's *all manual, no runner* instructions are superseded. [README](README.md) is the canonical execution guide, [design](../../design/multi-media-creator-experience.md) the functional contract and [assessment](prompt-assessment.md) the source/risk authority. P8C `docs/tasks/p8/closeout.md` stays historically NOT GREEN, but owner-deferred **for P8D entry**.
 
 ## Grammar and commit ownership
@@ -12,9 +23,9 @@ The exact parser in `scripts/codex-stack-core.mjs` accepts folder `p8d` as conti
 | P2 MP3 Audio | 0.8.15 | private durable MP3 upload, Add Audio modal, audio-player, Studio saved/owned browser | **Manual Codex** browser; exact commit subject `0.8.15` |
 | P3 Book Showcase | 0.8.16 | Add Book, portrait bookshelf/detail, optional MP3 same book/shared player | **Manual Codex** browser; exact commit subject `0.8.16` |
 | P4 Native & publish | 0.8.17 | mixed-media cards, native audio semantics, rights-safe immutable delivery, old-client block | **Manual Codex** browser/device; exact commit subject `0.8.17` |
-| P5 closeout | 0.8.18 assigned only | one final aggregate + owner browser + real Vega audio/book | **MANUAL** closeout, actual project version **0.8.17 unchanged** |
+| P5 TRUE Phase 8 closeout | 0.8.18 grammar only | mandatory staging-first, whole Phase 8 owner/browser+native, 8 correction/redeploy cycles maximum | **MANUAL**, canonical `docs/tasks/p8/closeout.md`, actual product **0.8.17 unchanged** |
 
-The runner auto-commits P1 and detects subsequent manual completions by the exact single-line Git commit subjects above. For manually executed P2–P4 use `git commit -m '0.8.15'`, etc., for the product+root version checkpoint, not a descriptive subject. Evidence commits can follow with a different descriptive subject and must not overwrite exact source identity. Re-run runner between manual tasks to advance the prefix; it always stops again at the next browser=yes prompt. P5 writes `docs/tasks/p8d/closeout.md` at unchanged 0.8.17. **Do not run `--closeout` automatically**, since browser required=yes stops it.
+The runner auto-commits P1 and detects subsequent manual completions by the exact single-line Git commit subjects above. For manually executed P2–P4 use `git commit -m '0.8.15'`, etc., for the product+root version checkpoint, not a descriptive subject. Evidence commits can follow with a different descriptive subject and must not overwrite exact source identity. Re-run runner between manual tasks to advance the prefix; it always stops again at the next browser=yes prompt. P5 writes the authoritative `docs/tasks/p8/closeout.md` at actual unchanged 0.8.17, plus `docs/tasks/p8d/closeout.md` as detailed media appendix, preserving the prior P8C result in its dated archive. **Do not run `--closeout` automatically**, since browser required=yes stops it.
 
 ## Preflight and P8C deferment
 
@@ -30,7 +41,7 @@ At prompt authoring, GitHub main root `package.json` and both `package-lock.json
 
 **P4:** real Vega generator audio/book/film projection and one common native audio-player semantics (D-pad/Back/seek/lifecycle), matching owner/rights-approved immutable byte-range MP3, installed app Requires App Update if unsupported, no unauthorized private/CDN delivery. Commit exact 0.8.17 before rollout. Actual device proof may remain BLOCKED if current VVD fails; don't pretend local native tests replace it.
 
-**P5:** one `npm run test` (already builds/typechecks), final active committed source vs stage, one real owner audio/book/mixed-media journey, actual rights-safe Vega package/audio+book device screenshot/log/audible seek and Back, original public release #1 unchanged and exact external statuses. Record GREEN/NOT GREEN, separate deferred P8C debts without requalifying them. No Phase 9 auto-entry.
+**P5:** first deploy exact committed source into protected staging (after minimum security/integrity preflight), then real owner/browser tests across Video/Export, P8B layouts, P8C editor/artwork, P8D audio/books/mixed media and real Vega device; up to EIGHT bounded diagnosed correction cycles with source commit + new SHA-verified protected redeploy BEFORE every changed-source live retest. One final aggregate `npm run test` on settled source, repeat if post-test source changes, then canonical final `docs/tasks/p8/closeout.md` and P8D appendix; preserve prior P8C historical NOT GREEN. Missing required native/security proof stays NOT GREEN; no P9 auto-entry.
 
 ## Operating guardrails
 
