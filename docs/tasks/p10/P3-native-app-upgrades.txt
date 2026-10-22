@@ -1,3 +1,8 @@
+DEFERRED PHASE 10 PLAN — DO NOT RUN AS WRITTEN.
+This prompt was migrated unchanged in substance from the superseded 2026-10-21 Phase 9 Live Publishing plan. The old 0.9.x version/Phase 9/runner references below are historical, NOT approved P10 execution metadata. Reassess against the actual Phase 9 Polish closeout and author 0.10.x-compatible execution before starting. Preserve installed-client safety, immutable approvals and protected public release #1.
+
+--- ORIGINAL PLANNED INSTRUCTIONS (ARCHIVAL, DEFERRED) ---
+
 TASK: Phase 9 P3-native-app-upgrades
 
 MODEL / ENTRY
