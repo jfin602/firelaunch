@@ -19,7 +19,7 @@ This issue journal records **owner-reported problems**, not implementation compl
 | **P9-003** | P1 required | Reorder Home quick actions: orange Edit Channel, Add Media to Library, one-click View fullscreen | Reported | [P9-003 details](issues/P9-003-home-quick-actions.md) |
 | **P9-004** | P1 required | Single persisted media-rights confirmation during Add Media; remove repeated blockers/status jargon across Studio | Reported | [P9-004 details](issues/P9-004-one-time-media-rights-confirmation.md) |
 | **P9-005** | P1 required | Compact Pages & Layout editor: borderless icon actions, animated drag section reorder, distinct New Page, top compact Add Section | Reported | [P9-005 details](issues/P9-005-compact-channel-layout-editor.md) |
-| **P9-006** | P1 required | Formal image-upload popup for channel logo, app background and image sections; aspect-safe display and Vega export | Reported | [P9-006 details](issues/P9-006-channel-branding-image-uploads.md) |
+| **P9-006** | P1 required | Formal image uploads for logo, channel-wide and per-page backgrounds (with Apply to all pages), and image sections; Vega export parity | Reported — amended 2026-10-22 | [P9-006 details](issues/P9-006-channel-branding-image-uploads.md) |
 | **P9-007** | P1 required | Standardize every Studio popup on New Page modal style, including all media and upload workflows and illustrative choice graphics where useful | Reported | [P9-007 details](issues/P9-007-unified-desert-heat-modal-design.md) |
 | **P9-008** | P1 required | Fix clipped foreground artwork in interactive/fullscreen Vega Preview and export; support non-16:9 aspect ratios without breaking TV layout | Reported | [P9-008 details](issues/P9-008-prevent-preview-image-clipping.md) |
 
