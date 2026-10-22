@@ -30,6 +30,71 @@ test('native hero stays bounded at HD and Full HD without a bottom gutter', asyn
   assert.doesNotMatch(source, /screen: \{ flex: 1, padding: 60 \}/);
 });
 
+test('generated native feature uses shared selection and fits a first selector at TV sizes', async () => {
+  const original = fixtureChannel();
+  const second = { ...original.content[0]!, id: `item_${'5'.repeat(32)}`, title: 'Second',
+    artwork: 'https://example.org/second.jpg', presentation: 'audio' as const };
+  const selector = { id: `mod_${'6'.repeat(32)}`, kind: 'rail' as const, title: 'Browse',
+    contentIds: [original.content[0]!.id, second.id] };
+  const lower = { id: `mod_${'7'.repeat(32)}`, kind: 'rail' as const, title: 'More',
+    contentIds: [original.content[0]!.id] };
+  const other = { id: `page_${'8'.repeat(32)}`, title: 'Other',
+    modules: [{ ...lower, id: `mod_${'9'.repeat(32)}` }] };
+  const spec = { ...original, content: [...original.content, second],
+    navigation: [...original.navigation, other.id],
+    pages: [{ ...original.pages[0]!, modules: [...original.pages[0]!.modules, selector, lower] }, other] };
+  const generated = await generateProject(spec);
+  const { tvLayout, featureArtworkFrame, featureScrollTarget } = await import(
+    `data:text/javascript,${encodeURIComponent(generated.files.get('src/tv-layout.js')!)}`);
+  for (const [width, height] of [[1280, 720], [1920, 1080], [960, 540]]) {
+    const layout = tvLayout(width, height);
+    assert.ok(layout.topInset + layout.headerHeight + layout.featureHeight +
+      layout.selectorHeight + 32 * layout.scale <= height, `${width}x${height} first row fits`);
+    for (const [presentation, ratio] of [['video', 16 / 9], ['audio', 1], ['information', 2 / 3]] as const) {
+      const frame = featureArtworkFrame(layout, presentation);
+      assert.ok(frame.width <= layout.contentWidth * 0.42);
+      assert.ok(frame.height <= layout.featureHeight);
+      assert.ok(frame.width / frame.height <= ratio + 0.001);
+    }
+  }
+  assert.equal(featureScrollTarget({ y: 490, height: 160 }, 90, 520, true), 0);
+  assert.equal(featureScrollTarget({ y: 900, height: 160 }, 0, 520, false), 552);
+  const runtime = await import(`data:text/javascript,${encodeURIComponent(generated.files.get('src/tv-runtime.js')!)}`);
+  const projected = JSON.parse(generated.files.get('src/channel.json')!);
+  const page = projected.pages[0];
+  assert.equal(runtime.heroSelector(page).selector.id, selector.id);
+  let state = runtime.initialState(projected);
+  assert.equal(runtime.heroSpotlight(page, state).id, original.content[0]!.id);
+  state = runtime.transition(projected, state, 'down');
+  state = runtime.transition(projected, state, 'right');
+  assert.equal(state.screen, 'page');
+  assert.equal(runtime.heroSpotlight(page, state).id, second.id);
+  const detail = runtime.transition(projected, state, 'select');
+  assert.equal(detail.screen, 'detail');
+  assert.equal(runtime.transition(projected, detail, 'back').focusId, state.focusId);
+  assert.equal(runtime.transition(projected, state, 'down').focusId,
+    `item:${page.id}:${lower.id}:${original.content[0]!.id}`);
+  const otherNav = runtime.transition(projected, runtime.initialState(projected), 'right');
+  assert.equal(runtime.transition(projected, otherNav, 'select').pageId, other.id);
+  assert.equal(runtime.heroSelector(projected.pages[1]), undefined);
+  const source = generated.files.get('src/App.js')!;
+  assert.doesNotThrow(() => parse(source, { sourceType: 'module', plugins: ['jsx'] }));
+  assert.match(source, /heroSelector\(page\)/);
+  assert.match(source, /heroSpotlight\(page, state\)/);
+  assert.match(source, /module === heroPair\?\.selector \? null/);
+  assert.match(source, /resizeMode="cover"/);
+  assert.match(source, /resizeMode="contain"/);
+  assert.match(source, /featureScrollTarget\(/);
+  assert.match(source, /ScrollView horizontal ref=\{rowRef\}/);
+  assert.match(source, /module\.kind === 'grid' && !featureSelector/);
+  assert.match(source, /height=\{featureSelector \? layout\.cardArtworkHeight/);
+  assert.match(source, /numberOfLines=\{featureSelector \? 1 : undefined\}/);
+  const grid = await generateProject({ ...spec, pages: [{ ...spec.pages[0]!,
+    modules: [spec.pages[0]!.modules[0]!, { ...selector, kind: 'grid' }, lower] }, other] });
+  const gridRuntime = await import(`data:text/javascript,${encodeURIComponent(grid.files.get('src/tv-runtime.js')!)}`);
+  assert.equal(gridRuntime.heroSelector(JSON.parse(grid.files.get('src/channel.json')!).pages[0]).selector.kind, 'grid');
+});
+
 test('native audio artwork remains centered and preserves portrait book covers', async () => {
   const generated = await generateProject(fixtureChannel());
   const helper = generated.files.get('src/tv-layout.js')!;

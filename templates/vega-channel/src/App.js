@@ -3,10 +3,10 @@ import { BackHandler, Image, Pressable, ScrollView, StyleSheet, Text, TVEventHan
 import { KeplerVideoSurfaceView, VideoPlayer } from '@amazon-devices/react-native-w3cmedia';
 import bundled from './channel.json';
 import { installRelease } from './release-client';
-import { activeItem, initialState, itemFocusId, navFocusId, transition } from './tv-runtime';
+import { activeItem, heroSelector, heroSpotlight, initialState, itemFocusId, navFocusId, transition } from './tv-runtime';
 import { createPlaybackController } from './playback-controller';
 import { createHlsPlayer, installHlsPolyfills } from './hlsjs/adapter';
-import { audioArtworkFrame, scrollTarget, tvLayout } from './tv-layout';
+import { audioArtworkFrame, featureArtworkFrame, featureScrollTarget, tvLayout } from './tv-layout';
 
 function formatTime(seconds) {
   const value = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
@@ -35,13 +35,55 @@ function StaticArtwork({ source, crop, banner, font, color, layout }) {
   return <View style={[artStyle, styles.missingArt]}><Text style={[font, color]}>Artwork unavailable</Text></View>;
 }
 
-function Section({ module, page, state, brand, font, focusStyle, layout, onLayout, onRowLayout, onItemLayout, setView }) {
+function heroAction(content) {
+  if (content.audiobook) return 'Listen to Audiobook';
+  if (content.presentation === 'information') return 'Explore';
+  return content.presentation === 'audio' ? 'Listen' : 'Watch';
+}
+
+function Feature({ content, brand, font, layout }) {
+  const [failedSource, setFailedSource] = useState(null);
+  const source = content.artwork?.startsWith('https://') ? content.artwork : null;
+  const visible = source && source !== failedSource;
+  const frame = featureArtworkFrame(layout, content.presentation);
+  const meta = [content.author, content.publicationDate?.slice(0, 4), content.category, content.series].filter(Boolean);
+  return <View style={[styles.feature, { height: layout.featureHeight, backgroundColor: brand.backgroundColor }]}>
+    {visible && <Image key={`back:${source}`} source={{ uri: source }} resizeMode="cover"
+      onError={() => setFailedSource(source)} style={styles.featureBackdrop} />}
+    <View style={styles.featureScrim} />
+    <View style={[styles.featureCopy, { padding: 20 * layout.scale }]}>
+      <Text style={[styles.featureKicker, font, { borderColor: brand.primaryColor }]}>FEATURED</Text>
+      <Text numberOfLines={2} style={[styles.featureTitle, font, { fontSize: 36 * layout.scale }]}>{content.title}</Text>
+      <Text numberOfLines={3} style={[styles.featureDescription, font, { fontSize: 18 * layout.scale }]}>{content.description}</Text>
+      {meta.length > 0 && <Text numberOfLines={1} style={[styles.featureMeta, font]}>{meta.join('  ·  ')}</Text>}
+      <Text style={[styles.featureAction, font, { borderColor: brand.primaryColor }]}>{heroAction(content)}  →</Text>
+    </View>
+    <View style={[styles.featureFrame, { width: layout.contentWidth * 0.42 }]}>
+      {visible ? <Image key={`front:${source}`} source={{ uri: source }} resizeMode="contain"
+        onError={() => setFailedSource(source)} style={{ width: frame.width, height: frame.height }} />
+        : <Text style={[font, styles.featureFallback]}>Artwork unavailable</Text>}
+    </View>
+  </View>;
+}
+
+function ItemArtwork({ source, resizeMode, height, font, color }) {
+  const [failedSource, setFailedSource] = useState(null);
+  const visible = source?.startsWith('https://') && source !== failedSource;
+  const style = [styles.artwork, { height }];
+  return visible ? <Image key={source} source={{ uri: source }} resizeMode={resizeMode}
+    onError={() => setFailedSource(source)} style={style} />
+    : <View style={[style, styles.missingArt]}><Text numberOfLines={1}
+      style={[font, color]}>Artwork unavailable</Text></View>;
+}
+
+function Section({ module, page, state, brand, font, focusStyle, layout, featureSelector,
+  onLayout, onRowLayout, onItemLayout, onRowScroll, rowRef, setView }) {
   const color = { color: brand.textColor };
   const aligned = { textAlign: module.alignment === 'center' ? 'center' : 'left' };
   const compact = module.spacing === 'compact';
   const surface = module.background === 'surface' ? styles.sectionSurface : null;
   const moduleSpacing = { marginVertical: 8 * layout.scale };
-  const title = module.title && <Text style={[styles.moduleTitle, { fontSize: 27 * layout.scale,
+  const title = module.title && <Text numberOfLines={featureSelector ? 1 : undefined} style={[styles.moduleTitle, { fontSize: 27 * layout.scale,
     marginBottom: 8 * layout.scale }, font, color, aligned]}>{module.title}</Text>;
   if (module.kind === 'text') return <View style={[styles.module, moduleSpacing, surface, { padding: 8 * layout.scale }]}>
     {title}<Text style={[styles.body, font, color, aligned]}>{module.body}</Text>
@@ -58,8 +100,7 @@ function Section({ module, page, state, brand, font, focusStyle, layout, onLayou
   }
   if (module.kind !== 'hero' && module.kind !== 'rail' && module.kind !== 'grid')
     throw new Error(`Unsupported TV section: ${module.kind}`);
-  return <View onLayout={onLayout} style={[styles.module, moduleSpacing, compact && styles.compactSection]}>
-    {title}<View onLayout={onRowLayout} style={module.kind === 'grid' ? styles.grid : styles.rail}>{module.items.map(content => {
+  const cards = module.items.map(content => {
       const focusId = itemFocusId(page.id, module.id, content.id);
       return <Pressable key={focusId} focusable={false} onPress={() => setView(previous => ({ ...previous,
         state: transition(previous.channel, { screen: 'page', pageId: page.id, focusId }, 'select') }))}
@@ -70,16 +111,18 @@ function Section({ module, page, state, brand, font, focusStyle, layout, onLayou
         style={[styles.card, { width: module.kind === 'hero' ? layout.heroWidth : layout.cardWidth,
           padding: 8 * layout.scale, marginRight: 12 * layout.scale },
           compact && styles.compactCard, state.focusId === focusId && [styles.focused, focusStyle]]}>
-        {content.artwork?.startsWith('https://') ? <Image source={{ uri: content.artwork }}
-          resizeMode={content.presentation === 'information' || content.presentation === 'audio' || module.kind === 'hero' || module.crop === 'contain' ? 'contain' : 'cover'}
-          style={[styles.artwork, { height: content.presentation === 'information' ? layout.cardArtworkHeight * 1.5 : module.kind === 'hero' ? layout.heroArtworkHeight : layout.cardArtworkHeight,
-            marginBottom: 8 * layout.scale }]} />
-          : <View style={[styles.artwork, { height: module.kind === 'hero' ? layout.heroArtworkHeight : layout.cardArtworkHeight,
-            marginBottom: 8 * layout.scale }]} />}
-        <Text style={[font, color, aligned]}>{content.title}</Text>
+        <ItemArtwork source={content.artwork} font={font} color={color}
+          resizeMode={featureSelector || content.presentation === 'information' || content.presentation === 'audio' || module.kind === 'hero' || module.crop === 'contain' ? 'contain' : 'cover'}
+          height={featureSelector ? layout.cardArtworkHeight : content.presentation === 'information' ? layout.cardArtworkHeight * 1.5 : module.kind === 'hero' ? layout.heroArtworkHeight : layout.cardArtworkHeight} />
+        <Text numberOfLines={featureSelector ? 1 : 2} style={[font, color, aligned]}>{content.title}</Text>
         <Text style={[styles.cardType, font, color]}>{content.presentation === 'information' ? 'Book' : content.presentation === 'audio' ? 'Audio' : 'Video'}</Text>
       </Pressable>;
-    })}</View>
+    });
+  return <View onLayout={onLayout} style={[styles.module, moduleSpacing, compact && styles.compactSection]}>
+    {title}{module.kind === 'grid' && !featureSelector ? <View onLayout={onRowLayout} style={styles.grid}>{cards}</View>
+      : <ScrollView horizontal ref={rowRef} showsHorizontalScrollIndicator={false} onLayout={onRowLayout}
+        onScroll={event => onRowScroll(module.id, event?.nativeEvent?.contentOffset?.x ?? 0)}
+        scrollEventThrottle={16} style={styles.rail}>{cards}</ScrollView>}
   </View>;
 }
 
@@ -193,6 +236,8 @@ export default function App() {
   const sectionLayouts = useRef(new Map());
   const rowLayouts = useRef(new Map());
   const itemLayouts = useRef(new Map());
+  const rowScrolls = useRef(new Map());
+  const rowOffsets = useRef(new Map());
   const scrollOffset = useRef(0);
   const indicatorTimer = useRef(null);
   const [scrollMetrics, setScrollMetrics] = useState({ viewport: 0, content: 0, offset: 0, visible: false });
@@ -213,16 +258,24 @@ export default function App() {
     const section = sectionLayouts.current.get(module?.id);
     const row = rowLayouts.current.get(module?.id);
     const card = itemLayouts.current.get(focusId);
+    const firstSelector = heroSelector(currentPage)?.selector.id === module?.id;
+    if ((module?.kind === 'rail' || firstSelector) && row && card) {
+      const offset = rowOffsets.current.get(module.id) ?? 0;
+      const targetX = card.x < offset + 8 ? Math.max(0, card.x - 8)
+        : card.x + card.width > offset + row.width - 8 ? card.x + card.width - row.width + 8 : offset;
+      if (targetX !== offset) rowScrolls.current.get(module.id)?.scrollTo({ x: targetX, animated: true });
+    }
     const focusedLayout = section && row && card
       ? { y: section.y + row.y + card.y, height: card.height } : section;
-    const target = scrollTarget(focusedLayout, scrollOffset.current, scrollMetrics.viewport);
+    const target = featureScrollTarget(focusedLayout, scrollOffset.current, scrollMetrics.viewport, firstSelector);
     if (target !== scrollOffset.current) scrollView.current?.scrollTo({ y: target, animated: true });
   };
   useEffect(() => {
     if (state.screen === 'page') revealFocus(state.focusId, channel.pages.find(candidate => candidate.id === state.pageId));
   }, [state.screen, state.pageId, state.focusId, scrollMetrics.viewport]);
   useEffect(() => {
-    sectionLayouts.current.clear(); rowLayouts.current.clear(); itemLayouts.current.clear(); scrollOffset.current = 0;
+    sectionLayouts.current.clear(); rowLayouts.current.clear(); itemLayouts.current.clear();
+    rowScrolls.current.clear(); rowOffsets.current.clear(); scrollOffset.current = 0;
   }, [state.pageId]);
   useEffect(() => () => { if (indicatorTimer.current) clearTimeout(indicatorTimer.current); }, []);
   useEffect(() => {
@@ -258,6 +311,8 @@ export default function App() {
     return () => { handler.disable(); back.remove(); };
   }, []);
   const page = channel.pages.find(candidate => candidate.id === state.pageId);
+  const heroPair = page && heroSelector(page);
+  const spotlight = page && heroSpotlight(page, state);
   const item = activeItem(channel, state);
   const brand = channel.brand;
   const focusStyle = { borderColor: brand.primaryColor };
@@ -289,7 +344,7 @@ export default function App() {
             style={[styles.navItem, { paddingVertical: 10 * layout.scale,
               paddingHorizontal: 14 * layout.scale, marginRight: 12 * layout.scale },
               state.focusId === navFocusId(target.id) && [styles.focused, focusStyle]]}>
-            <Text style={[font, { color: brand.textColor }]}>{target.title}</Text>
+            <Text numberOfLines={1} style={[font, { color: brand.textColor }]}>{target.title}</Text>
           </Pressable>)}</ScrollView>
       </View>
       <View style={styles.scrollArea}>
@@ -307,7 +362,22 @@ export default function App() {
             setScrollMetrics(previous => ({ ...previous, offset, visible: true }));
             if (indicatorTimer.current) clearTimeout(indicatorTimer.current);
             indicatorTimer.current = setTimeout(() => setScrollMetrics(previous => ({ ...previous, visible: false })), 1000);
-          }}>{page.modules.map(module => <Section key={module.id} module={module} page={page}
+          }}>{page.modules.map(module => module === heroPair?.selector ? null : module === heroPair?.hero && spotlight ?
+            <React.Fragment key={module.id}><Feature content={spotlight} brand={brand} font={font} layout={layout} />
+              <Section module={heroPair.selector} page={page} state={state} brand={brand} font={font}
+                focusStyle={focusStyle} layout={layout} featureSelector
+                onLayout={event => {
+                  const frame = layoutFrame(event);
+                  if (frame) sectionLayouts.current.set(heroPair.selector.id, frame);
+                }} onRowLayout={event => {
+                  const frame = layoutFrame(event);
+                  if (frame) rowLayouts.current.set(heroPair.selector.id, frame);
+                }} onItemLayout={(focusId, frame) => {
+                  itemLayouts.current.set(focusId, frame);
+                  if (state.screen === 'page' && state.focusId === focusId) revealFocus(focusId, page);
+                }} onRowScroll={(id, offset) => rowOffsets.current.set(id, offset)}
+                rowRef={instance => { if (instance) rowScrolls.current.set(heroPair.selector.id, instance); }}
+                setView={setView} /></React.Fragment> : <Section key={module.id} module={module} page={page}
             state={state} brand={brand} font={font} focusStyle={focusStyle} layout={layout}
             onLayout={event => {
               const frame = layoutFrame(event);
@@ -322,7 +392,9 @@ export default function App() {
             }} onItemLayout={(focusId, itemLayout) => {
               itemLayouts.current.set(focusId, itemLayout);
               if (state.screen === 'page' && state.focusId === focusId) revealFocus(focusId, page);
-            }} setView={setView} />)}</ScrollView>
+            }} onRowScroll={(id, offset) => rowOffsets.current.set(id, offset)}
+            rowRef={instance => { if (instance) rowScrolls.current.set(module.id, instance); }}
+            setView={setView} />)}</ScrollView>
         {scrollMetrics.visible && scrollMetrics.viewport > 0 && scrollMetrics.content > scrollMetrics.viewport + 2 &&
           <View pointerEvents="none" style={[styles.scrollIndicator, {
             height: Math.max(20, scrollMetrics.viewport ** 2 / scrollMetrics.content),
@@ -359,6 +431,18 @@ const styles = StyleSheet.create({
   navItem: { paddingVertical: 10, paddingHorizontal: 14, marginRight: 12, borderWidth: 2, borderColor: 'transparent', borderRadius: 6 },
   scrollArea: { flex: 1 }, scrollIndicator: { position: 'absolute', right: -2, width: 2,
     borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
+  feature: { flexDirection: 'row', overflow: 'hidden', borderRadius: 8, marginBottom: 2 },
+  featureBackdrop: { ...StyleSheet.absoluteFillObject, opacity: 0.6 },
+  featureScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.62)' },
+  featureCopy: { flex: 1, justifyContent: 'center', zIndex: 1 },
+  featureKicker: { color: '#E5EEE9', fontSize: 14, fontWeight: 'bold', borderLeftWidth: 4, paddingLeft: 8 },
+  featureTitle: { color: '#FFFFFF', fontWeight: 'bold', marginTop: 8 },
+  featureDescription: { color: '#F0F3F1', lineHeight: 25, marginTop: 6 },
+  featureMeta: { color: '#D0D9D3', fontSize: 17, marginTop: 8 },
+  featureAction: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold', marginTop: 12,
+    borderLeftWidth: 4, paddingLeft: 8 },
+  featureFrame: { alignItems: 'center', justifyContent: 'center', zIndex: 1 },
+  featureFallback: { color: '#E5EEE9', fontSize: 18 },
   module: { marginVertical: 8 }, moduleTitle: { fontSize: 27, marginBottom: 8 },
   body: { fontSize: 22, lineHeight: 32 }, sectionSurface: { backgroundColor: '#ffffff16', borderRadius: 8 },
   compactSection: { padding: 8, marginVertical: 8 }, comfortableSection: { padding: 20 },
@@ -366,7 +450,7 @@ const styles = StyleSheet.create({
   staticRight: { flexDirection: 'row-reverse' }, staticArt: { width: '45%', height: 220, backgroundColor: '#ffffff12' },
   bannerArt: { width: '60%' }, missingArt: { alignItems: 'center', justifyContent: 'center' },
   staticCopy: { flex: 1, paddingHorizontal: 24 }, compactCard: { marginRight: 8 },
-  rail: { flexDirection: 'row' }, grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  rail: { flexGrow: 0 }, grid: { flexDirection: 'row', flexWrap: 'wrap' },
   card: { padding: 8, borderWidth: 2, borderColor: 'transparent', borderRadius: 6, marginRight: 12 },
   artwork: { height: 124, width: '100%', marginBottom: 8 },
   cardType: { fontSize: 16, marginTop: 4 },

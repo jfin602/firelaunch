@@ -7,7 +7,25 @@ export function tvLayout(width, height) {
   const heroWidth = Math.min(contentWidth, heroArtworkHeight * 16 / 9 + 16 * scale);
   const cardArtworkHeight = Math.min(height * 0.17, contentWidth * 0.26 * 9 / 16);
   const cardWidth = Math.min(contentWidth, cardArtworkHeight * 16 / 9 + 16 * scale);
-  return { scale, horizontalInset, topInset, heroArtworkHeight, heroWidth, cardWidth, cardArtworkHeight };
+  const headerHeight = 70 * scale;
+  // One title line, card padding/art gap, one card title line, type and section margins.
+  // Selector book art is contained inside the same bounded card-art frame.
+  const selectorHeight = cardArtworkHeight + 124 * scale;
+  const featureHeight = Math.max(160 * scale, Math.min(height * 0.44,
+    height - topInset - headerHeight - selectorHeight - 32 * scale));
+  return { scale, horizontalInset, topInset, contentWidth, heroArtworkHeight, heroWidth, cardWidth, cardArtworkHeight,
+    headerHeight, selectorHeight, featureHeight };
+}
+
+export function featureArtworkFrame(layout, presentation) {
+  const height = layout.featureHeight * 0.78;
+  const ratio = presentation === 'information' ? 2 / 3 : presentation === 'audio' ? 1 : 16 / 9;
+  const width = Math.min(height * ratio, layout.contentWidth * 0.42);
+  return { width, height };
+}
+
+export function featureScrollTarget(layout, offset, viewportHeight, firstSelector) {
+  return firstSelector ? 0 : scrollTarget(layout, offset, viewportHeight);
 }
 
 export function audioArtworkFrame(width, height, portrait) {
