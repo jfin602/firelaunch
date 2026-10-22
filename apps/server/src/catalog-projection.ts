@@ -155,8 +155,18 @@ export class CatalogProjectionService {
       if (!blockedReason && item.kind !== 'book' && !mediaUrl) blockedReason = 'playback_rights_or_delivery_missing';
       const title = (item.creatorOverrides?.title ?? item.sourceRecord.metadata.title).trim().slice(0, 120).trim();
       const description = (item.creatorOverrides?.description ?? item.sourceRecord.metadata.description ?? '').slice(0, 2000);
+      const metadata = { ...item.sourceRecord.metadata, ...item.creatorOverrides };
+      const audiobook = item.kind === 'book' && item.audiobook ? assets.get(item.audiobook.audioAssetId) : undefined;
+      const audiobookUrl = audiobook?.kind === 'audio' && audiobook.catalogItemId === item.id &&
+        audiobook.deliveryEligible && mediaUseEligible(audiobook, 'television_playback')
+        ? assetPublicMediaUrl(audiobook) : undefined;
       const baseline = blockedReason ? null : contentSchema.parse({ id: contentId, title, description, artwork,
-        presentation, ...(mediaUrl ? { mediaUrl } : {}) });
+        presentation, ...(mediaUrl ? { mediaUrl } : {}),
+        ...(item.kind === 'book' && metadata.author ? { author: metadata.author } : {}),
+        ...(item.kind === 'book' && metadata.series ? { series: metadata.series.slice(0, 80) } : {}),
+        ...(item.kind === 'book' && metadata.narrator ? { narrator: metadata.narrator } : {}),
+        ...(item.kind === 'book' && metadata.publicationDate ? { publicationDate: metadata.publicationDate } : {}),
+        ...(audiobookUrl ? { audiobook: { mediaUrl: audiobookUrl } } : {}) });
       bindings.push({ catalogItemId: id, contentId, collectionIds, baseline, ...(blockedReason ? { blockedReason } : {}) });
     }
     // Reject snapshots made stale while resolving candidates. The eventual spec write

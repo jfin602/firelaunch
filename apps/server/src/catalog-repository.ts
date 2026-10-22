@@ -110,7 +110,10 @@ export class CatalogRepository {
       if (method === 'DELETE') {
         list.splice(index, 1);
         if (kind === 'media-assets') {
-          for (const item of snapshot.items) item.mediaAssetIds = item.mediaAssetIds.filter(value => value !== id);
+          for (const item of snapshot.items) {
+            item.mediaAssetIds = item.mediaAssetIds.filter(value => value !== id);
+            if (item.audiobook?.audioAssetId === id) delete item.audiobook;
+          }
         }
       } else {
         record = parseRecord(kind, raw, owner, project.data, id);

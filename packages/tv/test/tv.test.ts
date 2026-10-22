@@ -79,3 +79,18 @@ test('informational detail cannot play and Back returns to its card; audio can p
   state = transition(tv, state, 'right');
   assert.equal(transition(tv, transition(tv, state, 'select'), 'select').screen, 'playback');
 });
+
+test('a book audiobook uses the player and Back returns to its own detail', () => {
+  const spec = fixtureChannel();
+  const book = { id: 'item_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', title: 'Guide', description: 'A book',
+    artwork: 'assets/ocean.jpg', presentation: 'information' as const, audiobook: { mediaUrl: 'https://media.example/guide.mp3' } };
+  const module = { ...spec.pages[0]!.modules[0]!, kind: 'rail' as const, title: 'Books', contentIds: [book.id] };
+  const tv = televisionFromSpec({ ...spec, content: [book], pages: [{ ...spec.pages[0]!, modules: [module] }] });
+  let state = transition(tv, transition(tv, initialState(tv), 'down'), 'select');
+  assert.equal(state.screen, 'detail');
+  state = transition(tv, state, 'select');
+  assert.equal(state.screen, 'playback');
+  state = transition(tv, state, 'back');
+  assert.equal(state.screen, 'detail');
+  assert.equal(state.itemId, book.id);
+});

@@ -316,6 +316,12 @@ body { min-width: 0; }
 .catalog-library-art { display: grid; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 0; background: #30282a; color: var(--fl-muted); }
 .catalog-library-art-audio { aspect-ratio: 1 / 1; max-height: 230px; }
 .catalog-library-art-book, .catalog-library-art-listing { aspect-ratio: 2 / 3; max-height: 230px; }
+.book-workspace-cover { display: inline-flex; width: 128px; aspect-ratio: 2 / 3; overflow: hidden; border-radius: 8px; background: #303236; align-items: center; justify-content: center; }
+.book-workspace-cover img { width: 100%; height: 100%; object-fit: cover; }
+.tv-book-card .tv-art { aspect-ratio: 2 / 3; width: 55%; margin-inline: auto; }
+.tv-book-card .tv-art img { object-fit: contain; }
+.tv-detail:has(.tv-book-author)>img { aspect-ratio: 2 / 3; object-fit: contain; }
+.tv-book-author { font-weight: 700; }
 .catalog-library-art img { display: block; width: 100%; height: 100%; object-fit: cover; filter: none; }
 .catalog-library-art-fallback { font-size: 28px; }
 .catalog-library-copy { padding: 13px 14px 16px; gap: 6px; }

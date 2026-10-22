@@ -9,7 +9,7 @@ export function reconcile(tv: Television, state: TvState | null): TvState {
   if (state.screen === 'page') return rows.some(row => row.includes(state.focusId)) ? state : { screen: 'page', pageId: page.id, focusId: navFocusId(page.id) };
   const item = page.modules.flatMap(module => module.items).find(candidate => candidate.id === state.itemId);
   if (!item || !rows.some(row => row.includes(state.returnFocusId))) return { screen: 'page', pageId: page.id, focusId: navFocusId(page.id) };
-  if (!isPlayableContent(item)) return { ...state, screen: 'detail', focusId: `detail:${item.id}` };
+  if (!isPlayableContent(item) && !item.audiobook) return { ...state, screen: 'detail', focusId: `detail:${item.id}` };
   return state.screen === 'detail' ? { ...state, focusId: `play:${item.id}` } : state;
 }
 

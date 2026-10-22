@@ -42,7 +42,6 @@ export function PreviewArtwork({ contentId, source, inventory, projectId, accoun
 }
 
 export function Preview({ spec, selectedPageId, hosted = false, accountId, libraryRevision = 0, fullscreen = false, controlsVisible = true, onHideControls, onEnterFullscreen, onExitFullscreen, enterButtonRef, exitButtonRef }: { spec: ChannelSpec; selectedPageId?: string | undefined; hosted?: boolean; accountId?: string | null | undefined; libraryRevision?: number; fullscreen?: boolean; controlsVisible?: boolean; onHideControls?: () => void; onEnterFullscreen?: () => void; onExitFullscreen?: () => void; enterButtonRef?: React.Ref<HTMLButtonElement>; exitButtonRef?: React.Ref<HTMLButtonElement> }) {
-  const tv = televisionFromSpec(spec);
   const [inventory, setInventory] = useState<CatalogSnapshot | null>(null);
   useEffect(() => {
     setInventory(null);
@@ -52,6 +51,26 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
       [...data.items, ...data.mediaAssets].every(value => value.projectId === spec.id && value.creatorAccountId === accountId)) setInventory(data); }).catch(() => undefined);
     return () => { active = false; };
   }, [spec.id, hosted, accountId, libraryRevision]);
+  const previewContent = spec.content.map(content => {
+    if (!hosted || !inventory || inventory.projectId !== spec.id || inventory.creatorAccountId !== accountId || content.presentation !== 'information') return content;
+    const book = inventory.items.find(value => value.kind === 'book' && value.projectId === spec.id && value.creatorAccountId === accountId && catalogContentId(value.id) === content.id);
+    if (!book) return content;
+    const metadata = { ...book.sourceRecord.metadata, ...book.creatorOverrides };
+    const attached = inventory.mediaAssets.find(value => value.id === book.audiobook?.audioAssetId && value.catalogItemId === book.id &&
+      value.projectId === spec.id && value.creatorAccountId === accountId && value.kind === 'audio' &&
+      value.tvPlaybackRights?.status === 'cleared');
+    const privateAudioUrl = attached?.location.type === 'private_object'
+      ? `/api/projects/${encodeURIComponent(spec.id)}/private-objects/${encodeURIComponent(attached.location.objectId)}/audio` : undefined;
+    const publicAudioUrl = attached?.location.type === 'https' && attached.deliveryEligible &&
+      content.audiobook?.mediaUrl === attached.location.url ? attached.location.url : undefined;
+    const { audiobook: _previousAudio, ...safeContent } = content;
+    return { ...safeContent, ...(metadata.author ? { author: metadata.author } : {}),
+      ...(metadata.series ? { series: metadata.series.slice(0, 80) } : {}),
+      ...(metadata.narrator ? { narrator: metadata.narrator } : {}),
+      ...(metadata.publicationDate ? { publicationDate: metadata.publicationDate } : {}),
+      ...(privateAudioUrl || publicAudioUrl ? { audiobook: { mediaUrl: privateAudioUrl ?? publicAudioUrl! } } : {}) };
+  });
+  const tv = televisionFromSpec({ ...spec, content: previewContent });
   const [state, setState] = useState<TvState | null>(null);
   const current = reconcile(tv, state);
   const screenRef = useRef<HTMLDivElement>(null);
@@ -65,7 +84,7 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
   stateRef.current = current;
   const dispatch = (command: TvCommand) => {
     const active = activeItem(tvRef.current, stateRef.current);
-    if (stateRef.current.screen === 'playback' && active && contentPresentation(active) === 'audio' &&
+    if (stateRef.current.screen === 'playback' && active && (contentPresentation(active) === 'audio' || !!active.audiobook) &&
       (command === 'left' || command === 'right' || command === 'select')) {
       audioPlayerRef.current?.command(command); return;
     }
@@ -154,7 +173,8 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
                 <div className="tv-static-copy">{module.body && <p>{module.body}</p>}</div>
               </div> : module.kind === 'text' ? <p className={`tv-text-${module.alignment ?? 'left'} tv-text-${module.background ?? 'theme'} tv-text-${module.spacing ?? 'comfortable'}`}>{module.body}</p> : <div className={`tv-items tv-spacing-${module.spacing ?? 'comfortable'}`}>{module.items.map(content => {
                 const id = itemFocusId(page.id, module.id, content.id);
-                return <button key={id} data-tv-focus={id} className={'tv-card' + focus(id)} onClick={() => selectFocus(id)} aria-label={`Open ${content.title}`}>
+                const bookCard = inventory?.items.some(value => value.kind === 'book' && catalogContentId(value.id) === content.id);
+                return <button key={id} data-tv-focus={id} className={'tv-card' + (bookCard ? ' tv-book-card' : '') + focus(id)} onClick={() => selectFocus(id)} aria-label={`Open ${content.title}`}>
                   <span className="tv-art"><PreviewArtwork contentId={content.id} source={content.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/></span><span className="tv-card-caption">{content.title}</span>
                 </button>;
               })}</div>}
@@ -167,12 +187,14 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
         </> : item && <div className={'tv-overlay tv-' + current.screen}>
           {current.screen === 'detail' ? <>
             <PreviewArtwork contentId={item.id} source={item.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/>
-            <div className="tv-detail-copy"><span className="eyebrow">{contentPresentation(item) === 'video' ? 'NOW SHOWING' : contentPresentation(item) === 'audio' ? 'NOW LISTENING' : 'ABOUT THIS TITLE'} · {item.category ?? 'FEATURE'}</span><h2>{item.title}</h2><p>{item.description}</p>
-              {isPlayableContent(item) ? <button data-tv-focus={current.focusId} className="tv-play focused" onClick={() => dispatch('select')}>▶ &nbsp; {contentPresentation(item) === 'audio' ? 'Play audio' : 'Play film'}</button>
+            <div className="tv-detail-copy"><span className="eyebrow">{contentPresentation(item) === 'video' ? 'NOW SHOWING' : contentPresentation(item) === 'audio' ? 'NOW LISTENING' : item.author ? 'BOOK SHOWCASE' : 'ABOUT THIS TITLE'} · {item.category ?? 'FEATURE'}</span><h2>{item.title}</h2>
+              {item.author && <p className="tv-book-author">By {item.author}</p>}{item.series && <p>Series: {item.series}</p>}{item.publicationDate && <p>Published {item.publicationDate}</p>}
+              <p>{item.description}</p>{item.audiobook && item.narrator && <p>Narrated by {item.narrator}</p>}
+              {isPlayableContent(item) || item.audiobook ? <button data-tv-focus={current.focusId} className="tv-play focused" onClick={() => dispatch('select')}>▶ &nbsp; {item.audiobook ? 'Listen to Audiobook' : contentPresentation(item) === 'audio' ? 'Play audio' : 'Play film'}</button>
                 : <button data-tv-focus={current.focusId} className="tv-play focused" onClick={() => dispatch('back')}>← Back to channel</button>}
-              <small>{isPlayableContent(item) ? `Press Enter to play · ${fullscreen ? 'Backspace' : 'Escape'} to go back` : `Press ${fullscreen ? 'Backspace' : 'Escape'} to go back`}</small></div>
-          </> : <div className="tv-player">{contentPresentation(item) === 'audio'
-            ? <AudioPlayer ref={audioPlayerRef} key={item.id} source={item.mediaUrl!} title={item.title} autoPlay startMuted={tv.playback.startMuted}
+              <small>{isPlayableContent(item) || item.audiobook ? `Press Enter to listen or play · ${fullscreen ? 'Backspace' : 'Escape'} to go back` : `Press ${fullscreen ? 'Backspace' : 'Escape'} to go back`}</small></div>
+          </> : <div className="tv-player">{contentPresentation(item) === 'audio' || item.audiobook
+            ? <AudioPlayer ref={audioPlayerRef} key={item.id} source={item.audiobook?.mediaUrl ?? item.mediaUrl!} title={item.title} creator={item.narrator ?? item.author ?? ''} autoPlay startMuted={tv.playback.startMuted}
                 artwork={<PreviewArtwork contentId={item.id} source={item.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/>}
                 onBack={() => dispatch('back')}/>
             : <VideoPlayer key={item.id} source={item.mediaUrl!} startMuted={tv.playback.startMuted}

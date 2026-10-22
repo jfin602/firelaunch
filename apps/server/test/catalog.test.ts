@@ -111,6 +111,25 @@ databaseTest('catalog SQL ownership, revisions, references and rollback with two
     const removeRevision = (await one.read(a, aProject.id)).revision;
     await one.mutate(a, aProject.id, 'media-assets', 'DELETE', removeRevision, undefined, attached.id);
     await privateObjects.delete(a, aProject.id, upload.id);
+    const audioRevision = (await one.read(a, aProject.id)).revision;
+    const bookAudio = (await one.mutate(a, aProject.id, 'media-assets', 'POST', audioRevision, {
+      schemaVersion: 1, catalogItemId: aBook.id, kind: 'audio',
+      location: { type: 'private_object', objectId: audioUpload.id },
+      tvDisplayRights: unknown, tvPlaybackRights: unknown, deliveryEligible: false
+    })).record!;
+    const beforeBinding = await one.read(a, aProject.id);
+    const boundBook = beforeBinding.items.find(item => item.id === aBook.id)!;
+    const { id: _bookId, creatorAccountId: _bookOwner, projectId: _bookProject, ...bookRecord } = boundBook;
+    await one.mutate(a, aProject.id, 'items', 'PUT', beforeBinding.revision,
+      { ...bookRecord, audiobook: { audioAssetId: bookAudio.id } }, aBook.id);
+    const beforeAudioRemoval = await one.read(a, aProject.id);
+    assert.equal(beforeAudioRemoval.items.find(item => item.id === aBook.id)?.audiobook?.audioAssetId, bookAudio.id);
+    await one.mutate(a, aProject.id, 'media-assets', 'DELETE', beforeAudioRemoval.revision, undefined, bookAudio.id);
+    const afterAudioRemoval = await one.read(a, aProject.id);
+    assert.equal(afterAudioRemoval.items.find(item => item.id === aBook.id)?.audiobook, undefined);
+    assert.equal(afterAudioRemoval.items.find(item => item.id === aBook.id)?.mediaAssetIds.includes(bookAudio.id), false);
+    assert.equal(afterAudioRemoval.items.find(item => item.id === aBook.id)?.mediaAssetIds.includes(asset.id), true,
+      'removing audiobook keeps the book cover');
     assert.equal([...stored.values()].some(value => value.equals(png)), true, 'foreign upload remains private');
     await assert.rejects(two.mutate(b, bProject.id, 'media-assets', 'POST', 1,
       { schemaVersion: 1, catalogItemId: aBook.id, kind: 'artwork', location: { type: 'https', url: 'https://example.com/cover.jpg' },

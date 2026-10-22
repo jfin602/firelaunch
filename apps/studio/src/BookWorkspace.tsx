@@ -1,0 +1,271 @@
+import React, { useEffect, useRef, useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
+import { resolvedCatalogMetadata, type MediaAsset } from '@firelaunch/contracts';
+import { ApiError, deleteCatalogRecord, deletePrivateObject, readCatalog, readPrivateObjectMetadata,
+  uploadPrivateAudio, uploadPrivateMedia, writeCatalog, type CatalogSnapshot } from './api.js';
+import { AudioPlayer } from './AudioPlayer.js';
+import { OwnedArtwork } from './OwnedArtwork.js';
+
+const unknown = () => ({ status: 'unknown' as const, basis: 'none' as const, permittedUse: 'none' as const });
+const rights = (use: 'television_display' | 'television_playback', checked: boolean) => checked
+  ? { status: 'cleared' as const, basis: 'creator_asserted' as const, permittedUse: use, assertedAt: new Date().toISOString() }
+  : unknown();
+const reason = (error: unknown) => error instanceof ApiError && error.status === 409
+  ? 'The library changed in another tab. Review the latest saved book and retry.'
+  : error instanceof Error ? error.message : String(error);
+
+export function BookWorkspace({ projectId, accountId, itemId, onIdentity, onClose }: {
+  projectId: string; accountId: string; itemId?: string; onIdentity: (id: string) => void; onClose: () => void;
+}) {
+  const [inventory, setInventory] = useState<CatalogSnapshot | null>(null);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [title, setTitle] = useState('');
+  const [author, setAuthor] = useState('');
+  const [synopsis, setSynopsis] = useState('');
+  const [isbn, setIsbn] = useState('');
+  const [series, setSeries] = useState('');
+  const [publicationDate, setPublicationDate] = useState('');
+  const [narrator, setNarrator] = useState('');
+  const [cover, setCover] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [attachAudio, setAttachAudio] = useState(false);
+  const [displayRights, setDisplayRights] = useState(false);
+  const [playbackRights, setPlaybackRights] = useState(false);
+  const [bookshelfId, setBookshelfId] = useState('');
+  const [newBookshelf, setNewBookshelf] = useState('');
+  const [listening, setListening] = useState(false);
+  const [audioUrl, setAudioUrl] = useState('');
+  const dialog = useRef<HTMLDivElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const initialized = useRef('');
+  const refresh = async () => {
+    const data = await readCatalog(projectId);
+    if (data.projectId !== projectId || data.creatorAccountId !== accountId ||
+      [...data.sources, ...data.items, ...data.collections, ...data.mediaAssets].some(value =>
+        value.projectId !== projectId || value.creatorAccountId !== accountId))
+      throw new Error('Book library is unavailable for this account.');
+    setInventory(data); return data;
+  };
+  useEffect(() => { void refresh().catch(value => setError(reason(value))); }, [projectId, accountId]);
+  useEffect(() => {
+    if (!itemId || !inventory || initialized.current === itemId || busy) return;
+    const item = inventory.items.find(value => value.id === itemId && value.kind === 'book');
+    if (!item) return;
+    initialized.current = itemId;
+    const metadata = resolvedCatalogMetadata(item);
+    setTitle(metadata.title); setAuthor(metadata.author ?? ''); setSynopsis(metadata.description ?? '');
+    setIsbn(metadata.isbn ?? ''); setSeries(metadata.series ?? ''); setPublicationDate(metadata.publicationDate ?? '');
+    setNarrator(metadata.narrator ?? '');
+    setBookshelfId(inventory.collections.find(value => value.kind === 'bookshelf' && value.itemIds.includes(itemId))?.id ?? '');
+    const coverAsset = [...item.mediaAssetIds].reverse().map(id => inventory.mediaAssets.find(value => value.id === id))
+      .find(value => value?.kind === 'artwork' && value.location.type === 'private_object');
+    const audioAsset = inventory.mediaAssets.find(value => value.id === item.audiobook?.audioAssetId);
+    setDisplayRights(coverAsset?.tvDisplayRights?.status === 'cleared');
+    setPlaybackRights(audioAsset?.tvPlaybackRights?.status === 'cleared');
+    setAttachAudio(!!audioAsset);
+  }, [inventory, itemId, busy]);
+  useEffect(() => {
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const shell = document.querySelector<HTMLElement>('.app-shell');
+    const previous = document.body.style.overflow;
+    if (shell) shell.inert = true;
+    document.body.style.overflow = 'hidden'; closeButton.current?.focus();
+    return () => { if (shell) shell.inert = false; document.body.style.overflow = previous; opener.current?.focus(); };
+  }, []);
+  const item = inventory?.items.find(value => value.id === itemId && value.kind === 'book');
+  const audiobook = inventory?.mediaAssets.find(value => value.id === item?.audiobook?.audioAssetId && value.catalogItemId === item.id && value.kind === 'audio');
+  const doWork = async (action: () => Promise<string>) => {
+    setBusy(true); setError(''); setMessage('');
+    try { setMessage(await action()); }
+    catch (value) { setError(reason(value)); await refresh().catch(() => undefined); }
+    finally { setBusy(false); }
+  };
+  const updateBook = async (current: CatalogSnapshot, id: string, patch: object) => {
+    const existing = current.items.find(value => value.id === id && value.kind === 'book');
+    if (!existing) throw new Error('Book draft is unavailable for this channel.');
+    const { id: _id, creatorAccountId: _owner, projectId: _project, ...record } = existing;
+    const next = { ...record, ...patch } as typeof record;
+    if ('audiobook' in patch && (patch as { audiobook?: unknown }).audiobook === null) delete next.audiobook;
+    await writeCatalog(projectId, 'items', current.revision, next, id);
+    return await refresh();
+  };
+  const save = (event: FormEvent) => { event.preventDefault(); void doWork(async () => {
+    if (!title.trim() || !author.trim()) throw new Error('Title and author are required.');
+    const normalizedIsbn = isbn.replace(/[\s-]/g, '').toUpperCase();
+    if (normalizedIsbn && !/^(?:[0-9]{9}[0-9X]|97[89][0-9]{10})$/.test(normalizedIsbn)) throw new Error('Enter an ISBN-10 or ISBN-13.');
+    if (attachAudio && audioFile && !narrator.trim()) throw new Error('Add a narrator for this audiobook.');
+    let current = await refresh();
+    let ownedId = itemId ?? '';
+    const metadata = { title: title.trim(), author: author.trim(), ...(synopsis.trim() ? { description: synopsis.trim() } : {}),
+      ...(normalizedIsbn ? { isbn: normalizedIsbn } : {}), ...(series.trim() ? { series: series.trim() } : {}),
+      ...(publicationDate ? { publicationDate } : {}), ...(narrator.trim() ? { narrator: narrator.trim() } : {}) };
+    if (!ownedId) {
+      let source = current.sources.find(value => value.type === 'creator_upload');
+      if (!source) {
+        const added = await writeCatalog(projectId, 'sources', current.revision, {
+          schemaVersion: 1, type: 'creator_upload', state: 'discovered', permission: { retrieval: 'unknown', tvDisplay: 'unknown' }
+        });
+        current = await refresh(); source = current.sources.find(value => value.id === added.record.id);
+      }
+      if (!source) throw new Error('Book source could not be saved.');
+      const identifier = { provider: 'creator' as const, kind: 'upload_id' as const, value: crypto.randomUUID() };
+      const added = await writeCatalog(projectId, 'items', current.revision, { schemaVersion: 1, kind: 'book',
+        sourceRecord: { sourceId: source.id, externalId: identifier, observedAt: new Date().toISOString(), metadata },
+        externalIdentifiers: [identifier], mediaAssetIds: [] });
+      ownedId = added.record.id; onIdentity(ownedId); current = await refresh();
+    } else current = await updateBook(current, ownedId, { creatorOverrides: { ...metadata, editedAt: new Date().toISOString() } });
+    if (cover) {
+      if (!['image/png', 'image/jpeg'].includes(cover.type) || cover.size < 1 || cover.size > 1_000_000)
+        throw new Error('Choose a PNG or JPEG portrait cover under 1 MB.');
+      const image = await createImageBitmap(cover);
+      const portrait = image.height > image.width;
+      image.close();
+      if (!portrait) throw new Error('Choose a portrait cover image.');
+      const uploaded = await uploadPrivateMedia(projectId, cover);
+      try { await writeCatalog(projectId, 'media-assets', current.revision, { schemaVersion: 1,
+        catalogItemId: ownedId, kind: 'artwork', location: { type: 'private_object', objectId: uploaded.id },
+        tvDisplayRights: rights('television_display', displayRights), tvPlaybackRights: unknown(), deliveryEligible: false }); }
+      catch (value) { await deletePrivateObject(projectId, uploaded.id).catch(() => undefined); throw value; }
+      current = await refresh(); setCover(null);
+    } else {
+      const existingCover = [...current.mediaAssets].reverse().find(value => value.catalogItemId === ownedId && value.kind === 'artwork' &&
+        value.location.type === 'private_object' && !value.deliveryEligible);
+      if (existingCover && displayRights !== (existingCover.tvDisplayRights?.status === 'cleared')) {
+        const { id, creatorAccountId: _owner, projectId: _project, ...record } = existingCover;
+        await writeCatalog(projectId, 'media-assets', current.revision, { ...record,
+          tvDisplayRights: rights('television_display', displayRights), deliveryEligible: false }, id);
+        current = await refresh();
+      }
+    }
+    if (attachAudio && audioFile) {
+      const old = current.mediaAssets.find(value => value.id === current.items.find(item => item.id === ownedId)?.audiobook?.audioAssetId);
+      if (old?.deliveryEligible) throw new Error('Approved audiobook delivery must be revoked before replacement.');
+      const uploaded = await uploadPrivateAudio(projectId, audioFile);
+      if (old?.location.type === 'private_object') {
+        let prior;
+        try { prior = await readPrivateObjectMetadata(projectId, old.location.objectId); }
+        catch (value) { await deletePrivateObject(projectId, uploaded.id).catch(() => undefined); throw value; }
+        if (prior.sha256 === uploaded.sha256 && prior.byteSize === uploaded.byteSize) {
+          await deletePrivateObject(projectId, uploaded.id); setAudioFile(null);
+          return 'This MP3 is already attached to the book.';
+        }
+      }
+      let newAssetId = '';
+      try {
+        const added = await writeCatalog(projectId, 'media-assets', current.revision, { schemaVersion: 1,
+          catalogItemId: ownedId, kind: 'audio', location: { type: 'private_object', objectId: uploaded.id },
+          tvDisplayRights: rights('television_display', displayRights),
+          tvPlaybackRights: rights('television_playback', playbackRights), deliveryEligible: false });
+        newAssetId = added.record.id;
+        current = await refresh();
+        current = await updateBook(current, ownedId, { audiobook: { audioAssetId: newAssetId } });
+      } catch (value) {
+        if (newAssetId) {
+          const latest = await refresh().catch(() => null);
+          if (latest && latest.items.find(value => value.id === ownedId)?.audiobook?.audioAssetId !== newAssetId) {
+            await deleteCatalogRecord(projectId, 'media-assets', latest.revision, newAssetId).catch(() => undefined);
+            await deletePrivateObject(projectId, uploaded.id).catch(() => undefined);
+          }
+        } else await deletePrivateObject(projectId, uploaded.id).catch(() => undefined);
+        throw value;
+      }
+      if (old) {
+        await deleteCatalogRecord(projectId, 'media-assets', current.revision, old.id);
+        current = await refresh();
+        if (old.location.type === 'private_object') await deletePrivateObject(projectId, old.location.objectId);
+      }
+      setAudioFile(null); setListening(false);
+    } else if (audiobook && !audiobook.deliveryEligible &&
+      playbackRights !== (audiobook.tvPlaybackRights?.status === 'cleared')) {
+      const { id, creatorAccountId: _owner, projectId: _project, ...record } = audiobook;
+      await writeCatalog(projectId, 'media-assets', current.revision, { ...record,
+        tvPlaybackRights: rights('television_playback', playbackRights), deliveryEligible: false }, id);
+      current = await refresh(); setListening(false);
+    }
+    if (newBookshelf.trim()) {
+      const added = await writeCatalog(projectId, 'collections', current.revision, {
+        schemaVersion: 1, kind: 'bookshelf', title: newBookshelf.trim(), itemIds: [ownedId] });
+      setBookshelfId(added.record.id); setNewBookshelf(''); current = await refresh();
+    } else if (bookshelfId) {
+      const selected = current.collections.find(value => value.id === bookshelfId && value.kind === 'bookshelf');
+      if (!selected) throw new Error('Choose an available bookshelf.');
+      if (!selected.itemIds.includes(ownedId)) {
+        const { id, creatorAccountId: _owner, projectId: _project, ...record } = selected;
+        await writeCatalog(projectId, 'collections', current.revision, { ...record, itemIds: [...record.itemIds, ownedId] }, id);
+      }
+    }
+    await refresh();
+    return 'Book saved privately. Book-only has no Play action. TV delivery requires separate review.';
+  }); };
+  const removeAudiobook = () => void doWork(async () => {
+    if (!inventory || !audiobook || audiobook.deliveryEligible) throw new Error('Approved audiobook delivery must be revoked before removal.');
+    const next = await updateBook(inventory, item!.id, { audiobook: null });
+    await deleteCatalogRecord(projectId, 'media-assets', next.revision, audiobook.id);
+    if (audiobook.location.type === 'private_object') await deletePrivateObject(projectId, audiobook.location.objectId);
+    setListening(false); setAttachAudio(false); setPlaybackRights(false); await refresh();
+    return 'Audiobook removed. The book and its cover remain saved.';
+  });
+  const revokeAudiobook = () => void doWork(async () => {
+    if (!inventory || !audiobook || audiobook.deliveryEligible) throw new Error('Approved audiobook delivery needs separate revocation review.');
+    const { id, creatorAccountId: _owner, projectId: _project, ...record } = audiobook;
+    await writeCatalog(projectId, 'media-assets', inventory.revision, { ...record,
+      tvPlaybackRights: { ...unknown(), status: 'revoked' }, deliveryEligible: false }, id);
+    setListening(false); setPlaybackRights(false); await refresh();
+    return 'Audiobook playback revoked. The book and cover remain saved.';
+  });
+  const listen = () => {
+    if (!audiobook || audiobook.location.type !== 'private_object' || audiobook.tvPlaybackRights?.status !== 'cleared') return;
+    setAudioUrl(`/api/projects/${encodeURIComponent(projectId)}/private-objects/${encodeURIComponent(audiobook.location.objectId)}/audio`);
+    setListening(true);
+  };
+  const keyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Escape') { event.preventDefault(); if (!busy) onClose(); }
+    if (event.key !== 'Tab') return;
+    const controls = Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled)') ?? []);
+    if (event.shiftKey && document.activeElement === controls[0]) { event.preventDefault(); controls.at(-1)?.focus(); }
+    else if (!event.shiftKey && document.activeElement === controls.at(-1)) { event.preventDefault(); controls[0]?.focus(); }
+  };
+  return createPortal(<div className="video-workspace-backdrop"><div ref={dialog} className="video-workspace book-workspace"
+    role="dialog" aria-modal="true" aria-labelledby="book-workspace-title" onKeyDown={keyDown}>
+    <header className="video-workspace-header"><div><span className="eyebrow">PRIVATE BOOK WORKSPACE</span>
+      <h2 id="book-workspace-title">{item ? title || 'Book draft' : 'Add Book'}</h2>
+      <p>Showcase a book with an optional audiobook. There is no TV book reader.</p></div>
+      <button ref={closeButton} type="button" disabled={busy} onClick={onClose}>Close ×</button></header>
+    <div className="video-workspace-body">
+      {error && <p role="alert" className="catalog-error">{error}</p>}{message && <p role="status">{message}</p>}
+      {!inventory && !error && <p>Loading book library…</p>}
+      {itemId && inventory && !item && <p role="alert">This book is unavailable in this channel.</p>}
+      {inventory && (!itemId || item) && <form onSubmit={save} className="audio-workspace-form">
+        <label className="field">TITLE<input required maxLength={160} value={title} onChange={event => setTitle(event.target.value)}/></label>
+        <label className="field">AUTHOR<input required maxLength={160} value={author} onChange={event => setAuthor(event.target.value)}/></label>
+        <label className="field">SYNOPSIS<textarea maxLength={4000} value={synopsis} onChange={event => setSynopsis(event.target.value)}/></label>
+        <div className="audio-workspace-fields"><label className="field">ISBN (OPTIONAL)<input value={isbn} onChange={event => setIsbn(event.target.value)}/></label>
+          <label className="field">SERIES<input maxLength={160} value={series} onChange={event => setSeries(event.target.value)}/></label>
+          <label className="field">PUBLICATION DATE<input type="date" value={publicationDate} onChange={event => setPublicationDate(event.target.value)}/></label></div>
+        <label className="field">PORTRAIT COVER · PNG OR JPEG · UNDER 1 MB<input type="file" accept="image/png,image/jpeg" onChange={event => setCover(event.target.files?.[0] ?? null)}/></label>
+        {item && <OwnedArtwork item={item} assets={inventory.mediaAssets} projectId={projectId} accountId={accountId}
+          className="book-workspace-cover" fallback={<span>◇</span>}/>}
+        <label className="check"><input type="checkbox" checked={displayRights} onChange={event => setDisplayRights(event.target.checked)}/> I have TV display rights for this book cover.</label>
+        <label className="field">BOOKSHELF<select value={bookshelfId} onChange={event => setBookshelfId(event.target.value)}><option value="">No bookshelf</option>
+          {inventory.collections.filter(value => value.kind === 'bookshelf').map(value => <option key={value.id} value={value.id}>{value.title}</option>)}</select></label>
+        <label className="field">NEW BOOKSHELF<input maxLength={160} value={newBookshelf} onChange={event => setNewBookshelf(event.target.value)}/></label>
+        <label className="check"><input type="checkbox" checked={attachAudio} onChange={event => setAttachAudio(event.target.checked)}/> Attach audiobook MP3</label>
+        {attachAudio && <><label className="field">NARRATOR<input maxLength={160} value={narrator} onChange={event => setNarrator(event.target.value)}/></label>
+          <label className="field">AUDIOBOOK MP3 · UP TO 2 HOURS / 320 MB<input type="file" accept=".mp3,audio/mpeg" onChange={event => setAudioFile(event.target.files?.[0] ?? null)}/></label>
+          <label className="check"><input type="checkbox" checked={playbackRights} onChange={event => setPlaybackRights(event.target.checked)}/> I have independent TV playback rights for this audiobook MP3.</label></>}
+        <button className="primary" disabled={busy}>{busy ? 'Saving privately…' : 'Save book draft'}</button>
+      </form>}
+      {item && <div className="audio-workspace-summary"><strong>Saved status: PRIVATE</strong>
+        <p>Book: information only · Cover display: {[...(inventory?.mediaAssets ?? [])].reverse().find(value => value.catalogItemId === item.id && value.kind === 'artwork')?.tvDisplayRights?.status ?? 'unknown'} · Audiobook: {audiobook ? 'attached to this book' : 'none'} · Delivery: blocked · Live: no</p>
+        {audiobook && <><p>MP3 playback rights: {audiobook.tvPlaybackRights?.status ?? 'unknown'}</p>
+          <div className="button-row"><button type="button" disabled={busy || audiobook.tvPlaybackRights?.status !== 'cleared' || audiobook.location.type !== 'private_object'} onClick={listen}>Listen to Audiobook privately</button>
+            <button type="button" disabled={busy || audiobook.deliveryEligible || audiobook.tvPlaybackRights?.status === 'revoked'} onClick={revokeAudiobook}>Revoke audiobook playback</button>
+            <button type="button" disabled={busy || audiobook.deliveryEligible} onClick={removeAudiobook}>Remove audiobook</button></div></>}
+        {listening && audioUrl && audiobook?.tvPlaybackRights?.status === 'cleared' &&
+          <AudioPlayer source={audioUrl} title={title} creator={narrator} onBack={() => setListening(false)} artwork={<OwnedArtwork item={item} assets={inventory!.mediaAssets}
+            projectId={projectId} accountId={accountId} className="audio-workspace-player-art" fallback={<span>◇</span>}/>}/>}</div>}
+    </div></div></div>, document.body);
+}

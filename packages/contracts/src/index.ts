@@ -72,7 +72,8 @@ export const contentShapeSchema = z.strictObject({
   audiobook: z.strictObject({ mediaUrl: httpUrlSchema }).optional(),
   durationSeconds: z.number().int().positive().max(86400).optional(),
   category: z.string().trim().min(1).max(80).optional(),
-  series: z.string().trim().min(1).max(80).optional()
+  series: z.string().trim().min(1).max(80).optional(),
+  author: titleSchema.optional(), narrator: titleSchema.optional(), publicationDate: z.iso.date().optional()
 });
 export const contentSchema = contentShapeSchema.superRefine((item, context) => {
   if (item.presentation === 'information') {

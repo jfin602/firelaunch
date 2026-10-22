@@ -173,6 +173,23 @@ test('Preview offers book detail and audio controls without a fake film player',
   cleanup();
 });
 
+test('book audiobook opens shared audio player and Back restores book detail', () => {
+  const spec = fixtureChannel();
+  const book = { id: 'item_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', title: 'Field Guide', description: 'A book',
+    artwork: 'assets/ocean.jpg', presentation: 'information' as const, author: 'A. Writer',
+    narrator: 'A. Narrator', audiobook: { mediaUrl: 'https://media.example/field-guide.mp3' } };
+  const module = { ...spec.pages[0]!.modules[0]!, kind: 'rail' as const, title: 'Books', contentIds: [book.id] };
+  const view = render(createElement(Preview, { spec: { ...spec, content: [book], pages: [{ ...spec.pages[0]!, modules: [module] }] } }));
+  try {
+    fireEvent.click(screen.getByRole('button', { name: 'Open Field Guide' }));
+    assert.match(view.container.querySelector('.tv-detail-copy')?.textContent ?? '', /By A\. Writer/);
+    fireEvent.click(screen.getByRole('button', { name: /Listen to Audiobook/ }));
+    assert.ok(view.container.querySelector('.audio-player audio'));
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    assert.ok(screen.getByRole('button', { name: /Listen to Audiobook/ }));
+  } finally { cleanup(); }
+});
+
 test('Preview keyboard commands stay inside the TV frame and leave editor controls alone', () => {
   const view = render(createElement(Preview, { spec: fixtureChannel() }));
   const frame = screen.getByLabelText('TV screen, use arrow keys, Enter and Escape');

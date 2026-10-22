@@ -1,7 +1,7 @@
 import type { ChannelSpec, ContentItem, Brand } from '@firelaunch/contracts';
 
 function isPlayableContent(item: ContentItem): boolean {
-  return item.presentation !== 'information' && typeof item.mediaUrl === 'string';
+  return (item.presentation !== 'information' && typeof item.mediaUrl === 'string') || !!item.audiobook?.mediaUrl;
 }
 
 export type TvModule = {
