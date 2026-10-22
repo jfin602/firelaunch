@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { contentPresentation, isPlayableContent, mediaUseEligible, type ChannelSpec, type ContentItem } from '@firelaunch/contracts';
-import { accentTextColor, activeItem, heroSelector, heroSpotlight, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
+import { accentTextColor, activeItem, heroActionFocusId, heroSelector, heroSpotlight, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
 import { keyboardCommand, navigate, reconcile } from './preview-state.js';
 import { VideoPlayer } from './VideoPlayer.js';
 import { AudioPlayer, type AudioPlayerHandle } from './AudioPlayer.js';
@@ -239,7 +239,8 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
                 <div className="tv-feature-copy"><span className="tv-feature-kicker">FEATURED</span><h2>{spotlight.title}</h2>
                   <p>{spotlight.description.length > 220 ? `${spotlight.description.slice(0, 217).trimEnd()}…` : spotlight.description}</p>
                   <div className="tv-feature-meta">{[spotlight.author, spotlight.publicationDate?.slice(0, 4), spotlight.category, spotlight.series].filter(Boolean).map((part, index) => <span key={index}>{part}</span>)}</div>
-                  <span className="tv-feature-action">{heroAction(spotlight)} <span aria-hidden="true">→</span></span>
+                  <button data-tv-focus={heroActionFocusId(page.id)} className={'tv-feature-action' + focus(heroActionFocusId(page.id))}
+                    onClick={() => selectFocus(heroActionFocusId(page.id))}>{heroAction(spotlight)} <span aria-hidden="true">→</span></button>
                 </div>
               </div>
               <div className="tv-feature-selector" aria-label={heroPair.selector.title ?? 'Browse titles'}>

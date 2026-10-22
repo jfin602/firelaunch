@@ -20,8 +20,8 @@ test('sample fills the starter Hero and row without adding sections or changing 
     'item_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'item_cccccccccccccccccccccccccccccccc'
   ]);
   assert.deepEqual(spec.content, []);
-  assert.equal(focusRows(tv, tv.pages[0]!.id).length, 2);
-  const detail = transition(tv, transition(tv, initialState(tv), 'down'), 'select');
+  assert.equal(focusRows(tv, tv.pages[0]!.id).length, 3);
+  const detail = transition(tv, transition(tv, transition(tv, initialState(tv), 'down'), 'down'), 'select');
   assert.equal(detail.screen, 'detail');
   assert.equal(transition(tv, detail, 'select').screen, 'playback');
   assert.throws(() => sampleMutations({ ...project, spec: next }, ['item_dddddddddddddddddddddddddddddddd', 'item_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', 'item_ffffffffffffffffffffffffffffffff']), /untouched starter/);

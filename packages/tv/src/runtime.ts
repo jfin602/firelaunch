@@ -55,6 +55,7 @@ export function projectTelevision(spec: ChannelSpec): Television {
 }
 
 export function navFocusId(pageId: string): string { return `nav:${pageId}`; }
+export function heroActionFocusId(pageId: string): string { return `hero-action:${pageId}`; }
 export function itemFocusId(pageId: string, moduleId: string, itemId: string): string {
   return `item:${pageId}:${moduleId}:${itemId}`;
 }
@@ -92,6 +93,10 @@ export function heroSpotlight(page: TvPage, state: TvState): ContentItem | undef
   const focused = pair.selector.items.find(item =>
     itemFocusId(page.id, pair.selector.id, item.id) === (state.screen === 'page' ? state.focusId : state.returnFocusId));
   if (focused) return focused;
+  if (state.screen !== 'page' && state.returnFocusId === heroActionFocusId(page.id)) {
+    const activated = pair.selector.items.find(item => item.id === state.itemId);
+    if (activated) return activated;
+  }
   if (state.screen === 'page' && state.selectedHeroItemId) {
     const retained = pair.selector.items.find(item => item.id === state.selectedHeroItemId);
     if (retained) return retained;
@@ -105,7 +110,7 @@ export function focusRows(tv: Television, pageId: string): string[][] {
   const page = tv.pages.find(candidate => candidate.id === pageId);
   if (!page) throw new Error(`Unknown page: ${pageId}`);
   const pair = heroSelector(page);
-  return [tv.pages.map(candidate => navFocusId(candidate.id)), ...page.modules
+  return [tv.pages.map(candidate => navFocusId(candidate.id)), ...(pair ? [[heroActionFocusId(page.id)]] : []), ...page.modules
     .filter(module => module.items.length > 0 && module !== pair?.hero)
     .map(module => module.items.map(item => itemFocusId(page.id, module.id, item.id)))];
 }
@@ -118,10 +123,13 @@ export function initialState(tv: Television): TvState {
 
 export function transition(tv: Television, state: TvState, command: TvCommand): TvState {
   if (state.screen === 'playback') {
-    return command === 'back' ? { ...state, screen: 'detail', focusId: `play:${state.itemId}` } : state;
+    return command === 'back' ? state.returnFocusId === heroActionFocusId(state.pageId)
+      ? { screen: 'page', pageId: state.pageId, focusId: state.returnFocusId, selectedHeroItemId: state.itemId }
+      : { ...state, screen: 'detail', focusId: `play:${state.itemId}` } : state;
   }
   if (state.screen === 'detail') {
-    if (command === 'back') return { screen: 'page', pageId: state.pageId, focusId: state.returnFocusId };
+    if (command === 'back') return { screen: 'page', pageId: state.pageId, focusId: state.returnFocusId,
+      ...(state.returnFocusId === heroActionFocusId(state.pageId) ? { selectedHeroItemId: state.itemId } : {}) };
     const item = activeItem(tv, state);
     if (command === 'select' && item && isPlayableContent(item)) {
       return { ...state, screen: 'playback', focusId: `player:${state.itemId}` };
@@ -144,7 +152,8 @@ export function transition(tv: Television, state: TvState, command: TvCommand): 
     const pair = page && heroSelector(page);
     const retained = pair && state.selectedHeroItemId
       ? itemFocusId(state.pageId, pair.selector.id, state.selectedHeroItemId) : undefined;
-    const next = state.focusId.startsWith('nav:') && retained && nextRow.includes(retained)
+    const next = (state.focusId.startsWith('nav:') || state.focusId === heroActionFocusId(state.pageId)) &&
+      retained && nextRow.includes(retained)
       ? retained : nextRow[Math.min(column, nextRow.length - 1)]!;
     return pageFocus(tv, state, next);
   }
@@ -152,6 +161,14 @@ export function transition(tv: Television, state: TvState, command: TvCommand): 
     const pageId = state.focusId.slice(4);
     return tv.pages.some(page => page.id === pageId)
       ? { screen: 'page', pageId, focusId: navFocusId(pageId) } : state;
+  }
+  if (state.focusId === heroActionFocusId(state.pageId)) {
+    const page = tv.pages.find(candidate => candidate.id === state.pageId);
+    const featured = page && heroSpotlight(page, state);
+    if (!featured) return state;
+    return { screen: isPlayableContent(featured) ? 'playback' : 'detail', pageId: state.pageId,
+      itemId: featured.id, returnFocusId: state.focusId,
+      focusId: `${isPlayableContent(featured) ? 'player' : 'detail'}:${featured.id}` };
   }
   const item = tv.pages.find(page => page.id === state.pageId)?.modules
     .flatMap(module => module.items.map(content => ({ content, focusId: itemFocusId(state.pageId, module.id, content.id) })))
@@ -163,7 +180,8 @@ export function transition(tv: Television, state: TvState, command: TvCommand): 
 function pageFocus(tv: Television, state: Extract<TvState, { screen: 'page' }>, focusId: string): TvState {
   const page = tv.pages.find(candidate => candidate.id === state.pageId);
   const pair = page && heroSelector(page);
-  const selected = pair?.selector.items.find(item => itemFocusId(state.pageId, pair.selector.id, item.id) === focusId);
+  const selected = pair?.selector.items.find(item => itemFocusId(state.pageId, pair.selector.id, item.id) === focusId) ??
+    pair?.selector.items.find(item => itemFocusId(state.pageId, pair.selector.id, item.id) === state.focusId);
   return selected ? { ...state, focusId, selectedHeroItemId: selected.id } : { ...state, focusId };
 }
 

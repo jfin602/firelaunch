@@ -66,6 +66,8 @@ test('generated native feature uses shared selection and fits a first selector a
   let state = runtime.initialState(projected);
   assert.equal(runtime.heroSpotlight(page, state).id, original.content[0]!.id);
   state = runtime.transition(projected, state, 'down');
+  assert.equal(state.focusId, runtime.heroActionFocusId(page.id));
+  state = runtime.transition(projected, state, 'down');
   state = runtime.transition(projected, state, 'right');
   assert.equal(state.screen, 'page');
   assert.equal(runtime.heroSpotlight(page, state).id, second.id);
@@ -81,6 +83,7 @@ test('generated native feature uses shared selection and fits a first selector a
   assert.doesNotThrow(() => parse(source, { sourceType: 'module', plugins: ['jsx'] }));
   assert.match(source, /heroSelector\(page\)/);
   assert.match(source, /heroSpotlight\(page, state\)/);
+  assert.match(source, /actionFocused=\{state\.focusId === heroActionFocusId\(page\.id\)\}/);
   assert.match(source, /<HeroBackdrop source=\{spotlight\.artwork\}[\s\S]*?backgroundColor=\{brand\.backgroundColor\}/);
   assert.match(source, /featureSelector && \{ backgroundColor: brand\.backgroundColor \}/);
   assert.match(source, /heroBackdropImage: \{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '10%' \}/);

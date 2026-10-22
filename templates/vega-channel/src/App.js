@@ -3,7 +3,7 @@ import { BackHandler, Image, Pressable, ScrollView, StyleSheet, Text, TVEventHan
 import { KeplerVideoSurfaceView, VideoPlayer } from '@amazon-devices/react-native-w3cmedia';
 import bundled from './channel.json';
 import { installRelease } from './release-client';
-import { accentTextColor, activeItem, heroSelector, heroSpotlight, initialState, itemFocusId, navFocusId, transition } from './tv-runtime';
+import { accentTextColor, activeItem, heroActionFocusId, heroSelector, heroSpotlight, initialState, itemFocusId, navFocusId, transition } from './tv-runtime';
 import { createPlaybackController } from './playback-controller';
 import { createHlsPlayer, installHlsPolyfills } from './hlsjs/adapter';
 import { audioArtworkFrame, featureArtworkFrame, featureScrollTarget, tvLayout } from './tv-layout';
@@ -62,7 +62,7 @@ function HeroBackdrop({ source, backgroundColor }) {
   </View>;
 }
 
-function Feature({ content, brand, font, layout }) {
+function Feature({ content, brand, font, layout, actionFocused, focusStyle, onAction }) {
   const [failedSource, setFailedSource] = useState(null);
   const source = content.artwork?.startsWith('https://') ? content.artwork : null;
   const visible = source && source !== failedSource;
@@ -74,8 +74,11 @@ function Feature({ content, brand, font, layout }) {
       <Text numberOfLines={2} style={[styles.featureTitle, font, { fontSize: 36 * layout.scale }]}>{content.title}</Text>
       <Text numberOfLines={3} style={[styles.featureDescription, font, { fontSize: 18 * layout.scale }]}>{content.description}</Text>
       {meta.length > 0 && <Text numberOfLines={1} style={[styles.featureMeta, font]}>{meta.join('  ·  ')}</Text>}
-      <Text style={[styles.featureAction, font, { backgroundColor: brand.primaryColor,
-        color: accentTextColor(brand.primaryColor) }]}>{heroAction(content)}  →</Text>
+      <Pressable focusable={false} onPress={onAction} style={[styles.featureAction,
+        { backgroundColor: brand.primaryColor }, actionFocused && [styles.focused, focusStyle]]}>
+        <Text style={[font, { color: accentTextColor(brand.primaryColor), fontWeight: 'bold', fontSize: 18 }]}>
+          {heroAction(content)}  →</Text>
+      </Pressable>
     </View>
     {content.presentation !== 'video' && <View style={[styles.featureFrame, { width: layout.contentWidth * 0.42 }]}>
       {visible ? <Image key={`front:${source}`} source={{ uri: source }} resizeMode="contain"
@@ -265,6 +268,10 @@ export default function App() {
   const dispatch = command => setView(previous => ({ ...previous,
     state: transition(previous.channel, previous.state, command) }));
   const revealFocus = (focusId, currentPage) => {
+    if (focusId === heroActionFocusId(currentPage?.id)) {
+      scrollView.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
     if (focusId.startsWith('nav:')) {
       scrollView.current?.scrollTo({ y: 0, animated: true });
       const item = navLayouts.current.get(focusId.slice(4));
@@ -385,7 +392,11 @@ export default function App() {
             if (indicatorTimer.current) clearTimeout(indicatorTimer.current);
             indicatorTimer.current = setTimeout(() => setScrollMetrics(previous => ({ ...previous, visible: false })), 1000);
           }}>{page.modules.map(module => module === heroPair?.selector ? null : module === heroPair?.hero && spotlight ?
-            <React.Fragment key={module.id}><Feature content={spotlight} brand={brand} font={font} layout={layout} />
+            <React.Fragment key={module.id}><Feature content={spotlight} brand={brand} font={font} layout={layout}
+              actionFocused={state.focusId === heroActionFocusId(page.id)} focusStyle={focusStyle}
+              onAction={() => setView(previous => ({ ...previous, state: transition(previous.channel,
+                { screen: 'page', pageId: page.id, focusId: heroActionFocusId(page.id),
+                  selectedHeroItemId: spotlight.id }, 'select') }))} />
               <Section module={heroPair.selector} page={page} state={state} brand={brand} font={font}
                 focusStyle={focusStyle} layout={layout} featureSelector
                 onLayout={event => {
@@ -461,7 +472,7 @@ const styles = StyleSheet.create({
   featureTitle: { color: '#FFFFFF', fontWeight: 'bold', marginTop: 8 },
   featureDescription: { color: '#F0F3F1', lineHeight: 25, marginTop: 6 },
   featureMeta: { color: '#D0D9D3', fontSize: 17, marginTop: 8 },
-  featureAction: { alignSelf: 'flex-start', fontSize: 18, fontWeight: 'bold', marginTop: 12,
+  featureAction: { alignSelf: 'flex-start', marginTop: 12, borderWidth: 2, borderColor: 'transparent',
     borderRadius: 5, paddingHorizontal: 14, paddingVertical: 7 },
   featureFrame: { alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   featureFallback: { color: '#E5EEE9', fontSize: 18 },

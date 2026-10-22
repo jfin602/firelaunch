@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { fixtureChannel } from '../../channel-engine/test/fixtures.js';
-import { accentTextColor, televisionFromSpec, focusRows, heroSelector, heroSpotlight, initialState, transition, itemFocusId, navFocusId } from '../src/index.js';
+import { accentTextColor, televisionFromSpec, focusRows, heroActionFocusId, heroSelector, heroSpotlight, initialState, transition, itemFocusId, navFocusId } from '../src/index.js';
 
 test('projects ordered navigation and resolves modules/content without mutation', () => {
   const spec = fixtureChannel();
@@ -103,15 +103,22 @@ test('adjacent Hero and first row share one focused spotlight and preserve Selec
   const projected = tv.pages[0]!;
   assert.equal(heroSelector(projected)?.selector.id, rail.id);
   assert.equal(heroSpotlight(projected, initialState(tv))?.id, base.id);
-  assert.equal(focusRows(tv, page.id).length, 2, 'Hero has no duplicate focus row');
+  assert.equal(focusRows(tv, page.id).length, 3, 'Hero has one action and one selector row');
   let state = transition(tv, initialState(tv), 'down');
+  assert.equal(state.focusId, heroActionFocusId(page.id));
+  state = transition(tv, state, 'down');
   assert.equal(state.focusId, itemFocusId(page.id, rail.id, base.id));
   state = transition(tv, state, 'right');
   assert.equal(state.screen, 'page');
   assert.equal(state.focusId, itemFocusId(page.id, rail.id, second.id));
   assert.equal(heroSpotlight(projected, state)?.id, second.id);
   state = transition(tv, state, 'up');
-  assert.equal(heroSpotlight(projected, state)?.id, second.id, 'nav focus retains transient spotlight');
+  assert.equal(state.focusId, heroActionFocusId(page.id));
+  assert.equal(heroSpotlight(projected, state)?.id, second.id, 'action focus retains transient spotlight');
+  const playback = transition(tv, state, 'select');
+  assert.equal(playback.screen, 'playback');
+  assert.equal(playback.itemId, second.id);
+  assert.deepEqual(transition(tv, playback, 'back'), state);
   state = transition(tv, state, 'down');
   state = transition(tv, state, 'select');
   assert.equal(state.screen, 'detail');
@@ -133,9 +140,9 @@ test('Hero selector falls back safely for empty, lone and unrelated sections', (
   const separated = televisionFromSpec({ ...spec, pages: [{ ...page, modules: [hero,
     { id: `mod_${'d'.repeat(32)}`, kind: 'text', title: 'Story', body: 'Story' }, rail] }] });
   assert.equal(heroSelector(separated.pages[0]!)?.selector.id, rail.id);
-  assert.equal(focusRows(separated, page.id).length, 2);
+  assert.equal(focusRows(separated, page.id).length, 3);
   assert.equal(transition(separated, initialState(separated), 'down').focusId,
-    itemFocusId(page.id, rail.id, spec.content[0]!.id));
+    heroActionFocusId(page.id));
   assert.equal(accentTextColor('#ff6a00'), '#101812');
   assert.equal(accentTextColor('#1c2840'), '#FFFFFF');
 });

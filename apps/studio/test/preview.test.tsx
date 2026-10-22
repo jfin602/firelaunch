@@ -5,7 +5,7 @@ import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
 import { starterChannel } from '@firelaunch/channel-engine';
-import { televisionFromSpec, heroSpotlight, initialState, itemFocusId, navFocusId } from '@firelaunch/tv';
+import { televisionFromSpec, heroActionFocusId, heroSpotlight, initialState, itemFocusId, navFocusId } from '@firelaunch/tv';
 import { Preview, PreviewArtwork, adequateHeroArtwork, catalogContentId, ownerBookPreviewContent } from '../src/Preview.js';
 import type { CatalogSnapshot } from '../src/api.js';
 import { keyboardCommand, navigate, reconcile } from '../src/preview-state.js';
@@ -50,6 +50,8 @@ test('paired Hero uses one focusable row and updates copy without starting playb
     assert.match(feature.querySelector('.tv-feature-copy')?.textContent ?? '', /Oceans.*Watch/s);
     const content = view.container.querySelector<HTMLElement>('.tv-content')!;
     fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+    assert.ok(feature.querySelector('.tv-feature-action.focused'));
+    fireEvent.click(screen.getByRole('button', { name: 'Down' }));
     fireEvent.click(screen.getByRole('button', { name: 'Right' }));
     assert.match(feature.querySelector('.tv-feature-copy')?.textContent ?? '', /Soundscape.*A recording.*The Artist.*Music.*Listen/s);
     assert.ok(feature.querySelector('.tv-audio-card.focused'));
@@ -65,6 +67,23 @@ test('paired Hero uses one focusable row and updates copy without starting playb
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     assert.ok(view.container.querySelector('.tv-book-card.focused'));
     assert.equal(view.container.querySelector('.tv-feature-copy h2')?.textContent, 'Field Guide');
+  } finally { cleanup(); }
+});
+
+test('Hero Watch is reachable by remote Select and Back restores its focus', () => {
+  const spec = fixtureChannel(), page = spec.pages[0]!, item = spec.content[0]!;
+  spec.pages[0] = { ...page, modules: [page.modules[0]!,
+    { id: `mod_${'e'.repeat(32)}`, kind: 'rail', title: 'Browse', contentIds: [item.id] }] };
+  try {
+    const view = render(createElement(Preview, { spec }));
+    fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+    assert.ok(view.container.querySelector('.tv-feature-action.focused'));
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+    assert.ok(view.container.querySelector('video'));
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    assert.ok(view.container.querySelector('.tv-feature-action.focused'));
+    fireEvent.click(screen.getByRole('button', { name: /Watch/ }));
+    assert.ok(view.container.querySelector('video'));
   } finally { cleanup(); }
 });
 
@@ -153,6 +172,7 @@ test('book audiobook uses Listen to Audiobook in the hero without starting audio
   try {
     const view = render(createElement(Preview, { spec }));
     fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Down' }));
     assert.match(view.container.querySelector('.tv-feature-copy')?.textContent ?? '', /Field Guide.*Listen to Audiobook/s);
     assert.equal(view.container.querySelector('audio, video'), null);
   } finally { cleanup(); }
@@ -165,7 +185,7 @@ test('preview state follows row focus, keeps detail/Back, and clears stale selec
   const tv = televisionFromSpec({ ...spec, content: [first, other], pages: [{ ...page, modules: [page.modules[0]!, rail] }] });
   const projected = tv.pages[0]!;
   let state = initialState(tv);
-  for (const key of ['ArrowDown', 'ArrowRight'] as const) state = navigate(tv, state, keyboardCommand({ key })!);
+  for (const key of ['ArrowDown', 'ArrowDown', 'ArrowRight'] as const) state = navigate(tv, state, keyboardCommand({ key })!);
   assert.equal(heroSpotlight(projected, state)?.id, other.id);
   assert.equal(state.screen, 'page');
   state = navigate(tv, state, keyboardCommand({ key: 'Enter' })!);
@@ -173,6 +193,10 @@ test('preview state follows row focus, keeps detail/Back, and clears stale selec
   assert.equal(state.itemId, other.id);
   state = navigate(tv, state, keyboardCommand({ key: 'Backspace' })!);
   assert.equal(state.focusId, itemFocusId(page.id, rail.id, other.id));
+  state = navigate(tv, state, 'up');
+  assert.equal(state.focusId, heroActionFocusId(page.id));
+  assert.equal(navigate(tv, state, 'select').screen, 'playback');
+  state = navigate(tv, state, 'down');
   const changed = televisionFromSpec({ ...spec, pages: [{ ...page, modules: [page.modules[0]!, { ...rail, contentIds: [first.id] }] }] });
   state = reconcile(changed, state);
   assert.equal(state.screen, 'page');
