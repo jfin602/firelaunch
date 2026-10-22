@@ -1,3 +1,13 @@
+# CURRENT OCTOBER 22 MVP OVERRIDE — Phase 9 Polish; Publishing deferred to Phase 10
+
+The owner replaced the former Phase 9 **Live Channel Publishing & App Updates** plan with **Phase 9 — MVP Polish** for the October 23 noon MVP deadline. Publishing/installed-app remote refresh/same-ID native upgrades move to [deferred P10](../tasks/p10/README.md). New [P9 manual issue prompts](../tasks/p9/README.md) cover [ten issues](../tasks/p9-polish/README.md) individually, each with focused source change + tests, owned commit/version, exact-hash guarded **staging deploy BEFORE connected Codex-browser acceptance**, and truthful per-issue GREEN/NOT GREEN/BLOCKED evidence. One final integrated MVP smoke, not ten redundant full sweeps. NO phase runner or `/activate`.
+
+The actual Phase 8 P8D closeout remains NOT GREEN at documented product 0.8.17, schema 15; owner-approved c8-hero-multimedia is the current prerequisite at unchanged 0.8.17 (not automatically qualified by this plan). New P9 source starts only after actual local Git, stage/hero and owner handoff reconciliation. Do not publish new immutable public media, bypass rights, change AWS policy, touch production or change original approved FREE release #1. P9 per-media Publish means **include/exclude from current channel draft and newly exported Vega package**, not OTA of already-installed applications.
+
+**This section supersedes the historical P9 Live Publishing roadmap paragraphs below for current scheduling.** Those paragraphs are preserved as dated proposals rather than deleted evidence. Deadline timezone appears inconsistent in old documents (America/Chicago vs PDT); confirm owner/organizer clock before final cutover. **No code/version/deploy from documentation authoring.**
+
+---
+
 # FireLaunch MVP Roadmap
 
 ## CURRENT — c8-hero-multimedia next 0.8.17 correction (2026-10-22)
