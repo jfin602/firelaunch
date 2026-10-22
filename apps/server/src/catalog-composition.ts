@@ -27,9 +27,18 @@ export function composeCatalogDraft(kind: CompositionKind, current: ChannelSpec,
     previous = channelSpecSchema.parse(previous);
     if (previous.id !== current.id) throw new Error('Composition baseline belongs to another channel');
   }
+  // Removing a generated video from the channel is an explicit editorial choice.
+  // A later Generate with the old saved catalog selection must not add it back.
+  // The one-video Publish action can add it to current again, which clears this omission.
+  const priorContent = new Set(previous?.content.map(item => item.id) ?? []);
+  const currentContent = new Set(current.content.map(item => item.id));
+  const withheld = new Set(projection.bindings.filter(binding => kind === 'video' &&
+    priorContent.has(binding.contentId) && !currentContent.has(binding.contentId))
+    .map(binding => binding.contentId));
   const blocked = projection.bindings.filter(binding => binding.baseline === null);
-  const eligible = projection.bindings.filter(binding => binding.baseline !== null).map(binding => binding.baseline!)
+  const selectedEligible = projection.bindings.filter(binding => binding.baseline !== null).map(binding => binding.baseline!)
     .filter(item => kind === 'writing' || item.presentation === kind);
+  const eligible = selectedEligible.filter(item => !withheld.has(item.id));
   const ofType = (type: ContentItem['presentation']) => eligible.filter(item => item.presentation === type).map(item => item.id);
   const video = ofType('video'), audio = ofType('audio'), books = ofType('information');
   const allowed = new Set(eligible.map(item => item.id));
@@ -147,7 +156,10 @@ export function composeCatalogDraft(kind: CompositionKind, current: ChannelSpec,
     ? unique([...current.navigation.filter(id => sanitized.some(p => p.id === id)), ...mergedPages.map(p => p.id)])
     : unique([...mergedPages.map(p => p.id), ...manualPages.map(p => p.id)]);
   const spec = channelSpecSchema.parse({ ...current, pages: sanitized, navigation, content });
-  return { spec, baseline: generated, notices: [
+  // Keep withheld IDs in the merge ancestor so repeated Generate calls cannot
+  // forget the removal after the first regeneration.
+  const baseline = channelSpecSchema.parse({ ...generated, content: selectedEligible });
+  return { spec, baseline, notices: [
     ...blocked.map(b => `${b.contentId}: ${b.blockedReason ?? 'unavailable'}`),
     ...(eligible.length ? [] : ['No selected content is currently eligible for this draft.'])
   ] };

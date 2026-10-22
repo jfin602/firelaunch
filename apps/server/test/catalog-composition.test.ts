@@ -76,6 +76,25 @@ test('empty and missing-media drafts give honest status; revoked selected media 
   assert.ok(!JSON.stringify(revoked.spec.pages).includes(film.id));
 });
 
+test('Generate preserves an explicit video removal even with the old saved selection', () => {
+  const source = projection([film, episode]);
+  const first = composeCatalogDraft('video', channel, source);
+  const removed = structuredClone(first.spec);
+  removed.content = removed.content.filter(item => item.id !== film.id);
+  removed.pages = removed.pages.map(page => ({ ...page, modules: page.modules.map(module =>
+    'contentIds' in module ? { ...module, contentIds: module.contentIds.filter(id => id !== film.id) } : module) }));
+  const regenerated = composeCatalogDraft('video', removed, source, first.baseline);
+  assert.ok(!regenerated.spec.content.some(item => item.id === film.id));
+  assert.ok(!JSON.stringify(regenerated.spec.pages).includes(film.id));
+  assert.ok(regenerated.spec.content.some(item => item.id === episode.id));
+  const repeated = composeCatalogDraft('video', regenerated.spec, source, regenerated.baseline);
+  assert.ok(!repeated.spec.content.some(item => item.id === film.id));
+  const republished = structuredClone(removed);
+  republished.content.push(film);
+  const afterPublish = composeCatalogDraft('video', republished, source, first.baseline);
+  assert.ok(afterPublish.spec.content.some(item => item.id === film.id));
+});
+
 test('repeat generation is stable and preserves creator brand, text, module and navigation edits', () => {
   const source = projection([film, episode]);
   const first = composeCatalogDraft('video', channel, source);
