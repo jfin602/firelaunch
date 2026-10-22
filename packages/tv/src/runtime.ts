@@ -16,7 +16,7 @@ export type Television = {
 };
 export type TvCommand = 'up' | 'down' | 'left' | 'right' | 'select' | 'back';
 export type TvState =
-  | { screen: 'page'; pageId: string; focusId: string }
+  | { screen: 'page'; pageId: string; focusId: string; selectedHeroItemId?: string }
   | { screen: 'detail'; pageId: string; itemId: string; returnFocusId: string; focusId: string }
   | { screen: 'playback'; pageId: string; itemId: string; returnFocusId: string; focusId: string };
 
@@ -59,11 +59,41 @@ export function itemFocusId(pageId: string, moduleId: string, itemId: string): s
   return `item:${pageId}:${moduleId}:${itemId}`;
 }
 
+/** A Hero is presentation when its immediately following authored module is a selector. */
+export function heroSelector(page: TvPage): { hero: TvModule; selector: TvModule } | undefined {
+  const index = page.modules.findIndex((module, at) => module.kind === 'hero' &&
+    !!page.modules[at + 1]?.items.length &&
+    (page.modules[at + 1]?.kind === 'rail' || page.modules[at + 1]?.kind === 'grid'));
+  if (index < 0) return undefined;
+  const hero = page.modules[index]!;
+  const selector = page.modules[index + 1];
+  return selector && (selector.kind === 'rail' || selector.kind === 'grid') && selector.items.length
+    ? { hero, selector } : undefined;
+}
+
+/** Resolve the featured item from existing page/focus state, without saving a second selection. */
+export function heroSpotlight(page: TvPage, state: TvState): ContentItem | undefined {
+  if (state.pageId !== page.id) return undefined;
+  const pair = heroSelector(page);
+  if (!pair) return undefined;
+  const focused = pair.selector.items.find(item =>
+    itemFocusId(page.id, pair.selector.id, item.id) === (state.screen === 'page' ? state.focusId : state.returnFocusId));
+  if (focused) return focused;
+  if (state.screen === 'page' && state.selectedHeroItemId) {
+    const retained = pair.selector.items.find(item => item.id === state.selectedHeroItemId);
+    if (retained) return retained;
+  }
+  return pair.hero.items.length
+    ? pair.selector.items.find(item => item.id === pair.hero.items[0]!.id) ?? pair.hero.items[0]
+    : pair.selector.items[0];
+}
+
 export function focusRows(tv: Television, pageId: string): string[][] {
   const page = tv.pages.find(candidate => candidate.id === pageId);
   if (!page) throw new Error(`Unknown page: ${pageId}`);
+  const pair = heroSelector(page);
   return [tv.pages.map(candidate => navFocusId(candidate.id)), ...page.modules
-    .filter(module => module.items.length > 0)
+    .filter(module => module.items.length > 0 && module !== pair?.hero)
     .map(module => module.items.map(item => itemFocusId(page.id, module.id, item.id)))];
 }
 
@@ -92,11 +122,18 @@ export function transition(tv: Television, state: TvState, command: TvCommand): 
   const column = rows[rowIndex]!.indexOf(state.focusId);
   if (command === 'left' || command === 'right') {
     const next = rows[rowIndex]![column + (command === 'left' ? -1 : 1)];
-    return next ? { ...state, focusId: next } : state;
+    return next ? pageFocus(tv, state, next) : state;
   }
   if (command === 'up' || command === 'down') {
     const nextRow = rows[rowIndex + (command === 'up' ? -1 : 1)];
-    return nextRow ? { ...state, focusId: nextRow[Math.min(column, nextRow.length - 1)]! } : state;
+    if (!nextRow) return state;
+    const page = tv.pages.find(candidate => candidate.id === state.pageId);
+    const pair = page && heroSelector(page);
+    const retained = pair && state.selectedHeroItemId
+      ? itemFocusId(state.pageId, pair.selector.id, state.selectedHeroItemId) : undefined;
+    const next = state.focusId.startsWith('nav:') && retained && nextRow.includes(retained)
+      ? retained : nextRow[Math.min(column, nextRow.length - 1)]!;
+    return pageFocus(tv, state, next);
   }
   if (state.focusId.startsWith('nav:')) {
     const pageId = state.focusId.slice(4);
@@ -108,6 +145,13 @@ export function transition(tv: Television, state: TvState, command: TvCommand): 
     .find(candidate => candidate.focusId === state.focusId);
   return item ? { screen: 'detail', pageId: state.pageId, itemId: item.content.id,
     returnFocusId: state.focusId, focusId: `${isPlayableContent(item.content) ? 'play' : 'detail'}:${item.content.id}` } : state;
+}
+
+function pageFocus(tv: Television, state: Extract<TvState, { screen: 'page' }>, focusId: string): TvState {
+  const page = tv.pages.find(candidate => candidate.id === state.pageId);
+  const pair = page && heroSelector(page);
+  const selected = pair?.selector.items.find(item => itemFocusId(state.pageId, pair.selector.id, item.id) === focusId);
+  return selected ? { ...state, focusId, selectedHeroItemId: selected.id } : { ...state, focusId };
 }
 
 export function activeItem(tv: Television, state: TvState): ContentItem | undefined {

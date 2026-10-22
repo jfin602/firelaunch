@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { fixtureChannel } from '../../channel-engine/test/fixtures.js';
-import { televisionFromSpec, focusRows, initialState, transition, itemFocusId, navFocusId } from '../src/index.js';
+import { televisionFromSpec, focusRows, heroSelector, heroSpotlight, initialState, transition, itemFocusId, navFocusId } from '../src/index.js';
 
 test('projects ordered navigation and resolves modules/content without mutation', () => {
   const spec = fixtureChannel();
@@ -93,4 +93,45 @@ test('a book audiobook uses the player and Back returns to its own detail', () =
   state = transition(tv, state, 'back');
   assert.equal(state.screen, 'detail');
   assert.equal(state.itemId, book.id);
+});
+
+test('adjacent Hero and first row share one focused spotlight and preserve Select/Back', () => {
+  const spec = fixtureChannel(), base = spec.content[0]!, page = spec.pages[0]!;
+  const second = { ...base, id: `item_${'b'.repeat(32)}`, title: 'Second' };
+  const rail = { id: `mod_${'b'.repeat(32)}`, kind: 'rail' as const, title: 'Browse', contentIds: [base.id, second.id] };
+  const tv = televisionFromSpec({ ...spec, content: [base, second], pages: [{ ...page, modules: [page.modules[0]!, rail] }] });
+  const projected = tv.pages[0]!;
+  assert.equal(heroSelector(projected)?.selector.id, rail.id);
+  assert.equal(heroSpotlight(projected, initialState(tv))?.id, base.id);
+  assert.equal(focusRows(tv, page.id).length, 2, 'Hero has no duplicate focus row');
+  let state = transition(tv, initialState(tv), 'down');
+  assert.equal(state.focusId, itemFocusId(page.id, rail.id, base.id));
+  state = transition(tv, state, 'right');
+  assert.equal(state.screen, 'page');
+  assert.equal(state.focusId, itemFocusId(page.id, rail.id, second.id));
+  assert.equal(heroSpotlight(projected, state)?.id, second.id);
+  state = transition(tv, state, 'up');
+  assert.equal(heroSpotlight(projected, state)?.id, second.id, 'nav focus retains transient spotlight');
+  state = transition(tv, state, 'down');
+  state = transition(tv, state, 'select');
+  assert.equal(state.screen, 'detail');
+  assert.equal(state.itemId, second.id);
+  assert.equal(heroSpotlight(projected, state)?.id, second.id);
+  state = transition(tv, state, 'back');
+  assert.equal(state.focusId, itemFocusId(page.id, rail.id, second.id));
+  assert.equal(heroSpotlight(projected, state)?.id, second.id);
+});
+
+test('Hero selector falls back safely for empty, lone and unrelated sections', () => {
+  const spec = fixtureChannel(), page = spec.pages[0]!, hero = page.modules[0]!;
+  const empty = televisionFromSpec(spec).pages[0]!;
+  assert.equal(heroSelector(empty), undefined);
+  assert.equal(heroSpotlight(empty, { screen: 'page', pageId: empty.id, focusId: navFocusId(empty.id) }), undefined);
+  const rail = { id: `mod_${'c'.repeat(32)}`, kind: 'rail' as const, title: 'Browse', contentIds: [spec.content[0]!.id] };
+  const tv = televisionFromSpec({ ...spec, pages: [{ ...page, modules: [{ ...hero, contentIds: [] }, rail] }] });
+  assert.equal(heroSpotlight(tv.pages[0]!, initialState(tv))?.id, spec.content[0]!.id);
+  const separated = televisionFromSpec({ ...spec, pages: [{ ...page, modules: [hero,
+    { id: `mod_${'d'.repeat(32)}`, kind: 'text', title: 'Story', body: 'Story' }, rail] }] });
+  assert.equal(heroSelector(separated.pages[0]!), undefined);
+  assert.equal(focusRows(separated, page.id).length, 3);
 });

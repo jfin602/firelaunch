@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
-import { televisionFromSpec, initialState, itemFocusId, navFocusId } from '@firelaunch/tv';
+import { televisionFromSpec, heroSpotlight, initialState, itemFocusId, navFocusId } from '@firelaunch/tv';
 import { Preview, PreviewArtwork, catalogContentId, ownerBookPreviewContent } from '../src/Preview.js';
 import type { CatalogSnapshot } from '../src/api.js';
 import { keyboardCommand, navigate, reconcile } from '../src/preview-state.js';
@@ -17,6 +17,32 @@ Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.
 Object.defineProperty(dom.window.HTMLMediaElement.prototype, 'pause', { value: () => {} });
 Object.defineProperty(dom.window.HTMLMediaElement.prototype, 'load', { value: () => {} });
 const { cleanup, fireEvent, render, screen, waitFor } = await import('@testing-library/react');
+
+test('preview state follows row focus, keeps detail/Back, and clears stale selection', () => {
+  const spec = fixtureChannel(), page = spec.pages[0]!, first = spec.content[0]!;
+  const other = { ...first, id: `item_${'b'.repeat(32)}`, title: 'Next title' };
+  const rail = { id: `mod_${'b'.repeat(32)}`, kind: 'rail' as const, title: 'Browse', contentIds: [first.id, other.id] };
+  const tv = televisionFromSpec({ ...spec, content: [first, other], pages: [{ ...page, modules: [page.modules[0]!, rail] }] });
+  const projected = tv.pages[0]!;
+  let state = initialState(tv);
+  for (const key of ['ArrowDown', 'ArrowRight'] as const) state = navigate(tv, state, keyboardCommand({ key })!);
+  assert.equal(heroSpotlight(projected, state)?.id, other.id);
+  assert.equal(state.screen, 'page');
+  state = navigate(tv, state, keyboardCommand({ key: 'Enter' })!);
+  assert.equal(state.screen, 'detail');
+  assert.equal(state.itemId, other.id);
+  state = navigate(tv, state, keyboardCommand({ key: 'Backspace' })!);
+  assert.equal(state.focusId, itemFocusId(page.id, rail.id, other.id));
+  const changed = televisionFromSpec({ ...spec, pages: [{ ...page, modules: [page.modules[0]!, { ...rail, contentIds: [first.id] }] }] });
+  state = reconcile(changed, state);
+  assert.equal(state.screen, 'page');
+  assert.equal(state.focusId, navFocusId(page.id));
+  assert.equal(heroSpotlight(changed.pages[0]!, state)?.id, first.id);
+  const secondPage = { ...page, id: `page_${'c'.repeat(32)}`, title: 'Other', modules: [] };
+  const switched = televisionFromSpec({ ...spec, pages: [page, secondPage], navigation: [page.id, secondPage.id] });
+  assert.equal(heroSpotlight(switched.pages[1]!, reconcile(switched,
+    { screen: 'page', pageId: secondPage.id, focusId: navFocusId(secondPage.id), selectedHeroItemId: other.id })), undefined);
+});
 
 test('Preview renders ordered static artwork and copy without selectable TV cards', () => {
   const spec = fixtureChannel(), original = spec.pages[0]!;
