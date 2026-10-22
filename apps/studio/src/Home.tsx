@@ -54,11 +54,17 @@ export function Home({ project, projects, accountId, hosted, libraryRevision = 0
         : items.length === 0 ? <p>No catalog items yet. Open Library to add a video or import creator-controlled content.</p>
         : <div className="home-media-grid">{items.map(item => {
           const asset = catalog?.mediaAssets.find(value => value.catalogItemId === item.id && value.kind === 'video' && value.location.type === 'managed_hls');
+          const audioAsset = catalog?.mediaAssets.find(value => value.catalogItemId === item.id && value.kind === 'audio' &&
+            (item.kind === 'audio' || (item.kind === 'book' && value.id === item.audiobook?.audioAssetId)));
+          const coverAsset = catalog?.mediaAssets.find(value => value.catalogItemId === item.id && value.kind === 'artwork');
           const title = item.creatorOverrides?.title ?? item.sourceRecord.metadata.title;
-          const rights = asset?.tvPlaybackRights?.status === 'revoked' ? 'Playback rights revoked' : asset?.tvPlaybackRights?.status === 'cleared' ? 'Playback rights asserted' : 'Playback rights unknown';
+          const playback = (item.kind === 'audio' ? audioAsset : asset)?.tvPlaybackRights?.status;
+          const rights = playback === 'revoked' ? 'Playback rights revoked' : playback === 'cleared' ? 'Playback rights asserted' : 'Playback rights unknown';
+          const coverRights = coverAsset?.tvDisplayRights?.status === 'revoked' ? 'Cover display rights revoked' :
+            coverAsset?.tvDisplayRights?.status === 'cleared' ? 'Cover display rights asserted' : 'Cover display rights unknown';
           return <button key={item.id} className="home-media-card" onClick={() => item.kind === 'video' && onOpenVideo ? onOpenVideo(item.id) : onSurface('Library')} aria-label={item.kind === 'video' ? `Open ${title} video` : `Open ${title} in Library`}>
-            <OwnedArtwork item={item} assets={catalog?.mediaAssets ?? []} projectId={project.id} accountId={accountId} className={`home-art home-art-${item.kind}`} fallback={<span className="home-art-fallback" aria-label="Artwork unavailable">{item.kind === 'video' ? '▣' : item.kind === 'audio' ? '♫' : '◇'}</span>}/><span className="home-media-copy"><strong>{title}</strong><small>{item.kind === 'book' || item.kind === 'listing' ? 'Informational · no playback' : item.kind === 'video' ? 'Video · private draft' : 'Audio · private draft'}</small>
-              <small>{item.kind === 'video' || item.kind === 'audio' ? rights : 'Review display rights in Library'}</small>
+            <OwnedArtwork item={item} assets={catalog?.mediaAssets ?? []} projectId={project.id} accountId={accountId} className={`home-art home-art-${item.kind}`} fallback={<span className="home-art-fallback" aria-label="Artwork unavailable">{item.kind === 'video' ? '▣' : item.kind === 'audio' ? '♫' : '◇'}</span>}/><span className="home-media-copy"><strong>{title}</strong><small>{item.kind === 'book' ? audioAsset ? 'Book · audiobook attached' : 'Book · no playback' : item.kind === 'listing' ? 'Informational · no playback' : item.kind === 'video' ? 'Video · private draft' : 'Audio · private draft'}</small>
+              <small>{item.kind === 'book' ? `${coverRights}${audioAsset ? ` · ${rights.toLowerCase()}` : ''}` : item.kind === 'listing' ? 'Review display rights in Library' : rights}</small>
               {item.kind === 'video' && <><small>{asset ? <VideoLibraryStatus key={`${project.id}:${item.id}:${asset.id}`} projectId={project.id} assetId={asset.id}/> : 'No upload yet · open to add an MP4'}</small><small className="video-card-action">Open video →</small></>}</span>
           </button>;
         })}</div>}
