@@ -41,17 +41,35 @@ function heroAction(content) {
   return content.presentation === 'audio' ? 'Listen' : 'Watch';
 }
 
+// The selected card fills the entire TV canvas, including behind navigation and
+// the selector. Narrow translucent strips soften both edges into black.
+function HeroBackdrop({ source }) {
+  const [failedSource, setFailedSource] = useState(null);
+  const visible = source?.startsWith('https://') && source !== failedSource;
+  return <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+    {visible && <Image key={source} source={{ uri: source }} resizeMode="cover"
+      onError={() => setFailedSource(source)} style={StyleSheet.absoluteFillObject} />}
+    <View style={styles.featureDim} />
+    {Array.from({ length: 24 }, (_, index) => <React.Fragment key={`edge:${index}`}>
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: `${index * 2.5}%`, width: '2.6%',
+        backgroundColor: '#000', opacity: 0.98 * Math.pow(1 - index / 24, 1.7) }} />
+      <View style={{ position: 'absolute', top: 0, bottom: 0, right: `${index * 1.25}%`, width: '1.35%',
+        backgroundColor: '#000', opacity: 0.98 * Math.pow(1 - index / 24, 1.6) }} />
+    </React.Fragment>)}
+    {Array.from({ length: 14 }, (_, index) => <View key={`bottom:${index}`} style={{ position: 'absolute',
+      left: 0, right: 0, bottom: `${index * 4}%`, height: '4.1%', backgroundColor: '#000',
+      opacity: 0.95 * Math.pow(1 - index / 14, 2) }} />)}
+  </View>;
+}
+
 function Feature({ content, brand, font, layout }) {
   const [failedSource, setFailedSource] = useState(null);
   const source = content.artwork?.startsWith('https://') ? content.artwork : null;
   const visible = source && source !== failedSource;
   const frame = featureArtworkFrame(layout, content.presentation);
   const meta = [content.author, content.publicationDate?.slice(0, 4), content.category, content.series].filter(Boolean);
-  return <View style={[styles.feature, { height: layout.featureHeight, backgroundColor: brand.backgroundColor }]}>
-    {visible && <Image key={`back:${source}`} source={{ uri: source }} resizeMode="cover"
-      onError={() => setFailedSource(source)} style={styles.featureBackdrop} />}
-    <View style={styles.featureScrim} />
-    <View style={[styles.featureCopy, { padding: 20 * layout.scale }]}>
+  return <View style={[styles.feature, { height: layout.featureHeight }]}>
+    <View style={[styles.featureCopy, { width: layout.contentWidth * 0.56, padding: 20 * layout.scale }]}>
       <Text style={[styles.featureKicker, font, { borderColor: brand.primaryColor }]}>FEATURED</Text>
       <Text numberOfLines={2} style={[styles.featureTitle, font, { fontSize: 36 * layout.scale }]}>{content.title}</Text>
       <Text numberOfLines={3} style={[styles.featureDescription, font, { fontSize: 18 * layout.scale }]}>{content.description}</Text>
@@ -59,11 +77,11 @@ function Feature({ content, brand, font, layout }) {
       <Text style={[styles.featureAction, font, { backgroundColor: brand.primaryColor,
         color: accentTextColor(brand.primaryColor) }]}>{heroAction(content)}  →</Text>
     </View>
-    <View style={[styles.featureFrame, { width: layout.contentWidth * 0.42 }]}>
+    {content.presentation !== 'video' && <View style={[styles.featureFrame, { width: layout.contentWidth * 0.42 }]}>
       {visible ? <Image key={`front:${source}`} source={{ uri: source }} resizeMode="contain"
         onError={() => setFailedSource(source)} style={{ width: frame.width, height: frame.height }} />
         : <Text style={[font, styles.featureFallback]}>Artwork unavailable</Text>}
-    </View>
+    </View>}
   </View>;
 }
 
@@ -324,6 +342,7 @@ export default function App() {
     onBack={() => dispatch('back')} typography={brand.typography} />;
   return <View style={[styles.screen, { backgroundColor: brand.backgroundColor,
     paddingHorizontal: layout.horizontalInset, paddingTop: layout.topInset }]}>
+    {state.screen === 'page' && heroPair && spotlight && <HeroBackdrop source={spotlight.artwork} />}
     {state.screen === 'page' ? <>
       <View style={[styles.header, { minHeight: 58 * layout.scale, marginBottom: 12 * layout.scale }]}>
         {brand.logo?.startsWith('https://') && <Image source={{ uri: brand.logo }}
@@ -432,10 +451,9 @@ const styles = StyleSheet.create({
   navItem: { paddingVertical: 10, paddingHorizontal: 14, marginRight: 12, borderWidth: 2, borderColor: 'transparent', borderRadius: 6 },
   scrollArea: { flex: 1 }, scrollIndicator: { position: 'absolute', right: -2, width: 2,
     borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
-  feature: { flexDirection: 'row', overflow: 'hidden', borderRadius: 8, marginBottom: 2 },
-  featureBackdrop: { ...StyleSheet.absoluteFillObject, opacity: 0.6 },
-  featureScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.62)' },
-  featureCopy: { flex: 1, justifyContent: 'center', zIndex: 1 },
+  feature: { flexDirection: 'row', overflow: 'hidden', marginBottom: 2 },
+  featureDim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.12)' },
+  featureCopy: { justifyContent: 'center', zIndex: 1 },
   featureKicker: { color: '#E5EEE9', fontSize: 14, fontWeight: 'bold', borderLeftWidth: 4, paddingLeft: 8 },
   featureTitle: { color: '#FFFFFF', fontWeight: 'bold', marginTop: 8 },
   featureDescription: { color: '#F0F3F1', lineHeight: 25, marginTop: 6 },

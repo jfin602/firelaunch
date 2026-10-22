@@ -994,11 +994,14 @@ body:has(.preview-fullscreen){overflow:hidden}
 
 /* The paired Hero and first authored row share the initial TV viewport. */
 .tv-feature{height:87cqh;max-height:calc(100% - 1px);display:flex;flex-direction:column;overflow:hidden}
-.tv-feature-display{position:relative;height:45cqh;flex:none;display:flex;align-items:center;overflow:hidden;background:radial-gradient(ellipse at 78% 36%,color-mix(in srgb,var(--tv-accent) 22%,#172333),#0a111a 72%)}
-.tv-feature-art{position:absolute;inset:0;background-size:cover;background-position:center;display:flex;justify-content:flex-end;align-items:center;padding:2% 5% 2% 58%;isolation:isolate}
-.tv-feature-art.has-art::before{content:"";position:absolute;inset:-5%;z-index:-2;background:inherit;background-size:cover;background-position:center;filter:blur(1.1em) brightness(.6)}
-.tv-feature-art::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#091018 2%,#091018e8 37%,#09101890 75%,#0910188c)}
-.tv-feature-art img{display:block;width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 .6em 1.2em #000b)}
+.tv-screen-featured .tv-header,.tv-screen-featured .tv-content-wrap{position:relative;z-index:1}
+.tv-screen-featured .tv-header{border-bottom:0}
+.tv-feature-display{position:relative;height:51cqh;flex:none;display:flex;align-items:center;overflow:hidden;background:transparent}
+.tv-feature-art{position:absolute;inset:0;z-index:0;background-size:cover;background-position:60% center;background-color:#000;isolation:isolate;pointer-events:none}
+.tv-feature-art::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#000 0%,#000f 8%,#000e 20%,#000a 38%,#0003 60%,transparent 78%,#0007 100%)}
+.tv-feature-art::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,#000 0%,#000e 14%,#0009 30%,transparent 64%)}
+.tv-feature-art img{position:absolute;right:7%;top:17%;width:35%;height:45%;object-fit:contain;filter:drop-shadow(0 .6em 1.2em #000b)}
+.tv-feature-art.is-wide img{visibility:hidden}
 .tv-feature-art:not(.has-art) img{visibility:hidden}
 .tv-feature-art img:not([src]){display:none}
 .tv-feature-art-fallback{margin:auto;color:color-mix(in srgb,var(--tv-accent) 45%,white);opacity:.55;font-size:5em}

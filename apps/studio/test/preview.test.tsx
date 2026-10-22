@@ -100,12 +100,13 @@ test('Hero art contains each shape and falls back for small or failed images', (
 test('Hero and first selector fit HD and FHD stages without vertical reveal scrolling', () => {
   const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
   assert.match(css, /\.tv-feature\{height:87cqh;max-height:calc\(100% - 1px\)/);
-  assert.match(css, /\.tv-feature-display\{[^}]*height:45cqh/);
+  assert.match(css, /\.tv-feature-display\{[^}]*height:51cqh/);
+  assert.match(css, /\.tv-feature-art\{[^}]*inset:0/);
   assert.match(css, /\.tv-feature-selector \.tv-items\{[^}]*overflow-x:auto;overflow-y:hidden/);
   assert.match(css, /\.tv-feature-art img\{[^}]*object-fit:contain/);
   for (const height of [720, 1080]) {
     assert.ok((.13 + .87) * height <= height);
-    assert.ok(.45 * height + (.87 - .45) * height <= .87 * height);
+    assert.ok(.51 * height + (.87 - .51) * height <= .87 * height);
   }
 });
 

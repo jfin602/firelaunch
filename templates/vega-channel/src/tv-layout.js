@@ -10,8 +10,8 @@ export function tvLayout(width, height) {
   const headerHeight = 70 * scale;
   // One title line, card padding/art gap, one card title line, type and section margins.
   // Selector book art is contained inside the same bounded card-art frame.
-  const selectorHeight = cardArtworkHeight + 124 * scale;
-  const featureHeight = Math.max(160 * scale, Math.min(height * 0.44,
+  const selectorHeight = cardArtworkHeight + 80 * scale;
+  const featureHeight = Math.max(160 * scale, Math.min(height * 0.52,
     height - topInset - headerHeight - selectorHeight - 32 * scale));
   return { scale, horizontalInset, topInset, contentWidth, heroArtworkHeight, heroWidth, cardWidth, cardArtworkHeight,
     headerHeight, selectorHeight, featureHeight };

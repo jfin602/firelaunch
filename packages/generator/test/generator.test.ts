@@ -81,6 +81,8 @@ test('generated native feature uses shared selection and fits a first selector a
   assert.doesNotThrow(() => parse(source, { sourceType: 'module', plugins: ['jsx'] }));
   assert.match(source, /heroSelector\(page\)/);
   assert.match(source, /heroSpotlight\(page, state\)/);
+  assert.match(source, /<HeroBackdrop source=\{spotlight\.artwork\}/);
+  assert.match(source, /style=\{StyleSheet\.absoluteFillObject\}/);
   assert.match(source, /module === heroPair\?\.selector \? null/);
   assert.match(source, /resizeMode="cover"/);
   assert.match(source, /resizeMode="contain"/);
