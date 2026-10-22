@@ -1,0 +1,17 @@
+DEFERRED PHASE 10 PLAN — DO NOT RUN AS WRITTEN.
+This prompt was migrated unchanged in substance from the superseded 2026-10-21 Phase 9 Live Publishing plan. The old 0.9.x version/Phase 9/runner references below are historical, NOT approved P10 execution metadata. Reassess against the actual Phase 9 Polish closeout and author 0.10.x-compatible execution before starting. Preserve installed-client safety, immutable approvals and protected public release #1.
+
+--- ORIGINAL PLANNED INSTRUCTIONS (ARCHIVAL, DEFERRED) ---
+
+TASK: Phase 9 P2-live-channel-refresh
+
+MODEL / ENTRY
+GPT-6 Sol High. Planned 0.9.2 after explicit coherent 0.9.0 entry and previous accepted checkpoint. Sequential runner-owned checkpoint, no device qualification. No /activate; verify current HEAD/worktree, P8 handoff and C7 R4. <=8 min target, 15 min hard stop.
+
+WORK
+Inspect actual Phase 5 immutable owner approval, pointer, public resolver and generated Vega release loader (not just a test stub). Repair only real gaps for approved compatible v1→v2 on same package, pinned HTTPS and valid deployment/schema/digest/sequence. Persist last-known-good; offline/404/5xx/timeout/corrupt/wrong deployment must preserve previous view. Rights-rechecked owner rollback creates a new higher-sequence v3. Never publish drafts or foreign/staged/revoked media.
+
+VALIDATE / DISPOSITION
+Focused tests for v1/v2, faults/LKG, rollback, public-only payload, typecheck/build/diff. P5 provides installed-device proof; no unauthorized public publish.
+
+Never perform unapproved live creator publication, paid encoding, cloud/IAM/CDN changes, remote executable JS OTA, Amazon login/submission, unsafe worker execution or historic P5/Q2/C7 relabeling. Report exact source, results and remaining blocker.
