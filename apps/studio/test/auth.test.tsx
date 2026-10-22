@@ -47,15 +47,16 @@ test('hosted Studio selects only listed projects, verifies switch and clears on 
   }) as typeof fetch;
   try {
     render(createElement(App));
-    assert.equal((await screen.findByRole('heading', { name: 'First owner channel', level: 1 })).textContent, 'First owner channel');
+    assert.match((await screen.findByRole('button', { name: 'Switch workspace, current channel First owner channel' })).textContent ?? '', /First owner channel/);
     assert.equal(dom.window.location.search, `?project=${firstId}`);
-    fireEvent.change(screen.getByRole('combobox', { name: 'Switch project' }), { target: { value: secondId } });
-    await screen.findByRole('heading', { name: 'Second owner channel', level: 1 });
+    fireEvent.click(screen.getByRole('button', { name: /Switch workspace, current channel/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Second owner channel' }));
+    await screen.findByRole('button', { name: `Switch workspace, current channel Second owner channel` });
     assert.ok(requests.includes(`/api/projects/${secondId}`));
     account = 'cr_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
     fireEvent(dom.window as unknown as Window, new dom.window.Event('focus'));
     await screen.findByRole('link', { name: 'Sign in with Google' });
-    assert.equal(screen.queryByRole('combobox', { name: 'Switch project' }), null);
+    assert.equal(screen.queryByRole('button', { name: /Switch workspace, current channel/ }), null);
     assert.equal(dom.window.location.search, '');
   } finally { cleanup(); globalThis.fetch = previous; dom.window.history.replaceState(null, '', '/'); }
 });

@@ -61,7 +61,7 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
   }) as typeof fetch;
   try {
     render(createElement(App));
-    await screen.findByRole('heading', { name: 'Wild Earth', level: 1 });
+    await screen.findByRole('button', { name: `Switch workspace, current channel Wild Earth` });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     assert.equal(screen.getByRole('button', { name: 'Pages & Layout' }).getAttribute('aria-pressed'), 'true');
     assert.deepEqual(within(screen.getByRole('group', { name: 'Channel views' })).getAllByRole('button').map(button => button.textContent), ['Pages & Layout', 'Appearance']);
@@ -134,8 +134,9 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     assert.ok(within(rail).getByRole('button', { name: 'Home' }));
     fireEvent.click(screen.getByRole('button', { name: 'Edit page' }));
     assert.equal((screen.getByRole('button', { name: 'Delete page' }) as HTMLButtonElement).disabled, true);
-    fireEvent.change(screen.getByRole('combobox', { name: 'Switch project' }), { target: { value: second.id } });
-    await screen.findByRole('heading', { name: 'Other channel', level: 1 });
+    fireEvent.click(screen.getByRole('button', { name: /Switch workspace, current channel/ }));
+    fireEvent.click(screen.getByRole('button', { name: second.spec.title }));
+    await screen.findByRole('button', { name: `Switch workspace, current channel Other channel` });
     assert.equal(screen.getAllByRole('region', { name: 'Interactive TV Preview' }).length, 1);
     assert.notEqual(screen.getByRole('region', { name: 'Interactive TV Preview' }), preview);
     assert.equal(screen.queryByRole('complementary', { name: 'Layout inspector' }), null);
@@ -176,7 +177,7 @@ test('Image + Text section saves bounded text and preset through the normal muta
   }) as typeof fetch;
   try {
     render(createElement(App));
-    await screen.findByRole('heading', { name: 'Wild Earth', level: 1 });
+    await screen.findByRole('button', { name: `Switch workspace, current channel Wild Earth` });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Section type' }), { target: { value: 'image-text' } });
@@ -216,7 +217,7 @@ test('section edits reorder by stable IDs, preserve Library references and retai
   }) as typeof fetch;
   try {
     render(createElement(App));
-    await screen.findByRole('heading', { name: 'Wild Earth', level: 1 });
+    await screen.findByRole('button', { name: `Switch workspace, current channel Wild Earth` });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     const section = screen.getByRole('region', { name: 'hero section 1' });

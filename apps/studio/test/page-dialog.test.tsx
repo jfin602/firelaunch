@@ -38,7 +38,7 @@ test('new-page dialog keeps input on conflict, retries once, saves composition a
   }) as typeof fetch;
   try {
     render(createElement(App));
-    await screen.findByRole('heading', { name: 'Films', level: 1 });
+    await screen.findByRole('button', { name: `Switch workspace, current channel Films` });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     const opener = screen.getByRole('button', { name: 'New page' });

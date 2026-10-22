@@ -36,7 +36,27 @@ test('empty hosted account keeps onboarding, status and real navigation visible'
     assert.ok(screen.getByRole('navigation', { name: 'Studio surfaces' }));
     assert.equal(screen.getByRole('button', { name: 'Library' }).hasAttribute('disabled'), true);
     assert.ok(screen.getByRole('button', { name: 'Sign out' }));
-    assert.ok(screen.getByRole('heading', { level: 1, name: 'Your next channel' }));
+    assert.ok(screen.getByRole('heading', { level: 1, name: /Stories belong/ }));
+    assert.equal(document.querySelector('.topbar'), null);
+  } finally { restore(); }
+});
+
+test('every Studio destination starts without a topbar and the card owns workspace actions', async () => {
+  const restore = mockApi([first, second]);
+  try {
+    render(createElement(App));
+    const card = await screen.findByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` });
+    assert.match(card.textContent ?? '', /REV 3 · PRIVATE/);
+    assert.equal(document.querySelector('.topbar'), null);
+    assert.equal(document.querySelector('.project-select'), null);
+    for (const destination of ['Home', 'Library', 'Channel', 'Publish', 'Export']) {
+      fireEvent.click(screen.getByRole('button', { name: destination }));
+      assert.equal(document.querySelector('.topbar'), null);
+      assert.equal(document.querySelector('.studio-main')?.firstElementChild?.classList.contains('topbar'), false);
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'New channel' }));
+    assert.ok(screen.getByPlaceholderText('e.g. Wild Earth'));
+    assert.equal(document.querySelector('.topbar'), null);
   } finally { restore(); }
 });
 
@@ -45,7 +65,7 @@ test('appearance editor keeps unsaved changes guarded across dock tabs and proje
   const originalConfirm = window.confirm;
   try {
     render(createElement(App));
-    await screen.findByRole('heading', { name: first.spec.title, level: 1 });
+    await screen.findByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` });
     fireEvent.click(screen.getByRole('button', { name: 'Library' }));
     assert.equal(screen.queryByRole('complementary', { name: /inspector/i }), null);
     assert.equal(document.querySelector('.workspace')?.classList.contains('has-inspector'), false);
@@ -54,15 +74,20 @@ test('appearance editor keeps unsaved changes guarded across dock tabs and proje
     assert.ok(screen.getByRole('complementary', { name: 'Appearance editor' }));
     const title = screen.getByLabelText('DISPLAY NAME') as HTMLInputElement;
     fireEvent.change(title, { target: { value: 'Unsaved name' } });
+    assert.match(screen.getByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` }).textContent ?? '', /UNSAVED EDITS/);
     window.confirm = () => false;
+    fireEvent.click(screen.getByRole('button', { name: /Switch workspace, current channel/ }));
+    fireEvent.click(screen.getByRole('button', { name: second.spec.title }));
+    assert.ok(screen.getByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` }));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     assert.ok(screen.getByRole('complementary', { name: 'Appearance editor' }));
     window.confirm = () => true;
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     assert.equal(screen.queryByRole('complementary', { name: 'Appearance editor' }), null);
     fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-    fireEvent.change(screen.getByRole('combobox', { name: 'Switch project' }), { target: { value: second.id } });
-    await screen.findByRole('heading', { name: 'Second channel', level: 1 });
+    fireEvent.click(screen.getByRole('button', { name: /Switch workspace, current channel/ }));
+    fireEvent.click(screen.getByRole('button', { name: second.spec.title }));
+    await screen.findByRole('button', { name: `Switch workspace, current channel Second channel` });
     assert.equal(screen.queryByRole('complementary', { name: 'Appearance inspector' }), null);
     assert.ok(screen.getByRole('region', { name: 'Interactive TV Preview' }));
     assert.equal(screen.queryByRole('button', { name: 'Close TV Preview' }), null);
@@ -81,7 +106,8 @@ test('responsive shell declares edge-to-edge canvas and inline tablet inspector'
   assert.match(shell, /@media \(max-width: 1180px\)/);
   assert.match(css, /\.workspace\.has-inspector\s*\{[^}]*grid-template-columns/s);
   assert.match(shell, /@media \(max-width: 900px\)/);
-  assert.match(shell, /\.sidebar-project \.project-select\s*\{\s*display:\s*block/);
+  assert.match(shell, /\.project-switch-current\s*\{[^}]*min-height:\s*40px/s);
+  assert.doesNotMatch(css, /calc\(100dvh - (?:82|95)px\)/);
   assert.match(shell, /\.sidebar-nav\s*\{[^}]*overflow-x:\s*auto/s);
   assert.match(css, /@media \(max-width: 600px\)\s*\{\s*\.sidebar\s*\{\s*position:\s*relative/s);
   assert.match(css, /\.sidebar-nav\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/s);
@@ -95,9 +121,10 @@ test('local project switch keeps the creator in Studio', async () => {
   const restore = mockApi([first, second], true);
   try {
     render(createElement(App));
-    await screen.findByRole('heading', { name: first.spec.title, level: 1 });
-    fireEvent.change(screen.getByRole('combobox', { name: 'Switch project' }), { target: { value: second.id } });
-    await screen.findByRole('heading', { name: 'Second channel', level: 1 });
+    await screen.findByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` });
+    fireEvent.click(screen.getByRole('button', { name: /Switch workspace, current channel/ }));
+    fireEvent.click(screen.getByRole('button', { name: second.spec.title }));
+    await screen.findByRole('button', { name: `Switch workspace, current channel Second channel` });
     assert.equal(screen.queryByRole('heading', { name: 'Sign in to FireLaunch' }), null);
     assert.equal(dom.window.location.search, `?project=${second.id}`);
   } finally { restore(); }
@@ -113,7 +140,7 @@ test('full-screen fallback retains the live Preview, TV playback and focus on ex
   Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: undefined });
   try {
     render(createElement(App));
-    await screen.findByRole('heading', { name: first.spec.title, level: 1 });
+    await screen.findByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
     fireEvent.click(screen.getByRole('button', { name: 'Down' }));
@@ -159,7 +186,7 @@ test('Clean View hides Studio chrome and recovers by H, corner, editor shortcut 
   Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: undefined });
   try {
     render(createElement(App));
-    await screen.findByRole('heading', { name: first.spec.title, level: 1 });
+    await screen.findByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
     const editor = document.querySelector('.channel-editor');
@@ -233,7 +260,7 @@ test('native fullscreen success and rejection keep one Preview and return focus'
   Object.defineProperty(document, 'exitFullscreen', { configurable: true, value: () => { fullscreenElement = null; document.dispatchEvent(new dom.window.Event('fullscreenchange')); return Promise.resolve(); } });
   try {
     render(createElement(App));
-    await screen.findByRole('heading', { name: first.spec.title, level: 1 });
+    await screen.findByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
     const trigger = screen.getByRole('button', { name: 'View full screen' });
@@ -265,7 +292,7 @@ test('fullscreen left drawer reveals at the edge, stays open for focus and edits
   Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: undefined });
   try {
     render(createElement(App));
-    await screen.findByRole('heading', { name: first.spec.title, level: 1 });
+    await screen.findByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     const preview = screen.getByRole('region', { name: 'Interactive TV Preview' });
     const editor = document.querySelector('.channel-editor');
@@ -343,15 +370,17 @@ test('an external project switch closes fallback before showing the next channel
   Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: undefined });
   try {
     render(createElement(App));
-    await screen.findByRole('heading', { name: first.spec.title, level: 1 });
+    await screen.findByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` });
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     fireEvent.click(screen.getByRole('button', { name: 'View full screen' }));
     assert.ok(screen.getByRole('dialog', { name: 'Full-screen TV Preview' }));
-    fireEvent.change(document.querySelector<HTMLSelectElement>('.project-select')!, { target: { value: second.id } });
+    fireEvent.click(screen.getByRole('button', { name: /Switch workspace, current channel/ }));
+    fireEvent.click(screen.getByRole('button', { name: second.spec.title }));
     await new Promise(resolve => setTimeout(resolve, 100));
-    assert.equal(document.querySelector('.topbar h1')?.textContent, 'Second channel');
+    assert.equal(document.querySelector('.topbar'), null);
+    assert.equal(document.querySelector('.project-select'), null);
     assert.equal(document.querySelector('.preview-fullscreen'), null);
-    await screen.findByRole('heading', { name: 'Second channel', level: 1 });
+    await screen.findByRole('button', { name: `Switch workspace, current channel Second channel` });
     assert.equal(document.querySelectorAll('.preview-wrap').length, 1);
   } finally {
     Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: original });

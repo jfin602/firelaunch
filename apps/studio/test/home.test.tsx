@@ -67,7 +67,7 @@ test('empty account keeps clear onboarding; one project opens real Home and navi
     fireEvent.click(screen.getByRole('button', { name: 'Go to Library →' }));
     assert.equal(screen.getByRole('button', { name: 'Library' }).getAttribute('aria-current'), 'page');
     fireEvent.click(screen.getByRole('navigation', { name: 'Studio surfaces' }).querySelector('button')!);
-    fireEvent.click(document.querySelector('.topbar-right button')!);
+    fireEvent.click(screen.getByRole('button', { name: 'New channel' }));
     assert.ok(screen.getByPlaceholderText('e.g. Wild Earth'));
   } finally { one.restore(); }
 });

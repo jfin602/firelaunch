@@ -331,6 +331,16 @@ export default function App() {
   const inspectorDirty = useRef(false);
   const sectionDraftDirty = useRef(false);
   const [sectionDraftPending, setSectionDraftPending] = useState(false);
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
+  const workspaceCard = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!workspaceMenuOpen) return;
+    const dismissOutside = (event: PointerEvent) => { if (!workspaceCard.current?.contains(event.target as Node)) setWorkspaceMenuOpen(false); };
+    const dismissEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setWorkspaceMenuOpen(false); };
+    document.addEventListener('pointerdown', dismissOutside);
+    document.addEventListener('keydown', dismissEscape);
+    return () => { document.removeEventListener('pointerdown', dismissOutside); document.removeEventListener('keydown', dismissEscape); };
+  }, [workspaceMenuOpen]);
   const leaveSectionDraft = () => !sectionDraftDirty.current || window.confirm('Discard unsaved section edits?');
   const reportSectionDraft = useCallback((dirty: boolean) => { sectionDraftDirty.current = dirty; setSectionDraftPending(dirty); }, []);
   const setInspectorDirty = (dirty: boolean) => { inspectorDirty.current = dirty; setAppearanceDraftPending(dirty); };
@@ -344,6 +354,7 @@ export default function App() {
   const navigate = (target: Surface) => {
     if (!leaveSectionDraft()) return;
     if (inspectorProject && !closeInspector()) return;
+    setWorkspaceMenuOpen(false);
     if (target === 'Channel') setChannelView('Pages & Layout');
     setSurface(target); setNewChannel(false);
   };
@@ -385,6 +396,7 @@ export default function App() {
       const next = await getProject(id);
       if (generation !== switchGeneration.current || identity !== identityGeneration.current || (active?.accountId ?? null) !== accountRef.current || next.id !== id) return;
       select(next);
+      setWorkspaceMenuOpen(false);
       setInspectorProject(surface === 'Channel' && channelView === 'Appearance' ? next.id : null); inspectorDirty.current = false;
       setVideoSelection(null);
       setNewChannel(false);
@@ -425,15 +437,21 @@ export default function App() {
   const draftSelection = project ? catalogSelections[project.id] : undefined;
   const editorPageId = project && editorPageSelection?.projectId === project.id && project.spec.navigation.includes(editorPageSelection.pageId)
     ? editorPageSelection.pageId : project?.spec.navigation[0];
-  const openChannel = (view: ChannelView) => { if (!leaveSectionDraft()) return; if (inspectorProject && !closeInspector()) return; setInspectorProject(view === 'Appearance' ? project?.id ?? null : null); setChannelView(view); setSurface('Channel'); setNewChannel(false); };
+  const openChannel = (view: ChannelView) => { if (!leaveSectionDraft()) return; if (inspectorProject && !closeInspector()) return; setWorkspaceMenuOpen(false); setInspectorProject(view === 'Appearance' ? project?.id ?? null : null); setChannelView(view); setSurface('Channel'); setNewChannel(false); };
   const openVideo = (itemId?: string) => {
     if (!project || !session) return;
     setVideoSelection({ projectId: project.id, accountId: session.accountId, ...(itemId ? { itemId } : {}) });
   };
+  const openNewChannel = () => {
+    if (!leaveSectionDraft()) return;
+    if (inspectorProject && !closeInspector()) return;
+    setWorkspaceMenuOpen(false);
+    setNewChannel(true);
+  };
   if (signedOut) return <div className="welcome"><h1>Sign in to FireLaunch</h1><p>Your session has ended or you have not signed in.</p><a className="primary" href="/api/auth/login">Sign in with Google</a></div>;
-  return <div className="app-shell"><aside className="sidebar" aria-label="Studio navigation"><div className="sidebar-head"><div className="wordmark"><span className="mark">✳</span><span>firelaunch<small>CREATOR STUDIO</small></span></div>{session && <div className="sidebar-account"><span title={session.email}>{session.email}</span><button onClick={() => void logout().then(() => window.dispatchEvent(new window.Event('firelaunch-session-expired'))).catch(reason => setError(String(reason)))}>Sign out</button></div>}</div><div className="sidebar-project"><div className="sidebar-label">WORKSPACE</div><button className="project-switch" onClick={() => { if (leaveSectionDraft()) setNewChannel(true); }} aria-label="New channel workspace"><span className="project-avatar">{project?.spec.title[0] ?? '+'}</span><span>{project?.spec.title ?? 'New channel'}<small>{project ? `REV ${project.revision} · ${session ? 'PRIVATE' : 'LOCAL'}` : 'GET STARTED'}</small></span><span aria-hidden="true">＋</span></button>{projects.length > 1 && <select className="project-select" aria-label="Switch project" value={project?.id ?? ''} onChange={event => { if (projects.some(item => item.id === event.target.value)) void switchProject(event.target.value); }}>{projects.map(item => <option key={item.id} value={item.id}>{item.spec.title}</option>)}</select>}</div>
+  return <div className="app-shell"><aside className="sidebar" aria-label="Studio navigation"><div className="sidebar-head"><div className="wordmark"><span className="mark">✳</span><span>firelaunch<small>CREATOR STUDIO</small></span></div>{session && <div className="sidebar-account"><span title={session.email}>{session.email}</span><button onClick={() => void logout().then(() => window.dispatchEvent(new window.Event('firelaunch-session-expired'))).catch(reason => setError(String(reason)))}>Sign out</button></div>}</div><div className="sidebar-project" ref={workspaceCard}><div className="sidebar-label">WORKSPACE</div><div className="project-switch"><button type="button" className="project-switch-current" aria-label={`Switch workspace, current channel ${project?.spec.title ?? 'New channel'}`} aria-expanded={workspaceMenuOpen} aria-controls={workspaceMenuOpen ? 'workspace-menu' : undefined} disabled={projects.length < 2} onClick={() => setWorkspaceMenuOpen(open => !open)}><span className="project-avatar">{project?.spec.title[0] ?? '+'}</span><span className="project-switch-copy">{project?.spec.title ?? 'New channel'}<small aria-live="polite">{project ? `REV ${project.revision} · ${busy ? 'SAVING' : sectionDraftPending || appearanceDraftPending ? 'UNSAVED EDITS' : session ? 'PRIVATE' : 'LOCAL'}` : 'GET STARTED'}</small></span>{projects.length > 1 && <span className="project-switch-chevron" aria-hidden="true">⌄</span>}</button><button type="button" className="project-switch-add" aria-label="New channel" onClick={openNewChannel}>＋</button></div>{workspaceMenuOpen && projects.length > 1 && <div id="workspace-menu" className="workspace-menu" aria-label="Workspaces">{projects.map(item => <button key={item.id} type="button" aria-current={item.id === project?.id ? 'true' : undefined} onClick={() => { setWorkspaceMenuOpen(false); if (item.id !== project?.id) void switchProject(item.id); }}>{item.spec.title}</button>)}</div>}</div>
     <div className="sidebar-label sidebar-sections-label">CHANNEL WORKSPACE</div><nav className="sidebar-nav" aria-label="Studio surfaces">{surfaces.map(target => <button key={target} disabled={!project} aria-current={surface === target && project && !newChannel ? 'page' : undefined} className={surface === target && project && !newChannel ? 'active' : ''} onClick={() => navigate(target)}><span aria-hidden="true">{icons[target]}</span>{target}</button>)}</nav><div className="sidebar-footer">✧ &nbsp; Vega-first creation<br/><small>{session ? 'Hosted studio' : 'Local studio'}</small></div></aside>
-    <main className="studio-main"><header className="topbar"><div className="topbar-title"><span className="eyebrow">STUDIO / {newChannel || !project ? 'NEW CHANNEL' : surface.toUpperCase()}</span><h1>{newChannel ? 'Your next channel' : project?.spec.title ?? 'Your next channel'}</h1></div><div className="topbar-right"><span className="status" role="status"><i aria-hidden="true"/> {busy ? 'SAVING' : sectionDraftPending ? 'UNSAVED EDITS' : project ? session ? 'SAVED PRIVATELY' : 'SAVED LOCALLY' : 'READY'}</span><button onClick={() => { if (!leaveSectionDraft()) return; if (inspectorProject && !closeInspector()) return; setNewChannel(previous => !previous); }}>{newChannel && project ? '← Current channel' : '＋ New channel'}</button></div></header>
+    <main className="studio-main">
       {session && project && <VideoTransferNotice accountId={session.accountId} projectId={project.id} onOpen={openVideo}/>}
       {error && <div className="error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></div>}
       {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : surface === 'Home' ? <Home key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} projects={projects} accountId={session?.accountId ?? null} hosted={!!session} libraryRevision={libraryRevision} onSelectProject={id => void switchProject(id)} onSurface={navigate} onEditChannel={() => openChannel('Appearance')} onOpenVideo={openVideo} onPreview={() => openChannel('Pages & Layout')}/> : <div className={`workspace ${surface === 'Channel' ? 'channel-workspace' : ''}`}>
