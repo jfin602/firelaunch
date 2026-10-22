@@ -6,9 +6,12 @@ import { z } from 'zod';
 import type { PrivateObjectStore } from './private-objects.js';
 import { audit } from './operations.js';
 
-const MAX_ARCHIVE = 256_000_000;
+// A two-hour MP3 may occupy 320 MB; recovery v1 base64 and encryption add overhead.
+// The staging preflight keeps actual archives below this ceiling before allocation.
+const MAX_ARCHIVE = 800_000_000;
 const sha = (value: Buffer) => createHash('sha256').update(value).digest('hex');
-const itemSchema = z.strictObject({ key: z.string().regex(/^private\/[a-f0-9]{64}$/), size: z.number().int().nonnegative().max(1_048_576), sha256: z.string().regex(/^[a-f0-9]{64}$/), contentType: z.string().max(100), contentBase64: z.string() });
+const itemSchema = z.strictObject({ key: z.string().regex(/^private\/[a-f0-9]{64}$/), size: z.number().int().nonnegative().max(320_000_000), sha256: z.string().regex(/^[a-f0-9]{64}$/), contentType: z.string().max(100), contentBase64: z.string() })
+  .refine(item => item.size <= (item.contentType === 'audio/mpeg' ? 320_000_000 : 1_048_576), 'Unsupported recovery object size');
 const archiveSchema = z.strictObject({ format: z.literal('firelaunch-recovery-v1'), createdAt: z.string().datetime(), retainUntil: z.string().datetime(), databaseSha256: z.string().regex(/^[a-f0-9]{64}$/), databaseBase64: z.string(), objects: z.array(itemSchema).max(100_000) });
 export type RecoveryManifest = { format: string; createdAt: string; retainUntil: string; databaseSha256: string; objects: { key: string; size: number; sha256: string; contentType: string }[] };
 

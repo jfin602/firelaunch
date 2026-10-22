@@ -19,7 +19,7 @@ export async function audit(pool: Pool | undefined, event: z.infer<typeof events
 
 export async function health(pool: Pool, store: PrivateObjectStore): Promise<{ status: 'ok' | 'degraded'; database: boolean; objectStore: boolean; migration: number }> {
   let database = false; let objectStore = false; let migration = 0;
-  try { const result = await pool.query<{ version: number }>('SELECT max(version)::int AS version FROM firelaunch_schema_migrations'); migration = result.rows[0]?.version ?? 0; database = migration === 13; } catch { /* safe status only */ }
+  try { const result = await pool.query<{ version: number }>('SELECT max(version)::int AS version FROM firelaunch_schema_migrations'); migration = result.rows[0]?.version ?? 0; database = migration === 15; } catch { /* safe status only */ }
   // Object stores expose no list permission. A missing random key must return an error, proving a reachable authenticated read path.
   try { await store.get(`private/${'0'.repeat(64)}`); objectStore = true; }
   catch (error) { objectStore = !(error instanceof TypeError) && /NoSuchKey|ENOENT|not found/i.test(String(error)); }
@@ -59,7 +59,7 @@ export async function exportAccount(pool: Pool, store: PrivateObjectStore, id: s
     for (const row of rows) {
       const content = await store.get(row.object_key);
       bytes += content.length;
-      if (bytes > 100_000_000 || content.length !== row.byte_size || hash(content) !== row.sha256) throw new Error('Account export integrity or size failure');
+      if (bytes > 500_000_000 || content.length !== row.byte_size || hash(content) !== row.sha256) throw new Error('Account export integrity or size failure');
       const { object_key: _key, ...metadata } = row;
       objects.push({ metadata, contentBase64: content.toString('base64') });
     }

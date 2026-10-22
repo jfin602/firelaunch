@@ -120,6 +120,9 @@ export type CatalogKind = 'sources' | 'items' | 'collections' | 'media-assets';
 export async function writeCatalog(id: string, kind: CatalogKind, revision: number, record: object, recordId?: string): Promise<{ revision: number; record: CatalogSource | CatalogItem | Collection | MediaAsset }> {
   return await request(`/${id}/catalog/${kind}${recordId ? `/${recordId}` : ''}`, { ...json({ expectedRevision: revision, record }), method: recordId ? 'PUT' : 'POST' }) as { revision: number; record: CatalogSource | CatalogItem | Collection | MediaAsset };
 }
+export async function deleteCatalogRecord(id: string, kind: CatalogKind, revision: number, recordId: string): Promise<void> {
+  await request(`/${id}/catalog/${kind}/${recordId}`, { ...json({ expectedRevision: revision }), method: 'DELETE' });
+}
 export async function previewCatalogImport(id: string, sourceId: string, format: 'csv' | 'json' | 'feed', content?: string): Promise<ImportPreview> {
   return await request(`/${id}/catalog/imports/${format === 'feed' ? 'feed-preview' : 'preview'}`, json(format === 'feed' ? { sourceId } : { sourceId, format, content })) as ImportPreview;
 }
@@ -132,6 +135,14 @@ export async function uploadPrivateMedia(id: string, file: File): Promise<{ id: 
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return await request(`/${id}/private-objects`, json({ kind: 'media', contentType: file.type, contentBase64: btoa(binary) })) as { id: string; contentType: string };
+}
+
+export async function uploadPrivateAudio(id: string, file: File): Promise<{ id: string; contentType: string; byteSize: number; sha256: string }> {
+  if (file.type !== 'audio/mpeg' || !/\.mp3$/i.test(file.name) || file.size < 1 || file.size > 320_000_000)
+    throw new ApiError('Choose an MP3 file under 320 MB and two hours.', 400);
+  return await request(`/${id}/private-objects/audio`, {
+    method: 'POST', headers: { 'content-type': 'audio/mpeg' }, body: file
+  }) as { id: string; contentType: string; byteSize: number; sha256: string };
 }
 
 export type SubtitleTrack = { id: string; itemId: string; videoAssetId: string; objectId: string; language: string; format: 'text/vtt'; byteSize: number; sha256: string; version: number; state: 'active' };
@@ -163,6 +174,9 @@ export async function uploadPrivateEvidence(id: string, file: File): Promise<{ i
 }
 export async function deletePrivateObject(id: string, objectId: string): Promise<void> {
   await request(`/${id}/private-objects/${objectId}`, { method: 'DELETE' });
+}
+export async function readPrivateObjectMetadata(id: string, objectId: string): Promise<{ id: string; byteSize: number; sha256: string; contentType: string }> {
+  return await request(`/${id}/private-objects/${objectId}`) as { id: string; byteSize: number; sha256: string; contentType: string };
 }
 export async function readPrivateThumbnail(id: string, objectId: string, signal?: AbortSignal): Promise<Blob> {
   const capability = await request(`/${id}/private-objects/${objectId}/capability`, { ...json({}), ...(signal ? { signal } : {}) }) as { capability: string };

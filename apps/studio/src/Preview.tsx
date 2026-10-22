@@ -3,6 +3,7 @@ import { contentPresentation, isPlayableContent, mediaUseEligible, type ChannelS
 import { activeItem, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
 import { keyboardCommand, navigate, reconcile } from './preview-state.js';
 import { VideoPlayer } from './VideoPlayer.js';
+import { AudioPlayer, type AudioPlayerHandle } from './AudioPlayer.js';
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
 import { readCatalog, type CatalogSnapshot } from './api.js';
@@ -59,9 +60,17 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
   const frameRef = useRef<HTMLDivElement>(null);
   const tvRef = useRef(tv);
   const stateRef = useRef(current);
+  const audioPlayerRef = useRef<AudioPlayerHandle>(null);
   tvRef.current = tv;
   stateRef.current = current;
-  const dispatch = (command: TvCommand) => setState(previous => navigate(tvRef.current, previous, command));
+  const dispatch = (command: TvCommand) => {
+    const active = activeItem(tvRef.current, stateRef.current);
+    if (stateRef.current.screen === 'playback' && active && contentPresentation(active) === 'audio' &&
+      (command === 'left' || command === 'right' || command === 'select')) {
+      audioPlayerRef.current?.command(command); return;
+    }
+    setState(previous => navigate(tvRef.current, previous, command));
+  };
 
   useEffect(() => {
     if (!selectedPageId || !tvRef.current.pages.some(page => page.id === selectedPageId)) return;
@@ -80,6 +89,12 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
       if (!inFrame && !(fullscreen && event.key === 'Backspace' && frameRef.current?.closest('.channel-presentation')?.contains(target))) return;
       if (!inFrame && event.key !== 'Backspace') return;
       if (fullscreen && event.key === 'Escape') return;
+      if (target.closest('.audio-player') && ['ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key) &&
+        !(target.closest('button') && ['Enter', ' '].includes(event.key))) {
+        event.preventDefault();
+        audioPlayerRef.current?.command(event.key === 'ArrowLeft' ? 'left' : event.key === 'ArrowRight' ? 'right' : 'select');
+        return;
+      }
       if (target.closest('audio, video')) {
         // Keep native media keys, but let Back leave playback even when the player has focus.
         if (event.key !== 'Escape' && event.key !== 'Backspace') return;
@@ -157,7 +172,9 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
                 : <button data-tv-focus={current.focusId} className="tv-play focused" onClick={() => dispatch('back')}>← Back to channel</button>}
               <small>{isPlayableContent(item) ? `Press Enter to play · ${fullscreen ? 'Backspace' : 'Escape'} to go back` : `Press ${fullscreen ? 'Backspace' : 'Escape'} to go back`}</small></div>
           </> : <div className="tv-player">{contentPresentation(item) === 'audio'
-            ? <><PreviewArtwork contentId={item.id} source={item.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/><audio key={item.id} src={item.mediaUrl} controls autoPlay muted={tv.playback.startMuted} /></>
+            ? <AudioPlayer ref={audioPlayerRef} key={item.id} source={item.mediaUrl!} title={item.title} autoPlay startMuted={tv.playback.startMuted}
+                artwork={<PreviewArtwork contentId={item.id} source={item.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/>}
+                onBack={() => dispatch('back')}/>
             : <VideoPlayer key={item.id} source={item.mediaUrl!} startMuted={tv.playback.startMuted}
                 contentId={item.id} {...(hosted ? { projectId: spec.id } : {})} />}
             <div className="tv-player-footer"><strong>{item.title}</strong><button className="tv-play focused" onClick={() => dispatch('back')}>← Back to details</button></div></div>}

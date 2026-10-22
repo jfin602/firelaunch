@@ -578,6 +578,26 @@ body { min-width: 0; }
 .video-review-requirement h4 { margin: 0 0 8px; }
 .video-review .delivery { max-width: none; margin-top: 18px; }
 .video-workspace :is(button, input, select, textarea):focus-visible { outline: 3px solid var(--fl-focus); outline-offset: 3px; }
+.audio-workspace { width: min(820px, 100%); }
+.audio-workspace-form { display: grid; gap: 8px; }
+.audio-workspace-form .field { margin: 4px 0; }
+.audio-workspace-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.audio-workspace-cover { display: grid; place-items: center; width: 110px; aspect-ratio: 1; overflow: hidden; border-radius: 8px; background: #33272a; font-size: 42px; }
+.audio-workspace-cover img, .audio-workspace-player-art img { width: 100%; height: 100%; object-fit: cover; }
+.audio-workspace-summary { margin-top: 24px; padding: 18px; border: 1px solid var(--fl-border); border-radius: 8px; background: var(--fl-surface); }
+.audio-player { display: flex; align-items: center; gap: 24px; width: 100%; min-width: 0; padding: 16px; color: var(--fl-text, #fff); }
+.audio-player-cover { display: grid; place-items: center; flex: 0 0 min(35%, 220px); aspect-ratio: 1; overflow: hidden; border-radius: 10px; background: #362c30; font-size: clamp(40px, 6vw, 90px); }
+.audio-player-cover img, .audio-player-cover .audio-workspace-player-art { width: 100%; height: 100%; object-fit: cover; }
+.audio-player-body { flex: 1; min-width: 0; }
+.audio-player-body h3 { margin: 8px 0; font-size: clamp(19px, 2.3vw, 34px); overflow-wrap: anywhere; }
+.audio-player-body p { margin: 4px 0 16px; }
+.audio-player-controls { display: flex; gap: 9px; margin: 14px 0; }
+.audio-player-controls button, .audio-player-body > button { padding: 9px 14px; border: 1px solid #a47464; border-radius: 6px; background: #4c2b27; color: #fff; }
+.audio-player-progress { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.audio-player-progress input { flex: 1; min-width: 0; accent-color: var(--tv-accent, #ec895f); }
+.tv-player .audio-player { height: 100%; justify-content: center; }
+.tv-player .audio-player-cover { flex-basis: min(38%, 250px); }
+@media (max-width: 600px) { .audio-player { flex-direction: column; align-items: stretch; } .audio-player-cover { flex-basis: auto; width: 120px; } }
 .native-export-workspace { width: min(760px, 100%); min-height: 460px; }
 .native-export-body { display: grid; align-content: start; gap: 20px; }
 .native-export-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }

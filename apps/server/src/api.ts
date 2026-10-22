@@ -1,5 +1,10 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { mkdtemp, open, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { isIP } from 'node:net';
 import { ZodError, z } from 'zod';
 import { applyMutation, mutationSchema } from '@firelaunch/channel-engine';
@@ -10,7 +15,7 @@ import { WorkspaceService } from './workspace.js';
 import { HostedWorkspaceService } from './hosted-workspace.js';
 import type { ServerMode } from './auth/config.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
-import type { PrivateObjectService } from './private-objects.js';
+import { MAX_PRIVATE_AUDIO_BYTES, type PrivateObjectService } from './private-objects.js';
 import { audit } from './operations.js';
 import { CatalogRepository, catalogKinds, type CatalogKind } from './catalog-repository.js';
 import { CatalogProjectionService } from './catalog-projection.js';
@@ -77,6 +82,51 @@ async function body(request: IncomingMessage): Promise<unknown> {
   }
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
   catch { throw new ZodError([{ code: 'custom', path: [], message: 'Invalid JSON' }]); }
+}
+
+export async function privateAudioBody(request: IncomingMessage): Promise<{ file: string; directory: string; bytes: number; sha256: string; head: Buffer; durationSeconds: number }> {
+  if (request.headers['content-type']?.toLowerCase() !== 'audio/mpeg')
+    throw new RepositoryError('INVALID_INPUT', 'Expected MP3 audio');
+  const length = Number(request.headers['content-length']);
+  if (!Number.isSafeInteger(length) || length < 1 || length > MAX_PRIVATE_AUDIO_BYTES)
+    throw new RepositoryError('INVALID_INPUT', 'MP3 must be 1 byte to 320 MB');
+  const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-audio-'));
+  const file = path.join(directory, 'upload.mp3');
+  const handle = await open(file, 'wx', 0o600);
+  const hash = createHash('sha256');
+  let head = Buffer.alloc(0);
+  let size = 0;
+  try {
+    for await (const chunk of request) {
+      size += chunk.length;
+      if (size > MAX_PRIVATE_AUDIO_BYTES || size > length)
+        throw new RepositoryError('INVALID_INPUT', 'MP3 upload exceeds its declared size');
+      hash.update(chunk);
+      if (head.length < 16) head = Buffer.concat([head, chunk.subarray(0, 16 - head.length)]);
+      await handle.writeFile(chunk);
+    }
+    if (size !== length) throw new RepositoryError('INVALID_INPUT', 'Incomplete MP3 upload');
+    await handle.close();
+    let durationSeconds = 0;
+    try {
+      const { stdout } = await promisify(execFile)('ffprobe', ['-v', 'error', '-show_entries',
+        'format=duration,format_name:stream=codec_name,codec_type', '-of', 'json', file],
+      { timeout: 30_000, maxBuffer: 4096 });
+      const probed = JSON.parse(stdout) as { format?: { duration?: string; format_name?: string };
+        streams?: { codec_name?: string; codec_type?: string }[] };
+      if (!probed.format?.format_name?.split(',').includes('mp3') ||
+        !probed.streams?.some(stream => stream.codec_type === 'audio' && stream.codec_name === 'mp3'))
+        throw new Error('Not MP3 audio');
+      durationSeconds = Number(probed.format.duration);
+    } catch { throw new RepositoryError('INVALID_INPUT', 'MP3 duration could not be verified'); }
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || durationSeconds > 7200)
+      throw new RepositoryError('INVALID_INPUT', 'MP3 must be playable and no longer than two hours');
+    return { file, directory, bytes: size, sha256: hash.digest('hex'), head, durationSeconds };
+  } catch (error) {
+    await handle.close().catch(() => undefined);
+    await rm(directory, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 function respond(response: ServerResponse, status: number, value: unknown): void {
@@ -326,6 +376,15 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
           if (segments.length >= 4 && segments[3] === 'private-objects') {
             if (!privateObjects) { respond(response, 503, { error: { code: 'STORAGE_ERROR', message: 'Private storage unavailable' } }); return; }
             const projectId = segments[2]!;
+            if (segments.length === 5 && segments[4] === 'audio' && !url.search && request.method === 'POST') {
+              await hostedRepository.read(principal, projectId);
+              const uploaded = await privateAudioBody(request);
+              try {
+                const { directory: _directory, durationSeconds: _duration, ...source } = uploaded;
+                respond(response, 201, { ...await privateObjects.put(principal, projectId, 'media', 'audio/mpeg', source, true),
+                  durationSeconds: uploaded.durationSeconds }); return;
+              } finally { await rm(uploaded.directory, { recursive: true, force: true }); }
+            }
             if (segments.length === 4 && !url.search && request.method === 'POST') {
               await hostedRepository.read(principal, projectId);
               const input = privatePutSchema.parse(await body(request));
@@ -339,6 +398,19 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             }
             if (segments.length === 6 && !url.search) {
               const objectId = segments[4]!;
+              if (segments[5] === 'audio' && request.method === 'GET') {
+                const range = request.headers.range;
+                const match = range ? /^bytes=(\d+)-(\d*)$/.exec(range) : null;
+                if (range && !match) throw new RepositoryError('INVALID_INPUT', 'Unsupported audio range');
+                const start = match ? Number(match[1]) : 0;
+                const end = match?.[2] ? Number(match[2]) : undefined;
+                const part = await privateObjects.readAudioRange(principal, projectId, objectId, start, end);
+                response.writeHead(206, { 'content-type': 'audio/mpeg', 'content-length': part.content.length,
+                  'content-range': `bytes ${part.start}-${part.end}/${part.metadata.byteSize}`,
+                  'accept-ranges': 'bytes', 'cache-control': 'private, no-store',
+                  'x-content-type-options': 'nosniff', 'cross-origin-resource-policy': 'same-origin' });
+                response.end(part.content); return;
+              }
               if (segments[5] === 'capability' && request.method === 'POST') {
                 z.strictObject({}).parse(await body(request));
                 respond(response, 200, await privateObjects.issueDownload(principal, projectId, objectId)); return;

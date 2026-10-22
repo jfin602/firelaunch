@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { mkdir, open, readFile, rm } from 'node:fs/promises';
+import { mkdir, open, readFile, rm, copyFile } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { fromIni } from '@aws-sdk/credential-providers';
@@ -13,7 +14,9 @@ import { localHostedHttp } from './local-hosted.js';
 
 export interface PrivateObjectStore {
   put(key: string, content: Buffer, contentType: string): Promise<void>;
+  putFile(key: string, file: string, bytes: number, contentType: string): Promise<void>;
   get(key: string): Promise<Buffer>;
+  getRange(key: string, start: number, end: number): Promise<Buffer>;
   delete(key: string): Promise<void>;
 }
 
@@ -24,7 +27,8 @@ const allowedTypes = {
   evidence: ['image/png', 'image/jpeg', 'application/pdf']
 } as const;
 const maximumBytes = 1_000_000;
-const maximumAccountBytes = 100_000_000;
+export const MAX_PRIVATE_AUDIO_BYTES = 320_000_000;
+const maximumAccountBytes = 2_000_000_000;
 const maximumAccountObjects = 1000;
 function matchesContentType(contentType: string, content: Buffer): boolean {
   if (contentType === 'image/png') return content.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
@@ -51,7 +55,21 @@ export class IsolatedObjectStore implements PrivateObjectStore {
     const handle = await open(file, 'wx', 0o600);
     try { await handle.writeFile(content); } finally { await handle.close(); }
   }
+  async putFile(key: string, source: string): Promise<void> {
+    const file = this.file(key);
+    await mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
+    await copyFile(source, file);
+  }
   async get(key: string): Promise<Buffer> { return readFile(this.file(key)); }
+  async getRange(key: string, start: number, end: number): Promise<Buffer> {
+    const file = await open(this.file(key), 'r');
+    try {
+      const result = Buffer.alloc(end - start + 1);
+      const { bytesRead } = await file.read(result, 0, result.length, start);
+      if (bytesRead !== result.length) throw new Error('Short private object range');
+      return result;
+    } finally { await file.close(); }
+  }
   async delete(key: string): Promise<void> { await rm(this.file(key), { force: true }); }
 }
 
@@ -73,10 +91,23 @@ export class S3PrivateObjectStore implements PrivateObjectStore {
     await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: keySchema.parse(key), Body: content,
       ContentType: contentType, ServerSideEncryption: 'AES256', IfNoneMatch: '*' }));
   }
+  async putFile(key: string, file: string, bytes: number, contentType: string): Promise<void> {
+    await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: keySchema.parse(key),
+      Body: createReadStream(file), ContentLength: bytes, ContentType: contentType,
+      ServerSideEncryption: 'AES256', IfNoneMatch: '*' }));
+  }
   async get(key: string): Promise<Buffer> {
     const result = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: keySchema.parse(key) }));
     if (!result.Body) throw new Error('Private object body missing');
     return Buffer.from(await result.Body.transformToByteArray());
+  }
+  async getRange(key: string, start: number, end: number): Promise<Buffer> {
+    const result = await this.client.send(new GetObjectCommand({ Bucket: this.bucket,
+      Key: keySchema.parse(key), Range: `bytes=${start}-${end}` }));
+    if (!result.Body) throw new Error('Private object range missing');
+    const bytes = Buffer.from(await result.Body.transformToByteArray());
+    if (bytes.length !== end - start + 1) throw new Error('Short private object range');
+    return bytes;
   }
   async delete(key: string): Promise<void> { await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: keySchema.parse(key) })); }
 }
@@ -119,13 +150,23 @@ export class PrivateObjectService {
     private readonly now: () => number = Date.now) {}
   private get pool(): Pool { return this.repository.pool; }
 
-  async put(principal: AuthenticatedPrincipal, projectId: string, kind: 'media' | 'evidence', contentType: string, content: Buffer): Promise<PrivateObjectMetadata> {
+  async put(principal: AuthenticatedPrincipal, projectId: string, kind: 'media' | 'evidence', contentType: string,
+    content: Buffer | { file: string; bytes: number; sha256: string; head: Buffer }, privateAudio = false): Promise<PrivateObjectMetadata> {
     await this.repository.read(principal, projectId);
-    if ((kind !== 'media' && kind !== 'evidence') || !allowedTypes[kind].includes(contentType as never) || !Buffer.isBuffer(content) || content.length < 1 || content.length > maximumBytes || !matchesContentType(contentType, content))
+    const bytes = Buffer.isBuffer(content) ? content.length : content.bytes;
+    const head = Buffer.isBuffer(content) ? content : content.head;
+    const sha256 = Buffer.isBuffer(content) ? digest(content) : content.sha256;
+    if ((kind !== 'media' && kind !== 'evidence') || !allowedTypes[kind].includes(contentType as never) ||
+      bytes < 1 || bytes > (privateAudio ? MAX_PRIVATE_AUDIO_BYTES : maximumBytes) ||
+      (privateAudio && (kind !== 'media' || contentType !== 'audio/mpeg' || Buffer.isBuffer(content))) ||
+      (!privateAudio && !Buffer.isBuffer(content)) || !/^[a-f0-9]{64}$/.test(sha256) || !matchesContentType(contentType, head))
       throw new RepositoryError('INVALID_INPUT', 'Unsupported private object type or size');
     const id = `${kind === 'media' ? 'ma' : 'ev'}_${randomUUID().replaceAll('-', '')}`;
     const key = `private/${randomBytes(32).toString('hex')}`;
-    try { await this.store.put(key, content, contentType); }
+    try {
+      if (Buffer.isBuffer(content)) await this.store.put(key, content, contentType);
+      else await this.store.putFile(key, content.file, bytes, contentType);
+    }
     catch {
       try { await this.store.delete(key); } catch { await this.queueOrphan(key); }
       await audit(this.pool, 'storage_failed', 'failure', principal.accountId);
@@ -142,14 +183,14 @@ export class PrivateObjectService {
       if (!account.rowCount) throw missing();
       const usage = await client.query<{ object_count: string; total_bytes: string }>(`SELECT count(*)::text AS object_count,
         COALESCE(sum(byte_size), 0)::text AS total_bytes FROM private_objects WHERE creator_account_id = $1`, [principal.accountId]);
-      if (Number(usage.rows[0]!.object_count) >= maximumAccountObjects || Number(usage.rows[0]!.total_bytes) + content.length > maximumAccountBytes)
+      if (Number(usage.rows[0]!.object_count) >= maximumAccountObjects || Number(usage.rows[0]!.total_bytes) + bytes > maximumAccountBytes)
         throw new RepositoryError('INVALID_INPUT', 'Private storage quota exceeded');
       const result = await client.query<ObjectRow>(`INSERT INTO private_objects
         (id, creator_account_id, project_id, kind, object_key, content_type, byte_size, sha256)
         SELECT $1, o.creator_account_id, o.project_id, $3, $4, $5, $6, $7
         FROM channel_ownerships o JOIN provider_identities i ON i.creator_account_id = o.creator_account_id
         WHERE o.project_id = $2 AND o.creator_account_id = $8 AND i.issuer = $9 AND i.subject = $10
-        RETURNING *`, [id, projectId, kind, key, contentType, content.length, digest(content), principal.accountId, principal.issuer, principal.subject]);
+        RETURNING *`, [id, projectId, kind, key, contentType, bytes, sha256, principal.accountId, principal.issuer, principal.subject]);
       if (!result.rows[0]) throw missing();
       await client.query('COMMIT');
       return publicMetadata(result.rows[0]);
@@ -192,6 +233,8 @@ export class PrivateObjectService {
 
   async download(principal: AuthenticatedPrincipal, projectId: string, objectId: string, capability: string): Promise<{ metadata: PrivateObjectMetadata; content: Buffer }> {
     const row = await this.owned(principal, projectId, objectId);
+    if (row.content_type === 'audio/mpeg' && row.byte_size > maximumBytes)
+      throw new RepositoryError('INVALID_INPUT', 'Large private audio uses owner-only range playback');
     if (!/^[a-zA-Z0-9_-]{43}$/.test(capability)) throw missing();
     const result = await this.pool.query(`SELECT 1 FROM private_object_capabilities WHERE token_hash = $1 AND object_id = $2
       AND creator_account_id = $3 AND purpose = 'download' AND revoked_at IS NULL AND expires_at > $4`,
@@ -199,6 +242,25 @@ export class PrivateObjectService {
     if (!result.rowCount) throw missing();
     try { return { metadata: publicMetadata(row), content: await this.store.get(row.object_key) }; }
     catch { await audit(this.pool, 'storage_failed', 'failure', principal.accountId); throw new RepositoryError('STORAGE_ERROR', 'Private object read failed'); }
+  }
+
+  async readAudioRange(principal: AuthenticatedPrincipal, projectId: string, objectId: string, start: number, requestedEnd?: number): Promise<{
+    metadata: PrivateObjectMetadata; start: number; end: number; content: Buffer
+  }> {
+    const row = await this.owned(principal, projectId, objectId);
+    if (row.kind !== 'media' || row.content_type !== 'audio/mpeg' || !Number.isSafeInteger(start) || start < 0 || start >= row.byte_size)
+      throw missing();
+    const attached = await this.pool.query(`SELECT 1 FROM catalog_media_assets a
+      WHERE a.project_id = $1 AND a.creator_account_id = $2 AND a.record->>'kind' = 'audio'
+        AND a.record->'location'->>'type' = 'private_object'
+        AND a.record->'location'->>'objectId' = $3
+        AND COALESCE(a.record->'tvPlaybackRights'->>'status', 'unknown') <> 'revoked'`,
+    [projectId, principal.accountId, objectId]);
+    if (!attached.rowCount) throw missing();
+    if (requestedEnd !== undefined && (!Number.isSafeInteger(requestedEnd) || requestedEnd < start)) throw missing();
+    const end = Math.min(row.byte_size - 1, start + 2_000_000 - 1, requestedEnd ?? Number.MAX_SAFE_INTEGER);
+    try { return { metadata: publicMetadata(row), start, end, content: await this.store.getRange(row.object_key, start, end) }; }
+    catch { await audit(this.pool, 'storage_failed', 'failure', principal.accountId); throw new RepositoryError('STORAGE_ERROR', 'Private audio read failed'); }
   }
 
   async revoke(principal: AuthenticatedPrincipal, projectId: string, objectId: string): Promise<void> {

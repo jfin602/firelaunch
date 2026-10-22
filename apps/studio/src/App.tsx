@@ -7,6 +7,7 @@ import { Delivery } from './Delivery.js';
 import { Catalog } from './Catalog.js';
 import { Home } from './Home.js';
 import { VideoWorkspace } from './VideoWorkspace.js';
+import { AudioWorkspace } from './AudioWorkspace.js';
 import { clearVideoTransfers, stopVideoTransfer, subscribeVideoTransfers, videoTransfers, type VideoTransfer } from './video-transfer.js';
 import { sampleMutations } from './sample.js';
 
@@ -254,6 +255,7 @@ export default function App() {
   const [catalogSelections, setCatalogSelections] = useState<Record<string, { selection: CatalogSelection; creator: 'video' | 'audio' | 'writing' }>>({});
   const [session, setSession] = useState<StudioSession | null>(null);
   const [videoSelection, setVideoSelection] = useState<{ projectId: string; accountId: string; itemId?: string } | null>(null);
+  const [audioSelection, setAudioSelection] = useState<{ projectId: string; accountId: string; itemId?: string } | null>(null);
   const [libraryRevision, setLibraryRevision] = useState(0);
   const [signedOut, setSignedOut] = useState(false);
   const [inspectorProject, setInspectorProject] = useState<string | null>(null);
@@ -381,7 +383,7 @@ export default function App() {
   const select = (next: ChannelProject) => { projectRef.current = next; setProject(next); window.history.replaceState(null, '', `?project=${next.id}`); };
   const acceptProject = (next: ChannelProject) => { select(next); setProjects(previous => previous.map(item => item.id === next.id ? next : item)); };
   useEffect(() => {
-    const expired = () => { if (accountRef.current) clearVideoTransfers(accountRef.current); identityGeneration.current++; switchGeneration.current++; accountRef.current = null; setVideoSelection(null); setInspectorProject(null); inspectorDirty.current = false; setSignedOut(true); setSession(null); setProjects([]); setProject(null); setCatalogSelections({}); projectRef.current = null; window.history.replaceState(null, '', window.location.pathname); };
+    const expired = () => { if (accountRef.current) clearVideoTransfers(accountRef.current); identityGeneration.current++; switchGeneration.current++; accountRef.current = null; setVideoSelection(null); setAudioSelection(null); setInspectorProject(null); inspectorDirty.current = false; setSignedOut(true); setSession(null); setProjects([]); setProject(null); setCatalogSelections({}); projectRef.current = null; window.history.replaceState(null, '', window.location.pathname); };
     const checkSession = () => { if (!accountRef.current) return; void getSession().then(active => {
       if (!active || active.accountId !== accountRef.current) { expired(); return; }
       setSession(active);
@@ -416,6 +418,7 @@ export default function App() {
       setWorkspaceMenuOpen(false);
       setInspectorProject(surface === 'Channel' && channelView === 'Appearance' ? next.id : null); inspectorDirty.current = false;
       setVideoSelection(null);
+      setAudioSelection(null);
       setNewChannel(false);
     } catch (reason) { if (generation === switchGeneration.current && identity === identityGeneration.current) setError(reason instanceof Error ? reason.message : String(reason)); }
   };
@@ -442,7 +445,7 @@ export default function App() {
     setBusy(true); setError('');
     try {
       const created = await createProject(title);
-      select(created); setVideoSelection(null); setProjects(previous => [...previous, created]); setNewChannel(false); setSurface(catalog ? 'Library' : 'Channel'); setChannelView('Pages & Layout');
+      select(created); setVideoSelection(null); setAudioSelection(null); setProjects(previous => [...previous, created]); setNewChannel(false); setSurface(catalog ? 'Library' : 'Channel'); setChannelView('Pages & Layout');
       if (sample && !session) for (const mutation of sampleMutations(created, [newId('item'), newId('item'), newId('item')])) if (!(await commit(mutation))) break;
       if (request && projectRef.current?.id === created.id) {
         const result = await askAgent(projectRef.current, request);
@@ -458,6 +461,10 @@ export default function App() {
   const openVideo = (itemId?: string) => {
     if (!project || !session) return;
     setVideoSelection({ projectId: project.id, accountId: session.accountId, ...(itemId ? { itemId } : {}) });
+  };
+  const openAudio = (itemId?: string) => {
+    if (!project || !session) return;
+    setAudioSelection({ projectId: project.id, accountId: session.accountId, ...(itemId ? { itemId } : {}) });
   };
   const openNewChannel = () => {
     if (!leaveSectionDraft()) return;
@@ -482,10 +489,11 @@ export default function App() {
             <div className="channel-tv-stage"><div id="tv-preview">{fullscreenNotice && <p className="preview-fullscreen-notice" role="status">{fullscreenNotice}</p>}<Preview key={`${session?.accountId ?? 'local'}:${project.id}`} spec={project.spec} selectedPageId={editorPageId} hosted={!!session} accountId={session?.accountId} libraryRevision={libraryRevision} fullscreen={!!previewFullscreen} controlsVisible={fullscreenUiMode === 'controls'} onHideControls={() => { cancelDockHide(); dockHover.current = false; setDockVisible(false); setFullscreenUiMode('clean'); window.setTimeout(() => { if (fullscreenRoot.current?.classList.contains('clean-view')) fullscreenRoot.current.querySelector<HTMLElement>('.tv-frame')?.focus(); }, 0); }} onEnterFullscreen={enterPreviewFullscreen} onExitFullscreen={exitPreviewFullscreen} enterButtonRef={fullscreenTrigger} exitButtonRef={fullscreenExit}/></div></div>
             {previewFullscreen && fullscreenUiMode === 'controls' && <button type="button" className="channel-dock-handle" aria-label={`${dockVisible ? 'Hide' : 'Show'} editing drawer (Alt+E)`} aria-expanded={dockVisible} aria-controls="channel-editor-drawer" onPointerEnter={() => { dockHover.current = true; revealDock(); }} onPointerLeave={() => { dockHover.current = false; scheduleDockHide(); }} onClick={() => { dockHover.current = false; if (dockVisible && !dockMustStayOpen()) { cancelDockHide(); setDockVisible(false); } else revealDock(); }}>Edit channel <span aria-hidden="true">{dockVisible ? '‹' : '›'}</span></button>}
             {previewFullscreen && fullscreenUiMode === 'clean' && <button type="button" className="fullscreen-corner-recovery" aria-label="Show full-screen controls (H)" onPointerEnter={() => { setFullscreenUiMode('controls'); }} onClick={() => { setFullscreenUiMode('controls'); window.setTimeout(() => fullscreenExit.current?.focus(), 0); }} />}
-          </div> : <div className="channel-editor">{surface === 'Library' ? <Catalog project={project} hosted={!!session} {...(session ? { accountId: session.accountId } : {})} libraryRevision={libraryRevision} onOpenVideo={openVideo} onCatalogChange={() => setLibraryRevision(value => value + 1)} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => openChannel('Pages & Layout')}/> : <Delivery key={`${project.id}:${surface}:${exportView}`} project={project} surface={surface === 'Publish' ? 'Publish' : exportView === 'Advanced Source' ? 'Code' : 'Build'} hosted={!!session} />}</div>}
+          </div> : <div className="channel-editor">{surface === 'Library' ? <Catalog project={project} hosted={!!session} {...(session ? { accountId: session.accountId } : {})} libraryRevision={libraryRevision} onOpenVideo={openVideo} onOpenAudio={openAudio} onCatalogChange={() => setLibraryRevision(value => value + 1)} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => openChannel('Pages & Layout')}/> : <Delivery key={`${project.id}:${surface}:${exportView}`} project={project} surface={surface === 'Publish' ? 'Publish' : exportView === 'Advanced Source' ? 'Code' : 'Build'} hosted={!!session} />}</div>}
         </div>
       </div>}
       <span className="sr-only" role="status" aria-live="polite">{inspectorProject === project?.id && surface === 'Channel' && channelView === 'Appearance' ? 'Appearance inspector open' : 'Appearance inspector closed'}</span>
 
-    </main>{videoSelection && project?.id === videoSelection.projectId && session?.accountId === videoSelection.accountId && !newChannel && <VideoWorkspace key={`${videoSelection.accountId}:${videoSelection.projectId}`} selection={videoSelection} project={project} onProjectUpdate={acceptProject} onIdentity={itemId => setVideoSelection(previous => previous && previous.projectId === project.id && previous.accountId === session.accountId ? { ...previous, itemId } : previous)} onClose={() => { setVideoSelection(null); setLibraryRevision(value => value + 1); }}/>}</div>;
+    </main>{audioSelection && project?.id === audioSelection.projectId && session?.accountId === audioSelection.accountId && !newChannel && <AudioWorkspace key={`${audioSelection.accountId}:${audioSelection.projectId}`} projectId={audioSelection.projectId} accountId={audioSelection.accountId} {...(audioSelection.itemId ? { itemId: audioSelection.itemId } : {})} onIdentity={itemId => setAudioSelection(previous => previous && previous.projectId === project.id && previous.accountId === session.accountId ? { ...previous, itemId } : previous)} onClose={() => { setAudioSelection(null); setLibraryRevision(value => value + 1); }}/>}
+    {videoSelection && project?.id === videoSelection.projectId && session?.accountId === videoSelection.accountId && !newChannel && <VideoWorkspace key={`${videoSelection.accountId}:${videoSelection.projectId}`} selection={videoSelection} project={project} onProjectUpdate={acceptProject} onIdentity={itemId => setVideoSelection(previous => previous && previous.projectId === project.id && previous.accountId === session.accountId ? { ...previous, itemId } : previous)} onClose={() => { setVideoSelection(null); setLibraryRevision(value => value + 1); }}/>}</div>;
 }

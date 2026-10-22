@@ -96,6 +96,8 @@ export const catalogMetadataSchema = z.strictObject({
   artworkUrl: httpsUrlSchema.optional(),
   artist: titleSchema.optional(),
   album: titleSchema.optional(),
+  episode: titleSchema.optional(),
+  trackNumber: z.number().int().min(1).max(9999).optional(),
   author: titleSchema.optional(),
   isbn: z.string().regex(/^(?:[0-9]{9}[0-9X]|97[89][0-9]{10})$/, 'Expected normalized ISBN-10 or ISBN-13').optional(),
   series: titleSchema.optional(),
@@ -117,6 +119,7 @@ export const creatorMetadataOverridesSchema = z.strictObject({
   description: descriptionSchema.optional(),
   artworkUrl: httpsUrlSchema.optional(),
   artist: titleSchema.optional(), album: titleSchema.optional(),
+  episode: titleSchema.optional(), trackNumber: z.number().int().min(1).max(9999).optional(),
   author: titleSchema.optional(), isbn: catalogMetadataSchema.shape.isbn.optional(),
   series: titleSchema.optional(), narrator: titleSchema.optional(),
   editedAt: z.iso.datetime()
@@ -146,7 +149,7 @@ export const catalogItemSchema = z.strictObject({
     context.addIssue({ code: 'custom', message: 'Audiobook must reference media on the same book' });
   const metadata = [item.sourceRecord.metadata, item.creatorOverrides];
   for (const value of metadata) if (value) {
-    if (item.kind !== 'audio' && (value.artist !== undefined || value.album !== undefined))
+    if (item.kind !== 'audio' && (value.artist !== undefined || value.album !== undefined || value.episode !== undefined || value.trackNumber !== undefined))
       context.addIssue({ code: 'custom', message: 'Artist and album require an audio item' });
     if (item.kind !== 'book' && (value.author !== undefined || value.isbn !== undefined ||
       value.series !== undefined || value.narrator !== undefined))

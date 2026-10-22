@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { randomUUID } from 'node:crypto';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Pool } from 'pg';
@@ -45,6 +45,37 @@ test('local S3 HTTP requires explicit development and loopback', () => {
 });
 
 const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
+(baseUrl ? test : test.skip)('schema 15 stores a bounded large private MP3 without widening other private types', async () => {
+  const admin = new Pool({ connectionString: baseUrl });
+  const dbName = `firelaunch_audio_${randomUUID().replaceAll('-', '')}`;
+  const url = new URL(baseUrl!); url.pathname = `/${dbName}`;
+  const root = await mkdtemp(path.join(tmpdir(), 'firelaunch-audio-objects-'));
+  let repository: HostedProjectRepository | undefined;
+  const oldEnv = process.env.NODE_ENV; process.env.NODE_ENV = 'test';
+  try {
+    await admin.query(`CREATE DATABASE ${dbName}`);
+    repository = await HostedProjectRepository.connect(url.toString());
+    const accountId = await repository.accountForIdentity({ issuer: 'https://issuer.example', subject: 'audio', email: 'audio@example.com' });
+    const principal: AuthenticatedPrincipal = { accountId, issuer: 'https://issuer.example', subject: 'audio', email: 'audio@example.com' };
+    const project = await repository.create(principal, { title: 'Audio' });
+    const source = path.join(root, 'two-megabyte.mp3');
+    const bytes = Buffer.alloc(2_000_000); bytes.set(Buffer.from('ID3'));
+    await writeFile(source, bytes);
+    const service = new PrivateObjectService(repository, new IsolatedObjectStore(root));
+    const object = await service.put(principal, project.id, 'media', 'audio/mpeg', {
+      file: source, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), head: bytes.subarray(0, 16)
+    }, true);
+    assert.equal(object.byteSize, 2_000_000);
+    await assert.rejects(repository.pool.query(`UPDATE private_objects SET content_type = 'image/png' WHERE id = $1`, [object.id]), /private_objects_byte_size_check/);
+    assert.equal((await service.metadata(principal, project.id, object.id)).contentType, 'audio/mpeg');
+  } finally {
+    await repository?.pool.end();
+    await admin.query(`DROP DATABASE IF EXISTS ${dbName} WITH (FORCE)`);
+    await admin.end();
+    await rm(root, { recursive: true, force: true });
+    process.env.NODE_ENV = oldEnv;
+  }
+});
 (baseUrl ? test : test.skip)('private object ownership, expiry, revocation, deletion and orphan cleanup on real Postgres', async () => {
   const admin = new Pool({ connectionString: baseUrl });
   const dbName = `firelaunch_p4_${randomUUID().replaceAll('-', '')}`;

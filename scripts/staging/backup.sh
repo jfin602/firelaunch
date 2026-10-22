@@ -27,9 +27,9 @@ preflight_output="$("$node_bin" --env-file="$env_file" "$(dirname "${BASH_SOURCE
 read -r live_schema db_bytes object_count object_bytes <<< "$preflight_output"
 [[ "$live_schema" = "$schema" ]] || die 'Database and release schema differ'
 (( object_count <= 100000 )) || die 'Recovery object count exceeds archive limit'
-# Recovery v1 has a 256 MB encrypted archive limit. Leave room for JSON/base64
-# overhead and temporary files; reject uncertain capacity before work begins.
-(( db_bytes + (object_bytes * 2) <= 200000000 )) || die 'Recovery archive may exceed format limit'
+# Recovery v1 now permits a bounded 800 MB archive. Its in-memory JSON/base64
+# representation needs generous headroom on this host; fail before allocating it.
+(( db_bytes + (object_bytes * 2) <= 600000000 )) || die 'Recovery archive or host memory may be exceeded'
 mkdir -p -m 0700 "$backup_dir"
 [[ ! -L "$backup_dir" && "$(stat -c '%U:%G %a' "$backup_dir")" = 'root:root 700' ]] || die 'Unsafe backup directory'
 available_kib="$(df -Pk "$backup_dir" | awk 'NR==2 {print $4}')"
