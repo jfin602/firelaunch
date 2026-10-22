@@ -1,5 +1,14 @@
 # FireLaunch Current State
 
+## CURRENT — P8D RUNNER CONVERSION COMPLETED (2026-10-22)
+
+Owner selected the RUNNER after the initial P8D `Browser required must be exactly yes. or no.` grammar failure. The [P8D prompt set](tasks/p8d/README.md), [assessment](tasks/p8d/prompt-assessment.md), [implementation plan](tasks/p8d/implementation-plan.md) and five executable files are now revised for the actual runner grammar and commit policy. Run `npm run codex:stack:validate -- p8d` then `npm run codex:stack -- p8d`. P1 `0.8.14` is browser=no and RUNNER-OWNED (NO self-commit). P2 `0.8.15`, P3 `0.8.16`, P4 `0.8.17` are browser=yes, so the runner STOPS before each for manual Codex browser testing. Those manual implementations self-commit exactly `0.8.15`, `0.8.16`, `0.8.17` as Git SUBJECTS and return control to the resumed runner. P5 manual browser closeout has assigned parser metadata `0.8.18` but ACTUAL source/lock stays `0.8.17` (no bump). Current P8D prompt AUTHORING only: no new product implementation/version/deploy was carried out. **Older all-manual/no-runner claims below are superseded for P8D.**
+
+P8C historical [NOT GREEN closeout](tasks/p8/closeout.md) is explicitly owner-DEFERRED for P8D entry, not made GREEN. Known static Vega device and hero-art discrepancies remain. Public FREE release #1 untouched; book-only info has no Play, book-attached audiobook uses same audio player, no TV reader. Phase 9 remains unactivated. Verify current local checkout/lock and untracked files before invoking runner because P1 runner stages all modifications.
+
+---
+
+
 ## CURRENT — P8D AUTHORED AND CLEARED TO START (2026-10-22)
 
 **Owner decision:** [P8D Multi-Media Creator Support](tasks/p8d/README.md) executes **now**, BEFORE Phase 9, using current root+both lock **0.8.13**. [Design](design/multi-media-creator-experience.md), [assessment](tasks/p8d/prompt-assessment.md), [plan](tasks/p8d/implementation-plan.md) and five manual [P1](tasks/p8d/P1-media-contracts.txt) / [P2](tasks/p8d/P2-audio-workflow.txt) / [P3](tasks/p8d/P3-book-showcase.txt) / [P4](tasks/p8d/P4-native-mixed-media.txt) / [P5](tasks/p8d/P5-multimedia-closeout.txt) prompts **COMMITTED/AUTHORED, NOT RUN**. Manual Codex agents own per-stage `0.8.14→0.8.15→0.8.16→0.8.17` version+commit; P5 stays 0.8.17. **No runner, no `/activate`**. P1 may begin after checking live local git/version. No product code/version/deploy changes were made by this documentation action.
