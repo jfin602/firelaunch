@@ -1,5 +1,16 @@
 # FireLaunch Current State
 
+## CURRENT — P8D AUTHORED AND CLEARED TO START (2026-10-22)
+
+**Owner decision:** [P8D Multi-Media Creator Support](tasks/p8d/README.md) executes **now**, BEFORE Phase 9, using current root+both lock **0.8.13**. [Design](design/multi-media-creator-experience.md), [assessment](tasks/p8d/prompt-assessment.md), [plan](tasks/p8d/implementation-plan.md) and five manual [P1](tasks/p8d/P1-media-contracts.txt) / [P2](tasks/p8d/P2-audio-workflow.txt) / [P3](tasks/p8d/P3-book-showcase.txt) / [P4](tasks/p8d/P4-native-mixed-media.txt) / [P5](tasks/p8d/P5-multimedia-closeout.txt) prompts **COMMITTED/AUTHORED, NOT RUN**. Manual Codex agents own per-stage `0.8.14→0.8.15→0.8.16→0.8.17` version+commit; P5 stays 0.8.17. **No runner, no `/activate`**. P1 may begin after checking live local git/version. No product code/version/deploy changes were made by this documentation action.
+
+**Important truth:** [P8C final Phase 8 closeout](tasks/p8/closeout.md) remains **NOT GREEN**, tested source `0.8.13`, protected staging 0.8.13 ACCEPTED for scoped Studio, real Vega Image Banner/Image + Text unqualified due `qemu:-1`, and hero composition historically not accepted. Owner expressly DEFERRED those two blocking **entry** gates to allow P8D implementation; historical report is NOT rewritten, failures are NOT passed, and P8D's eventual native evidence remains independent. [P8D design](design/multi-media-creator-experience.md) locks Video Watch, Audio Listen (MP3) and Book Showcase with optional MP3 audiobook attached to SAME book. NO TV book reader/EPUB/PDF, no duplicate audiobook catalog entry. Existing approved FREE release #1 unchanged. Phase 9 planned only and requires explicit future authorization.
+
+**Source at P8D authoring:** GitHub main `d0814e3ef739`, package+two lock fields 0.8.13, not verification of developer laptop or present host. Current standing `muffinos` guarded deploy/rollback grant is shared-host privileged; exact archive/hash, trusted source, encrypted backup, schema14, staged owner-browser, rights and rollback remain required per real rollout. Old P8C pending/planning notes below are historical.
+
+---
+
+
 ## Latest: P8C manual browser prompt stack AUTHORED — 2026-10-21 local / 2026-10-22 UTC
 
 **Owner approved `/prompt-ass + /prompt-plan + /prompt-write p8c`, manual Codex-browser execution, no runner.** [P8C assessment](tasks/p8c/prompt-assessment.md), [plan](tasks/p8c/implementation-plan.md), [README](tasks/p8c/README.md) and [P1](tasks/p8c/P1-artwork-media-clarity.txt), [P2](tasks/p8c/P2-first-time-creator.txt), [P3](tasks/p8c/P3-editor-usability.txt), [P4](tasks/p8c/P4-final-phase8-closeout.txt) are checked in; **none executed by prompt authoring**. P1/P2/P3 require real staging Codex browser and each own tested source VERSION BUMP + COMMIT + protected deploy + owner-browser debugging: root+both top lock fields `0.8.11` → `0.8.12` → `0.8.13`. P4 is manual unchanged `0.8.13`, conducts one integrated final staging + native new static-section Vega proof and commits `docs/tasks/p8/closeout.md` with Phase 8 GREEN/NOT GREEN; no `0.8.14` or automatic P9. **Never invoke `npm run codex:stack -- p8c`, its validator or `/activate`.**
