@@ -50,7 +50,7 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
   };
   useEffect(() => { void refresh().catch(value => setError(reason(value))); }, [projectId, accountId]);
   useEffect(() => {
-    if (!itemId || !inventory || initialized.current === itemId) return;
+    if (!itemId || !inventory || initialized.current === itemId || busy) return;
     const item = inventory.items.find(value => value.id === itemId && value.kind === 'audio');
     if (!item) return;
     initialized.current = itemId;
@@ -61,7 +61,7 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
     const ownedAudio = [...inventory.mediaAssets].reverse().find(value => value.catalogItemId === itemId && value.kind === 'audio' && value.location.type === 'private_object');
     setDisplayRights(ownedAudio?.tvDisplayRights?.status === 'cleared');
     setPlaybackRights(ownedAudio?.tvPlaybackRights?.status === 'cleared');
-  }, [inventory, itemId]);
+  }, [inventory, itemId, busy]);
   useEffect(() => {
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const shell = document.querySelector<HTMLElement>('.app-shell');
