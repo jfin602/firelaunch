@@ -1,5 +1,14 @@
 # P9 — Live Channel Publishing & App Updates
 
+## Current entry dependency — approved P8C plan (2026-10-21 local / 2026-10-22 UTC)
+
+**Phase 9 is NOT activated.** [P8C final creator UX and phase closeout](../p8c/README.md) owns the last Phase 8 implementation versions `0.8.11`–`0.8.13` and one manual Phase 8 P4 closeout at unchanged `0.8.13`. The final evidence-backed Phase 8 result must be written to [`../p8/closeout.md`](../p8/README.md) only after real staging/creator checks and targeted static-layout Vega VirtualDevice rendering; the link points to the P8 overview until the closeout is actually created. A separately approved `0.9.0` source handoff is required before any P9 prompt runs. No Phase 9 version or implementation change is authorized here.
+
+The latest dated [c8-ui3 result](../c8-ui3/closeout.md) is **0.8.10 staging DEPLOYED / UI NOT GREEN**, with image fidelity and native Fullscreen API constraints; [P8B](../p8b/wave2-closeout.md) still lacks native **new static-section** Vega parity. In contrast, the [later C7 R4 evidence](../c7-export-recovery/R4-playback-evidence.md) **does establish moving HLS video, audible loopback audio and seek/pause on the tested VirtualDevice package**, superseding earlier first-fragment-stall statements in the historical Phase 7 paragraphs below. Phase 9 still owns **installed-client remote updates, same-ID native upgrades and the ultimate launch demonstration**, not a replay of known-green unchanged C7 device evidence.
+
+---
+
+
 **Owner-approved documentation plan, 2026-10-21. NOT IMPLEMENTED OR QUALIFIED.** Planned 0.9.x; no version bump. Deadline Fri October 23 noon America/Chicago; internal 11:30 AM, freeze Thu 5 PM.
 
 ## Inherited Phase 7 technical exception / final acceptance
