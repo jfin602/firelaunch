@@ -46,6 +46,9 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     const forged = { ...b, accountId: aId };
     const created = await first.create(a, { title: 'First channel' });
     assert.match(created.id, /^ch_[a-f0-9]{32}$/);
+    assert.deepEqual(await second.create(a, { id: created.id, title: 'First channel' }), created);
+    await assert.rejects(second.create(b, { id: created.id, title: 'First channel' }), { code: 'CONFLICT' });
+    await assert.rejects(second.create(a, { id: created.id, title: 'Changed title' }), { code: 'CONFLICT' });
     assert.equal(created.spec.schemaVersion, 1);
     assert.equal((await second.list(a)).length, 1);
     assert.deepEqual(await second.read(a, created.id), created);

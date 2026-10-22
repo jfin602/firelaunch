@@ -47,8 +47,8 @@ export async function getProject(id: string): Promise<ChannelProject> {
   return projectSchema.parse(await request(`/${encodeURIComponent(id)}`));
 }
 
-export async function createProject(title: string): Promise<ChannelProject> {
-  return projectSchema.parse(await request('', json({ title })));
+export async function createProject(title: string, id?: string): Promise<ChannelProject> {
+  return projectSchema.parse(await request('', json({ title, ...(id ? { id } : {}) })));
 }
 
 export async function mutateProject(project: ChannelProject, mutation: ChannelMutation): Promise<ChannelProject> {

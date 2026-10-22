@@ -92,12 +92,18 @@ export class ProjectRepository {
 
   async create(raw: unknown): Promise<ChannelProject> {
     const input = createProjectSchema.parse(raw);
-    const id = newId('ch');
+    const id = input.id ?? newId('ch');
     const spec = starterChannel(input.title, id);
     const now = new Date().toISOString();
     const project = projectSchema.parse({ id, spec: { ...spec, slug: input.slug ?? spec.slug }, revision: 1, createdAt: now, updatedAt: now });
     const directory = await this.projectDirectory(id);
-    await mkdir(directory);
+    try { await mkdir(directory); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      const prior = await this.read(id);
+      if (prior.spec.title !== input.title) throw new RepositoryError('CONFLICT', 'This creation request belongs to another channel');
+      return prior;
+    }
     try { await this.write(directory, project); }
     catch (error) { await rm(directory, { recursive: true, force: true }); throw error; }
     return project;

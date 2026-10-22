@@ -26,6 +26,15 @@ test('repository persists, reopens, lists and rejects stale revisions', () => te
   await assert.rejects(repository.read('../escape'));
 }));
 
+test('a repeated create request returns the original draft without changing its name', () => temporary(async root => {
+  const repository = new ProjectRepository(root);
+  const id = `ch_${'d'.repeat(32)}`;
+  const created = await repository.create({ id, title: 'Retry-safe channel' });
+  assert.deepEqual(await new ProjectRepository(root).create({ id, title: 'Retry-safe channel' }), created);
+  assert.equal((await repository.list()).length, 1);
+  await assert.rejects(repository.create({ id, title: 'Another channel' }), { code: 'CONFLICT' });
+}));
+
 test('repository rejects a symlink in the configured data-root ancestry', () => temporary(async root => {
   const link = path.join(root, 'link');
   await symlink(path.join(root, 'elsewhere'), link);

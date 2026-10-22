@@ -127,6 +127,6 @@ export const projectSchema = z.strictObject({
 }).refine(project => project.id === project.spec.id, 'Project ID must match ChannelSpec ID');
 export type ChannelProject = z.infer<typeof projectSchema>;
 
-export const createProjectSchema = z.strictObject({ title: titleSchema, slug: slugSchema.optional() });
+export const createProjectSchema = z.strictObject({ title: titleSchema, slug: slugSchema.optional(), id: channelIdSchema.optional() });
 export const updateProjectSchema = z.strictObject({ expectedRevision: z.number().int().positive(), spec: channelSpecSchema });
 export const errorSchema = z.strictObject({ error: z.strictObject({ code: z.enum(['INVALID_INPUT', 'NOT_FOUND', 'CONFLICT', 'STORAGE_ERROR']), message: z.string() }) });

@@ -157,7 +157,7 @@ export class HostedProjectRepository {
 
   async create(principal: AuthenticatedPrincipal, raw: unknown): Promise<ChannelProject> {
     const input = createProjectSchema.parse(raw);
-    const id = newId('ch');
+    const id = input.id ?? newId('ch');
     const spec = starterChannel(input.title, id);
     const now = new Date().toISOString();
     const created = projectSchema.parse({ id, spec: { ...spec, slug: input.slug ?? spec.slug }, revision: 1, createdAt: now, updatedAt: now });
@@ -165,7 +165,13 @@ export class HostedProjectRepository {
     try {
       await client.query('BEGIN');
       const owner = await this.owner(principal, client);
-      await client.query('INSERT INTO channel_projects(id, creator_account_id, spec, revision, created_at, updated_at) VALUES ($1, $2, $3::jsonb, $4, $5, $6)', [id, owner, JSON.stringify(created.spec), 1, now, now]);
+      const inserted = await client.query('INSERT INTO channel_projects(id, creator_account_id, spec, revision, created_at, updated_at) VALUES ($1, $2, $3::jsonb, $4, $5, $6) ON CONFLICT (id) DO NOTHING RETURNING id', [id, owner, JSON.stringify(created.spec), 1, now, now]);
+      if (!inserted.rowCount) {
+        const prior = await client.query<ProjectRow>('SELECT p.id, p.spec, p.revision, p.created_at, p.updated_at FROM channel_projects p JOIN channel_ownerships o ON o.project_id = p.id AND o.creator_account_id = p.creator_account_id WHERE p.id = $1 AND o.creator_account_id = $2', [id, owner]);
+        if (!prior.rows[0] || project(prior.rows[0]).spec.title !== input.title) throw new RepositoryError('CONFLICT', 'This creation request belongs to another channel');
+        await client.query('COMMIT');
+        return project(prior.rows[0]);
+      }
       await client.query('INSERT INTO channel_ownerships(project_id, creator_account_id, channel_id) VALUES ($1, $2, $1)', [id, owner]);
       await client.query('COMMIT');
       return created;

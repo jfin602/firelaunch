@@ -49,11 +49,12 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="field"><span>{label}</span>{children}</label>;
 }
 
-function Intro({ onCreate }: { onCreate: (title: string) => Promise<void> }) {
+function Intro({ onCreate }: { onCreate: (title: string, id: string) => Promise<void> }) {
   const [title, setTitle] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const creatingRef = useRef(false);
+  const requestId = useRef(`ch_${crypto.randomUUID().replaceAll('-', '')}`);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (creatingRef.current) return;
@@ -62,12 +63,12 @@ function Intro({ onCreate }: { onCreate: (title: string) => Promise<void> }) {
     creatingRef.current = true;
     setCreating(true);
     setError('');
-    try { await onCreate(name); }
+    try { await onCreate(name, requestId.current); }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not create the channel. Check your connection and try again.'); }
     finally { creatingRef.current = false; setCreating(false); }
   };
   return <div className="welcome"><div className="welcome-symbol">✳</div><span className="eyebrow">YOUR CHANNEL STARTS HERE</span><h1>Stories belong<br/><em>on the big screen.</em></h1><p>Shape your brand, curate a collection, and explore the TV experience before writing a line of code.</p>
-    <div className="welcome-form"><form onSubmit={event => void submit(event)}><Field label="CHANNEL NAME"><input autoFocus required maxLength={120} value={title} onChange={event => { setTitle(event.target.value); setError(''); }} placeholder="e.g. Wild Earth" aria-invalid={!!error} /></Field><div className="button-row"><button className="primary" type="submit" disabled={creating || !title.trim()}>{creating ? 'Creating…' : 'Create Channel →'}</button></div>{error && <p role="alert">{error}</p>}</form>
+    <div className="welcome-form"><form onSubmit={event => void submit(event)}><Field label="CHANNEL NAME"><input autoFocus required maxLength={120} value={title} onChange={event => { setTitle(event.target.value); requestId.current = `ch_${crypto.randomUUID().replaceAll('-', '')}`; setError(''); }} placeholder="e.g. Wild Earth" aria-invalid={!!error} /></Field><div className="button-row"><button className="primary" type="submit" disabled={creating || !title.trim()}>{creating ? 'Creating…' : 'Create Channel →'}</button></div>{error && <p role="alert">{error}</p>}</form>
     </div></div>;
 }
 
@@ -452,10 +453,10 @@ export default function App() {
       return false;
     } finally { setBusy(false); }
   };
-  const create = async (title: string) => {
+  const create = async (title: string, id: string) => {
     setBusy(true); setError('');
     try {
-      const created = await createProject(title);
+      const created = await createProject(title, id);
       select(created); setVideoSelection(null); setAudioSelection(null); setBookSelection(null); setProjects(previous => [...previous, created]); setNewChannel(false); setSurface('Channel'); setChannelView('Pages & Layout');
     } finally { setBusy(false); }
   };
