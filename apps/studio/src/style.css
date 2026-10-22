@@ -1006,3 +1006,10 @@ body:has(.preview-fullscreen){overflow:hidden}
   .channel-editor .layout-page-list{flex-direction:row;overflow-x:auto;overscroll-behavior-inline:contain;padding-bottom:5px}
   .channel-editor .layout-page-list button{width:auto;flex:none;white-space:nowrap}
 }
+
+/* Keep book metadata readable while the D-pad action stays visible. */
+.tv-overlay.tv-detail { overflow: hidden; }
+.tv-detail-copy,.preview-fullscreen .tv-detail-copy { display: flex; flex-direction: column; max-height: 100%; overflow: hidden; }
+.tv-detail-text { min-height: 0; overflow: auto; scrollbar-width: thin; }
+.tv-detail-actions { flex: none; padding-top: .4em; background: var(--tv-bg); }
+.tv-detail-actions .tv-play { margin-bottom: .25em; }

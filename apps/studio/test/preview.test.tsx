@@ -183,6 +183,10 @@ test('book audiobook opens shared audio player and Back restores book detail', (
   try {
     fireEvent.click(screen.getByRole('button', { name: 'Open Field Guide' }));
     assert.match(view.container.querySelector('.tv-detail-copy')?.textContent ?? '', /By A\. Writer/);
+    const details = view.container.querySelector<HTMLElement>('.tv-detail-text')!;
+    assert.equal(details.scrollTop, 0);
+    fireEvent.click(screen.getByRole('button', { name: 'Down' }));
+    assert.equal(details.scrollTop, 40, 'remote Down scrolls long book metadata without losing its action');
     fireEvent.click(screen.getByRole('button', { name: /Listen to Audiobook/ }));
     assert.ok(view.container.querySelector('.audio-player audio'));
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));

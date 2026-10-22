@@ -231,7 +231,7 @@ export function Catalog({ project, projectId: legacyProjectId, accountId, hosted
     await refresh(); return `${use === 'television_display' ? 'Display' : 'Playback'} rights ${cleared ? 'asserted' : 'revoked'}; delivery remains disabled.`;
   });
   if (!hosted) return <div className="panel-content"><h2>Catalog needs a hosted account.</h2><p>Local channels still support the Create, Design, Content, Code, Build and Preview workflow.</p></div>;
-  return <div className="panel-content catalog-panel"><span className="eyebrow">CATALOG / PRIVATE DRAFT</span><h2>Build your channel library.</h2><p>Add owned video or audio, then review it here. Other catalog sources and library tools are available below.</p>
+  return <div className="panel-content catalog-panel"><span className="eyebrow">CATALOG / PRIVATE DRAFT</span><h2>Build your channel library.</h2><p>Add owned video, audio or books, then review them here. Other catalog sources and library tools are available below.</p>
     {error && <p role="alert" className="catalog-error">{error}</p>}{message && <p role="status" className="catalog-status">{message}</p>}{!inventory ? <p>Loading catalog…</p> : <>
     <div className="catalog-upload-entry"><div><strong>Your video library</strong><p>Add an owned MP4 as a private channel draft.</p></div><button className="primary" type="button" onClick={() => onOpenVideo?.()}>Add Video</button></div>
     <div className="catalog-upload-entry"><div><strong>Your audio library</strong><p>Add an owned MP3 with cover and separate rights as a private draft.</p></div><button className="primary" type="button" onClick={() => onOpenAudio?.()}>Add Audio</button></div>

@@ -84,6 +84,11 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
   stateRef.current = current;
   const dispatch = (command: TvCommand) => {
     const active = activeItem(tvRef.current, stateRef.current);
+    if (stateRef.current.screen === 'detail' && (command === 'up' || command === 'down')) {
+      const details = screenRef.current?.querySelector<HTMLElement>('.tv-detail-text');
+      if (details) details.scrollTop += (command === 'down' ? 1 : -1) * Math.max(40, details.clientHeight * 0.6);
+      return;
+    }
     if (stateRef.current.screen === 'playback' && active && (contentPresentation(active) === 'audio' || !!active.audiobook) &&
       (command === 'left' || command === 'right' || command === 'select')) {
       audioPlayerRef.current?.command(command); return;
@@ -130,7 +135,7 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
   useEffect(() => {
     const focused = Array.from(screenRef.current?.querySelectorAll<HTMLElement>('[data-tv-focus]') ?? [])
       .find(element => element.dataset.tvFocus === current.focusId);
-    focused?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    if (current.screen === 'page') focused?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }, [current.focusId, current.pageId, current.screen]);
 
   useEffect(() => () => { if (scrollIndicatorTimer.current) clearTimeout(scrollIndicatorTimer.current); }, []);
@@ -187,12 +192,12 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
         </> : item && <div className={'tv-overlay tv-' + current.screen}>
           {current.screen === 'detail' ? <>
             <PreviewArtwork contentId={item.id} source={item.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/>
-            <div className="tv-detail-copy"><span className="eyebrow">{contentPresentation(item) === 'video' ? 'NOW SHOWING' : contentPresentation(item) === 'audio' ? 'NOW LISTENING' : item.author ? 'BOOK SHOWCASE' : 'ABOUT THIS TITLE'} · {item.category ?? 'FEATURE'}</span><h2>{item.title}</h2>
+            <div className="tv-detail-copy"><div className="tv-detail-text"><span className="eyebrow">{contentPresentation(item) === 'video' ? 'NOW SHOWING' : contentPresentation(item) === 'audio' ? 'NOW LISTENING' : item.author ? 'BOOK SHOWCASE' : 'ABOUT THIS TITLE'} · {item.category ?? 'FEATURE'}</span><h2>{item.title}</h2>
               {item.author && <p className="tv-book-author">By {item.author}</p>}{item.series && <p>Series: {item.series}</p>}{item.publicationDate && <p>Published {item.publicationDate}</p>}
-              <p>{item.description}</p>{item.audiobook && item.narrator && <p>Narrated by {item.narrator}</p>}
+              <p>{item.description}</p>{item.audiobook && item.narrator && <p>Narrated by {item.narrator}</p>}</div><div className="tv-detail-actions">
               {isPlayableContent(item) || item.audiobook ? <button data-tv-focus={current.focusId} className="tv-play focused" onClick={() => dispatch('select')}>▶ &nbsp; {item.audiobook ? 'Listen to Audiobook' : contentPresentation(item) === 'audio' ? 'Play audio' : 'Play film'}</button>
                 : <button data-tv-focus={current.focusId} className="tv-play focused" onClick={() => dispatch('back')}>← Back to channel</button>}
-              <small>{isPlayableContent(item) || item.audiobook ? `Press Enter to listen or play · ${fullscreen ? 'Backspace' : 'Escape'} to go back` : `Press ${fullscreen ? 'Backspace' : 'Escape'} to go back`}</small></div>
+              <small>{isPlayableContent(item) || item.audiobook ? `Press Enter to listen or play · ${fullscreen ? 'Backspace' : 'Escape'} to go back` : `Use ↑ ↓ to read · ${fullscreen ? 'Backspace' : 'Escape'} to go back`}</small></div></div>
           </> : <div className="tv-player">{contentPresentation(item) === 'audio' || item.audiobook
             ? <AudioPlayer ref={audioPlayerRef} key={item.id} source={item.audiobook?.mediaUrl ?? item.mediaUrl!} title={item.title} creator={item.narrator ?? item.author ?? ''} autoPlay startMuted={tv.playback.startMuted}
                 artwork={<PreviewArtwork contentId={item.id} source={item.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/>}
