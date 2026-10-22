@@ -31,8 +31,8 @@ prior_assets_dir="$(dirname "$prior_index")/assets"
 mapfile -t prior_assets < <(find "$prior_assets_dir" -mindepth 1 -maxdepth 1 \( -name '*.js' -o -name '*.css' \) -printf '%f\n' | sort -u)
 # Consecutive protected releases retain older hashed entrypoints for cached browsers.
 # Successive browser-required checkpoints retain earlier entrypoints for cached tabs.
-# Keep a finite cap while allowing the P3 source and its first corrected release.
-[[ ${#prior_assets[@]} -ge ${#entry_assets[@]} && ${#prior_assets[@]} -le 64 ]] || { echo 'Unexpected retained Studio asset inventory' >&2; exit 1; }
+# Keep a finite cap while allowing the current visual correction and cached entrypoints.
+[[ ${#prior_assets[@]} -ge ${#entry_assets[@]} && ${#prior_assets[@]} -le 72 ]] || { echo 'Unexpected retained Studio asset inventory' >&2; exit 1; }
 for asset in "${entry_assets[@]}"; do
   [[ -f "$(dirname "$prior_index")$asset" ]] || { echo "Active Studio entrypoint asset missing: $asset" >&2; exit 1; }
 done

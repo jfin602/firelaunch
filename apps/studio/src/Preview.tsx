@@ -83,7 +83,7 @@ function HeroArtwork({ content, inventory, projectId, accountId }: { content: Co
   const [ready, setReady] = useState<{ url: string; wide: boolean } | null>(null);
   const visible = !!url && ready?.url === url;
   return <div className={'tv-feature-art' + (visible ? ' has-art' : '') + (visible && ready.wide ? ' is-wide' : '')}
-    style={visible ? { backgroundImage: `linear-gradient(#0002, #0002), url("${url.replaceAll('"', '%22')}")` } : undefined}>
+    style={visible ? { backgroundImage: `linear-gradient(color-mix(in srgb, var(--tv-bg) 12%, transparent), color-mix(in srgb, var(--tv-bg) 12%, transparent)), url("${url.replaceAll('"', '%22')}")` } : undefined}>
     {url && <img key={url} src={url} alt="" referrerPolicy="no-referrer" onLoad={event => {
       if (adequateHeroArtwork(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight))
         setReady({ url, wide: event.currentTarget.naturalWidth / event.currentTarget.naturalHeight >= 1.35 });

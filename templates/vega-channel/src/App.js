@@ -41,23 +41,23 @@ function heroAction(content) {
   return content.presentation === 'audio' ? 'Listen' : 'Watch';
 }
 
-// The selected card fills the entire TV canvas, including behind navigation and
-// the selector. Narrow translucent strips soften both edges into black.
-function HeroBackdrop({ source }) {
+// The selected card fills the TV canvas; translucent strips fade its edges into
+// the channel's chosen background color.
+function HeroBackdrop({ source, backgroundColor }) {
   const [failedSource, setFailedSource] = useState(null);
   const visible = source?.startsWith('https://') && source !== failedSource;
   return <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
     {visible && <Image key={source} source={{ uri: source }} resizeMode="cover"
       onError={() => setFailedSource(source)} style={styles.heroBackdropImage} />}
-    <View style={styles.featureDim} />
+    <View style={[styles.featureDim, { backgroundColor }]} />
     {Array.from({ length: 24 }, (_, index) => <React.Fragment key={`edge:${index}`}>
       <View style={{ position: 'absolute', top: 0, bottom: 0, left: `${index * 2.5}%`, width: '2.6%',
-        backgroundColor: '#000', opacity: 0.98 * Math.pow(1 - index / 24, 1.7) }} />
+        backgroundColor, opacity: 0.98 * Math.pow(1 - index / 24, 1.7) }} />
       <View style={{ position: 'absolute', top: 0, bottom: 0, right: `${index * 1.25}%`, width: '1.35%',
-        backgroundColor: '#000', opacity: 0.98 * Math.pow(1 - index / 24, 1.6) }} />
+        backgroundColor, opacity: 0.98 * Math.pow(1 - index / 24, 1.6) }} />
     </React.Fragment>)}
     {Array.from({ length: 14 }, (_, index) => <View key={`bottom:${index}`} style={{ position: 'absolute',
-      left: 0, right: 0, bottom: `${index * 4}%`, height: '4.1%', backgroundColor: '#000',
+      left: 0, right: 0, bottom: `${index * 4}%`, height: '4.1%', backgroundColor,
       opacity: 0.98 * Math.pow(1 - index / 14, 0.8) }} />)}
   </View>;
 }
@@ -138,7 +138,7 @@ function Section({ module, page, state, brand, font, focusStyle, layout, feature
       </Pressable>;
     });
   return <View onLayout={onLayout} style={[styles.module, moduleSpacing, compact && styles.compactSection,
-    featureSelector && styles.featureSelectorSurface]}>
+    featureSelector && { backgroundColor: brand.backgroundColor }]}>
     {title}{module.kind === 'grid' && !featureSelector ? <View onLayout={onRowLayout} style={styles.grid}>{cards}</View>
       : <ScrollView horizontal ref={rowRef} showsHorizontalScrollIndicator={false} onLayout={onRowLayout}
         onScroll={event => onRowScroll(module.id, event?.nativeEvent?.contentOffset?.x ?? 0)}
@@ -343,7 +343,8 @@ export default function App() {
     onBack={() => dispatch('back')} typography={brand.typography} />;
   return <View style={[styles.screen, { backgroundColor: brand.backgroundColor,
     paddingHorizontal: layout.horizontalInset, paddingTop: layout.topInset }]}>
-    {state.screen === 'page' && heroPair && spotlight && <HeroBackdrop source={spotlight.artwork} />}
+    {state.screen === 'page' && heroPair && spotlight && <HeroBackdrop source={spotlight.artwork}
+      backgroundColor={brand.backgroundColor} />}
     {state.screen === 'page' ? <>
       <View style={[styles.header, { minHeight: 58 * layout.scale, marginBottom: 12 * layout.scale }]}>
         {brand.logo?.startsWith('https://') && <Image source={{ uri: brand.logo }}
@@ -454,7 +455,7 @@ const styles = StyleSheet.create({
     borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
   feature: { flexDirection: 'row', overflow: 'hidden', marginBottom: 2 },
   heroBackdropImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: '10%' },
-  featureDim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.12)' },
+  featureDim: { ...StyleSheet.absoluteFillObject, opacity: 0.12 },
   featureCopy: { justifyContent: 'center', zIndex: 1 },
   featureKicker: { color: '#E5EEE9', fontSize: 14, fontWeight: 'bold', borderLeftWidth: 4, paddingLeft: 8 },
   featureTitle: { color: '#FFFFFF', fontWeight: 'bold', marginTop: 8 },
@@ -464,7 +465,6 @@ const styles = StyleSheet.create({
     borderRadius: 5, paddingHorizontal: 14, paddingVertical: 7 },
   featureFrame: { alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   featureFallback: { color: '#E5EEE9', fontSize: 18 },
-  featureSelectorSurface: { backgroundColor: 'rgba(0,0,0,0.86)' },
   module: { marginVertical: 8 }, moduleTitle: { fontSize: 27, marginBottom: 8 },
   body: { fontSize: 22, lineHeight: 32 }, sectionSurface: { backgroundColor: '#ffffff16', borderRadius: 8 },
   compactSection: { padding: 8, marginVertical: 8 }, comfortableSection: { padding: 20 },
