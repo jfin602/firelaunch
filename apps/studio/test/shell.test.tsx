@@ -41,6 +41,46 @@ test('empty hosted account keeps onboarding, status and real navigation visible'
   } finally { restore(); }
 });
 
+test('single channel form keeps its name on failure and blocks repeated pending submits', async () => {
+  const previous = globalThis.fetch;
+  let attempts = 0;
+  let finish: ((response: Response) => void) | undefined;
+  const created = { ...first, id: `ch_${'c'.repeat(32)}`, spec: { ...first.spec, id: `ch_${'c'.repeat(32)}`, title: 'My new channel' }, revision: 1 };
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === '/api/auth/session') return Response.json(session);
+    if (url === '/api/projects' && init?.method === 'POST') {
+      attempts++;
+      assert.equal((init.headers as Record<string, string>)['x-csrf-token'], 'csrf');
+      if (attempts === 1) return Response.json({ error: { message: 'Storage is temporarily unavailable' } }, { status: 503 });
+      return new Promise<Response>(resolve => { finish = resolve; });
+    }
+    if (url === '/api/projects') return Response.json([first]);
+    return Response.json(null, { status: 404 });
+  }) as typeof fetch;
+  try {
+    render(createElement(App));
+    await screen.findByRole('button', { name: `Switch workspace, current channel ${first.spec.title}` });
+    fireEvent.click(screen.getByRole('button', { name: 'New channel' }));
+    const input = screen.getByLabelText('CHANNEL NAME') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'My new channel' } });
+    assert.equal(screen.queryByText('02 First look'), null);
+    fireEvent.click(screen.getByRole('button', { name: /Create Channel/ }));
+    assert.match((await screen.findByRole('alert')).textContent ?? '', /Storage is temporarily unavailable/);
+    assert.equal(input.value, 'My new channel');
+    const button = screen.getByRole('button', { name: /Create Channel/ });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    fireEvent.submit(input.closest('form')!);
+    assert.equal(attempts, 2);
+    assert.equal((screen.getByRole('button', { name: 'Creating…' }) as HTMLButtonElement).disabled, true);
+    finish!(Response.json(created, { status: 201 }));
+    await screen.findByRole('button', { name: `Switch workspace, current channel My new channel` });
+    assert.equal(window.location.search, `?project=${created.id}`);
+    assert.equal(screen.getByRole('button', { name: 'Pages & Layout' }).getAttribute('aria-pressed'), 'true');
+  } finally { cleanup(); globalThis.fetch = previous; dom.window.history.replaceState(null, '', '/'); }
+});
+
 test('every Studio destination starts without a topbar and the card owns workspace actions', async () => {
   const restore = mockApi([first, second]);
   try {

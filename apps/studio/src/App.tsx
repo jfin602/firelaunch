@@ -10,7 +10,6 @@ import { VideoWorkspace } from './VideoWorkspace.js';
 import { AudioWorkspace } from './AudioWorkspace.js';
 import { BookWorkspace } from './BookWorkspace.js';
 import { clearVideoTransfers, stopVideoTransfer, subscribeVideoTransfers, videoTransfers, type VideoTransfer } from './video-transfer.js';
-import { sampleMutations } from './sample.js';
 
 function newId(kind: 'page' | 'mod' | 'item'): string {
   return `${kind}_${crypto.randomUUID().replaceAll('-', '')}`;
@@ -50,16 +49,25 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="field"><span>{label}</span>{children}</label>;
 }
 
-function Intro({ onCreate, busy, hosted }: { onCreate: (title: string, sample: boolean, request: string, catalog: boolean) => Promise<void>; busy: boolean; hosted: boolean }) {
-  const [step, setStep] = useState(0);
+function Intro({ onCreate }: { onCreate: (title: string) => Promise<void> }) {
   const [title, setTitle] = useState('');
-  const [sample, setSample] = useState(!hosted);
-  const [request, setRequest] = useState('');
-  const [catalog, setCatalog] = useState(hosted);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState('');
+  const creatingRef = useRef(false);
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (creatingRef.current) return;
+    const name = title.trim();
+    if (!name) { setError('Enter a channel name to continue.'); return; }
+    creatingRef.current = true;
+    setCreating(true);
+    setError('');
+    try { await onCreate(name); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not create the channel. Check your connection and try again.'); }
+    finally { creatingRef.current = false; setCreating(false); }
+  };
   return <div className="welcome"><div className="welcome-symbol">✳</div><span className="eyebrow">YOUR CHANNEL STARTS HERE</span><h1>Stories belong<br/><em>on the big screen.</em></h1><p>Shape your brand, curate a collection, and explore the TV experience before writing a line of code.</p>
-    <div className="welcome-form"><div className="steps"><span className={step === 0 ? 'current' : ''}>01 Identity</span><span className={step === 1 ? 'current' : ''}>02 First look</span></div>
-      {step === 0 ? <form onSubmit={event => { event.preventDefault(); if (title.trim()) setStep(1); }}><Field label="CHANNEL NAME"><input autoFocus required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} placeholder="e.g. Wild Earth" /></Field><button className="primary" type="submit">Continue <span>→</span></button></form>
-        : <div><h2>{title}</h2>{hosted && <><label className="check"><input type="radio" name="entry" checked={catalog} onChange={() => setCatalog(true)}/> Start with my catalog</label><label className="check"><input type="radio" name="entry" checked={!catalog} onChange={() => setCatalog(false)}/> Start with a prompt</label></>}{catalog ? <p>Your private Home starts with one Hero and one empty content row. Add owned content in Library, then choose it in Channel → Pages & Layout. Nothing is published automatically.</p> : <><p>{hosted ? 'Your private Home starts with one Hero and one empty content row. Add reviewed, owned content in Library before choosing it for TV Preview. No demo video is added.' : 'Start with original concept artwork and a procedural local demo clip, or begin blank.'}</p>{!hosted && <label className="check"><input type="checkbox" checked={sample} onChange={event => setSample(event.target.checked)} /> Add rights-safe demo collection</label>}<Field label="INITIAL AGENT REQUEST (OPTIONAL)"><textarea maxLength={2000} value={request} onChange={event => setRequest(event.target.value)} placeholder="e.g. Add page Explore" /></Field></>}<div className="button-row"><button onClick={() => setStep(0)}>← Back</button><button className="primary" disabled={busy} onClick={() => void onCreate(title.trim(), !catalog ? sample : false, catalog ? '' : request.trim(), catalog)}>{busy ? 'Creating…' : 'Create channel →'}</button></div></div>}
+    <div className="welcome-form"><form onSubmit={event => void submit(event)}><Field label="CHANNEL NAME"><input autoFocus required maxLength={120} value={title} onChange={event => { setTitle(event.target.value); setError(''); }} placeholder="e.g. Wild Earth" aria-invalid={!!error} /></Field><div className="button-row"><button className="primary" type="submit" disabled={creating || !title.trim()}>{creating ? 'Creating…' : 'Create Channel →'}</button></div>{error && <p role="alert">{error}</p>}</form>
     </div></div>;
 }
 
@@ -444,18 +452,12 @@ export default function App() {
       return false;
     } finally { setBusy(false); }
   };
-  const create = async (title: string, sample: boolean, request: string, catalog: boolean) => {
+  const create = async (title: string) => {
     setBusy(true); setError('');
     try {
       const created = await createProject(title);
-      select(created); setVideoSelection(null); setAudioSelection(null); setBookSelection(null); setProjects(previous => [...previous, created]); setNewChannel(false); setSurface(catalog ? 'Library' : 'Channel'); setChannelView('Pages & Layout');
-      if (sample && !session) for (const mutation of sampleMutations(created, [newId('item'), newId('item'), newId('item')])) if (!(await commit(mutation))) break;
-      if (request && projectRef.current?.id === created.id) {
-        const result = await askAgent(projectRef.current, request);
-        acceptProject(result.project);
-      }
-    } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
-    finally { setBusy(false); }
+      select(created); setVideoSelection(null); setAudioSelection(null); setBookSelection(null); setProjects(previous => [...previous, created]); setNewChannel(false); setSurface('Channel'); setChannelView('Pages & Layout');
+    } finally { setBusy(false); }
   };
   const draftSelection = project ? catalogSelections[project.id] : undefined;
   const editorPageId = project && editorPageSelection?.projectId === project.id && project.spec.navigation.includes(editorPageSelection.pageId)
@@ -485,7 +487,7 @@ export default function App() {
     <main className="studio-main">
       {session && project && <VideoTransferNotice accountId={session.accountId} projectId={project.id} onOpen={openVideo}/>}
       {error && <div className="error" role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></div>}
-      {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro busy={busy} hosted={!!session} onCreate={create} /> : surface === 'Home' ? <Home key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} projects={projects} accountId={session?.accountId ?? null} hosted={!!session} libraryRevision={libraryRevision} onSelectProject={id => void switchProject(id)} onSurface={navigate} onEditChannel={() => openChannel('Appearance')} onOpenVideo={openVideo} onPreview={() => openChannel('Pages & Layout')}/> : <div className={`workspace ${surface === 'Channel' ? 'channel-workspace' : ''}`}>
+      {loading ? <div className="loading" role="status">Loading projects…</div> : (!project || newChannel) ? <Intro onCreate={create} /> : surface === 'Home' ? <Home key={`${session?.accountId ?? 'local'}:${project.id}`} project={project} projects={projects} accountId={session?.accountId ?? null} hosted={!!session} libraryRevision={libraryRevision} onSelectProject={id => void switchProject(id)} onSurface={navigate} onEditChannel={() => openChannel('Appearance')} onOpenVideo={openVideo} onPreview={() => openChannel('Pages & Layout')}/> : <div className={`workspace ${surface === 'Channel' ? 'channel-workspace' : ''}`}>
         <div className="workspace-main" id="studio-controls">
           {surface === 'Export' && <div className="chips studio-subviews" role="group" aria-label="Export views">{exportViews.map(view => <button key={view} type="button" className={exportView === view ? 'active' : ''} aria-pressed={exportView === view} onClick={() => setExportView(view)}>{view}</button>)}</div>}
           {surface === 'Channel' ? <div id="channel-fullscreen-root" ref={fullscreenRoot} className={`channel-presentation${previewFullscreen ? ' preview-fullscreen' : ''}${previewFullscreen && fullscreenUiMode === 'clean' ? ' clean-view' : ''}${dockVisible ? ' dock-revealed' : ''}`} role={previewFullscreen === 'fallback' ? 'dialog' : undefined} aria-modal={previewFullscreen === 'fallback' ? true : undefined} aria-label={previewFullscreen === 'fallback' ? 'Full-screen TV Preview' : undefined} onPointerMove={event => { if (!previewFullscreen || fullscreenUiMode === 'clean' || event.pointerType === 'touch') return; if (event.clientX - event.currentTarget.getBoundingClientRect().left <= 38) revealDock(); }} onPointerLeave={() => { if (previewFullscreen && fullscreenUiMode === 'controls') scheduleDockHide(); }} onTouchStart={event => { if (previewFullscreen && fullscreenUiMode === 'controls' && event.touches[0]!.clientX - event.currentTarget.getBoundingClientRect().left <= 48) revealDock(); }}>
