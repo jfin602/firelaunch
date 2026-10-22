@@ -965,3 +965,18 @@ body:has(.preview-fullscreen){overflow:hidden}
 .tv-module :is(.tv-text-comfortable,.tv-text-compact){max-width:none;padding:.15em;margin:.1em 0}
 .preview-fullscreen .tv-content-wrap{height:auto;flex:1;padding-top:clamp(12px,2vh,32px)}
 .preview-fullscreen .tv-content{height:100%;padding-top:0;flex:none}
+
+/* Page controls remain available when the compact page strip has more pages than fit. */
+.channel-editor .layout-page-rail{display:flex;flex-direction:column;gap:8px}
+.channel-editor .layout-page-header{display:grid;gap:7px;flex:none;min-width:0}
+.channel-editor .layout-page-actions{display:flex;gap:8px;min-width:0}
+.channel-editor .layout-page-actions select{flex:1;min-width:0;min-height:44px;padding:8px;border:1px solid var(--fl-border);border-radius:var(--fl-radius-sm);background:var(--fl-field);color:var(--fl-text);font:inherit}
+.channel-editor .layout-page-actions button{width:auto;min-height:44px;white-space:nowrap}
+.channel-editor .layout-page-list{display:flex;flex-direction:column;gap:8px;min-width:0}
+.channel-editor .layout-page-list button,.channel-editor .layout-section .button-row button,.channel-editor .module-editor .button-row button,.channel-appearance .button-row button{min-height:44px;font-size:13px}
+.channel-editor .layout-page-actions select:focus-visible{outline:3px solid var(--fl-focus);outline-offset:2px}
+@media(max-width:760px){
+  .channel-editor .layout-page-rail{max-height:none;min-height:0;overflow:visible;align-items:stretch}
+  .channel-editor .layout-page-list{flex-direction:row;overflow-x:auto;overscroll-behavior-inline:contain;padding-bottom:5px}
+  .channel-editor .layout-page-list button{width:auto;flex:none;white-space:nowrap}
+}

@@ -84,6 +84,9 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     assert.equal(screen.queryByRole('complementary', { name: 'Layout inspector' }), null);
     let rail = screen.getByRole('navigation', { name: 'Channel pages' });
     assert.equal(within(rail).getByRole('button', { name: 'Home' }).getAttribute('aria-current'), 'page');
+    assert.match(rail.textContent ?? '', /PAGES · 1 OF 2/);
+    assert.equal((within(rail).getByRole('combobox', { name: 'Go to page' }) as HTMLSelectElement).options.length, 2);
+    assert.ok(within(rail).getByRole('button', { name: 'New page' }));
     const homeSection = screen.getByRole('region', { name: 'hero section 1' });
     assert.ok(within(homeSection).getByText('Oceans'));
     const editSection = within(homeSection).getByRole('button', { name: 'Edit section' });
@@ -93,7 +96,8 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
     await waitFor(() => assert.equal(screen.queryByRole('complementary', { name: 'Layout inspector' }), null));
     await waitFor(() => assert.equal(document.activeElement, editSection));
-    fireEvent.click(within(rail).getByRole('button', { name: 'Explore' }));
+    fireEvent.change(within(rail).getByRole('combobox', { name: 'Go to page' }), { target: { value: secondPageId } });
+    assert.match(rail.textContent ?? '', /PAGES · 2 OF 2/);
     assert.ok(screen.getByText('Choose content for Films.'));
     await waitFor(() => assert.ok(within(preview).getByRole('heading', { name: 'Films' })));
     fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
@@ -287,7 +291,7 @@ test('section edits reorder by stable IDs, preserve Library references and retai
     assert.ok(screen.getByRole('complementary', { name: 'Layout inspector' }));
     fail = true;
     fireEvent.click(within(editor).getByRole('button', { name: 'Save changes' }));
-    await waitFor(() => assert.match(within(editor).getByRole('status').textContent ?? '', /Failed to save/));
+    await waitFor(() => assert.match(within(editor).getByRole('alert').textContent ?? '', /Save failed/));
     assert.equal((within(editor).getByRole('textbox', { name: 'Section text' }) as HTMLTextAreaElement).value, 'Our story');
     fail = false;
     fireEvent.click(within(editor).getByRole('button', { name: 'Save changes' }));
