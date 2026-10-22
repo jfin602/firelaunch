@@ -78,7 +78,7 @@ test('many projects and creator artwork are scoped; broken artwork falls back', 
     render(createElement(App));
     await screen.findByRole('button', { name: 'Open Director Cut video' });
     assert.equal((document.querySelector('.home-art img') as HTMLImageElement).src, 'https://art.example/violet.jpg');
-    assert.ok(screen.getByText('Playback rights unknown'));
+    assert.equal(screen.queryByText(/Playback rights unknown/), null);
     assert.ok(screen.getByText('No upload yet · open to add an MP4'));
     assert.ok(screen.getByText('Open video →'));
     fireEvent.error(document.querySelector('.home-art img')!);
@@ -115,9 +115,9 @@ test('Home reports saved audio rights and a book audiobook from their own assets
     render(createElement(App));
     const audioCard = await screen.findByRole('button', { name: 'Open Private Track in Library' });
     const bookCard = screen.getByRole('button', { name: 'Open Private Book in Library' });
-    assert.match(audioCard.textContent ?? '', /Playback rights asserted/);
+    assert.doesNotMatch(audioCard.textContent ?? '', /rights asserted/);
     assert.match(bookCard.textContent ?? '', /Book · audiobook attached/);
-    assert.match(bookCard.textContent ?? '', /Cover display rights asserted · playback rights asserted/);
+    assert.doesNotMatch(bookCard.textContent ?? '', /rights asserted/);
   } finally { mock.restore(); }
 });
 

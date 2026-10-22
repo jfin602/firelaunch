@@ -41,7 +41,7 @@ export function Home({ project, projects, accountId, hosted, libraryRevision = 0
   const items = catalog?.items ?? [];
   return <div className="home" aria-label="Channel Home">
     <div className="home-hero"><span className="eyebrow">YOUR CHANNEL WORKSPACE</span><h2>{project.spec.title}</h2>
-      <p>{hosted ? 'Private draft. Review catalog content and rights before putting anything on TV.' : 'Local channel draft. Open an editor or TV Preview to keep building.'}</p>
+      <p>{hosted ? 'Private draft. Add media, edit your channel, or open TV Preview.' : 'Local channel draft. Open an editor or TV Preview to keep building.'}</p>
       <div className="button-row" aria-label="Quick actions"><h3>Quick actions</h3><button className="primary" onClick={() => hosted && onOpenVideo ? onOpenVideo() : onSurface('Library')}>{hosted ? 'Add Video' : 'Open Library / Add Video'}</button><button onClick={onEditChannel}>Edit channel</button><button onClick={onPreview}>TV Preview</button></div>
     </div>
     <section className="home-section" aria-label="Your channels"><div className="home-section-head"><h3>Your channels</h3><span>{projects.length} {projects.length === 1 ? 'project' : 'projects'}</span></div>
@@ -59,12 +59,14 @@ export function Home({ project, projects, accountId, hosted, libraryRevision = 0
           const coverAsset = catalog?.mediaAssets.find(value => value.catalogItemId === item.id && value.kind === 'artwork');
           const title = item.creatorOverrides?.title ?? item.sourceRecord.metadata.title;
           const playback = (item.kind === 'audio' || item.kind === 'book' ? audioAsset : asset)?.tvPlaybackRights?.status;
-          const rights = playback === 'revoked' ? 'Playback rights revoked' : playback === 'cleared' ? 'Playback rights asserted' : 'Playback rights unknown';
-          const coverRights = coverAsset?.tvDisplayRights?.status === 'revoked' ? 'Cover display rights revoked' :
-            coverAsset?.tvDisplayRights?.status === 'cleared' ? 'Cover display rights asserted' : 'Cover display rights unknown';
+          const rights = playback === 'revoked' ? 'Needs attention · playback permission revoked' :
+            playback !== 'cleared' && (audioAsset || asset) ? 'Needs attention · confirm playback permission' : null;
+          const coverRights = coverAsset?.tvDisplayRights?.status === 'revoked' ? 'Needs attention · cover permission revoked' :
+            coverAsset && coverAsset.tvDisplayRights?.status !== 'cleared' ? 'Needs attention · confirm cover permission' : null;
           return <button key={item.id} className="home-media-card" onClick={() => item.kind === 'video' && onOpenVideo ? onOpenVideo(item.id) : onSurface('Library')} aria-label={item.kind === 'video' ? `Open ${title} video` : `Open ${title} in Library`}>
             <OwnedArtwork item={item} assets={catalog?.mediaAssets ?? []} projectId={project.id} accountId={accountId} className={`home-art home-art-${item.kind}`} fallback={<span className="home-art-fallback" aria-label="Artwork unavailable">{item.kind === 'video' ? '▣' : item.kind === 'audio' ? '♫' : '◇'}</span>}/><span className="home-media-copy"><strong>{title}</strong><small>{item.kind === 'book' ? audioAsset ? 'Book · audiobook attached' : 'Book · no playback' : item.kind === 'listing' ? 'Informational · no playback' : item.kind === 'video' ? 'Video · private draft' : 'Audio · private draft'}</small>
-              <small>{item.kind === 'book' ? `${coverRights}${audioAsset ? ` · ${rights.toLowerCase()}` : ''}` : item.kind === 'listing' ? 'Review display rights in Library' : rights}</small>
+              {coverRights && item.kind === 'book' && <small>{coverRights}</small>}
+              {rights && <small>{rights}</small>}
               {item.kind === 'video' && <><small>{asset ? <VideoLibraryStatus key={`${project.id}:${item.id}:${asset.id}`} projectId={project.id} assetId={asset.id}/> : 'No upload yet · open to add an MP4'}</small><small className="video-card-action">Open video →</small></>}</span>
           </button>;
         })}</div>}
