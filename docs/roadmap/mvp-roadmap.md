@@ -1,5 +1,14 @@
 # FireLaunch MVP Roadmap
 
+## CURRENT — c8-hero-multimedia next 0.8.17 correction (2026-10-22)
+
+Owner approved [c8-hero-multimedia](../tasks/c8-hero-multimedia/README.md) and [focus-driven hero design](../design/c8-hero-multimedia.md). The actual Vega `snabble tv` app gets **one top adaptive hero + ONE bottom content row** in initial 16:9 viewport: bottom focus changes top spotlight without playback; Select opens exact detail, Back restores original card. Creator-owned landscape video / square audio / portrait book cover is preserved sharp, dark atmospheric background derived from the same art; additional authored modules stay reachable. **P1 shared TV focus**, **P2 Studio Preview**, **P3 native Vega** are runner-owned correction commits at unchanged **0.8.17**, browser=no. **P4 MANUAL browser=yes** requires owner-supplied mock artwork attached to Codex, protected staging deployment FIRST, signed-in owner Preview and real Vega native screenshot visual parity; no invented attachment or device proof. Correct CLI: `npm run codex:stack:validate -- c8-hero-multimedia`, then `npm run codex:stack -- c8-hero-multimedia`; stop at P4.
+
+[Phase 8 final recovery](../tasks/p8/closeout.md) stays **NOT GREEN** until independently supported; this hero correction targets one owner visual gate only, not unapproved mixed-media public release. Do not transition to P9 `0.9.0` or loosen existing immutable FREE #1/owner/rights/native safety. All files newly authored, product not implemented by docs.
+
+---
+
+
 ## CURRENT — Phase 8 recovery disposition and Phase 9 gate (2026-10-22)
 
 The [canonical Phase 8 closeout](../tasks/p8/closeout.md) remains **NOT GREEN** after the [final recovery](../tasks/p8d/closeout.md). At clean source `8120897ef150bbb52e0f1102778ad54e05a97ad1`, actual version **0.8.17**, R1 native MP3/audiobook tones, pause/resume and seek were qualified. R2's portrait source fix was protected-deployed as `20261022T165021Z-7510f7405d6c` and built/installed on the real VirtualDevice; native visual capture was unavailable, so portrait/book-only and hero acceptance remain open. No separate immutable, rights-cleared mixed-media test publication or compatible-client upgrade was qualified. Final aggregate: **376 pass, 16 skip, 0 fail**; approved public FREE release #1 is unchanged.
