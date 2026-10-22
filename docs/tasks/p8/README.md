@@ -1,5 +1,12 @@
 # P8 — Creative Studio UX & Pipeline Confirmation
 
+## NEW PRIORITY — P8D cleared before P9 (2026-10-22)
+
+[This phase's definitive historical P8C closeout](closeout.md) was actually executed and is **NOT GREEN** at `0.8.13`. The scope-tested Studio deployment passed, but Vega native Image Banner/Image + Text evidence and hero artwork composition acceptance were missing. **Owner explicitly authorizes [P8D](../p8d/README.md) to start now**, deferring those prior gates for **entry**, not changing this P8C closeout or claiming full Phase 8 GREEN. P8D has five manual prompts written at versions `0.8.14`–`0.8.17` (P5 closeout unchanged). P8D is the new audio/book multi-media implementation milestone preceding [P9](../p9/README.md): Audio MP3, Book Showcase with optional MP3 audiobook, one shared audio player and type-aware Vega application. **No TV reader**. Historical P8C authoring instructions below are superseded as current execution; P1 P8D is the next task. No code/stack was executed from this documentation write, package version remains 0.8.13.
+
+---
+
+
 ## CURRENT EXECUTION HANDOFF — P8C MANUAL PROMPTS (2026-10-21 local / 2026-10-22 UTC)
 
 **Phase 8 OPEN.** Owner-selected manual browser-led P8C is now [assessed](../p8c/prompt-assessment.md), [planned](../p8c/implementation-plan.md) and [written](../p8c/README.md): P1 `0.8.11` artwork/media, P2 `0.8.12` first-time creator, P3 `0.8.13` editor usability, P4 at **unchanged 0.8.13** final phase acceptance. All four are **independent MANUAL prompts with Codex browser**; NO runner, NO `/activate`. P1–P3 individually bump root/lock, TEST, COMMIT, deploy through protected standing staging grant and run real owner browser debugging; P4 does final aggregate, owner-browser/staging, bounded Vega static-section device parity and **commits `docs/tasks/p8/closeout.md`** after execution (GREEN/NOT GREEN truthful). No prompt has been run or product version changed from this docs authoring. Existing c8-ui3 staging is 0.8.10 **DEPLOYED/UI NOT GREEN**, not final P8C proof. P9 starts only after explicit approved `0.9.0` handoff. Historical initial P8C plan-only wording and older c8-ui runner plans below are superseded.
