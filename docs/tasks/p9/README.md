@@ -1,5 +1,12 @@
 # P9 — Live Channel Publishing & App Updates
 
+## Current P9 gate: manually executed P8C acceptance is pending (2026-10-21 local / 2026-10-22 UTC)
+
+[Phase 8's final P8C](../p8c/README.md) is now an AUTHORED four-prompt **manual Codex-browser stack, no runner**. Its agents own separate version bumps/commits/protected staged browser checks at 0.8.11, 0.8.12 and 0.8.13; P4 remains unchanged 0.8.13, validates new Vega Image Banner/Image+Text parity plus final staged owner journey and writes/commits `docs/tasks/p8/closeout.md` with evidence-backed result. **Not executed yet. Phase 8 remains OPEN; P9 not activated.** Start 0.9.0 only after an explicit owner-approved Phase 8 source/handoff decision; do not infer approval from document or prompt writing. C7 R4 earlier tested playback and c8-ui3 0.8.10 deployed/NOT GREEN remain separate dated evidence. Earlier P8C *planning only* notes below are superseded for prompt-authoring status.
+
+---
+
+
 ## Current entry dependency — approved P8C plan (2026-10-21 local / 2026-10-22 UTC)
 
 **Phase 9 is NOT activated.** [P8C final creator UX and phase closeout](../p8c/README.md) owns the last Phase 8 implementation versions `0.8.11`–`0.8.13` and one manual Phase 8 P4 closeout at unchanged `0.8.13`. The final evidence-backed Phase 8 result must be written to `docs/tasks/p8/closeout.md` (not yet created; see the [Phase 8 overview](../p8/README.md)) only after real staging/creator checks and targeted static-layout Vega VirtualDevice rendering; the link points to the P8 overview until the closeout is actually created. A separately approved `0.9.0` source handoff is required before any P9 prompt runs. No Phase 9 version or implementation change is authorized here.
