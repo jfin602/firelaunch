@@ -1,5 +1,16 @@
 # FireLaunch Agent Instructions
 
+## CURRENT NEXT EXECUTION — c8-hero-multimedia CORRECTION (2026-10-22)
+
+Owner-approved [c8-hero-multimedia](docs/tasks/c8-hero-multimedia/README.md): [design](docs/design/c8-hero-multimedia.md), [assessment](docs/tasks/c8-hero-multimedia/prompt-assessment.md), [plan](docs/tasks/c8-hero-multimedia/implementation-plan.md), P1–P4 runner grammar AUTHORED, NOT RUN. **Source stays 0.8.17 and Phase 8 still NOT GREEN.** On the actual original `snabble tv` exported app, the HERO is a featured art/title display; the ONE row immediately underneath drives that hero through focused bottom item. D-pad focus updates featured title/art/background WITHOUT playback; Select opens detail, Back restores the focused card. A first-row view fits standard 16:9 TV with no forced vertical scroll; other authored modules remain reachable. Use existing authorized landscape/square/portrait art as crisp uncropped foreground and dark/faded backdrop, safe no-art fallback; no generated image, extra media stream, second channel engine or new schema.
+
+**Runner handoff:** verify current local HEAD/status/origin, `package.json` and both root-lock version fields exactly `0.8.17`, then `npm run codex:stack:validate -- c8-hero-multimedia` and `npm run codex:stack -- c8-hero-multimedia`. P1–P3 browser=no, **RUNNER owns their scoped commits** (agents DO NOT self-commit, push, deploy, bump version). P4 browser=yes is the single independent MANUAL Codex browser + real Vega visual closeout; runner intentionally stops. P4 **requires actual owner mock artwork/reference ATTACHED at its manual invocation** (not auto available from ChatGPT). Deploy committed/tested P3 source to protected staging FIRST, then compare actual owner-signed-in TV Preview and real native x86_64 device at 1280x720/1920x1080. If mock absent/real Vega capture empty, mark that visual gate NOT GREEN; do not fabricate assets or claim device from Studio screenshot. Guarded staging requires archive SHA, current schema **15**, encrypted backup, rollback, healthy services and public FREE #1 unchanged; no AWS policy/production change.
+
+Historical [Phase 8 NOT GREEN](docs/tasks/p8/closeout.md), current last observed deployed `20261022T165021Z-7510f7405d6c`, and P8D media/audio proofs remain intact. **This correction's P4 does not automatically close overall Phase 8 or qualify unrelated mixed-media publication**; separate owner decision is required for that final integration and Phase 9 `0.9.0`. Older CURRENT/ACTIVE sections below are dated history superseded for next work.
+
+---
+
+
 ## CURRENT RESULT — P8D P5 EXECUTED; PHASE 8 NOT GREEN (2026-10-22)
 
 The manual P5 has finished. The [canonical Phase 8 closeout](docs/tasks/p8/closeout.md) is **NOT GREEN**, with [P8D evidence](docs/tasks/p8d/closeout.md) and unchanged [historical P8C archive](docs/tasks/p8c/closeout-2026-10-22-not-green.md). Tested product HEAD is `0d6c6db16478485e879052a8d58e545e4d3b3250`; root and both lock fields remain **0.8.17**. Final `npm run test`: **375 pass, 16 skip, 0 fail**. Exact committed source was protected-deployed before owner browser acceptance, followed by two corrected/committed/redeployed Home-rights cycles; final active staging release `20261022T154910Z-c991c12b770a` runs schema **15→15**, and original public FREE release #1 bytes are unchanged.
