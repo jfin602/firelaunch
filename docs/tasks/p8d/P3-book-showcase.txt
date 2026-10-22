@@ -1,0 +1,36 @@
+TASK: Phase 8 / P3 — Book showcase and optional audiobook MP3
+MODEL / REASONING / USAGE
+- Recommended configuration: `GPT-6 Sol High`.
+- Browser required: yes (connected owner-authenticated Codex browser).
+
+VERSIONING
+- Require accepted `0.8.15` P2 audio workflow and P1 optional-book contract.
+- Agent-owned target: `0.8.16`.
+
+TYPE
+MANUAL implementation; agent commits source, optionally guarded staging deploy and real browser evidence, then commits P3 handoff.
+
+MISSION
+First-class **Add Book** popup and television bookshelf. A book is **one** book CatalogItem; optionally it carries one audiobook MP3 Audio MediaAsset and shows **Listen to Audiobook** via the P2 shared audio player. Book without audio is a non-playable showcase. NO TV READER.
+
+MANUAL EXECUTION / SAFETY CONTRACT
+- This is ONE independently executed Codex prompt, NOT runner-owned. Do not run `npm run codex:stack -- p8d`, `npm run codex:stack:validate -- p8d` or `/activate`. YOU must manage the requested root+lock version increment, source Git commit, evidence commit and safe normal push if authorized; never force. Read `AGENTS.md`, `docs/tasks/p8d/{README.md,prompt-assessment.md,implementation-plan.md}`, `docs/design/multi-media-creator-experience.md`, and current source/tests.
+- BEFORE CHANGING SOURCE, inspect actual `git status --short`, HEAD/origin, package version and both root lock fields, prior P8D evidence when applicable. Never reset, stash, force-checkout or overwrite independent dirty work. If target version isn't a coherent predecessor, give exact handoff. P8C `docs/tasks/p8/closeout.md` NOT GREEN is a KNOWN, OWNER-DEFERRED ENTRY EXCEPTION; it is NOT a reason to stop P8D source work. Do NOT mark it GREEN or rewrite it.
+- When implementation runs, change `package.json.version`, root `package-lock.json.version` and `package-lock.json.packages[""].version` together to this prompt's target only. Workspace package versions unchanged. Focused directly affected tests/typechecks and `git diff --check` before source commit; P5 owns the single final aggregate. Commit exact tested product source; commit its observed handoff/evidence separately; no fabricated commit, browser or device claims.
+- Preserve owner/project/CSRF/revision and independent artwork display vs audio playback rights, creator source provenance and revocation. Never publish media automatically, expose private S3/capability URLs in manifests/ZIP, change public FREE release #1, add paid entitlements, run MediaConvert merely for MP3, scrape Amazon, or conflate preview with live publishing.
+- New native/runtime capability must require a qualified compatible VPKG; old installed apps are `Requires App Update / Blocked`, NOT silent manifest refresh. Book without MP3 has no Play; optional audiobook MP3 uses SAME audio asset pipeline/player as standalone audio and remains linked to SAME book item. No EPUB/PDF reader.
+- Browser testing when specified MUST use the connected Codex browser against real authenticated `https://firelaunch.jfin.dev/` after verifying candidate hashed assets; local fixtures alone are not staged-owner evidence. Keep private screenshots/tokens OUT of public Git. Native device qualification requires a real Vega device, not an HTML mock.
+- Protected staging deployment, when actually needed, uses `scripts/staging/README.md` owner-installed standing guarded sudoers grant: check current host, trusted committed-source archive + independent SHA-256, retained old assets/visible-root smoke, compatible schema14, encrypted backup and previous rollback, active symlink/worker/service, fresh owner browser and unchanged approved FREE #1. NO ad hoc root commands, production deploy or AWS/IAM/CDN access changes; separately request operator authorization if new schema/policy/cloud work is necessary. If blocked, record NOT DEPLOYED / NOT QUALIFIED accurately, but preserve safe source progress.
+- Two bounded evidenced repair loops maximum per prompt; avoid repeated global builds/tests and broad historical P8C device loops. Aim for <=8-minute focused implementation and 15-minute engineering stop/handoff, not an excuse to weaken tests/rights.
+
+IMPLEMENT
+1. Read P1/P2 evidence and actual `0.8.15` source. Inspect Library Catalog/VideoWorkspace/P2 Audio editor, current `CatalogItem.kind=book` and `Collection.kind=bookshelf`, ChannelSpec info/TV detail/Preview, publication bindings and tests. Preserve all author/import source metadata and existing book-only records. Don't introduce EPUB/PDF uploads, ebooks, pages, fonts, chapter conversion, excerpts-as-reader or retailer scraping.
+2. Add obvious **Add Book** button at Library next to Add Video/Add Audio. Popup uses familiar stages: cover (portrait PNG/JPEG), title, author, synopsis, optional ISBN/series/publication date; optional bookshelf/new bookshelf; separate TV cover display rights; Save private draft/reopen. An informational book needs no MP3 and **does not display Play or a dead disabled control**.
+3. Optional `Attach audiobook (MP3)` toggles additional MP3 field, narrator/optional duration and independent audio playback rights. Reuse P2's **exact secure large-file upload/session, validation and shared audio player**; audio MediaAsset stays attached to the SAME book item and never creates duplicate audio CatalogItem. Removing/replacing audio preserves book identity/cover/metadata and safely invalidates stale URLs/eligibility. Unknown/revoked/not-ready audio never presents a playable action.
+4. TV Preview/book detail uses portrait cover + 10-foot-readable title/author/synopsis/series. The optional **Listen to Audiobook** action launches SAME P2 listening UI, Play/Pause/Seek/D-pad/Back, with Back returning to book details. Bookshelves show covers, not video-thumbnail/poster clones. Standalone Audio and Video remain unchanged.
+5. Focus tests: create and reopen book-only and audiobook book; one item ID even after audio replace/revoke; no Play on book-only; audiobook eligibility/right denial; multiple books/collections; old book v1 roundtrip; no cross-project owner/image leaks; keyboard/focus/Back, same audio transport. Changed Studio/contract/server tests and package typechecks only, `git diff --check`.
+6. Bump root package and both root-lock fields `0.8.15→0.8.16`, commit `p8d/P3: add book showcase and audiobook option`, then create exact-source guarded staged archive/deploy only if safe. Codex browser real owner 0.8.16: add book-only, cover, bookshelf, reopen, no Listen; attach valid MP3 if available, replay controls and navigation, previous video/audio projects intact. Inspect JS/CSS/console/network; avoid publish. If external upload/provider missing, report scoped blocker and keep tested safe data behavior. Maximum two bounded fixes each test/commit/redeploy.
+7. Commit `docs/tasks/p8d/P3-evidence.md` with exact source/version, browser and tests, 0/1 audiobook relationship proof, rights/cover, staging/backup/schema/free #1, and P4 native/publication gaps. No Phase 9 or P8C relabeling.
+
+SUCCESS
+Add Book creates a navigable non-reading showcase with optional SAME-item MP3 audiobook sharing the audio player; saves/reopens and keeps rights and installed compatibility honest.
