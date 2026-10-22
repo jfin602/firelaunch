@@ -1,5 +1,14 @@
 # FireLaunch Current State
 
+## Latest: P8C manual browser prompt stack AUTHORED — 2026-10-21 local / 2026-10-22 UTC
+
+**Owner approved `/prompt-ass + /prompt-plan + /prompt-write p8c`, manual Codex-browser execution, no runner.** [P8C assessment](tasks/p8c/prompt-assessment.md), [plan](tasks/p8c/implementation-plan.md), [README](tasks/p8c/README.md) and [P1](tasks/p8c/P1-artwork-media-clarity.txt), [P2](tasks/p8c/P2-first-time-creator.txt), [P3](tasks/p8c/P3-editor-usability.txt), [P4](tasks/p8c/P4-final-phase8-closeout.txt) are checked in; **none executed by prompt authoring**. P1/P2/P3 require real staging Codex browser and each own tested source VERSION BUMP + COMMIT + protected deploy + owner-browser debugging: root+both top lock fields `0.8.11` → `0.8.12` → `0.8.13`. P4 is manual unchanged `0.8.13`, conducts one integrated final staging + native new static-section Vega proof and commits `docs/tasks/p8/closeout.md` with Phase 8 GREEN/NOT GREEN; no `0.8.14` or automatic P9. **Never invoke `npm run codex:stack -- p8c`, its validator or `/activate`.**
+
+Verified GitHub code version at authoring remains **0.8.10**; Phase 8 **OPEN**. [c8-ui3 result](tasks/c8-ui3/closeout.md) is **STAGING DEPLOYED / UI NOT GREEN**, with current historical native fullscreen API and artwork caveats. The fullscreen remote accepted in c8-ui3 P4 is **bottom RIGHT**, despite outdated bottom-left design passages. [Standing staging access](../scripts/staging/README.md) was owner-approved; each manual prompt still verifies hash, trusted archive, guard/backup/schema14/rollback, active staging and signed-in owner. This standing grant is privileged on `muffinos`, not automatic production rights. Preserve public FREE release #1 and historical closeouts. Older P8C *planning only, no prompts* paragraphs below are a dated prior snapshot.
+
+---
+
+
 ## Latest owner-approved Phase 8 final plan — P8C (2026-10-21 local / 2026-10-22 UTC)
 
 **Phase 8 remains OPEN. Documentation-only approval:** [P8C README](tasks/p8c/README.md) and [P8C implementation plan](tasks/p8c/implementation-plan.md) establish P1 artwork/media clarity (`0.8.11`), P2 first-time creator experience (`0.8.12`), P3 editor usability polish (`0.8.13`), and one **manual P4 at unchanged `0.8.13`** that owns final qualified staging, targeted native static-layout Vega proof and the authoritative `tasks/p8/closeout.md` Phase 8 GREEN/NOT GREEN decision. No P8C executable prompts, product code, releases or phase closeout are created by this docs change. Future `/prompt-ass + /prompt-plan + /prompt-write p8c` must check latest actual local HEAD/dirty state and runner version offset.
