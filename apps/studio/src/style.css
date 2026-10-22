@@ -1012,7 +1012,7 @@ body:has(.preview-fullscreen){overflow:hidden}
 .tv-feature-meta{display:flex;flex-wrap:wrap;gap:.4em 1em;font-size:.78em;color:#d0d9d3}
 .tv-feature-meta span+span::before{content:"·";margin-right:1em}
 .tv-feature-action{display:inline-block;margin-top:.8em;padding:.45em .9em;border:2px solid transparent;border-radius:.25em;background:var(--tv-accent);color:var(--tv-accent-ink);text-shadow:none;font-weight:800;font-size:.85em}
-.tv-feature-selector{min-height:0;flex:1;padding:1.2% 0 0;overflow:hidden;background:linear-gradient(180deg,color-mix(in srgb,var(--tv-bg) 80%,transparent),var(--tv-bg) 40%)}
+.tv-feature-selector{min-height:0;flex:1;padding:1.2% 0 0;overflow:hidden}
 .tv-feature-selector h3{font-size:1em;margin:0 0 .5em}
 .tv-feature-selector .tv-items{height:calc(100% - 2em);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-inline:contain;align-items:flex-start}
 .tv-feature-selector .tv-items::-webkit-scrollbar{display:none}

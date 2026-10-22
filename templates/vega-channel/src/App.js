@@ -140,8 +140,7 @@ function Section({ module, page, state, brand, font, focusStyle, layout, feature
         <Text style={[styles.cardType, font, color]}>{content.presentation === 'information' ? 'Book' : content.presentation === 'audio' ? 'Audio' : 'Video'}</Text>
       </Pressable>;
     });
-  return <View onLayout={onLayout} style={[styles.module, moduleSpacing, compact && styles.compactSection,
-    featureSelector && { backgroundColor: brand.backgroundColor }]}>
+  return <View onLayout={onLayout} style={[styles.module, moduleSpacing, compact && styles.compactSection]}>
     {title}{module.kind === 'grid' && !featureSelector ? <View onLayout={onRowLayout} style={styles.grid}>{cards}</View>
       : <ScrollView horizontal ref={rowRef} showsHorizontalScrollIndicator={false} onLayout={onRowLayout}
         onScroll={event => onRowScroll(module.id, event?.nativeEvent?.contentOffset?.x ?? 0)}

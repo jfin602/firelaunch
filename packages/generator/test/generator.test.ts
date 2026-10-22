@@ -85,7 +85,7 @@ test('generated native feature uses shared selection and fits a first selector a
   assert.match(source, /heroSpotlight\(page, state\)/);
   assert.match(source, /actionFocused=\{state\.focusId === heroActionFocusId\(page\.id\)\}/);
   assert.match(source, /<HeroBackdrop source=\{spotlight\.artwork\}[\s\S]*?backgroundColor=\{brand\.backgroundColor\}/);
-  assert.match(source, /featureSelector && \{ backgroundColor: brand\.backgroundColor \}/);
+  assert.doesNotMatch(source, /featureSelector && \{ backgroundColor: brand\.backgroundColor \}/);
   assert.match(source, /heroBackdropImage: \{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '10%' \}/);
   assert.match(source, /module === heroPair\?\.selector \? null/);
   assert.match(source, /resizeMode="cover"/);

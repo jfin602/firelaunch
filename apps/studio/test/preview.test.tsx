@@ -123,7 +123,7 @@ test('Hero and first selector fit HD and FHD stages without vertical reveal scro
   assert.match(css, /\.tv-feature-art\{[^}]*inset:0 0 10%/);
   assert.match(css, /\.tv-feature-art\{[^}]*background-color:var\(--tv-bg\)/);
   assert.match(css, /\.tv-feature-art::after\{[^}]*var\(--tv-bg\)/);
-  assert.match(css, /\.tv-feature-selector\{[^}]*var\(--tv-bg\)/);
+  assert.doesNotMatch(css.match(/\.tv-feature-selector\{[^}]*\}/)?.[0] ?? '', /background:/);
   assert.match(css, /\.tv-feature-selector \.tv-items\{[^}]*overflow-x:auto;overflow-y:hidden/);
   assert.match(css, /\.tv-feature-art img\{[^}]*object-fit:contain/);
   for (const height of [720, 1080]) {
