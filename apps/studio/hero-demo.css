@@ -1,0 +1,5 @@
+body.hero-demo{margin:0;background:#000;overflow:hidden}
+.hero-demo #root,.hero-demo .preview-wrap{width:100vw;height:100vh}
+.hero-demo .tv-frame{width:100vw;height:100vh;aspect-ratio:auto;border:0;border-radius:0;box-shadow:none}
+.hero-demo .tv-screen{padding:2% 3%;font-size:clamp(15px,1.35vw,23px)}
+.hero-demo .preview-heading,.hero-demo .remote-bar{display:none}

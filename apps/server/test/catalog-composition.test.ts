@@ -30,7 +30,8 @@ function projection(items: ContentItem[], blocked: string[] = []): CatalogProjec
 function openFirstItem(spec: ReturnType<typeof starterChannel>, pageIndex: number, itemId: string) {
   const tv = projectTelevision(spec);
   const page = tv.pages[pageIndex]!;
-  const module = page.modules.find(candidate => candidate.items.some(item => item.id === itemId))!;
+  const module = page.modules.find(candidate => candidate.kind !== 'hero' && candidate.items.some(item => item.id === itemId))!;
+  assert.ok(module, 'item needs a selectable rail or grid on this page');
   const state = { screen: 'page' as const, pageId: page.id, focusId: itemFocusId(page.id, module.id, itemId) };
   const detail = transition(tv, state, 'select');
   assert.equal(detail.screen, 'detail');
@@ -59,7 +60,7 @@ test('three creator drafts have distinct topology and coherent TV focus/playback
   assert.ok(writing.pages[0]!.modules.some(module => module.kind === 'text'));
   assert.ok(writing.pages[1]!.modules.some(module => module.kind === 'rail' && module.title === 'Novels'));
   assert.equal(isPlayableContent(writing.content.find(item => item.id === book.id)!), false);
-  assert.equal(openFirstItem(writing, 0, book.id).screen, 'detail');
+  assert.equal(openFirstItem(writing, 1, book.id).screen, 'detail');
   assert.equal(openFirstItem(writing, 0, reading.id).screen, 'playback');
 });
 
