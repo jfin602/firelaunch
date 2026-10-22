@@ -1,5 +1,13 @@
 # FireLaunch Current State
 
+## CURRENT — final Phase 8 P5 executed; overall NOT GREEN (2026-10-22)
+
+The [single canonical Phase 8 closeout](tasks/p8/closeout.md) now covers Wave 1, P8B, P8C and P8D; the detailed [P8D evidence appendix](tasks/p8d/closeout.md) records P5. Tested product source `0d6c6db16478485e879052a8d58e545e4d3b3250` and root/both lock fields remain **0.8.17**. Final `npm run test` passed **375**, skipped **16**, failed **0**. Protected staging was deployed first and, after two observed Home-rights corrections with fresh commits/archives/backups, final release `20261022T154910Z-c991c12b770a` is active at schema **15→15**, with both services active and previous release retained. Signed-in owner browser accepted the private Studio audio/book flow and corrected rights summary. Public FREE release #1 bytes remain unchanged.
+
+Current-generator x86_64 Vega device proof now includes direct Image Banner and Image + Text rendering with approved HTTPS synthetic artwork, approved HLS moving video, independent sound and D-pad pause/seek/Back. New MP3/audiobook device playback and portrait/book-only proof remain unqualified: the disposable HTTP media visibly failed closed, and no rights-cleared public HTTPS MP3 was authorized. Owner-saved static composition and P8C hero visual acceptance also remain open. **Overall Phase 8 is NOT GREEN; new-media public delivery stays blocked.** The historical [P8C NOT GREEN archive](tasks/p8c/closeout-2026-10-22-not-green.md) is unchanged. P9 `0.9.0` is not activated and requires a separate owner decision. Earlier “current” sections below are dated pre-P5 snapshots, not current instructions.
+
+---
+
 ## CURRENT — P8D P5 AUTHORITATIVE PHASE 8 CLOSEOUT OVERRIDE (2026-10-22)
 
 The owner requested P8D [P5](tasks/p8d/P5-multimedia-closeout.txt) be the **true final Phase 8 closeout**, **run manually**, with **fresh protected staging deployment before live browser testing** and up to **8 observed correction cycles**. Every code change must be locally tested, committed, packaged with new SHA-256 and guarded **redeployed BEFORE any live Codex-browser/device retest**. P5 then writes one canonical `docs/tasks/p8/closeout.md` covering P8 Wave 1 through P8D and `docs/tasks/p8d/closeout.md` as a media evidence appendix. Its runner-assigned `0.8.18` is only grammar; actual product remains `0.8.17`. NO `--closeout` browser bypass. Existing P1–P4 runner/browser execution ownership, exact version subjects and safety gates are unchanged. No source product or staging work occurred through this docs edit.

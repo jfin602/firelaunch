@@ -1,5 +1,11 @@
 # P9 — Live Channel Publishing & App Updates
 
+## CURRENT ENTRY — Phase 8 final NOT GREEN (2026-10-22)
+
+The [single final Phase 8 closeout](../p8/closeout.md) and [P8D P5 evidence](../p8d/closeout.md) now replace the pre-execution notes below. Tested source is **0.8.17**; protected staging release `20261022T154910Z-c991c12b770a` is deployed and the private owner Studio flow is scoped accepted. Current-generator Vega device proof covers synthetic static sections and approved HLS video/sound, but public HTTPS MP3/audiobook device playback, portrait/book-only proof, final owner hero/static composition, and mixed-media publication/installed upgrade remain open. The [historical P8C NOT GREEN archive](../p8c/closeout-2026-10-22-not-green.md) is unchanged. **P9 `0.9.0` is NOT STARTED** and still requires a separate explicit owner decision; keep incompatible installed clients `Requires App Update / Blocked`. Earlier “current” sections are dated pre-closeout history.
+
+---
+
 ## CURRENT P9 PRECONDITION — final Phase 8 P8D P5 after staging-first qualification (2026-10-22)
 
 P8D [P5 closeout](../p8d/P5-multimedia-closeout.txt) now owns the **true Phase 8 final closeout** across P8 Wave 1 through P8D. Its runner browser-required metadata and `0.8.18` proposed slot stay intact but P5 is MANUAL and actual product remains `0.8.17`. It MUST deploy committed tested source to protected staging BEFORE real browser acceptance and protected redeploy after **every** source-changing correction, up to **eight** targeted correction cycles, with new SHA/backup/schema14/rollback/owner-browser recheck. Final canonical `../p8/closeout.md` is updated only after actual evidence, plus P8D appendix. [Historical P8C NOT GREEN](../p8c/closeout-2026-10-22-not-green.md) is preserved, and owner-deferred P8C gates cannot be claimed passed without proof or explicitly documented scoped exception.

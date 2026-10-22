@@ -1,5 +1,13 @@
 # FireLaunch Agent Instructions
 
+## CURRENT RESULT — P8D P5 EXECUTED; PHASE 8 NOT GREEN (2026-10-22)
+
+The manual P5 has finished. The [canonical Phase 8 closeout](docs/tasks/p8/closeout.md) is **NOT GREEN**, with [P8D evidence](docs/tasks/p8d/closeout.md) and unchanged [historical P8C archive](docs/tasks/p8c/closeout-2026-10-22-not-green.md). Tested product HEAD is `0d6c6db16478485e879052a8d58e545e4d3b3250`; root and both lock fields remain **0.8.17**. Final `npm run test`: **375 pass, 16 skip, 0 fail**. Exact committed source was protected-deployed before owner browser acceptance, followed by two corrected/committed/redeployed Home-rights cycles; final active staging release `20261022T154910Z-c991c12b770a` runs schema **15→15**, and original public FREE release #1 bytes are unchanged.
+
+The current-generator Vega VirtualDevice package rendered Image Banner and Image + Text with approved HTTPS synthetic art and played approved HLS with moving picture, independent sound, pause/seek and D-pad/Back. MP3/audiobook device delivery, book portrait/book-only detail, final owner static/hero composition and mixed-media Publish/Export remain unqualified or blocked. Keep old installed clients at `Requires App Update / Blocked`; do not run P8D prompts or P5 again. P9 `0.9.0` requires a separate owner decision. Earlier “LATEST/ACTIVE/CURRENT” entries below are dated execution history; use the canonical closeout for current status.
+
+---
+
 ## LATEST OWNER DIRECTIVE — P8D P5 IS TRUE PHASE 8 CLOSEOUT (2026-10-22)
 
 P8D [P5 manual closeout](docs/tasks/p8d/P5-multimedia-closeout.txt) now OWNS the single authoritative final **Phase 8** decision across video/Export, P8B static layout, P8C editor/hero and P8D audio/book/mixed media. Only P5 changes; runner P1 `0.8.14` and browser-required/manual P2 `0.8.15`, P3 `0.8.16`, P4 `0.8.17` retain existing exact-commit-subject handoffs. P5 remains **Browser required: yes.**, independently MANUAL (NO CLI `--closeout`), assigned grammar slot `0.8.18` but real product remains **0.8.17 unchanged**. [P8D README](docs/tasks/p8d/README.md) is the current operating contract.

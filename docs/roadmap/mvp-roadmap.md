@@ -1,5 +1,13 @@
 # FireLaunch MVP Roadmap
 
+## CURRENT — Phase 8 final result and P9 gate (2026-10-22)
+
+The [authoritative Phase 8 closeout](../tasks/p8/closeout.md) is **NOT GREEN** at tested product source `0d6c6db16478485e879052a8d58e545e4d3b3250`, actual version **0.8.17**. [P8D P5 evidence](../tasks/p8d/closeout.md) records staging-first deployment, two corrected/redeployed Home rights defects, final **375 pass / 16 skip / 0 fail**, signed-in private Studio acceptance and current-generator Vega device proof for static sections and approved HLS. Native MP3/audiobook playback, owner-saved static/hero acceptance and compatible mixed-media publication remain open; original FREE release #1 is unchanged. [Historical P8C NOT GREEN](../tasks/p8c/closeout-2026-10-22-not-green.md) remains archived verbatim.
+
+**P9 stays planned, not started.** Keep new-media publication/Export blocked or `Requires App Update` until rights-cleared HTTPS device media, current-package qualification and installed-client compatibility are proven. Phase 9 `0.9.0`, production and cloud rights require separate explicit owner authorization. Dated “current” sections below describe earlier planning states and are superseded by this result.
+
+---
+
 ## CURRENT — P8D P5 replaces historical Phase 8 closeout after staging-first acceptance (2026-10-22)
 
 [Owner-updated P8D P5](../tasks/p8d/P5-multimedia-closeout.txt) is the one MANUAL final Phase 8 acceptance (not only a P8D feature closeout). **P1–P4 workflow stays runner/browser hybrid** with version targets 0.8.14–0.8.17; P5 final source stays 0.8.17 (grammar slot 0.8.18). P5 must stage fresh committed safe source FIRST, then run genuine owner Codex browser/native tests on THAT staging release. Up to **eight** diagnosed correction cycles R1–R8; EVERY changed candidate must be committed, SHA-verified, protected redeployed and verified active **before** retesting; final aggregate on last source. The final document is canonical `docs/tasks/p8/closeout.md` plus P8D appendix, only written after actual testing, not now.
