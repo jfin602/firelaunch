@@ -398,7 +398,7 @@ test('later thumbnail replacement creates a private draft asset and preserves pr
     if (url.endsWith('/catalog/media-assets') && init?.method === 'POST') {
       const body = JSON.parse(String(init.body));
       assert.equal(body.record.location.objectId, newObject);
-      assert.equal(body.record.deliveryEligible, false);
+      assert.equal(body.record.deliveryEligible, true);
       assert.equal(body.record.tvDisplayRights.permittedUse, 'television_display');
       assert.equal(body.record.tvPlaybackRights.status, 'unknown');
       assert.equal(new Headers(init.headers).get('x-csrf-token'), 'csrf-proof');
@@ -424,7 +424,7 @@ test('later thumbnail replacement creates a private draft asset and preserves pr
     await waitFor(() => assert.equal(inventory.mediaAssets.length, 2));
     assert.equal(inventory.mediaAssets[0].id, artworkId);
     assert.equal(inventory.mediaAssets[0].location.objectId, oldObject);
-    assert.equal(inventory.mediaAssets[1].deliveryEligible, false);
+    assert.equal(inventory.mediaAssets[1].deliveryEligible, true);
     assert.equal(requests.some(value => value === `DELETE /api/projects/${projectId}/private-objects/${oldObject}`), false);
     assert.equal(requests.some(value => value.includes('media-uploads')), false);
   } finally { cleanup(); globalThis.fetch = previous; }

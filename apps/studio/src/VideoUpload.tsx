@@ -22,7 +22,7 @@ async function saveThumbnail(projectId: string, itemId: string, thumbnail: File,
   try {
     await writeCatalog(projectId, 'media-assets', current.revision, {
       schemaVersion: 1, catalogItemId: itemId, kind: 'artwork', location: { type: 'private_object', objectId: uploaded.id },
-      tvDisplayRights: claim('television_display', new Date().toISOString()), tvPlaybackRights: unknown(), deliveryEligible: false
+      tvDisplayRights: claim('television_display', new Date().toISOString()), tvPlaybackRights: unknown(), deliveryEligible: true
     });
     attached = true;
     await refresh();

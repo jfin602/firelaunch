@@ -107,6 +107,30 @@ test('private preview reuses confirmed asset rights without source or artwork re
   } finally { cleanup(); globalThis.fetch = prior; }
 });
 
+test('Publish reuses one upload consent for its video and thumbnail', async () => {
+  const prior = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const route = String(input);
+    if (route.endsWith('/media-uploads')) return response({ uploadId: id('up', '1'), uploadState: 'verified', processing: { state: 'ready' } });
+    if (route.endsWith('/deployment')) return response({ error: { message: 'Not found' } }, 404);
+    throw new Error(route);
+  }) as typeof fetch;
+  try {
+    const scoped = (use: string) => ({ ...rights(use), attestationVersion: 'channel-media-v1' });
+    render(createElement(VideoReview, { page: 'publish', onNavigate: () => {}, project, item,
+      inventory: { ...inventory, sources: [{ ...source, type: 'creator_upload', state: 'discovered',
+        permission: { retrieval: 'unknown', tvDisplay: 'unknown' } }], mediaAssets: [
+        { ...video, tvDisplayRights: scoped('television_display'), tvPlaybackRights: scoped('television_playback') },
+        { ...art, tvDisplayRights: scoped('television_display') }] },
+      refresh: async () => inventory, onProjectUpdate: () => {} }));
+    await screen.findByText('Private draft · this video is not in the current live release.');
+    assert.equal(screen.queryByText('Confirm your source'), null);
+    assert.equal(screen.queryByText('Approve your thumbnail'), null);
+    assert.equal(screen.queryByRole('checkbox'), null);
+    assert.ok(screen.getByRole('button', { name: 'Review live channel' }));
+  } finally { cleanup(); globalThis.fetch = prior; }
+});
+
 test('stale channel revision blocks generation without writing a new draft', async () => {
   const prior = globalThis.fetch;
   let writes = 0;

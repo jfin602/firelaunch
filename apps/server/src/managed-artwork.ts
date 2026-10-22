@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import type { PrivateObjectStore } from './private-objects.js';
-import { catalogItemSchema, catalogSourceSchema, mediaAssetSchema, mediaUseEligible } from '@firelaunch/contracts';
+import { catalogItemSchema, catalogSourceSchema, mediaAssetSchema, mediaUseEligible, sourceUseEligible } from '@firelaunch/contracts';
 import type { S3MediaStorage } from './media-storage.js';
 import { RepositoryError } from './repository.js';
 
@@ -86,9 +86,8 @@ export class ManagedArtworkDelivery {
       !asset.data.deliveryEligible || !mediaUseEligible(asset.data, 'television_display') ||
       item.data.id !== itemId || item.data.creatorAccountId !== owner || item.data.projectId !== projectId ||
       !item.data.mediaAssetIds.includes(assetId) || item.data.sourceRecord.sourceId !== source.data.id ||
-      source.data.creatorAccountId !== owner || source.data.projectId !== projectId || source.data.state === 'discovered' ||
-      ['unknown', 'revoked'].includes(source.data.permission.retrieval) ||
-      ['unknown', 'revoked'].includes(source.data.permission.tvDisplay) ||
+      source.data.creatorAccountId !== owner || source.data.projectId !== projectId ||
+      !sourceUseEligible(source.data, asset.data, 'television_display') ||
       !/^private\/[a-f0-9]{64}$/.test(row.object_key) ||
       !['image/png', 'image/jpeg'].includes(row.content_type) || !digestPattern.test(row.sha256) ||
       row.byte_size < 1 || row.byte_size > maxImageBytes) throw unavailable();

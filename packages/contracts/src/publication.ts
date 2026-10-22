@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { channelSpecSchema, contentPresentation, SCHEMA_VERSION, type ChannelSpec } from './index.js';
-import { catalogInventorySchema, mediaUseEligible, type CatalogInventory, type MediaAsset } from './catalog.js';
+import { catalogInventorySchema, mediaUseEligible, sourceUseEligible, type CatalogInventory, type MediaAsset } from './catalog.js';
 import { channelDeploymentSchema } from './creator.js';
 
 export const PUBLISHED_MANIFEST_SCHEMA_VERSION = 1 as const;
@@ -198,9 +198,7 @@ export function projectApprovedManifest(input: {
     }
     const item = itemById.get(asset.catalogItemId);
     const source = item && sourceById.get(item.sourceRecord.sourceId);
-    if (!item || !source || source.state === 'discovered' ||
-      ['unknown', 'revoked'].includes(source.permission.retrieval) ||
-      ['unknown', 'revoked'].includes(source.permission.tvDisplay)) {
+    if (!item || !source || !sourceUseEligible(source, asset, kind === 'artwork' ? 'television_display' : 'television_playback')) {
       throw new Error('Media source lacks TV display authorization');
     }
     publicMedia.set(id, { id, kind: asset.kind, url: publicUrlSchema.parse(expectedUrl) });
@@ -226,9 +224,8 @@ export function projectApprovedManifest(input: {
     const item = itemById.get(binding.catalogItemId);
     if (!content || !item || !item.mediaAssetIds.includes(binding.artworkAssetId)) throw new Error('Content binding differs from catalog');
     const source = sourceById.get(item.sourceRecord.sourceId);
-    if (!source || source.state === 'discovered' ||
-      ['unknown', 'revoked'].includes(source.permission.retrieval) ||
-      ['unknown', 'revoked'].includes(source.permission.tvDisplay)) throw new Error('Content source lacks TV display authorization');
+    if (!source || source.permission.retrieval === 'revoked' || source.permission.tvDisplay === 'revoked')
+      throw new Error('Content source lacks TV display authorization');
     const presentation = contentPresentation(content);
     if ((presentation === 'information' && item.kind !== 'book') ||
       (presentation !== 'information' && presentation !== item.kind)) throw new Error('Content presentation differs from catalog');

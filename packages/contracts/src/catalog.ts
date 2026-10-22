@@ -238,6 +238,22 @@ export function mediaUseEligible(asset: Pick<MediaAsset, 'rights' | 'tvDisplayRi
   return rights?.status === 'cleared' && rights.permittedUse === use;
 }
 
+/** A current, asset-scoped upload assertion can replace the older shared-source proof gate.
+ * Legacy source verification remains valid; legacy display-only claims are never widened. */
+export function sourceUseEligible(source: CatalogSource, asset: MediaAsset,
+  use: 'television_display' | 'television_playback'): boolean {
+  if (source.creatorAccountId !== asset.creatorAccountId || source.projectId !== asset.projectId ||
+    source.permission.retrieval === 'revoked' || source.permission.tvDisplay === 'revoked' ||
+    !mediaUseEligible(asset, use)) return false;
+  if (source.state !== 'discovered' && source.permission.retrieval !== 'unknown' &&
+    source.permission.tvDisplay !== 'unknown') return true;
+  if (source.type !== 'creator_upload' || source.state !== 'discovered') return false;
+  const claim = use === 'television_display' ? asset.tvDisplayRights ?? asset.rights : asset.tvPlaybackRights ?? asset.rights;
+  return claim?.basis === 'creator_asserted' && claim.attestationVersion === 'channel-media-v1' &&
+    !!claim.assertedAt && (asset.kind !== 'video' || use !== 'television_playback' ||
+      (asset.tvDisplayRights?.status === 'cleared' && asset.tvDisplayRights.attestationVersion === 'channel-media-v1'));
+}
+
 export const collectionSchema = z.strictObject({
   schemaVersion: z.literal(CATALOG_SCHEMA_VERSION),
   id: collectionIdSchema,

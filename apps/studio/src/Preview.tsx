@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { contentPresentation, isPlayableContent, mediaUseEligible, type ChannelSpec, type ContentItem } from '@firelaunch/contracts';
+import { contentPresentation, isPlayableContent, mediaUseEligible, sourceUseEligible, type ChannelSpec, type ContentItem } from '@firelaunch/contracts';
 import { accentTextColor, activeItem, heroActionFocusId, heroSelector, heroSpotlight, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
 import { keyboardCommand, navigate, reconcile } from './preview-state.js';
 import { VideoPlayer } from './VideoPlayer.js';
@@ -50,9 +50,9 @@ export function eligibleStaticImageContent(spec: ChannelSpec, inventory: Catalog
       asset.creatorAccountId === accountId && asset.catalogItemId === item.id && asset.kind === 'artwork' &&
       asset.deliveryEligible && mediaUseEligible(asset, 'television_display'))) &&
     inventory.sources.some(source => source.id === item.sourceRecord.sourceId && source.projectId === spec.id &&
-      source.creatorAccountId === accountId && source.state !== 'discovered' &&
-      ['creator_asserted', 'provider_authorized'].includes(source.permission.retrieval) &&
-      ['creator_asserted', 'provider_authorized'].includes(source.permission.tvDisplay))));
+      source.creatorAccountId === accountId && item.mediaAssetIds.some(id => inventory.mediaAssets.some(asset =>
+        asset.id === id && asset.catalogItemId === item.id && asset.kind === 'artwork' && asset.deliveryEligible &&
+        sourceUseEligible(source, asset, 'television_display'))))));
 }
 
 

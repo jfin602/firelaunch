@@ -250,6 +250,20 @@ test('approved release projects a public, compatible, versioned manifest', () =>
   assert.equal(channelSpecSchema.parse(fixtureChannel()).schemaVersion, 1);
 });
 
+test('new upload uses its versioned asset consent without promoting an old narrow claim', () => {
+  const base = input();
+  const claims = [{ ...base.inventory.mediaAssets[0]!, rights: undefined,
+    tvDisplayRights: { ...rights('television_display'), attestationVersion: 'channel-media-v1' as const },
+    tvPlaybackRights: { ...rights('television_playback'), attestationVersion: 'channel-media-v1' as const } },
+    { ...base.inventory.mediaAssets[1]!, rights: { ...rights('television_display'), attestationVersion: 'channel-media-v1' as const } }];
+  const uploadSource = { ...base.inventory.sources[0]!, type: 'creator_upload' as const, state: 'discovered' as const,
+    endpointUrl: undefined, permission: { retrieval: 'unknown' as const, tvDisplay: 'unknown' as const } };
+  const candidate = { ...base, inventory: { ...base.inventory, sources: [uploadSource], mediaAssets: claims } };
+  assert.equal(projectApprovedManifest(candidate).media.length, 2);
+  assert.throws(() => projectApprovedManifest({ ...candidate, inventory: { ...candidate.inventory,
+    mediaAssets: [claims[0]!, base.inventory.mediaAssets[1]!] } }), /source lacks TV display authorization/i);
+});
+
 test('private video binds only a resolved stable HLS URL into v1, never its original identity', () => {
   const base = input();
   const url = `https://media.example.org/media/${hex('a')}/${hex('b')}/${hex('d')}/delivery/${hex('f')}/${'1'.repeat(64)}/master.m3u8`;

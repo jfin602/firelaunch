@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   CATALOG_SCHEMA_VERSION, catalogInventorySchema, catalogItemSchema, catalogSourceSchema,
   collectionSchema, externalIdentifierSchema, mediaAssetSchema, mediaRightsSchema,
-  mediaUseEligible,
+  mediaUseEligible, sourceUseEligible,
   resolvedCatalogMetadata,
   type CatalogInventory
 } from '../src/index.js';
@@ -183,6 +183,18 @@ test('separate display and playback claims never inherit permission from each ot
   assert.equal(mediaUseEligible(mediaAssetSchema.parse(cleared), 'television_playback'), true);
   assert.equal(mediaAssetSchema.safeParse({ ...cleared, tvPlaybackRights: { ...clearedRights, status: 'revoked' } }).success, false);
   assert.equal(mediaAssetSchema.safeParse({ ...cleared, tvPlaybackRights: { ...clearedRights, status: 'revoked' }, deliveryEligible: false }).success, true);
+});
+
+test('versioned creator upload consent is reusable only for the same scoped use', () => {
+  const upload = catalogSourceSchema.parse(source(`src_${hex('4')}`, 'creator_upload', 'discovered'));
+  const display = { ...clearedRights, permittedUse: 'television_display' as const, attestationVersion: 'channel-media-v1' as const };
+  const playback = { ...clearedRights, attestationVersion: 'channel-media-v1' as const };
+  const claimed = mediaAssetSchema.parse({ ...videoAsset, rights: undefined, tvDisplayRights: display, tvPlaybackRights: playback });
+  assert.equal(sourceUseEligible(upload, claimed, 'television_playback'), true);
+  assert.equal(sourceUseEligible(upload, { ...claimed, tvPlaybackRights: clearedRights }, 'television_playback'), false);
+  assert.equal(sourceUseEligible(upload, { ...claimed, tvPlaybackRights: { ...playback, status: 'revoked' } }, 'television_playback'), false);
+  assert.equal(sourceUseEligible({ ...upload, permission: { retrieval: 'revoked', tvDisplay: 'unknown' } }, claimed, 'television_playback'), false);
+  assert.equal(sourceUseEligible(upload, { ...claimed, creatorAccountId: `cr_${hex('5')}` }, 'television_playback'), false);
 });
 
 test('source, artwork and media URLs and upload keys reject unsafe locations', () => {

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mediaRenditionSetSchema, mediaUseEligible } from '@firelaunch/contracts';
+import { mediaRenditionSetSchema, mediaUseEligible, sourceUseEligible } from '@firelaunch/contracts';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { CatalogRepository } from './catalog-repository.js';
@@ -31,12 +31,11 @@ export class PrivateVideoPreview {
     const inventory = await this.catalog.read(principal, rawProjectId);
     const item = inventory.items.find(value => stableContentId(value.id) === rawContentId && value.kind === 'video');
     const source = item && inventory.sources.find(value => value.id === item.sourceRecord.sourceId);
-    if (!item || !source || source.state === 'discovered' ||
-      !['creator_asserted', 'provider_authorized'].includes(source.permission.retrieval) ||
-      !['creator_asserted', 'provider_authorized'].includes(source.permission.tvDisplay)) throw notFound();
+    if (!item || !source) throw notFound();
     for (const assetId of item.mediaAssetIds) {
       const asset = inventory.mediaAssets.find(value => value.id === assetId && value.catalogItemId === item.id);
       if (!asset || asset.kind !== 'video' || asset.location.type !== 'managed_hls' || !asset.deliveryEligible ||
+        !sourceUseEligible(source, asset, 'television_playback') ||
         !mediaUseEligible(asset, 'television_display') || !mediaUseEligible(asset, 'television_playback')) continue;
       const result = await this.projects.pool.query<ReadyRow>(`
         SELECT r.*, j.state, j.rendition_set_id FROM media_processing_jobs j

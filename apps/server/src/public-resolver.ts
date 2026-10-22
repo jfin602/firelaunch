@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
-import { catalogItemSchema, catalogSourceSchema, mediaAssetSchema, mediaUseEligible, publishedManifestSchema } from '@firelaunch/contracts';
+import { catalogItemSchema, catalogSourceSchema, mediaAssetSchema, mediaUseEligible, sourceUseEligible, publishedManifestSchema } from '@firelaunch/contracts';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { canonicalBytes } from './publication-repository.js';
 import { RepositoryError } from './repository.js';
@@ -114,9 +114,8 @@ export class PublicReleaseResolver {
         item.data.id !== parsed.data.catalogItemId || item.data.creatorAccountId !== row.creator_account_id ||
         item.data.projectId !== row.project_id || !item.data.mediaAssetIds.includes(media.id) ||
         source.data.id !== item.data.sourceRecord.sourceId || source.data.creatorAccountId !== row.creator_account_id ||
-        source.data.projectId !== row.project_id || source.data.state === 'discovered' ||
-        ['unknown', 'revoked'].includes(source.data.permission.retrieval) ||
-        ['unknown', 'revoked'].includes(source.data.permission.tvDisplay) ||
+        source.data.projectId !== row.project_id ||
+        !sourceUseEligible(source.data, parsed.data, media.kind === 'artwork' ? 'television_display' : 'television_playback') ||
         (media.kind === 'artwork' && parsed.data.location.type === 'private_object' &&
           !media.url.includes('/api/public-artwork/') && !media.url.includes('/delivery/artwork/'))) throw notFound();
       if (media.kind === 'artwork' && parsed.data.location.type === 'private_object' &&

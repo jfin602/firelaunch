@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
-import type { ChannelProject, CatalogItem, MediaAsset } from '@firelaunch/contracts';
+import { sourceUseEligible, type ChannelProject, type CatalogItem, type MediaAsset } from '@firelaunch/contracts';
 import { ApiError, deletePrivateObject, generateCatalogDraft, getProject, readCatalogDraft, readDeployment, readLiveSummary, readVideoAssetStatus, uploadPrivateEvidence, writeCatalog, type CatalogSnapshot, type LiveSummary, type VideoAssetStatus } from './api.js';
 import { LivePublication } from './LivePublication.js';
 import type { VideoPage } from './video-pages.js';
@@ -30,7 +30,7 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
   const publicArtwork = privateArtwork
     ? privateArtwork.deliveryEligible && privateArtwork.tvDisplayRights?.status === 'cleared' ? privateArtwork : undefined
     : assets.find(value => value.kind === 'artwork' && value.location.type === 'https' && value.deliveryEligible && value.tvDisplayRights?.status === 'cleared');
-  const sourceReady = source?.state === 'verified' && source.permission.retrieval === 'creator_asserted' && source.permission.tvDisplay === 'creator_asserted';
+  const sourceReady = !!source && !!managed && sourceUseEligible(source, managed, 'television_playback');
   const ready = !!managed && video?.uploadState === 'verified' && video.processing?.state === 'ready' &&
     managed.tvDisplayRights?.status === 'cleared' && managed.tvPlaybackRights?.status === 'cleared' && managed.deliveryEligible;
   const stableId = `item_${bytesToHex(sha256(new TextEncoder().encode(`catalog-content-v1\0${item.id}`))).slice(0, 32)}`;
@@ -48,6 +48,19 @@ export function VideoReview({ project, item, inventory, refresh, onProjectUpdate
     update(); const timer = window.setInterval(update, 5000);
     return () => { active = false; window.clearInterval(timer); };
   }, [project.id, managed?.id]);
+  useEffect(() => {
+    if (!source || !privateArtwork || privateArtwork.deliveryEligible || !managed ||
+      !sourceUseEligible(source, managed, 'television_playback') ||
+      !sourceUseEligible(source, privateArtwork, 'television_display') ||
+      privateArtwork.tvDisplayRights?.attestationVersion !== 'channel-media-v1') return;
+    // The 0.9.2 upload already saved a separate, current thumbnail assertion. Complete
+    // its delivery flag without asking for the same permission on Publish.
+    let active = true;
+    const { id, creatorAccountId: _owner, projectId: _project, ...record } = privateArtwork;
+    void writeCatalog(project.id, 'media-assets', inventory.revision, { ...record, deliveryEligible: true }, id)
+      .then(() => { if (active) void refresh(); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [project.id, inventory.revision, privateArtwork?.id, privateArtwork?.deliveryEligible, managed?.id, source?.id]);
   useEffect(() => {
     let active = true;
     setLiveLoaded(false);
