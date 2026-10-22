@@ -1,5 +1,14 @@
 # C8-UI3 — Final Channel Composition & True Fullscreen
 
+## Subsequent dated closeout and handoff to P8C
+
+The [executed P4 staging closeout](closeout.md) on 2026-10-21 23:12 UTC supersedes this document's original pre-implementation status: **STAGING DEPLOYED / UI NOT GREEN** at tested root/lock `0.8.10`. The owner-corrected fullscreen remote is **bottom RIGHT** (not the earlier P3 bottom-left proposal); fallback fullscreen, left drawer and Clean View work in the scoped browser run. Exact approved-mockup art scaling/editor thumbnail and native Fullscreen API success remain unqualified. The earlier c8-ui2 closeout remains historical, and P8B's native static-section parity is still NOT GREEN.
+
+**New owner decision:** [P8C](../p8c/README.md) takes subsequent artwork/media clarity, fresh-creator and editor-polish changes and the **single final Phase 8 integrated staged/native/owner closeout**. Preserve this correction's completed prompts and P4 evidence rather than restarting them or changing their historical disposition. The P8C /docs-apply adds documentation only; there are no P8C implementation prompts, deployment or Phase 8 GREEN claim yet.
+
+---
+
+
 **Owner-approved 2026-10-21. Correction plan and prompt stack updated; IMPLEMENTATION NOT QUALIFIED.** Root and both root lock fields: **0.8.10 unchanged** at latest GitHub readback. Phase 8 remains OPEN. This is a continuation after c8-ui2 P1–P3, not a reset or rerun of those completed corrections.
 
 [Final visual and fullscreen design contract](../../design/channel-preview-final-composition.md) · [Prompt assessment](prompt-assessment.md) · [Implementation plan](implementation-plan.md)
