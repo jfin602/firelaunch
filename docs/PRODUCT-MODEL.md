@@ -1,5 +1,14 @@
 # FireLaunch Product Model
 
+## CURRENT PRODUCT DECISION — P8D audio and book showcase (2026-10-22)
+
+[Multi-media creator design](design/multi-media-creator-experience.md) and [P8D execution plan](tasks/p8d/README.md) are owner-approved and authored, NOT implemented by this documentation update. Three TV experiences share ONE ChannelSpec/Library/Publish/Export: **Video Watch** (existing), **Audio Listen** (MP3 + album/playlist cover and native player), and **Book Showcase** (portrait cover, author, synopsis/bookshelf, optional single MP3 audiobook linked to SAME CatalogItem). A book without audio has **no playback action**; a book with eligible audio offers **Listen to Audiobook**, launching the SAME player as standalone audio. No TV e-reader, EPUB/PDF reader, pages, book excerpt renderer, Kindle/KDP scraping or second audiobook CatalogItem.
+
+Canonical catalog already includes Audio and Book kinds but current `ChannelSpec.presentation=information` rejects playback and current publication binding disallows book audio. P8D P1 adds narrow, rights-safe optional same-book audio binding plus capability guard; P2 audio upload/player; P3 book UI; P4 native mixed-media/approved delivery. Private files are not publicly playable merely because uploaded. Old installed apps fail closed for unsupported new media until compatible native upgrade. Historical P8C [NOT GREEN result](tasks/p8/closeout.md) is owner-DEFERRED for P8D ENTRY only; those Vega static layout/hero discrepancies remain unqualified and visible. P8D starts from root/lock 0.8.13, and Phase 9 requires separate owner entry approval.
+
+---
+
+
 ## Fullscreen Clean View — c8-ui3 approved addendum (2026-10-21)
 
 In NORMAL Channel the approved borderless 16:9 TV remains at right with Draft/Interactive, Full Screen and remote controls BELOW. In true fullscreen the actual TV fills the maximum possible 16:9 viewport; the Virtual remote overlays BOTTOM LEFT and Exit Full Screen + Hide controls TOP RIGHT, while the same secondary editor remains a LEFT drawer. **Clean View** hides EVERY Studio overlay/handle/status/control to show only the TV app, recoverable via H (outside editable inputs), top-right pointer/touch reveal zone, Alt+E left editor or Escape exit. There is no second TV or editor; focus/playback/unsaved state remain. This is new c8-ui3 P3 implementation and P4 staged qualification, not a change to ChannelSpec, native Vega or rights. Version 0.8.10 and Phase 8 OPEN.
