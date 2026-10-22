@@ -52,22 +52,39 @@ const base = process.env.FIRELAUNCH_TEST_DATABASE_URL;
     assert.equal((await pipeline.createUpload(owner, project.id, asset.id, uploadInput)).id, upload.id);
     assert.equal(await pipeline.attachS3Upload(owner, project.id, asset.id, upload.id, 'private-upload-token'), true);
     await pipeline.recordCompletedOriginal(owner, project.id, asset.id, upload.id, 0);
-    await assert.rejects(catalog.mutate(owner, project.id, 'items', 'POST', 4, itemInput), { code: 'INVALID_INPUT' });
-    await assert.rejects(catalog.mutate(foreign, project.id, 'collections', 'POST', 4,
+    const subtitleObjectId = `ma_${randomUUID().replaceAll('-', '')}`;
+    const subtitleId = `st_${randomUUID().replaceAll('-', '')}`;
+    await first.pool.query(`INSERT INTO private_objects(id, creator_account_id, project_id, kind, object_key, content_type, byte_size, sha256)
+      VALUES ($1,$2,$3,'media',$4,'text/vtt',24,$5)`, [subtitleObjectId, owner.accountId, project.id,
+      `private/${randomUUID().replaceAll('-', '').padEnd(64, '0')}`, 'c'.repeat(64)]);
+    await first.pool.query(`INSERT INTO video_subtitle_tracks(id, creator_account_id, project_id, item_id, video_asset_id,
+      object_id, language, byte_size, sha256, version, state) VALUES ($1,$2,$3,$4,$5,$6,'en',24,$7,1,'removed')`,
+    [subtitleId, owner.accountId, project.id, item.id, asset.id, subtitleObjectId, 'c'.repeat(64)]);
+    const nextId = { provider: 'creator', kind: 'upload_id', value: 'd'.repeat(64) } as const;
+    const nextItem = (await catalog.mutate(owner, project.id, 'items', 'POST', 4, {
+      ...itemInput, sourceRecord: { ...itemInput.sourceRecord, externalId: nextId, metadata: { title: 'Next film' } },
+      externalIdentifiers: [nextId]
+    })).record!;
+    assert.equal((await first.pool.query('SELECT count(*)::int AS count FROM video_subtitle_tracks WHERE id = $1',
+      [subtitleId])).rows[0].count, 1, 'retained subtitle history remains linked');
+    await assert.rejects(catalog.mutate(owner, project.id, 'items', 'POST', 5, itemInput), { code: 'INVALID_INPUT' });
+    await assert.rejects(catalog.mutate(foreign, project.id, 'collections', 'POST', 5,
       { schemaVersion: 1, kind: 'series', title: 'Foreign', itemIds: [item.id] }), { code: 'NOT_FOUND' });
     await first.pool.end(); first = undefined;
 
     restarted = await HostedProjectRepository.connect(url.toString());
     const after = new CatalogRepository(restarted);
     const stored = await after.read(owner, project.id);
-    assert.equal(stored.items.length, 1);
+    assert.equal(stored.items.length, 2);
     assert.equal(stored.mediaAssets.length, 1);
     assert.equal(stored.collections.length, 1);
-    assert.equal(stored.items[0]?.projectId, project.id);
-    assert.equal(stored.items[0]?.sourceRecord.metadata.title, 'My film');
-    assert.equal(stored.items[0]?.sourceRecord.metadata.description, 'Owned video');
-    assert.deepEqual(stored.items[0]?.mediaAssetIds, [asset.id]);
+    const storedFilm = stored.items.find(value => value.id === item.id);
+    assert.equal(storedFilm?.projectId, project.id);
+    assert.equal(storedFilm?.sourceRecord.metadata.title, 'My film');
+    assert.equal(storedFilm?.sourceRecord.metadata.description, 'Owned video');
+    assert.deepEqual(storedFilm?.mediaAssetIds, [asset.id]);
     assert.deepEqual(stored.collections[0]?.itemIds, [item.id]);
+    assert.equal(stored.items.find(value => value.id === nextItem.id)?.sourceRecord.sourceId, source.id);
     assert.equal(stored.collections[0]?.title, 'Videos');
     assert.equal(stored.collections[0]?.projectId, project.id);
     assert.equal(stored.mediaAssets[0]?.tvDisplayRights?.status, 'cleared');

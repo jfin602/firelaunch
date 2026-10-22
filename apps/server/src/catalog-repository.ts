@@ -313,21 +313,50 @@ export class CatalogRepository {
   }
 
   private async replace(client: PoolClient, owner: string, project: string, snapshot: Snapshot): Promise<void> {
+    // Keep existing parent rows in place. Private subtitle history has immediate
+    // foreign keys to catalog items/assets, so deleting and reinserting every
+    // row makes even an unrelated new video fail with a reference error.
+    const upsert = async (sql: string, values: unknown[]) => {
+      const result = await client.query(sql, values);
+      if (result.rowCount !== 1) invalid('Catalog identity conflict');
+    };
     await client.query('DELETE FROM catalog_collection_items WHERE project_id = $1 AND creator_account_id = $2', [project, owner]);
-    await client.query('DELETE FROM catalog_collections WHERE project_id = $1 AND creator_account_id = $2', [project, owner]);
-    await client.query('DELETE FROM catalog_media_assets WHERE project_id = $1 AND creator_account_id = $2', [project, owner]);
     await client.query('DELETE FROM catalog_item_identifiers WHERE project_id = $1 AND creator_account_id = $2', [project, owner]);
-    await client.query('DELETE FROM catalog_items WHERE project_id = $1 AND creator_account_id = $2', [project, owner]);
-    await client.query('DELETE FROM catalog_sources WHERE project_id = $1 AND creator_account_id = $2', [project, owner]);
-    for (const source of snapshot.sources) await client.query('INSERT INTO catalog_sources(id, project_id, creator_account_id, record) VALUES ($1,$2,$3,$4::jsonb)', [source.id, project, owner, JSON.stringify(source)]);
+    for (const source of snapshot.sources) await upsert(`INSERT INTO catalog_sources(id, project_id, creator_account_id, record)
+      VALUES ($1,$2,$3,$4::jsonb) ON CONFLICT (id) DO UPDATE SET record = EXCLUDED.record
+      WHERE catalog_sources.project_id = EXCLUDED.project_id AND catalog_sources.creator_account_id = EXCLUDED.creator_account_id`,
+    [source.id, project, owner, JSON.stringify(source)]);
     for (const item of snapshot.items) {
-      await client.query('INSERT INTO catalog_items(id, project_id, creator_account_id, source_id, record) VALUES ($1,$2,$3,$4,$5::jsonb)', [item.id, project, owner, item.sourceRecord.sourceId, JSON.stringify(item)]);
+      await upsert(`INSERT INTO catalog_items(id, project_id, creator_account_id, source_id, record)
+        VALUES ($1,$2,$3,$4,$5::jsonb) ON CONFLICT (id) DO UPDATE SET record = EXCLUDED.record
+        WHERE catalog_items.project_id = EXCLUDED.project_id AND catalog_items.creator_account_id = EXCLUDED.creator_account_id
+          AND catalog_items.source_id = EXCLUDED.source_id`,
+      [item.id, project, owner, item.sourceRecord.sourceId, JSON.stringify(item)]);
+    }
+    for (const asset of snapshot.mediaAssets) await upsert(`INSERT INTO catalog_media_assets(id, project_id, creator_account_id, item_id, record)
+      VALUES ($1,$2,$3,$4,$5::jsonb) ON CONFLICT (id) DO UPDATE SET record = EXCLUDED.record
+      WHERE catalog_media_assets.project_id = EXCLUDED.project_id AND catalog_media_assets.creator_account_id = EXCLUDED.creator_account_id
+        AND catalog_media_assets.item_id = EXCLUDED.item_id`,
+    [asset.id, project, owner, asset.catalogItemId, JSON.stringify(asset)]);
+    for (const collection of snapshot.collections) {
+      await upsert(`INSERT INTO catalog_collections(id, project_id, creator_account_id, record)
+        VALUES ($1,$2,$3,$4::jsonb) ON CONFLICT (id) DO UPDATE SET record = EXCLUDED.record
+        WHERE catalog_collections.project_id = EXCLUDED.project_id AND catalog_collections.creator_account_id = EXCLUDED.creator_account_id`,
+      [collection.id, project, owner, JSON.stringify(collection)]);
+    }
+    await client.query('DELETE FROM catalog_media_assets WHERE project_id = $1 AND creator_account_id = $2 AND id <> ALL($3::text[])',
+      [project, owner, snapshot.mediaAssets.map(value => value.id)]);
+    await client.query('DELETE FROM catalog_items WHERE project_id = $1 AND creator_account_id = $2 AND id <> ALL($3::text[])',
+      [project, owner, snapshot.items.map(value => value.id)]);
+    await client.query('DELETE FROM catalog_sources WHERE project_id = $1 AND creator_account_id = $2 AND id <> ALL($3::text[])',
+      [project, owner, snapshot.sources.map(value => value.id)]);
+    await client.query('DELETE FROM catalog_collections WHERE project_id = $1 AND creator_account_id = $2 AND id <> ALL($3::text[])',
+      [project, owner, snapshot.collections.map(value => value.id)]);
+    for (const item of snapshot.items) {
       for (const identifier of item.externalIdentifiers) await client.query('INSERT INTO catalog_item_identifiers(source_id, project_id, creator_account_id, item_id, provider, marketplace, kind, value) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
         [item.sourceRecord.sourceId, project, owner, item.id, identifier.provider, identifier.marketplace ?? '', identifier.kind, identifier.value]);
     }
-    for (const asset of snapshot.mediaAssets) await client.query('INSERT INTO catalog_media_assets(id, project_id, creator_account_id, item_id, record) VALUES ($1,$2,$3,$4,$5::jsonb)', [asset.id, project, owner, asset.catalogItemId, JSON.stringify(asset)]);
     for (const collection of snapshot.collections) {
-      await client.query('INSERT INTO catalog_collections(id, project_id, creator_account_id, record) VALUES ($1,$2,$3,$4::jsonb)', [collection.id, project, owner, JSON.stringify(collection)]);
       for (const [position, itemId] of collection.itemIds.entries()) await client.query('INSERT INTO catalog_collection_items(collection_id, project_id, creator_account_id, item_id, position) VALUES ($1,$2,$3,$4,$5)', [collection.id, project, owner, itemId, position]);
     }
   }
