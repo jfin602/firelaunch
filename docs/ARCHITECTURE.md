@@ -1,5 +1,14 @@
 # FireLaunch Architecture
 
+## CURRENT C8 HERO MULTIMEDIA — shared focus and two native renderers (2026-10-22)
+
+[Design](design/c8-hero-multimedia.md) and [correction](tasks/c8-hero-multimedia/README.md) are the next owner-approved source targets. Use `packages/tv/src/runtime.ts` existing `focusRows/transition/returnFocusId` to derive ONE transient selected hero item from the first selector row; no new ChannelSpec field/schema. Existing `apps/studio/src/Preview.tsx` and `templates/vega-channel/src/App.js` currently render separate giant Hero/card and first rail; scoped correction presents **one hero display + first row already visible at 720p/1080p**, same selected data and original device/player transitions. Native layout uses `templates/vega-channel/src/tv-layout.js`, guarding focus scrolling; portrait 2:3 and square 1:1 foreground use contain and same authorized art for optional atmospheric background. Private Studio blob/capability cannot escape into native package; installed-client unknown capability remains fail-closed. Other modules/pages remain intact.
+
+Runner P1 shared state, P2 Studio renderer, P3 Vega renderer **browser=no**, 0.8.17 unchanged; P4 **browser=yes MANUAL**, mock artwork ATTACHED by owner to Codex, protected staging deployment FIRST, exact signed-in browser and genuine Vega display capture. If attachment or display missing, visual parity unqualified. This docs-only correction does NOT change current [Phase 8 NOT GREEN](tasks/p8/closeout.md) or approve P9. Prior c8-ui code/visual notes below are dated history.
+
+---
+
+
 ## Current P8D execution boundary: runner + browser handoffs (2026-10-22)
 
 The [P8D multimedia design and contracts](tasks/p8d/README.md) stay unchanged; owner switched from all-manual to RUNNER recognition. CLI runner implements/commits only browser=no P1 contract checkpoint `0.8.14`; browser-required P2 Audio, P3 same-book optional MP3 Book Showcase and P4 native publishing remain manually executed with version subjects `0.8.15`/`0.8.16`/`0.8.17` for resume, and browser-required P5 proposed metadata `0.8.18` does not bump actual 0.8.17. All true native/device, immutable-media/rights, installed-client compatibility and guarded staging gates persist; none can be bypassed by setting a false browser flag. Older no-runner P8D instructions below are execution history, not current authority.
