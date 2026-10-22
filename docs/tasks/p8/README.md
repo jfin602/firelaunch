@@ -1,5 +1,14 @@
 # P8 — Creative Studio UX & Pipeline Confirmation
 
+## OWNER CLOSED PHASE 8 — Handoff to 0.9.0 Polish (2026-10-22)
+
+See [canonical owner-accepted closure](closeout.md): **Lifecycle CLOSED BY OWNER**, while preexisting measured **NOT GREEN / NATIVE + MIXED-PUBLICATION EXCEPTIONS** remain historical facts and are not rewritten as passing. The latest functional 0.8.17 source before docs/baseline was `69a750a43debd1068e3359487023c6f07681e280`, after video catalog-reference fix and dynamic full-bleed Hero/caching changes; those later commits are not independently staging-native qualified by older P8D/C8 reports. Do not re-run P8 P1–P5, c8-ui/c8-hero or P8D stacks merely to enter Phase 9.
+
+Next: [Phase 9 MVP Polish](../p9/README.md) (ten manual issues + P11 final smoke) with reserved clean `0.9.0` entry baseline and issue versions `0.9.1`–`0.9.10`. Former installed-app publishing is [deferred Phase 10](../p10/README.md). Protect old FREE release #1, current P8 media rights, compatibility denies and native qualification honesty.
+
+---
+
+
 ## NEW FOCUSED OWNER VISUAL CORRECTION — c8-hero-multimedia (2026-10-22)
 
 [Phase 8 final recovery closeout](closeout.md) is still **NOT GREEN** at tested 0.8.17. Owner approved an implementation-only focus-driven hero correction [c8-hero-multimedia](../c8-hero-multimedia/README.md): one featured spotlight and **one row beneath it within first TV viewport**; bottom row focus updates title/art/background above without autoplay, Select/detail and Back preserve focus. Supports landscape video, square audio and uncropped portrait book foreground, same-art dark/faded background, old other sections and creator branding. P1–P3 runner-owned code commits, unchanged 0.8.17; P4 browser-required MANUAL staging-first owner-ART-ATTACHED and real x86_64 Vega visual closeout. Run validator+runner, then P4 separately in Codex. Historical final Phase 8 NOT GREEN remains untouched; **this correction alone does not qualify the unapproved mixed-media test publication, authorize Phase 9, or rewrite canonical closeout**. All work here is docs-only until prompts actually execute.

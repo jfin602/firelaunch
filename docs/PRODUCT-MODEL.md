@@ -1,5 +1,14 @@
 # FireLaunch Product Model
 
+## OWNER-ACCEPTED 0.9.0 BASELINE — Phase 9 MVP Polish (2026-10-22)
+
+Phase 8 CLOSED BY OWNER with dated NOT GREEN qualification exceptions retained in [closeout](tasks/p8/closeout.md). Product now models one creator-owned Video/Audio/Book catalog and one ChannelSpec; TV Hero on compatible pages displays selected item's artwork full-bleed with creator-background scrims, and ONE visible first selector row drives feature copy/art by D-pad focus without autoplay. Native Vega/Studio have shared selection semantics; landscape/square/portrait art remains rights-scoped. Source improvements after C8 P4 include `feee22dee8c` video catalog foreign-key fix and `be06bd03c9`–`69a750a43d` prioritized Hero-art caching/retained decoded layer; not independently claimed qualified on currently deployed native device.
+
+**Phase 9 issue work:** [Polish P1–P11](tasks/p9/README.md) + [issue register](tasks/p9-polish/README.md), clean 0.9.0 entry baseline, manual P1–P10 targets 0.9.1–0.9.10. Per-video Publish/Remove is source-of-truth **included in draft/freshly exported package**, distinct from private Library and from deferred remote installed app updates. Old [Live Publication Phase 10](tasks/p10/README.md) archived without execution. Preserve existing Video Watch, Audio Listen, Book Showcase optional same-book audiobook with NO ebook reader, app/package identity, creator rights and preexisting public FREE #1.
+
+---
+
+
 ## CURRENT OWNER HERO BEHAVIOR — c8-hero-multimedia (2026-10-22)
 
 [Focus-driven hero design](design/c8-hero-multimedia.md) replaces the *presentation* of eligible existing Hero + first associated rail/grid in the original TV app, not the stored `ChannelSpec` structure. **Top featured display changes to match FOCUSED bottom card**; Select enters existing detail and Back restores card/spotlight. Exactly one first row is visible below hero at 1280x720 and 1920x1080 without forced vertical scroll; later authored sections aren't deleted or made unreachable. Safe video/album/book cover ratios keep crisp uncropped foreground and controlled dim/blur/fade backdrop derived from the SAME rights-approved asset. No automatic video/audio playback on focus, no second hero editor, no proprietary generated artwork or data/schema migration. Creator branding is independent of FireLaunch's own Studio theme.

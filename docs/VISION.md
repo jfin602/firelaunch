@@ -1,5 +1,12 @@
 # FireLaunch Vision
 
+## CURRENT DELIVERY SCOPE — Phase 8 closed; 0.9.0 Phase 9 polish (2026-10-22)
+
+Owner closed Phase 8 at the product milestone level with historical NOT GREEN native/publication evidence exceptions explicitly retained ([closeout](tasks/p8/closeout.md)). The active near-term product aim is to make the existing creator channel journey understandable and testable: create channel → add licensed Video/MP3/Book Showcase → curate into ChannelSpec → focus-driven full-bleed one-row Hero → Studio TV Preview → approved NEW Vega Export. [Phase 9 MVP Polish](tasks/p9/README.md) and [ten issue specs](tasks/p9-polish/README.md) execute manually one issue at a time from clean `0.9.0` baseline. Full remote installed-client publishing/update is postponed to [Phase 10](tasks/p10/README.md), not implied by a P9 Publish action. Preserve individual Amazon creator ownership and approved FREE public release #1.
+
+---
+
+
 ## Current P8D multi-media scope — owner approved 2026-10-22
 
 Video creators keep the established Watch workflow. Audio creators receive a simple MP3 Add Audio form, albums/playlists and a dedicated TV listening player. Writers receive a **Book Showcase** (cover, author, synopsis, bookshelf) and may attach one optional audiobook MP3, playing through the **same** audio player while remaining a single book item. **No ebook/EPUB/PDF television reader.** These experiences share one branded ChannelSpec app and existing creator ownership, display/playback rights and publication approval. Implementation is P8D ([plan](tasks/p8d/README.md)) before Phase 9. The previously documented [P8C NOT GREEN](tasks/p8/closeout.md) native static-layout/hero evidence is owner-deferred **for P8D entry only**, not relabeled. No source features/qualification are asserted merely by this vision update.

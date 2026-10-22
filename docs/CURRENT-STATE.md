@@ -1,5 +1,16 @@
 # FireLaunch Current State
 
+## LATEST AUTHORITATIVE — owner-closed Phase 8, clean Phase 9 0.9.0 baseline (2026-10-22)
+
+**Phase 8 LIFECYCLE CLOSED BY OWNER; final measured qualification remains HISTORICAL NOT GREEN with accepted exceptions.** See [canonical Phase 8 evidence and closure](tasks/p8/closeout.md), [C8 Hero evidence and later source note](tasks/c8-hero-multimedia/closeout.md), [P8D appendix](tasks/p8d/closeout.md). Owner approval is a roadmap handoff, not native-device/publication tests having passed retroactively.
+
+**Latest known 0.8.17 functional source** before docs-only reconciliation: `69a750a43debd1068e3359487023c6f07681e280` (retained decoded Hero image layer). The source since historical C8 P4 includes video upload catalog-reference preservation (`feee22dee8c`), a full-bleed selected content Hero fading to creator background with one visible selector row, focus→Hero without autoplay, and priority image precaching/retained previous decoded art to avoid unloaded flashes (`be06bd03c9`, `52216b40fb`, `69a750a43d`). Implementation is source evidence; this docs action has not rerun native/owner end-to-end qualification or deployed the latest release. The last historical C8 P4 staged release was `20261022T184819Z-584d7c8274ca`, schema **15**; do not treat that old archive as deploying subsequent code.
+
+**Phase 9 ACTIVE ROADMAP: MVP Polish** [manual P1–P11](tasks/p9/README.md), [ten-issue register](tasks/p9-polish/README.md). Minimal entry-only root/lock `0.9.0` baseline, then P1–P10 expected 0.9.1–0.9.10 each scoped/manual/guarded deployed/browser-tested, P11 unchanged. No P9 implementation or staging release is implied by new docs/baseline. Prior Phase 9 live Publishing and installed-app updates are **deferred Phase 10** [archival plan](tasks/p10/README.md), not runnable as written. P9 "Publish" = add/remove current channel draft for fresh export, NOT OTA. Public FREE release #1 untouched and rights/old-client native qualification remain fail-closed. Historic CURRENT labels below are superseded only as active navigation, not erased as records.
+
+---
+
+
 ## CURRENT — c8-hero-multimedia correction AUTHORED, NOT EXECUTED (2026-10-22)
 
 **Next approved work:** [c8-hero-multimedia](tasks/c8-hero-multimedia/README.md) [design](design/c8-hero-multimedia.md), [assessment](tasks/c8-hero-multimedia/prompt-assessment.md), [plan](tasks/c8-hero-multimedia/implementation-plan.md) and four executable prompts checked into GitHub; no implementation, new staging deployment or native qualification occurred from this docs authoring. **Source root+both lock remains `0.8.17`**; [current Phase 8 recovery closeout](tasks/p8/closeout.md) remains **NOT GREEN**. Current dated R2 staging `20261022T165021Z-7510f7405d6c`, schema15, 376 pass/16 skip/0 fail; this is historical host evidence, not live source proof. Phase 9 not started.

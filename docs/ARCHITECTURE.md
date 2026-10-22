@@ -1,5 +1,14 @@
 # FireLaunch Architecture
 
+## 2026-10-22 POST-P8 ARCHITECTURE BASELINE — 0.9.0 Polish entry
+
+Phase 8 is CLOSED BY OWNER with known native screenshot/mixed-publishing qualifications carried as exceptions, not independently GREEN ([canonical closeout](tasks/p8/closeout.md)). Existing `ChannelSpec`, source/owner/media asset rights, `packages/tv` focus and native Vega generator are the Phase 9 baseline; **no P9 migration / new parallel editor/player**. Source includes `packages/tv/src/hero-image-queue.ts` (priority, bounded 2 concurrent/24 entries), Studio `Preview.tsx` plus `OwnedArtwork.tsx` retained owner-safe image URL/layers and native Vega `Image.prefetch` with readiness gate, from commits `be06bd03c9ae`, `52216b40fb`, `69a750a43d`. Focus on one TV Hero backdrop + ONE first selector row, derived from existing modules, no background/source schema change. A stable code path is not proof of native device real screenshot or exact-owner-image parity.
+
+Active work routing: [P9 MVP Polish](tasks/p9/README.md) issue-based manual Codex browser prompts at baseline `0.9.0`; P1–P10 `0.9.1`–`0.9.10`. P9 video Publish/Remove changes **draft membership/fresh export**, not immutable live release/installed-app update. [P10](tasks/p10/README.md) retains prior versioned installed-client/remote publish architecture in **DEFERRED, NON-RUNNABLE** archival prompts. Keep safety invariants: creator ownership/CSRF, rights, schema15 staging compatibility/rollback and immutable approved public FREE #1.
+
+---
+
+
 ## CURRENT C8 HERO MULTIMEDIA — shared focus and two native renderers (2026-10-22)
 
 [Design](design/c8-hero-multimedia.md) and [correction](tasks/c8-hero-multimedia/README.md) are the next owner-approved source targets. Use `packages/tv/src/runtime.ts` existing `focusRows/transition/returnFocusId` to derive ONE transient selected hero item from the first selector row; no new ChannelSpec field/schema. Existing `apps/studio/src/Preview.tsx` and `templates/vega-channel/src/App.js` currently render separate giant Hero/card and first rail; scoped correction presents **one hero display + first row already visible at 720p/1080p**, same selected data and original device/player transitions. Native layout uses `templates/vega-channel/src/tv-layout.js`, guarding focus scrolling; portrait 2:3 and square 1:1 foreground use contain and same authorized art for optional atmospheric background. Private Studio blob/capability cannot escape into native package; installed-client unknown capability remains fail-closed. Other modules/pages remain intact.

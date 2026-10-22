@@ -1,5 +1,16 @@
 # C8 hero multimedia — P4 closeout (2026-10-22)
 
+# Post-closeout source reconciliation — 2026-10-22
+
+**Owner milestone disposition:** Phase 8 CLOSED BY OWNER with historical NOT GREEN evidence preserved in [canonical Phase 8 closeout](../p8/closeout.md). This C8 P4 report remains the honest evidence for its *earlier* exact tested/staged source; do not upgrade its native results on the strength of later code commits alone.
+
+**Later committed work on main (`0.8.17` unchanged):** Full-bleed selected Hero background and one-row display evolved through `2c514ced0d51`, `ed3758b6caa4`, `9bba0c488f6a`, `d925bc2562a6`, `1cbde6b9ce5d`, and `a5e930c91e35`. Hero caching/transition code evolved through `be06bd03c9ae`, `52216b40fb5d` and final pre-doc functional `69a750a43debd1068e3359487023c6f07681e280`. The code now contains prioritized artwork queue, native Image.prefetch use with readiness, Studio decoded preload and retained outgoing image to reduce blank frames. The legacy P4 source/aggregate hashes and staging archive cited below are not proof that these later commits were deployed, visually approved on Vega, or end-to-end tested after source changes. Existing artwork rights and public release restrictions stay intact.
+
+**Handoff:** Owner accepts remaining visual/device/publication evidence debt while closing the Phase 8 development milestone. P9 Polish continues from a clean 0.9.0 baseline and carries relevant artwork clipping/content-inclusion/asset workflows as named P9 issue tests; P10 alone covers installed-app live updates. The earlier P4 scoped NOT GREEN result below remains unchanged.
+
+---
+
+
 **Overall: NOT GREEN.** The Studio hero and first-row interaction is GREEN on the signed-in owner's private `snabble tv` draft. Native Vega hero/first-row visual evidence and a direct owner-project match to the supplied mock are NOT GREEN. Protected staging is DEPLOYED. This decision does not change the separate Phase 8 NOT GREEN decision or authorize Phase 9.
 
 ## Source and scope

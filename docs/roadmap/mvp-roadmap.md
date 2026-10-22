@@ -1,5 +1,16 @@
 # FireLaunch MVP Roadmap
 
+## APPROVED ROADMAP — Phase 8 owner-closed -> clean Phase 9 MVP Polish (2026-10-22)
+
+**Lifecycle:** Phase 8 **CLOSED BY OWNER**, with historic **NOT GREEN / ACCEPTED QUALIFICATION EXCEPTIONS** recorded (do not falsely report all native and mixed-media public gates GREEN). [Final Phase 8 evidence](../tasks/p8/closeout.md), [C8 Hero later-source addendum](../tasks/c8-hero-multimedia/closeout.md), and [P8D appendix](../tasks/p8d/closeout.md) retain the facts. Final known functional Phase 8 source commit `69a750a43debd1068e3359487023c6f07681e280`, version `0.8.17`. Later Hero/video/catalog/cache commits postdate older staging evidence; docs handoff alone does not prove latest source active or Vega GREEN.
+
+**Phase 9 = MVP POLISH, ACTIVE FOR MANUAL EXECUTION**: [owner issue register P9-001–P9-010](../tasks/p9-polish/README.md), [issue-scoped manual P1–P10 and P11 final smoke](../tasks/p9/README.md). **Baseline 0.9.0 is entry-only**, not P1's implementation. Issue targets P1 `0.9.1` through P10 `0.9.10`; P11 no version change. Every issue must test source, commit, guarded stage exact SHA, then test as owner in connected Codex browser; no runner. P9 P0 priority: making private media inclusion in saved ChannelSpec/fresh exported Vega app understandable and safe. Preserve video/audio/book creators, signed-in draft, fixed Hero design and responsive artwork, existing FREE #1 immutable rights.
+
+**Phase 10 = Live Channel Publishing & Installed-App Updates DEFERRED**: [archival P10 plan](../tasks/p10/README.md), old planned update compatibility, remote manifest refresh and same app ID native upgrade. Those archived prompts are not runnable as-is; do not equate P9 "Publish video to channel draft" with an installed-app OTA publish. No P9 feature code executed by docs merge/baseline.
+
+---
+
+
 ## CURRENT — c8-hero-multimedia next 0.8.17 correction (2026-10-22)
 
 Owner approved [c8-hero-multimedia](../tasks/c8-hero-multimedia/README.md) and [focus-driven hero design](../design/c8-hero-multimedia.md). The actual Vega `snabble tv` app gets **one top adaptive hero + ONE bottom content row** in initial 16:9 viewport: bottom focus changes top spotlight without playback; Select opens exact detail, Back restores original card. Creator-owned landscape video / square audio / portrait book cover is preserved sharp, dark atmospheric background derived from the same art; additional authored modules stay reachable. **P1 shared TV focus**, **P2 Studio Preview**, **P3 native Vega** are runner-owned correction commits at unchanged **0.8.17**, browser=no. **P4 MANUAL browser=yes** requires owner-supplied mock artwork attached to Codex, protected staging deployment FIRST, signed-in owner Preview and real Vega native screenshot visual parity; no invented attachment or device proof. Correct CLI: `npm run codex:stack:validate -- c8-hero-multimedia`, then `npm run codex:stack -- c8-hero-multimedia`; stop at P4.

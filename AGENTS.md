@@ -1,5 +1,16 @@
 # FireLaunch Agent Instructions
 
+## ACTIVE 2026-10-22 OWNER HANDOFF — PHASE 8 CLOSED; 0.9.0 BASELINE; P9 POLISH
+
+**Owner decision overrides dated historical instructions below.** Phase 8 development is **CLOSED BY OWNER** with archived historical NOT GREEN test gates retained in [Phase 8 closeout](docs/tasks/p8/closeout.md). P8/C8/D correction files are historical; **DO NOT start or rerun them** to begin P9. The final functional 0.8.17 source before docs/baseline was `69a750a43debd1068e3359487023c6f07681e280`, including recent video catalog reference fix, full-bleed selected Hero with ONE content row and Hero-art preloading/retained decoded-image transition. The code work after older C8/P8 closeouts does not magically establish native, owner-mock or mixed-publication GREEN. Protect immutable FREE release #1, existing owner/rights/CSRF, and real device proof.
+
+**Active phase:** [Phase 9 MVP Polish](docs/tasks/p9/README.md) with ten permanent owner issue specs in [register](docs/tasks/p9-polish/README.md), ten manually run Codex browser implementation prompts P1–P10 **one issue at a time**, plus manual P11 closeout. Clean product **0.9.0 is an entry-only baseline**, so P1 targets **0.9.1**, P2 **0.9.2**, ..., P10 **0.9.10**; P11 no product bump. NO `npm run codex:stack -- p9`, runner validator, `/activate`, or direct execution of old publishing prompts. Every implementation verifies actual local HEAD/status/origin/root+both lock fields, tests scoped code, commits, guarded deploys the exact archive to STAGING with confirmed schema **15**, backup/rollback/assets/worker, then uses real owner-authenticated Codex browser and writes truthful per-issue evidence. Reconcile in-flight local work before pull; no reset/stash/force. Do not assume docs are deployed.
+
+**Deferred:** Original live Publishing/remote installed-client app updates are [Phase 10 archival planning](docs/tasks/p10/README.md), NOT approved to run. In P9, per-media Publish/Remove means channel draft inclusion and next fresh export, not OTA. Preserve old clients' `Requires App Update / Blocked`, no production rollout or unauthorized AWS/cloud changes. Older CURRENT/ACTIVE passages below are dated history.
+
+---
+
+
 ## CURRENT NEXT EXECUTION — c8-hero-multimedia CORRECTION (2026-10-22)
 
 Owner-approved [c8-hero-multimedia](docs/tasks/c8-hero-multimedia/README.md): [design](docs/design/c8-hero-multimedia.md), [assessment](docs/tasks/c8-hero-multimedia/prompt-assessment.md), [plan](docs/tasks/c8-hero-multimedia/implementation-plan.md), P1–P4 runner grammar AUTHORED, NOT RUN. **Source stays 0.8.17 and Phase 8 still NOT GREEN.** On the actual original `snabble tv` exported app, the HERO is a featured art/title display; the ONE row immediately underneath drives that hero through focused bottom item. D-pad focus updates featured title/art/background WITHOUT playback; Select opens detail, Back restores the focused card. A first-row view fits standard 16:9 TV with no forced vertical scroll; other authored modules remain reachable. Use existing authorized landscape/square/portrait art as crisp uncropped foreground and dark/faded backdrop, safe no-art fallback; no generated image, extra media stream, second channel engine or new schema.

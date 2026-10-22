@@ -1,5 +1,12 @@
 # C8 Hero Multimedia — Focus-Driven Hero + One TV Row
 
+## DATED EXECUTION RESULT AND OWNER CLOSEOUT OVERRIDE — 2026-10-22
+
+**P1–P4 EXECUTED**, not pending: [P4 C8 closeout](closeout.md) documents Studio Hero/first-row GREEN and native owner-visual NOT GREEN at its staged tested source. Subsequent main commits added default Hero-first onboarding, fixed video catalog references, dominant full-bleed Hero artwork/fades, priority precaching and retained decoded image transitions (last functional `69a750a43debd1068e3359487023c6f07681e280` at unchanged 0.8.17). The dated P4 archive is not proof of native or browser acceptance for this later source. **Owner has now CLOSED Phase 8 as an accepted development milestone with those exceptions explicitly retained.** Do not rerun C8 prompts as current active tasks or claim missing device screenshots. Current active work is [Phase 9 MVP Polish](../p9/README.md) on clean `0.9.0` entry baseline; full installed-app updates deferred [P10](../p10/README.md). Original execution directions below are historical.
+
+---
+
+
 **Owner-approved /docs-apply + /prompt-ass + /prompt-plan + /prompt-write, 2026-10-22.** Fully authored correction stack, **NOT EXECUTED OR QUALIFIED**. Owner's native screenshot depicts a simple page shell with title/sections at top and oversized flat Hero/card list. New target: **ONE adaptive hero display + ONE focusable row visible underneath, in the first TV viewport; bottom selection updates hero above without playing anything**. Preserve creator-owned artwork, mixed-video/audio/books and existing Focus/Select/Back. [Design](../../design/c8-hero-multimedia.md) · [assessment](prompt-assessment.md) · [implementation plan](implementation-plan.md).
 
 ## Four correction prompts — ROOT VERSION 0.8.17 UNCHANGED
