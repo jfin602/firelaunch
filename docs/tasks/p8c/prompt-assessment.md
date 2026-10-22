@@ -1,0 +1,34 @@
+# P8C — Prompt assessment: manual Codex-browser iterations and Phase 8 exit
+
+**2026-10-21 America/Chicago (2026-10-22 UTC). Owner-approved /prompt-ass.** This is the **final Phase 8 continuation C**. Source commits and staging deployment happen when the manual prompts are executed, **not** when authored. See [README](README.md) and [plan](implementation-plan.md).
+
+## Verified factual baseline
+
+- GitHub main at assessment: `5acc3e0c891b8dbc456844c4185b532f02897096` (documentation), root and both lockfile top-level versions `0.8.10`. This says nothing about the present laptop tree or live VPS; each prompt must inspect its execution environment.
+- [c8-ui3 P4](../c8-ui3/closeout.md): exact `0.8.10` staging release `20261021T230818Z-c382c81aeacd` **DEPLOYED / UI NOT GREEN**. Real owner Chrome showed TV artwork narrower than supplied mockup, broken small artwork in editor, native Fullscreen API denied but fallback/left editor/Clean View worked. Export showed `Build input changed` on read-only visit. The fullscreen virtual remote **belongs at bottom RIGHT**, despite stale older P3 text.
+- [P8B Wave 2](../p8b/wave2-closeout.md) and [follow-on](../p8b/wave2-follow-on-2026-10-21.md): local static section contracts/native compatibility tests exist; required actual **Image Banner and Image + Text on Vega VirtualDevice** remains unqualified. [C7 R4](../c7-export-recovery/R4-playback-evidence.md) already demonstrated moving HLS/audio/seek on its earlier tested package; reuse rather than replay old worker/ZIP/device matrices.
+- Current `apps/studio/src/App.tsx` uses existing `Catalog`, `Preview`, `VideoWorkspace`, `sampleMutations`, and existing `Content` editor; current `starterChannel` in `packages/channel-engine/src/index.ts` already creates a Hero Home page. Investigate sample seeding before assuming the starter helper itself adds duplicates.
+- Latest [standing staging access](../../../scripts/staging/README.md) and [AGENTS.md](../../../AGENTS.md): owner installed permanent staging-only sudoers for guarded deploy/rollback on `muffinos`. **No per-candidate sudoers approval is normally needed**, but the agent still must check active grant, trusted archive, SHA-256, non-schema-changing migration compatibility, encrypted backup, service/owner smoke and rollback. This is privileged staging access, NOT production permission.
+
+## Decision: all four prompts manual and browser-required
+
+The user explicitly replaces the runner implementation workflow with a **sequential manual Codex-browser workflow**. **Do not execute `npm run codex:stack -- p8c` or `npm run codex:stack:validate -- p8c`** as control gates; they apply to the runner grammar, not this manual stack. No `/activate` step. Each P1–P3 is a standalone prompt run interactively using Codex browser diagnostics, including a protected deployment of its own final changed candidate and real owner staging browser checks. Browser debugging must inspect console/network/DOM/render, not screenshots alone. The user can attach the owner-approved visual reference to P1/P3/P4; if missing, compare using recorded precise prior measurements and disclose the reference limitation.
+
+**Commit owner:** The agent running each prompt, not the runner, owns a targeted version bump and verified Git commits. P1 must move root `package.json`, root `package-lock.json` `version` and `packages[""].version` to `0.8.11`; P2 to `0.8.12`; P3 to `0.8.13`. **Do not bump workspace versions.** Commit tested product source/version before packaging so the staging archive is traceable to Git; after browser acceptance commit evidence/handoff and any scoped repairs as needed, preserving product-source SHA separately from documentation commits. One direct commit is fine when all checks are already complete; no fabricated green or self-push assumption. P4 **stays 0.8.13**, and the manual agent commits the truthful final report and supporting doc-only handoff; source repair (if unavoidable) needs a separate controlled commit at unchanged version and fresh source/archive/testing evidence. Push only through approved normal Git workflow, never force.
+
+## Optimized split and gates
+
+| Prompt | Main seam | Codex-browser proof | Local check | Final result |
+| --- | --- | --- | --- | --- |
+| **P1** | Fix broken private/eligible artwork preview, correct featured art presentation and misleading media states | Deployed owner Library → selected media → editor/Preview; network image delivery/status, screenshot comparison | Focused Studio + changed server rights tests and package typechecks | `0.8.11` source commit + P1 evidence/handoff |
+| **P2** | Remove actual duplicate sample Home modules; improve first-run template/content binding | Deployed safe new/dedicated test project, saved/reopened template/content, old project unchanged | Deterministic starter/template/seed tests + affected typechecks | `0.8.12` source commit + P2 evidence/handoff |
+| **P3** | Narrow editor/page navigation/accessibility; Save/error UX, responsive contrast and discoverability | Deployed owner desktop/phone browser + keyboard + fullscreen smoke; no regression in TV-player instance | Targeted UI focus/overflow/save tests + Studio typecheck | `0.8.13` source commit + P3 evidence/handoff |
+| **P4** | Integrated owner sign-off, final staging + new section Vega parity + Phase 8 closeout | Same final **active** `0.8.13` deployed browser owner journey, targeted native device screenshot/log; last-known-green evidence reused | One final build-backed `npm run test`, version+diff/source readback | Commit `docs/tasks/p8/closeout.md` with **Phase 8 GREEN/NOT GREEN** |
+
+Each implementation prompt should favor <=8 minutes of focused editing/verification, limit speculative source loops to two bounded cycles (external browser/deploy access may take longer), and stop with an accurate handoff instead of hiding a blocker. Keep one final aggregate test in P4 rather than repeating global build suites in P1–P3. Browser-native fullscreen denial must remain distinct from a demonstrated fallback, not silently upgraded to success.
+
+## Exclusions and non-negotiable constraints
+
+No new standalone editor, ChannelSpec rewrite, media pipeline/MediaConvert encode, S3/CloudFront public policy change, Amazon submission, schema 15 migration, paid entitlements, virtual-device rebuild in P1–P3, broad C7/Q2/Q3 replay, production deployment or modifying approved public FREE release #1. Preserve owner/foreign boundaries, revision+CSRF enforcement, manual source overrides and native version/update compatibility. P4 requires a changed-static-layout proof; absent device evidence remains NOT GREEN unless the owner explicitly accepts a **scoped exception**, which must remain described as **unqualified**, not passed. P9 begins only on separately approved `0.9.0` entry.
+
+**Deadline** Friday Oct 23 2026 noon America/Chicago; freeze target Thu 17:00, internal handoff Fri 11:30.
