@@ -1,8 +1,19 @@
 # P8 — Creative Studio UX & Pipeline Confirmation
 
-**Current status (2026-10-21): WAVE 1 P5 GREEN / DEPLOYED at root/lock `0.8.4`, but PHASE 8 REMAINS OPEN.** Wave 1 qualified the initial navigation, contextual-inspector, creative and one-action Export milestone on protected staging. Wave 2 human-first Page Layout and full-screen Preview is approved **for documentation/planning only**, not implemented or qualified. The historical 0.8.0 runner baseline and original Phase 7 evidence are retained below. Owner delivery: Friday October 23, 2026 12:00 PM America/Chicago; internal handoff 11:30 AM; freeze target Thursday 5:00 PM CDT.
+## Latest approved Phase 8 final continuation — P8C (2026-10-21 local / 2026-10-22 UTC)
 
-## Current Wave 1 / Wave 2 handoff — October 21
+**PHASE 8 OPEN.** The owner approved [P8C Final Creator UX and Phase Closeout](../p8c/README.md) and its [implementation plan](../p8c/implementation-plan.md). This documentation alignment **does not implement P8C, deploy its candidate or write final `closeout.md`**. `p8c` has exactly three implementation checkpoints (artwork/media clarity `0.8.11`, first-time creator experience `0.8.12`, editor usability polish `0.8.13`) and **one independent manual P4 at unchanged `0.8.13`**. P4 is authoritative for final staging/editor acceptance, targeted Vega static-layout parity and **the full Phase 8 GREEN/NOT GREEN disposition**, recorded in `docs/tasks/p8/closeout.md` only after direct evidence. Phase 9 `0.9.0` requires an explicit subsequent owner-approved handoff.
+
+**Current dated source/host evidence supersedes the older Wave 2 planning notes below:** [c8-ui3 P4](../c8-ui3/closeout.md) tested source `0.8.10` and **DEPLOYED** to staging on 2026-10-21, but overall **UI NOT GREEN** (featured image width/editor thumbnail discrepancy; native Fullscreen API denied; expanded fallback/left drawer/Clean View were observed). [P8B Wave 2](../p8b/wave2-closeout.md) retains unproved **new static-section native VirtualDevice parity**; unchanged C7 R4 HLS moving image/audio/seek was previously proven and need not be replayed. [Wave 1](wave1-closeout.md) remains GREEN/DEPLOYED only for its own `0.8.4` scope. Existing c8-ui/c8-ui2/c8-ui3 closeouts are historical and **must not be rewritten as full Phase 8 qualification**. Reuse eligible exact-source staging evidence, but qualify the changed final P8C candidate independently.
+
+**Owner deadlines:** freeze target Thu 2026-10-22 17:00 America/Chicago, handoff Fri 2026-10-23 11:30, delivery noon. Do not rerun prior corrections or open new editor architecture.
+
+---
+
+
+**Historical Wave 1 status (superseded as current handoff by P8C above): WAVE 1 P5 GREEN / DEPLOYED at root/lock `0.8.4`, but PHASE 8 REMAINS OPEN.** Wave 1 qualified the initial navigation, contextual-inspector, creative and one-action Export milestone on protected staging. Wave 2 human-first Page Layout and full-screen Preview is approved **for documentation/planning only**, not implemented or qualified. The historical 0.8.0 runner baseline and original Phase 7 evidence are retained below. Owner delivery: Friday October 23, 2026 12:00 PM America/Chicago; internal handoff 11:30 AM; freeze target Thursday 5:00 PM CDT.
+
+## Historical Wave 1 / initial Wave 2 planning handoff — October 21
 
 [Wave 1 P5 staging closeout](wave1-closeout.md) is **GREEN / DEPLOYED** for the tested P1–P4 Studio and Export UX, root/lock `0.8.4` with schema 14 preserved. The original `P5-creator-ux-closeout.txt` is a **Wave 1 milestone** and must not be rewritten or interpreted as overall Phase 8 completion. The user has approved [Wave 2 `p8b` planning](../p8b/README.md) and the [human-first Page Layout design contract](../../design/page-layout-human-first.md). No `p8b` prompt assessment, implementation plan, executable prompts, version bump or new staging rollout exists yet.
 
