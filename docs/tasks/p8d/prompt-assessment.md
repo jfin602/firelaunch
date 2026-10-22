@@ -1,5 +1,14 @@
 # P8D — Prompt assessment: runner-compatible multimedia checkpoint sequence
 
+## P5 ownership extension — owner directive 2026-10-22
+
+Only the final manual P5 scope and iteration budget change. P1–P4 runner/browser checkpoints stay unchanged. [P5](P5-multimedia-closeout.txt) is now the TRUE FINAL **Phase 8** closeout, stage-first with a fresh trusted deploy **before** live testing, and **up to 8 evidence-led correction loops** where each changed source is re-committed/re-archived/protected re-deployed BEFORE browser/device retest. All Phase 8 milestones receive independent factual GREEN/NOT GREEN; owner-deferred P8C device/hero evidence is reviewed rather than presumed passed.
+
+Original P8C closeout is copied verbatim to [historical archive](../p8c/closeout-2026-10-22-not-green.md). At final P5 execution, new `docs/tasks/p8/closeout.md` becomes authoritative, with P8D detailed `closeout.md` as appendix. Actual product stays `0.8.17`; P5 assigned `0.8.18` is metadata only. Minimum safety/build checks precede staging, but real owner acceptance begins ONLY after protected deploy. Root/cloud privilege, creator rights, media/public release immutability and native proof are not relaxed by the 8-cycle allowance.
+
+---
+
+
 **2026-10-22. Owner-approved conversion to runner; first malformed browser metadata corrected.** P8D is a continuation D of Phase 8 with P1–P4 implementation and P5 manual closeout. [README](README.md), [implementation plan](implementation-plan.md), [design](../../design/multi-media-creator-experience.md) are authoritative. P8C Phase 8 NOT GREEN is **owner-deferred for new development entry only**, not rewritten or falsely qualified.
 
 ## Verified source seams and risks
@@ -14,10 +23,10 @@ P8C `docs/tasks/p8/closeout.md` at 0.8.13 is **NOT GREEN** due failed VirtualDev
 
 Read checked-in `scripts/codex-stack-core.mjs` and `scripts/codex-stack.mjs`. `p8d` is a pre-1.0 continuation with P1 assigned 0.8.14; version offset 13 requires metadata P1–P5 `0.8.14, 0.8.15, 0.8.16, 0.8.17, 0.8.18` respectively. P5 assigned `0.8.18` is a proposed metadata slot **only** and final product version remains `0.8.17`. Browser field must be precisely `- Browser required: yes.` or `no.`, no qualifiers or trailing explanation; one unambiguous final closeout.
 
-**Execution boundary:** P1 browser=no and runner owns version/commit subject `0.8.14`; no agent self-commit. P2/P3/P4 browser=yes and **runner intentionally stops before each**. Run these manually with Codex browser, committing tested source+version with exact one-line subjects `0.8.15`, `0.8.16`, `0.8.17` respectively. The runner can then discover each completed prefix from history when re-invoked. The manual P5 browser=yes closeout is independently executed at root+lock 0.8.17 with an evidence-only commit. This preserves genuine browser debugging and runner reconciliation; forcing browser=no on P2–P4 would be unsafe and not provide the requested browser proof.
+**Execution boundary:** P1 browser=no and runner owns version/commit subject `0.8.14`; no agent self-commit. P2/P3/P4 browser=yes and **runner intentionally stops before each**. Run these manually with Codex browser, committing tested source+version with exact one-line subjects `0.8.15`, `0.8.16`, `0.8.17` respectively. The runner can then discover each completed prefix from history when re-invoked. The manual P5 browser=yes closeout is independently executed at root+lock 0.8.17 with a staging-first integrated Phase 8 acceptance and a final evidence/report commit; its source repairs, if any, are separately committed without version bump. This preserves genuine browser debugging and runner reconciliation; forcing browser=no on P2–P4 would be unsafe and not provide the requested browser proof.
 
 ## Efficiency / current goal
 
-P1 contracts-only focused tests/typechecks, no browser/cloud/device. P2 Audio MP3 upload/Studio player and real signed-in browser. P3 Book Showcase + same-book optional audiobook and browser. P4 native Vega/audio publishing and browser/device if available. P5 one final aggregate/browser/device closeout. If an external provider/device step is blocked, say NOT GREEN explicitly; don't manufacture exact version commit unless the product checkpoint actually passed its required implementation gate. The standing staging deployment is privileged and requires SHA/backup/schema/rollback/approved public release unchanged. No unnecessary replays of older C7/P8C qualification.
+P1 contracts-only focused tests/typechecks, no browser/cloud/device. P2 Audio MP3 upload/Studio player and real signed-in browser. P3 Book Showcase + same-book optional audiobook and browser. P4 native Vega/audio publishing and browser/device if available. P5 manual true final Phase 8 closeout with mandatory staging-first owner/browser acceptance, up to eight redeploy-and-retest correction cycles and final canonical report. If an external provider/device step is blocked, say NOT GREEN explicitly; don't manufacture exact version commit unless the product checkpoint actually passed its required implementation gate. The standing staging deployment is privileged and requires SHA/backup/schema/rollback/approved public release unchanged. No unnecessary replays of older C7/P8C qualification.
 
 **Disposition:** P8D now structurally matches runner parsing and first run will execute P1 then stop at P2 for browser execution; it is NOT an all-automatic five-step terminal-run stack.
