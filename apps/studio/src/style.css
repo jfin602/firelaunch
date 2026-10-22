@@ -888,6 +888,42 @@ body { min-width: 0; }
 @media(max-width:690px){.preview-fullscreen .channel-tv-stage{height:100%}.preview-fullscreen .channel-tv-stage .tv-frame{width:min(100%,177.777778dvh);max-height:100dvh}.preview-fullscreen .channel-tv-stage .remote-bar>div:first-child{display:none}}
 @media(max-height:760px){.channel-presentation:not(.preview-fullscreen) .channel-tv-stage .remote-bar span{display:none}}
 
+/* Fullscreen is a responsive TV canvas; the embedded Studio TV keeps its 16:9 frame. */
+body:has(.preview-fullscreen){overflow:hidden}
+.channel-presentation.preview-fullscreen{width:100vw}
+.preview-fullscreen .channel-tv-stage .preview-wrap{align-items:stretch;justify-content:stretch}
+.preview-fullscreen .channel-tv-stage .tv-frame{width:100%;height:100%;max-width:none;max-height:none;aspect-ratio:auto;flex:1;min-height:0}
+.preview-fullscreen .tv-screen{display:flex;flex-direction:column;padding:clamp(18px,3.5vmin,64px) clamp(20px,4vw,80px);font-size:clamp(13px,1.35vw,22px)}
+.preview-fullscreen .tv-header{height:auto;min-height:3.5em;flex:none;gap:clamp(14px,3vw,48px)}
+.preview-fullscreen .tv-content{height:auto;min-height:0;flex:1;padding-top:clamp(12px,2vh,32px)}
+.preview-fullscreen .tv-grid .tv-items{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,11em),1fr));gap:1em}
+.preview-fullscreen .tv-grid .tv-card{width:100%}
+.preview-fullscreen .tv-rail .tv-card{width:clamp(9em,23%,15em)}
+.preview-fullscreen .tv-hero .tv-card{width:min(100%,42em)}
+.preview-fullscreen .tv-overlay{min-height:0}
+.preview-fullscreen .tv-detail-copy{min-width:0;overflow:auto}
+.preview-fullscreen .tv-player video{min-height:0;flex:1;height:auto;object-fit:contain}
+.preview-fullscreen .tv-player-footer{gap:1em;flex-wrap:wrap}
+@container (max-width:700px){
+  .preview-fullscreen .tv-screen{font-size:clamp(13px,2.5cqw,17px)}
+  .preview-fullscreen .tv-header{align-items:flex-start;flex-direction:column;gap:.4em;padding-bottom:.8em}
+  .preview-fullscreen .tv-nav{max-width:100%;flex-wrap:wrap;overflow:visible}
+  .preview-fullscreen .tv-rail .tv-items{overflow-x:auto}
+  .preview-fullscreen .tv-overlay.tv-detail{flex-direction:column;align-items:flex-start;overflow:auto;gap:1em}
+  .preview-fullscreen .tv-detail>img{width:min(100%,28em);height:auto;aspect-ratio:16/10}
+  .preview-fullscreen .tv-detail-copy h2{font-size:1.8em}
+}
+.preview-fullscreen .channel-dock{border-top:0;border-right:1px solid #494c50;background:#222426;box-shadow:8px 0 28px #0008}
+.preview-fullscreen .channel-dock-handle{border-color:#62686c;background:#2d3033;color:#e8eaeb;box-shadow:3px 0 12px #0008}
+.preview-fullscreen .channel-dock-handle:focus-visible,
+.preview-fullscreen .channel-dock :is(button,input,textarea,select):focus-visible{outline:2px solid #aeb9bd;outline-offset:2px}
+.preview-fullscreen .channel-dock :is(.channel-dock-header,.channel-dock-body,.channel-editor,.channel-appearance,.layout-workspace){background:#222426}
+@media(max-width:690px){.preview-fullscreen .channel-tv-stage .tv-frame{width:100%;height:100%;max-height:none;aspect-ratio:auto}}
+@media(max-width:700px){
+  .preview-fullscreen:not(.clean-view) .tv-screen{padding-top:76px}
+  .preview-fullscreen:not(.clean-view) .tv-content{padding-bottom:200px}
+}
+
 /* Keep every Studio scroll area aligned with the dark shell. */
 :root {
   --fl-scroll-track: #211b1c;

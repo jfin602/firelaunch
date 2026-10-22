@@ -243,12 +243,19 @@ test('Clean View hides Studio chrome and recovers by H, corner, editor shortcut 
 
 test('fullscreen geometry and overlay placement override normal mode at every breakpoint', () => {
   const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
-  const fullscreen = css.split('/* C8-UI3 P3:')[1];
+  const fullscreen = css.split('/* Fullscreen is a responsive TV canvas;')[1];
   assert.ok(fullscreen);
-  assert.match(fullscreen, /\.preview-fullscreen \.channel-tv-stage \.tv-frame\{width:min\(100%,177\.777778dvh\);height:auto;max-height:100dvh;aspect-ratio:16\/9;flex:none;border:0;border-radius:0;box-shadow:none\}/);
-  assert.match(fullscreen, /\.preview-fullscreen \.channel-tv-stage \.remote-bar\{[^}]*left:auto;right:12px;bottom:12px/);
-  assert.match(fullscreen, /\.preview-fullscreen \.channel-tv-stage \.preview-heading\{[^}]*top:12px;right:12px/);
-  assert.match(fullscreen, /\.preview-fullscreen \.preview-heading\[hidden\],\.preview-fullscreen \.remote-bar\[hidden\]/);
+  assert.match(fullscreen, /body:has\(\.preview-fullscreen\)\{overflow:hidden\}/);
+  assert.match(fullscreen, /\.channel-presentation.preview-fullscreen\{width:100vw\}/);
+  assert.match(fullscreen, /\.preview-fullscreen \.channel-tv-stage \.tv-frame\{width:100%;height:100%;max-width:none;max-height:none;aspect-ratio:auto/);
+  assert.match(fullscreen, /@media\(max-width:690px\)\{\.preview-fullscreen \.channel-tv-stage \.tv-frame\{width:100%;height:100%;max-height:none;aspect-ratio:auto\}\}/);
+  assert.match(fullscreen, /@container \(max-width:700px\)/);
+  assert.match(fullscreen, /\.preview-fullscreen:not\(\.clean-view\) \.tv-screen\{padding-top:76px\}/);
+  assert.match(fullscreen, /\.preview-fullscreen \.tv-grid \.tv-items\{display:grid;grid-template-columns:repeat\(auto-fit/);
+  assert.match(fullscreen, /\.preview-fullscreen \.channel-dock-handle\{border-color:#62686c;background:#2d3033/);
+  assert.match(css, /\.preview-fullscreen \.channel-tv-stage \.remote-bar\{[^}]*left:auto;right:12px;bottom:12px/);
+  assert.match(css, /\.preview-fullscreen \.channel-tv-stage \.preview-heading\{[^}]*top:12px;right:12px/);
+  assert.match(css, /\.preview-fullscreen \.preview-heading\[hidden\],\.preview-fullscreen \.remote-bar\[hidden\]/);
 });
 
 test('native fullscreen success and rejection keep one Preview and return focus', async () => {
