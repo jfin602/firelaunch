@@ -5,7 +5,8 @@ import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
 import { televisionFromSpec, initialState, itemFocusId, navFocusId } from '@firelaunch/tv';
-import { Preview, PreviewArtwork } from '../src/Preview.js';
+import { Preview, PreviewArtwork, catalogContentId, ownerBookPreviewContent } from '../src/Preview.js';
+import type { CatalogSnapshot } from '../src/api.js';
 import { keyboardCommand, navigate, reconcile } from '../src/preview-state.js';
 import { studioVideoSource } from '../src/VideoPlayer.js';
 import { createHash } from 'node:crypto';
@@ -71,6 +72,39 @@ test('hosted Preview projects saved private artwork visually without changing Ch
     await waitFor(() => assert.equal(view.container.querySelector('.studio-private-artwork img')?.getAttribute('src'), 'blob:http://localhost/studio-art'));
     assert.match(view.container.querySelector('.studio-private-artwork')?.textContent ?? '', /artwork preview only/);
   } finally { cleanup(); globalThis.fetch = previousFetch; URL.createObjectURL = create; URL.revokeObjectURL = revoke; }
+});
+
+test('owner book preview validates a same-origin private audiobook without saving its route', () => {
+  const spec = fixtureChannel(), owner = `cr_${'a'.repeat(32)}`, bookId = `ci_${'b'.repeat(32)}`;
+  const audioId = `ma_${'c'.repeat(32)}`, objectId = `ma_${'d'.repeat(32)}`;
+  const contentId = catalogContentId(bookId);
+  spec.content = [{ id: contentId, title: 'Field Guide', description: 'A book',
+    artwork: 'assets/ocean.jpg', presentation: 'information' }, ...spec.content];
+  const source = { schemaVersion: 1 as const, id: `src_${'e'.repeat(32)}`, creatorAccountId: owner,
+    projectId: spec.id, type: 'creator_upload' as const, state: 'discovered' as const,
+    permission: { retrieval: 'unknown' as const, tvDisplay: 'unknown' as const } };
+  const identifier = { provider: 'creator' as const, kind: 'upload_id' as const, value: 'book-1' };
+  const audio = { schemaVersion: 1 as const, id: audioId, creatorAccountId: owner, projectId: spec.id,
+    catalogItemId: bookId, kind: 'audio' as const, location: { type: 'private_object' as const, objectId },
+    tvDisplayRights: { status: 'unknown' as const, basis: 'none' as const, permittedUse: 'none' as const },
+    tvPlaybackRights: { status: 'cleared' as const, basis: 'creator_asserted' as const,
+      permittedUse: 'television_playback' as const, assertedAt: '2026-10-22T00:00:00.000Z' }, deliveryEligible: false };
+  const inventory = { schemaVersion: 1 as const, revision: 1, projectId: spec.id, creatorAccountId: owner,
+    sources: [source], items: [{ schemaVersion: 1 as const, id: bookId, creatorAccountId: owner,
+      projectId: spec.id, kind: 'book' as const,
+      sourceRecord: { sourceId: source.id, externalId: identifier, observedAt: '2026-10-22T00:00:00.000Z',
+        metadata: { title: 'Field Guide', author: 'A. Writer', narrator: 'A. Narrator' } },
+      externalIdentifiers: [identifier], mediaAssetIds: [audioId], audiobook: { audioAssetId: audioId } }],
+    mediaAssets: [audio], collections: [] } as CatalogSnapshot;
+  const before = JSON.stringify(spec);
+  const preview = ownerBookPreviewContent(spec, inventory, owner, 'https://studio.example');
+  assert.equal(preview[0]?.audiobook?.mediaUrl,
+    `https://studio.example/api/projects/${spec.id}/private-objects/${objectId}/audio`);
+  assert.doesNotThrow(() => televisionFromSpec({ ...spec, content: preview }));
+  assert.equal(JSON.stringify(spec), before);
+  assert.equal(ownerBookPreviewContent(spec, inventory, `cr_${'f'.repeat(32)}`, 'https://studio.example')[0]?.audiobook, undefined);
+  inventory.mediaAssets[0]!.tvPlaybackRights = { status: 'revoked', basis: 'none', permittedUse: 'none' };
+  assert.equal(ownerBookPreviewContent(spec, inventory, owner, 'https://studio.example')[0]?.audiobook, undefined);
 });
 
 test('editor and TV artwork show an honest fallback when the saved source is unavailable', () => {

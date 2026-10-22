@@ -16,6 +16,30 @@ export function catalogContentId(itemId: string): string {
   return `item_${bytesToHex(sha256(new TextEncoder().encode(`catalog-content-v1\0${itemId}`))).slice(0, 32)}`;
 }
 
+export function ownerBookPreviewContent(spec: ChannelSpec, inventory: CatalogSnapshot, accountId: string, origin: string): ContentItem[] {
+  return spec.content.map(content => {
+    if (inventory.projectId !== spec.id || inventory.creatorAccountId !== accountId || content.presentation !== 'information') return content;
+    const book = inventory.items.find(value => value.kind === 'book' && value.projectId === spec.id && value.creatorAccountId === accountId && catalogContentId(value.id) === content.id);
+    if (!book) return content;
+    const metadata = { ...book.sourceRecord.metadata, ...book.creatorOverrides };
+    const attached = inventory.mediaAssets.find(value => value.id === book.audiobook?.audioAssetId && value.catalogItemId === book.id &&
+      value.projectId === spec.id && value.creatorAccountId === accountId && value.kind === 'audio' &&
+      value.tvPlaybackRights?.status === 'cleared');
+    // The TV contract validates absolute HTTP(S) media URLs. Resolve the owner-only route
+    // against this Studio origin for the transient preview, never for the saved ChannelSpec.
+    const privateAudioUrl = attached?.location.type === 'private_object'
+      ? new URL(`/api/projects/${encodeURIComponent(spec.id)}/private-objects/${encodeURIComponent(attached.location.objectId)}/audio`, origin).href : undefined;
+    const publicAudioUrl = attached?.location.type === 'https' && attached.deliveryEligible &&
+      content.audiobook?.mediaUrl === attached.location.url ? attached.location.url : undefined;
+    const { audiobook: _previousAudio, ...safeContent } = content;
+    return { ...safeContent, ...(metadata.author ? { author: metadata.author } : {}),
+      ...(metadata.series ? { series: metadata.series.slice(0, 80) } : {}),
+      ...(metadata.narrator ? { narrator: metadata.narrator } : {}),
+      ...(metadata.publicationDate ? { publicationDate: metadata.publicationDate } : {}),
+      ...(privateAudioUrl || publicAudioUrl ? { audiobook: { mediaUrl: privateAudioUrl ?? publicAudioUrl! } } : {}) };
+  });
+}
+
 export function eligibleStaticImageContent(spec: ChannelSpec, inventory: CatalogSnapshot | null, accountId: string | undefined): ContentItem[] {
   if (!accountId) return spec.content;
   if (!inventory || inventory.projectId !== spec.id || inventory.creatorAccountId !== accountId) return [];
@@ -51,25 +75,8 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
       [...data.items, ...data.mediaAssets].every(value => value.projectId === spec.id && value.creatorAccountId === accountId)) setInventory(data); }).catch(() => undefined);
     return () => { active = false; };
   }, [spec.id, hosted, accountId, libraryRevision]);
-  const previewContent = spec.content.map(content => {
-    if (!hosted || !inventory || inventory.projectId !== spec.id || inventory.creatorAccountId !== accountId || content.presentation !== 'information') return content;
-    const book = inventory.items.find(value => value.kind === 'book' && value.projectId === spec.id && value.creatorAccountId === accountId && catalogContentId(value.id) === content.id);
-    if (!book) return content;
-    const metadata = { ...book.sourceRecord.metadata, ...book.creatorOverrides };
-    const attached = inventory.mediaAssets.find(value => value.id === book.audiobook?.audioAssetId && value.catalogItemId === book.id &&
-      value.projectId === spec.id && value.creatorAccountId === accountId && value.kind === 'audio' &&
-      value.tvPlaybackRights?.status === 'cleared');
-    const privateAudioUrl = attached?.location.type === 'private_object'
-      ? `/api/projects/${encodeURIComponent(spec.id)}/private-objects/${encodeURIComponent(attached.location.objectId)}/audio` : undefined;
-    const publicAudioUrl = attached?.location.type === 'https' && attached.deliveryEligible &&
-      content.audiobook?.mediaUrl === attached.location.url ? attached.location.url : undefined;
-    const { audiobook: _previousAudio, ...safeContent } = content;
-    return { ...safeContent, ...(metadata.author ? { author: metadata.author } : {}),
-      ...(metadata.series ? { series: metadata.series.slice(0, 80) } : {}),
-      ...(metadata.narrator ? { narrator: metadata.narrator } : {}),
-      ...(metadata.publicationDate ? { publicationDate: metadata.publicationDate } : {}),
-      ...(privateAudioUrl || publicAudioUrl ? { audiobook: { mediaUrl: privateAudioUrl ?? publicAudioUrl! } } : {}) };
-  });
+  const previewContent = hosted && inventory && accountId
+    ? ownerBookPreviewContent(spec, inventory, accountId, window.location.origin) : spec.content;
   const tv = televisionFromSpec({ ...spec, content: previewContent });
   const [state, setState] = useState<TvState | null>(null);
   const current = reconcile(tv, state);
