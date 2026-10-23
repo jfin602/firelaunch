@@ -1,4 +1,4 @@
-# FireLaunch Known Issues and Open Qualification Gates
+# VegaLaunch Known Issues and Open Qualification Gates
 
 Updated 2026-10-18. See [CURRENT-STATE](docs/CURRENT-STATE.md) and each dated closeout before considering a gate complete. Historical defects and old prompts remain in their original task records.
 

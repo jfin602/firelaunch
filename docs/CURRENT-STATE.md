@@ -1,5 +1,11 @@
 # VegaLaunch Current State
 
+## 2026-10-23 rebrand staging qualification
+
+The VegaLaunch product rename is staged at unchanged `0.9.4` from product commit `e3bad07a0442aa8d81eec0b24492e0c8a669d57a`; see [rebrand closeout](tasks/rebrand-vegalaunch/closeout.md). The canonical OAuth origin is `https://vegalaunch.jfin.dev`. Owner sign-in, existing projects, new private channel save/reload/relogin, fresh VegaLaunch source metadata, and Studio video preview passed. Native x86_64 Release build passed but the VirtualDevice did not remain connected for install/visual proof. One historical creator video title and one saved creator-owned source filename still show the old name; public/worker export was not rerun. Overall rebrand qualification is **NOT GREEN**. The protected staging release is `20261023T131759Z-eddc471ae38d`, schema 15, with the prior release retained for rollback; public FREE release #1 pointer remains unchanged.
+
+---
+
 ## Latest owner-approved P9 issue correction — P9-011 (2026-10-22 local)
 
 **Documentation-only authoring:** [P9-011](tasks/p9-polish/issues/P9-011-mixed-media-sections.md) and [`c9-multimedia-editor` manual prompt](tasks/c9-multimedia-editor/README.md) were assessed, planned and written. Fix the Channel Editor's video-only **Choose content** list by binding eligible owned Audio and Book items into existing Hero/Rows/Grid; preserve P8D typed detail/player and correct rights/export limits. **No code changes, stage deployment, version bump, native proof or user-browser acceptance occurred through authoring.** P9 mainline P1–P11 remain as planned and must report P9-011 at final P11 closeout. Correction defaults to unchanged actual P9 version, subject to executing agent's safe preflight. Public FREE release #1 protected; original live publishing still deferred to Phase 10.

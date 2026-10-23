@@ -1,4 +1,4 @@
-# FireLaunch MVP Roadmap
+# VegaLaunch MVP Roadmap
 
 ## Owner P0 addition — P9-011 / c9-multimedia-editor (2026-10-22 local)
 
