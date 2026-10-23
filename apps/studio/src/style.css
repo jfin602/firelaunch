@@ -1142,3 +1142,23 @@ body:has(.preview-fullscreen){overflow:hidden}
 .fl-modal-compact { width: min(440px, calc(100vw - 24px)); position: relative; z-index: 1011; }
 .fl-modal-compact .fl-modal-header { border: 0; padding-bottom: 4px; }
 .fl-modal-compact .fl-modal-footer { margin: 4px 24px 24px; }
+
+/* Studio identity uses the supplied transparent artwork, separate from creator channel branding. */
+.studio-brand { width: min(100%, 360px); margin-bottom: 28px; }
+.studio-brand img { display: block; width: 100%; height: auto; object-fit: contain; }
+.studio-brand .studio-brand-icon { display: none; }
+.wordmark { display: block; min-width: 0; width: calc(100% - 20px); }
+.wordmark .studio-brand { width: 100%; margin: 0; }
+.wordmark small { margin-top: 6px; font-size: 9px; letter-spacing: 1.8px; }
+@media (min-width: 601px) and (max-width: 1200px) {
+  .wordmark { width: 100%; }
+}
+@media (max-width: 900px) {
+  .wordmark { width: min(210px, 100%); }
+}
+@media (max-width: 420px) {
+  .wordmark { width: 56px; flex: none; }
+  .wordmark .studio-brand-full { display: none; }
+  .wordmark .studio-brand-icon { display: block; width: 42px; height: 42px; }
+  .wordmark small { display: none; }
+}
