@@ -37,7 +37,7 @@ test('Library uses one per-item Publish action and has no Generate flow', async 
     await screen.findByRole('button', { name: 'Select First Book · book' });
     assert.equal(screen.queryByText(/Generate Channel Draft/i), null);
     assert.equal(screen.queryByRole('button', { name: /Generate .* draft/ }), null);
-    fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publish First Book · book' }));
     await waitFor(() => assert.equal(nextRevision, 2));
     assert.deepEqual(calls[0], { expectedRevision: 1, expectedCatalogRevision: 2, itemId, action: 'publish' });
   } finally { cleanup(); globalThis.fetch = previous; }

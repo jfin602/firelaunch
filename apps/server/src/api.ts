@@ -492,12 +492,14 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
                   (module.kind === 'rail' || module.kind === 'grid') && module.contentIds.length < 100 &&
                   shelfTitles.has(module.title)).map(module => ({ page, module })))[0];
                 const targetPage = shelf?.page ?? home;
-                const rail = shelf?.module ?? home.modules.find(module => module.kind === 'rail' && module.contentIds.length < 100);
+                const defaultTitle = item.kind === 'book' ? 'Books' : item.kind === 'audio' ? 'Audio' : 'Videos';
+                const rail = shelf?.module ?? home.modules.find(module => module.kind === 'rail' && module.contentIds.length < 100 &&
+                  (item.kind === 'video' || module.title === defaultTitle));
                 if (rail && (rail.kind === 'rail' || rail.kind === 'grid')) spec = applyMutation(spec, { type: 'updateModule', pageId: targetPage.id,
                   module: { ...rail, contentIds: [...rail.contentIds, contentId] } });
                 else spec = applyMutation(spec, { type: 'addModule', pageId: home.id,
                   module: { id: `mod_${createHash('sha256').update(`media-inclusion-v1\0${id}\0${item.kind}`).digest('hex').slice(0, 32)}`,
-                    kind: 'rail', title: item.kind === 'book' ? 'Books' : item.kind === 'audio' ? 'Audio' : 'Videos', contentIds: [contentId] } });
+                    kind: 'rail', title: defaultTitle, contentIds: [contentId] } });
               }
             }
             respond(response, 200, spec === current.spec ? current : await hostedRepository.update(principal, id, current.revision, spec)); return;
