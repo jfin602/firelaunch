@@ -97,7 +97,7 @@ try {
     assert.ok(state?.visible && state.root.includes(expected), `${label}: visible UI missing`);
     assert.equal(errors.length, 0, `${label}: browser console/runtime errors`);
   }
-  await check(first, 'signed-out', 'Sign in to FireLaunch');
+  await check(first, 'signed-out', 'Sign in to VegaLaunch');
   signedIn = true;
   await check(first, 'signed-in', 'Startup smoke channel');
   const { targetId } = await first.send('Target.createTarget', { url: 'about:blank' });
