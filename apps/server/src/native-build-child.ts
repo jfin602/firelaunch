@@ -20,13 +20,13 @@ function safeTail(value: string): string {
 
 async function assertSandbox(): Promise<void> {
   if (process.version !== PINNED.node ||
-    Object.keys(process.env).some(key => /^(?:PG|DATABASE_|AWS_|GOOGLE_|OIDC_|SESSION_|FIRELAUNCH_)/.test(key)))
+    Object.keys(process.env).some(key => /^(?:PG|DATABASE_|AWS_|GOOGLE_|OIDC_|SESSION_|VEGALAUNCH_)/.test(key)))
     deny('Sandbox environment or toolchain invalid');
   if ((await readFile('/proc/1/comm', 'utf8')).trim() !== 'node' &&
       (await readFile('/proc/1/comm', 'utf8')).trim() !== 'bwrap') deny('Private PID namespace missing');
   if ((await readFile('/proc/net/route', 'utf8')).trim().split('\n').length > 1)
     deny('Sandbox network route is present');
-  for (const forbidden of ['/run/postgresql','/srv/firelaunch','/etc/firelaunch',
+  for (const forbidden of ['/run/postgresql','/srv/vegalaunch','/etc/vegalaunch',
     '/home/deploy','/root/.aws','/root/.ssh']) {
     if (await lstat(forbidden).then(() => true, () => false)) deny('Control-plane path visible');
   }

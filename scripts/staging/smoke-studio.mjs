@@ -46,7 +46,7 @@ const server = createServer(async (request, response) => {
   }
 });
 
-const profile = await mkdtemp(join(tmpdir(), 'firelaunch-studio-smoke-'));
+const profile = await mkdtemp(join(tmpdir(), 'vegalaunch-studio-smoke-'));
 let chrome;
 try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));

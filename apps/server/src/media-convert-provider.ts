@@ -15,11 +15,11 @@ const configSchema = z.strictObject({
 });
 export type MediaConvertConfig = z.infer<typeof configSchema>;
 export function mediaConvertConfigFromEnv(env: NodeJS.ProcessEnv): MediaConvertConfig {
-  const config = configSchema.parse({ awsAccountId: env.FIRELAUNCH_MEDIACONVERT_ACCOUNT,
-    awsRegion: env.FIRELAUNCH_MEDIA_AWS_REGION, queueArn: env.FIRELAUNCH_MEDIACONVERT_QUEUE_ARN,
-    roleArn: env.FIRELAUNCH_MEDIACONVERT_ROLE_ARN,
-    originalsBucket: env.FIRELAUNCH_MEDIA_ORIGINALS_BUCKET,
-    stagingBucket: env.FIRELAUNCH_MEDIA_DELIVERY_BUCKET });
+  const config = configSchema.parse({ awsAccountId: env.VEGALAUNCH_MEDIACONVERT_ACCOUNT,
+    awsRegion: env.VEGALAUNCH_MEDIA_AWS_REGION, queueArn: env.VEGALAUNCH_MEDIACONVERT_QUEUE_ARN,
+    roleArn: env.VEGALAUNCH_MEDIACONVERT_ROLE_ARN,
+    originalsBucket: env.VEGALAUNCH_MEDIA_ORIGINALS_BUCKET,
+    stagingBucket: env.VEGALAUNCH_MEDIA_DELIVERY_BUCKET });
   if (!config.queueArn.includes(`:${config.awsRegion}:${config.awsAccountId}:`) ||
     !config.roleArn.includes(`::${config.awsAccountId}:`) ||
     config.originalsBucket === config.stagingBucket) throw new Error('MediaConvert account, Region or buckets differ');
@@ -65,8 +65,8 @@ export class AwsMediaConvertProvider implements ManagedMediaProvider {
       `s3://${this.config.stagingBucket}/${input.outputStagingPrefix}`;
     const response = await this.client.send(new CreateJobCommand({
       ClientRequestToken: input.intentToken, Queue: this.config.queueArn, Role: this.config.roleArn,
-      Settings: settings, UserMetadata: { firelaunchIntent: input.intentToken,
-        firelaunchProfile: this.profile.hash } }));
+      Settings: settings, UserMetadata: { vegalaunchIntent: input.intentToken,
+        vegalaunchProfile: this.profile.hash } }));
     if (!response.Job?.Id) throw new Error('MediaConvert submit did not return a job ID');
     return { awsAccountId: this.config.awsAccountId, awsRegion: this.config.awsRegion,
       awsJobId: response.Job.Id };
@@ -85,8 +85,8 @@ export class AwsMediaConvertProvider implements ManagedMediaProvider {
     expectedSettings.OutputGroups![0]!.OutputGroupSettings!.HlsGroupSettings!.Destination = stagingUri;
     return { id: job.Id, status: job.Status, queueArn: job.Queue ?? '', roleArn: job.Role ?? '',
       originalUri, stagingUri, settingsMatch: canonical(job.Settings) === canonical(expectedSettings),
-      intentToken: job.UserMetadata?.firelaunchIntent ?? '',
-      profileHash: job.UserMetadata?.firelaunchProfile ?? '',
+      intentToken: job.UserMetadata?.vegalaunchIntent ?? job.UserMetadata?.firelaunchIntent ?? '',
+      profileHash: job.UserMetadata?.vegalaunchProfile ?? job.UserMetadata?.firelaunchProfile ?? '',
       ...(job.ErrorCode !== undefined ? { errorCode: String(job.ErrorCode) } : {}),
       ...(heights?.length ? { outputHeights: heights } : {}),
       ...(durations?.length ? { durationMs: Math.max(...durations) } : {}) };
@@ -107,7 +107,7 @@ export class AwsMediaConvertProvider implements ManagedMediaProvider {
       const result = await this.client.send(new ListJobsCommand({ MaxResults: 20,
         Order: 'DESCENDING', ...(cursor ? { NextToken: cursor } : {}) }));
       for (const raw of result.Jobs ?? []) {
-        if (raw.UserMetadata?.firelaunchIntent !== input.intentToken) continue;
+        if ((raw.UserMetadata?.vegalaunchIntent ?? raw.UserMetadata?.firelaunchIntent) !== input.intentToken) continue;
         const job = this.normalize(raw);
         if (job.queueArn !== this.config.queueArn || job.roleArn !== this.config.roleArn ||
           job.settingsMatch !== true ||

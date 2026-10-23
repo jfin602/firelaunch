@@ -8,7 +8,7 @@ dist/
 build/
 artifacts/
 *.vpkg
-.firelaunch-data/
+.vegalaunch-data/
 .generated/
 .codex-runs/
 .tmp/

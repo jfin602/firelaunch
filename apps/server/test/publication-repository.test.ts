@@ -24,14 +24,14 @@ import { generateProject } from '../../../packages/generator/src/index.js';
 import type { S3MediaStorage } from '../src/media-storage.js';
 import { reserveRevokedMediaInvalidation, finishMediaInvalidation } from '../src/media-invalidation.js';
 
-const databaseTest = process.env.FIRELAUNCH_TEST_DATABASE_URL ? test : test.skip;
+const databaseTest = process.env.VEGALAUNCH_TEST_DATABASE_URL ? test : test.skip;
 const id = (prefix: string) => `${prefix}_${randomUUID().replaceAll('-', '')}`;
 const sha256 = (bytes: string) => createHash('sha256').update(bytes).digest('hex');
 
 databaseTest('publication approvals, immutable CAS activation, rights-aware rollback and restart', async () => {
-  const base = process.env.FIRELAUNCH_TEST_DATABASE_URL!;
+  const base = process.env.VEGALAUNCH_TEST_DATABASE_URL!;
   const admin = new Pool({ connectionString: base });
-  const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const name = `vegalaunch_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(base); url.pathname = `/${name}`;
   await admin.query(`CREATE DATABASE ${name}`);
   let first: HostedProjectRepository | undefined;
@@ -112,7 +112,7 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     const verifier = new OidcVerifier({ issuer, clientId: 'publication-test', authorizationEndpoint: `${issuer}/authorize`,
       tokenEndpoint: `${issuer}/token`, jwksUri: `${issuer}/keys`, redirectUri: `${origin}/api/auth/callback` });
     const auth = new HostedAuth(verifier, origin, identity => first!.accountForIdentity(identity));
-    directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-publication-api-'));
+    directory = await mkdtemp(path.join(tmpdir(), 'vegalaunch-publication-api-'));
     api = createApi(new ProjectRepository(directory), undefined, { mode: 'hosted', auth }, first);
     api.listen(portAddress.port, '127.0.0.1'); await once(api, 'listening');
     const login = async (subject: 'owner' | 'foreign') => {
@@ -125,7 +125,7 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
       const callback = await fetch(`${origin}/api/auth/callback?state=${location.searchParams.get('state')}&code=fixture`,
         { headers: { cookie: started.headers.get('set-cookie')!.split(';')[0]! }, redirect: 'manual' });
       assert.equal(callback.status, 302);
-      const cookie = callback.headers.get('set-cookie')!.match(/firelaunch_local_session=[^;]+/)![0];
+      const cookie = callback.headers.get('set-cookie')!.match(/vegalaunch_local_session=[^;]+/)![0];
       const session = await (await fetch(`${origin}/api/auth/session`, { headers: { cookie } })).json();
       return { cookie, csrf: session.csrfToken as string };
     };
@@ -287,7 +287,7 @@ databaseTest('publication approvals, immutable CAS activation, rights-aware roll
     assert.deepEqual(JSON.parse(generated.files.get('src/release-config.json')!), {
       deploymentId, channelId: project.id, packageId: 'com.example.publication', origin: clientOrigin
     });
-    clientDirectory = await mkdtemp(path.join(process.cwd(), 'node_modules', '.firelaunch-convergence-'));
+    clientDirectory = await mkdtemp(path.join(process.cwd(), 'node_modules', '.vegalaunch-convergence-'));
     await mkdir(path.join(clientDirectory, 'src'));
     await writeFile(path.join(clientDirectory, 'package.json'), '{"type":"module"}');
     for (const name of ['src/remote-release.js', 'src/sha256.js', 'src/tv-runtime.js'])

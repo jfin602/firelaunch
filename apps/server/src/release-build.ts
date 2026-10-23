@@ -24,7 +24,7 @@ const conflict = (message: string): never => { throw new RepositoryError('CONFLI
 const invalid = (message: string): never => { throw new RepositoryError('INVALID_INPUT', message); };
 export type ReleaseIdentity = Readonly<{ releaseId: string; sequence: number }>;
 export type ReleaseBuildInput = Readonly<{
-  format: 'firelaunch-vega-build-input-v1'; projectId: string; creatorAccountId: string;
+  format: 'vegalaunch-vega-build-input-v1'; projectId: string; creatorAccountId: string;
   specRevision: number; generatorFingerprint: string; sourceRevision: number;
   deploymentId: string; packageId: string; manifestEndpoint: string;
   publishedRelease: ReleaseIdentity; files: Readonly<Record<string, string>>;
@@ -108,7 +108,7 @@ export async function createReleaseBuildInput(project: ChannelProject, source: S
     conflict('Unsupported Vega package or app identity');
   const fileSha256 = Object.freeze(Object.fromEntries(Object.entries(files).map(([name, body]) => [name, sha256(body)])));
   const sourceHash = sha256(JSON.stringify(fileSha256));
-  const identity = { format: 'firelaunch-vega-build-input-v1' as const, projectId: project.id,
+  const identity = { format: 'vegalaunch-vega-build-input-v1' as const, projectId: project.id,
     creatorAccountId: deployment.creatorAccountId, specRevision: project.revision,
     generatorFingerprint: generated.fingerprint, sourceRevision: source.specRevision,
     deploymentId: deployment.id, packageId: deployment.packageId, manifestEndpoint: endpoint,
@@ -135,7 +135,7 @@ export async function materializeReleaseBuildInput(input: ReleaseBuildInput, des
   if (sha256(JSON.stringify(input.fileSha256)) !== input.sourceHash ||
     sha256(JSON.stringify({ ...input, files: undefined, fingerprint: undefined })) !== input.fingerprint)
     conflict('Build input fingerprint changed');
-  if (input.format !== 'firelaunch-vega-build-input-v1' || !/^ch_[a-f0-9]{32}$/.test(input.projectId) ||
+  if (input.format !== 'vegalaunch-vega-build-input-v1' || !/^ch_[a-f0-9]{32}$/.test(input.projectId) ||
     !/^cr_[a-f0-9]{32}$/.test(input.creatorAccountId) || !/^dep_[a-f0-9]{32}$/.test(input.deploymentId) ||
     !/^rel_[a-f0-9]{32}$/.test(input.publishedRelease.releaseId) ||
     !Number.isSafeInteger(input.publishedRelease.sequence) || input.publishedRelease.sequence < 1 ||

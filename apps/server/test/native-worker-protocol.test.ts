@@ -12,7 +12,7 @@ const impostor = generateKeyPairSync('ed25519');
 const now = Date.now();
 const vpkg = Buffer.alloc(2048, 7); // Synthetic protocol fixture, never native qualification.
 const input = {
-  format: 'firelaunch-vega-build-input-v1', projectId: `ch_${'1'.repeat(32)}`,
+  format: 'vegalaunch-vega-build-input-v1', projectId: `ch_${'1'.repeat(32)}`,
   creatorAccountId: `cr_${'2'.repeat(32)}`, specRevision: 7, sourceRevision: 7,
   generatorFingerprint: '3'.repeat(64), deploymentId: `dep_${'4'.repeat(32)}`,
   packageId: 'com.creator.channel', manifestEndpoint: `https://creator.example.tv/public/v1/deployments/dep_${'4'.repeat(32)}/current`,
@@ -88,13 +88,13 @@ test('worker runner refuses missing isolation proof and canceled claims before a
     executablePath: '/usr/bin:/bin' };
   await assert.rejects(runQualifiedWorkerClaim(claim, configuration),
     /No qualified external boundary|Credential-bearing worker environment|Worker CPU, memory, process or dedicated filesystem limit missing/);
-  const prior = process.env.FIRELAUNCH_TEST_SECRET;
-  process.env.FIRELAUNCH_TEST_SECRET = 'synthetic-sentinel';
+  const prior = process.env.VEGALAUNCH_TEST_SECRET;
+  process.env.VEGALAUNCH_TEST_SECRET = 'synthetic-sentinel';
   try {
     await assert.rejects(runQualifiedWorkerClaim(claim, configuration), /Credential-bearing worker environment/);
   } finally {
-    if (prior === undefined) delete process.env.FIRELAUNCH_TEST_SECRET;
-    else process.env.FIRELAUNCH_TEST_SECRET = prior;
+    if (prior === undefined) delete process.env.VEGALAUNCH_TEST_SECRET;
+    else process.env.VEGALAUNCH_TEST_SECRET = prior;
   }
   const canceled = new AbortController(); canceled.abort();
   await assert.rejects(runQualifiedWorkerClaim(claim, configuration, canceled.signal), { code: 'CONFLICT' });

@@ -7,8 +7,8 @@ import { verifyTrustedMediaConvertJob } from '../src/media-convert-event.js';
 const account = '123456789012';
 const region = 'us-east-2';
 const config: MediaConvertConfig = { awsAccountId: account, awsRegion: region,
-  queueArn: `arn:aws:mediaconvert:${region}:${account}:queues/FireLaunch`,
-  roleArn: `arn:aws:iam::${account}:role/FireLaunchMediaConvert`,
+  queueArn: `arn:aws:mediaconvert:${region}:${account}:queues/VegaLaunch`,
+  roleArn: `arn:aws:iam::${account}:role/VegaLaunchMediaConvert`,
   originalsBucket: 'originals.example', stagingBucket: 'staging.example' };
 const prefix = `media/${'a'.repeat(32)}/${'b'.repeat(32)}/${'c'.repeat(32)}`;
 const originalKey = `${prefix}/original/${'d'.repeat(32)}.mp4`;

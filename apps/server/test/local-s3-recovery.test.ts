@@ -10,32 +10,32 @@ import { HostedProjectRepository } from '../src/hosted-repository.js';
 import { PrivateObjectService, S3PrivateObjectStore } from '../src/private-objects.js';
 import { inspectRecoveryArchive } from '../src/recovery.js';
 
-const enabled = process.env.FIRELAUNCH_LOCAL_S3_TEST === '1';
+const enabled = process.env.VEGALAUNCH_LOCAL_S3_TEST === '1';
 (enabled ? test : test.skip)('actual MinIO S3 buckets and operations CLI backup/restore stay separate', async () => {
-  const base = process.env.FIRELAUNCH_DATABASE_URL!;
+  const base = process.env.VEGALAUNCH_DATABASE_URL!;
   const suffix = randomUUID().replaceAll('-', '').slice(0, 12);
-  const sourceName = `firelaunch_c2_drill_${suffix}`;
-  const restoreName = `firelaunch_restore_${suffix}`;
+  const sourceName = `vegalaunch_c2_drill_${suffix}`;
+  const restoreName = `vegalaunch_restore_${suffix}`;
   const sourceUrl = new URL(base); sourceUrl.pathname = `/${sourceName}`;
   const restoreUrl = new URL(base); restoreUrl.pathname = `/${restoreName}`;
   const adminUrl = new URL(base); adminUrl.pathname = '/postgres';
   const admin = new Pool({ connectionString: adminUrl.toString() });
-  const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-c2-s3-'));
+  const directory = await mkdtemp(path.join(tmpdir(), 'vegalaunch-c2-s3-'));
   const archivePath = path.join(directory, 'backup.flrec');
-  const storage = { region: process.env.FIRELAUNCH_OBJECT_REGION!, endpoint: process.env.FIRELAUNCH_OBJECT_ENDPOINT!,
-    accessKeyId: process.env.FIRELAUNCH_OBJECT_ACCESS_KEY_ID!, secretAccessKey: process.env.FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY!, allowLocalHttp: true };
-  const source = new S3PrivateObjectStore(process.env.FIRELAUNCH_OBJECT_BUCKET!, storage);
-  const destination = new S3PrivateObjectStore(process.env.FIRELAUNCH_RESTORE_OBJECT_BUCKET!, storage);
+  const storage = { region: process.env.VEGALAUNCH_OBJECT_REGION!, endpoint: process.env.VEGALAUNCH_OBJECT_ENDPOINT!,
+    accessKeyId: process.env.VEGALAUNCH_OBJECT_ACCESS_KEY_ID!, secretAccessKey: process.env.VEGALAUNCH_OBJECT_SECRET_ACCESS_KEY!, allowLocalHttp: true };
+  const source = new S3PrivateObjectStore(process.env.VEGALAUNCH_OBJECT_BUCKET!, storage);
+  const destination = new S3PrivateObjectStore(process.env.VEGALAUNCH_RESTORE_OBJECT_BUCKET!, storage);
   const keys: string[] = [];
   let repository: HostedProjectRepository | undefined;
   try {
-    assert.notEqual(process.env.FIRELAUNCH_OBJECT_BUCKET, process.env.FIRELAUNCH_RESTORE_OBJECT_BUCKET);
+    assert.notEqual(process.env.VEGALAUNCH_OBJECT_BUCKET, process.env.VEGALAUNCH_RESTORE_OBJECT_BUCKET);
     assert.equal((await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [sourceName])).rowCount, 0);
     assert.equal((await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [restoreName])).rowCount, 0);
     await admin.query(`CREATE DATABASE ${sourceName}`);
     repository = await HostedProjectRepository.connect(sourceUrl.toString());
     // Storage drill data is synthetic; this does not represent a Google login.
-    const principal = { issuer: 'urn:firelaunch:c2-storage-drill', subject: suffix, email: 'drill@example.invalid', accountId: '' };
+    const principal = { issuer: 'urn:vegalaunch:c2-storage-drill', subject: suffix, email: 'drill@example.invalid', accountId: '' };
     principal.accountId = await repository.accountForIdentity(principal);
     const project = await repository.create(principal, { title: 'Storage drill' });
     const bytes = Buffer.concat([Buffer.from('%PDF-1.4\n'), randomBytes(37), Buffer.from('\n%%EOF')]);
@@ -44,11 +44,11 @@ const enabled = process.env.FIRELAUNCH_LOCAL_S3_TEST === '1';
     keys.push(row.object_key);
     assert.deepEqual(await source.get(row.object_key), bytes);
     await assert.rejects(destination.get(row.object_key));
-    const cliEnv = { ...process.env, FIRELAUNCH_DATABASE_URL: sourceUrl.toString(), FIRELAUNCH_RESTORE_DATABASE_URL: restoreUrl.toString() };
+    const cliEnv = { ...process.env, VEGALAUNCH_DATABASE_URL: sourceUrl.toString(), VEGALAUNCH_RESTORE_DATABASE_URL: restoreUrl.toString() };
     const ops = (...args: string[]) => spawnSync(process.execPath, ['--import', 'tsx', 'apps/server/src/operations-cli.ts', ...args], { cwd: process.cwd(), env: cliEnv, encoding: 'utf8' });
     assert.equal(ops('health').status, 0, 'source health');
     assert.equal(ops('backup', '--out', archivePath, '--retain-days', '1').status, 0, 'actual CLI backup');
-    const manifest = inspectRecoveryArchive(await readFile(archivePath), process.env.FIRELAUNCH_RECOVERY_KEY!);
+    const manifest = inspectRecoveryArchive(await readFile(archivePath), process.env.VEGALAUNCH_RECOVERY_KEY!);
     assert.equal(manifest.objects.length, 1);
     assert.equal(manifest.objects[0]?.sha256, item.sha256);
     assert.equal(ops('restore', '--in', archivePath).status, 0, 'actual CLI restore');

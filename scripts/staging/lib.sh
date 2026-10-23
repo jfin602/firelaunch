@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-base=/srv/firelaunch
-unit=firelaunch-staging.service
-env_file=/etc/firelaunch/staging.env
-drop_in=/etc/systemd/system/firelaunch-staging.service.d/aws.conf
-backup_dir=/var/backups/firelaunch-staging
-node_bin=/opt/firelaunch-staging-runtime/node24/bin/node
+base=/srv/vegalaunch
+unit=vegalaunch-staging.service
+env_file=/etc/vegalaunch/staging.env
+drop_in=/etc/systemd/system/vegalaunch-staging.service.d/aws.conf
+backup_dir=/var/backups/vegalaunch-staging
+node_bin=/opt/vegalaunch-staging-runtime/node24/bin/node
 die() { echo "$*" >&2; exit 1; }
 
 require_operator() {
@@ -43,7 +43,7 @@ require_layout() {
   local active_release link resolved
   [[ "$(systemctl show "$unit" -p User --value)" = deploy &&
      "$(systemctl show "$unit" -p WorkingDirectory --value)" = "$base/current" &&
-     "$(systemctl show "$unit" -p FragmentPath --value)" = /etc/systemd/system/firelaunch-staging.service ]] || die 'Unexpected staging unit identity or layout'
+     "$(systemctl show "$unit" -p FragmentPath --value)" = /etc/systemd/system/vegalaunch-staging.service ]] || die 'Unexpected staging unit identity or layout'
   systemctl show "$unit" -p ExecStart --value | grep -Fq "$node_bin $base/current/apps/server/dist/index.js" || die 'Unexpected staging ExecStart'
   [[ "$(systemctl show "$unit" -p ProtectSystem --value)" = strict ]] || die 'Staging filesystem protection changed'
   [[ -d "$base/releases" && -L "$base/current" && -x "$node_bin" ]] || die 'Staging release layout or Node runtime missing'
@@ -63,20 +63,20 @@ require_layout() {
   done < <(find "$active_release" -xdev -type l -print0)
   [[ "$(stat -c '%U:%G %a' "$env_file")" = 'root:root 600' ]] || die 'Staging environment protections changed'
   [[ -f "$drop_in" && "$(stat -c '%U:%G' "$drop_in")" = root:root ]] || die 'Prepared AWS service drop-in missing'
-  grep -Fxq 'Environment=AWS_PROFILE=firelaunch-staging-app' "$drop_in" || die 'Unexpected AWS service profile'
+  grep -Fxq 'Environment=AWS_PROFILE=vegalaunch-staging-app' "$drop_in" || die 'Unexpected AWS service profile'
   grep -Fxq 'Environment=AWS_CONFIG_FILE=/home/deploy/.aws/config' "$drop_in" || die 'Unexpected AWS config path'
-  if grep -Fxq 'FIRELAUNCH_OBJECT_AUTH=aws-profile' "$env_file"; then
-    ! grep -Eq '^FIRELAUNCH_OBJECT_ENDPOINT=.+' "$env_file" || die 'AWS profile cannot use a custom private-object endpoint'
+  if grep -Fxq 'VEGALAUNCH_OBJECT_AUTH=aws-profile' "$env_file"; then
+    ! grep -Eq '^VEGALAUNCH_OBJECT_ENDPOINT=.+' "$env_file" || die 'AWS profile cannot use a custom private-object endpoint'
   else
-    grep -Eq '^FIRELAUNCH_OBJECT_ACCESS_KEY_ID=' "$env_file" || die 'Existing object access key missing'
-    grep -Eq '^FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY=' "$env_file" || die 'Existing object secret key missing'
+    grep -Eq '^VEGALAUNCH_OBJECT_ACCESS_KEY_ID=' "$env_file" || die 'Existing object access key missing'
+    grep -Eq '^VEGALAUNCH_OBJECT_SECRET_ACCESS_KEY=' "$env_file" || die 'Existing object secret key missing'
   fi
 }
 
 health() {
   local local_code https_code
-  local_code="$(curl --max-time 5 -sS -o /dev/null -w '%{http_code}' -H 'Host: firelaunch.jfin.dev' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4184/api/auth/session 2>/dev/null || true)"
-  https_code="$(curl --max-time 8 -sS -o /dev/null -w '%{http_code}' --resolve firelaunch.jfin.dev:443:127.0.0.1 https://firelaunch.jfin.dev/api/auth/session 2>/dev/null || true)"
+  local_code="$(curl --max-time 5 -sS -o /dev/null -w '%{http_code}' -H 'Host: vegalaunch.jfin.dev' -H 'X-Forwarded-Proto: https' http://127.0.0.1:4184/api/auth/session 2>/dev/null || true)"
+  https_code="$(curl --max-time 8 -sS -o /dev/null -w '%{http_code}' --resolve vegalaunch.jfin.dev:443:127.0.0.1 https://vegalaunch.jfin.dev/api/auth/session 2>/dev/null || true)"
   [[ "$local_code" = 401 && "$https_code" = 401 ]]
 }
 

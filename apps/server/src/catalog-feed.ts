@@ -114,7 +114,7 @@ export function parseFeed(content: string, contentType: string): string {
       if (!title) invalid('Feed item needs a title');
       if (typeof item.id !== 'string') invalid('Feed item needs a stable ID');
       const description = text(item.summary), artworkUrl = text(item.image);
-      return { externalId: stableId(item.id), rawExternalId: item.id, kind: kind(item._firelaunch_kind), title,
+      return { externalId: stableId(item.id), rawExternalId: item.id, kind: kind(item._vegalaunch_kind ?? item._firelaunch_kind), title,
         ...(description ? { description } : {}), ...(artworkUrl ? { artworkUrl } : {}) };
     });
   } else if (['application/rss+xml', 'application/atom+xml', 'application/xml', 'text/xml'].includes(mime)) {
@@ -152,7 +152,7 @@ function parseXml(content: string): FeedRow[] {
       const title = current.title;
       if (!title) invalid('Feed item needs a title');
       const rawExternalId = current.guid || current.id || current.link || '';
-      rows.push({ externalId: stableId(rawExternalId), rawExternalId, kind: kind(current['firelaunch:kind']), title,
+      rows.push({ externalId: stableId(rawExternalId), rawExternalId, kind: kind(current['vegalaunch:kind'] ?? current['firelaunch:kind']), title,
         ...(current.description || current.summary ? { description: current.description || current.summary } : {}) });
       current = undefined;
     }

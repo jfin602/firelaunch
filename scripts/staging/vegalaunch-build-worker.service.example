@@ -1,17 +1,17 @@
 [Unit]
-Description=FireLaunch native Vega build queue worker (separate from staging API)
+Description=VegaLaunch native Vega build queue worker (separate from staging API)
 After=postgresql.service
-RequiresMountsFor=/var/lib/firelaunch-build
+RequiresMountsFor=/var/lib/vegalaunch-build
 
 [Service]
 Type=simple
-User=firelaunch-build
-Group=firelaunch-export
-EnvironmentFile=/etc/firelaunch-build/worker.env
-ExecStart=/usr/bin/flock -n /var/lib/firelaunch-build/worker.lock /opt/firelaunch-build-app/node/bin/node /opt/firelaunch-build-app/apps/server/dist/native-build-worker.js
+User=vegalaunch-build
+Group=vegalaunch-export
+EnvironmentFile=/etc/vegalaunch-build/worker.env
+ExecStart=/usr/bin/flock -n /var/lib/vegalaunch-build/worker.lock /opt/vegalaunch-build-app/node/bin/node /opt/vegalaunch-build-app/apps/server/dist/native-build-worker.js
 Restart=on-failure
 RestartSec=10
-WorkingDirectory=/opt/firelaunch-build-app
+WorkingDirectory=/opt/vegalaunch-build-app
 UMask=0077
 NoNewPrivileges=yes
 CapabilityBoundingSet=
@@ -28,8 +28,8 @@ ProtectKernelModules=yes
 ProtectControlGroups=yes
 ProtectClock=yes
 ProtectProc=invisible
-InaccessiblePaths=/srv/firelaunch /var/backups /etc/firelaunch /home /root
-ReadWritePaths=/var/lib/firelaunch-build
+InaccessiblePaths=/srv/vegalaunch /var/backups /etc/vegalaunch /home /root
+ReadWritePaths=/var/lib/vegalaunch-build
 RestrictAddressFamilies=AF_UNIX AF_NETLINK
 MemoryMax=2G
 CPUQuota=100%

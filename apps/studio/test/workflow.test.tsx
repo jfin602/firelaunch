@@ -17,7 +17,7 @@ Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.
 const { cleanup, fireEvent, render, screen, waitFor, within } = await import('@testing-library/react');
 
 test('Studio golden path creates, edits, refines, generates, blocks build, hands off and reloads', async () => {
-  const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-studio-'));
+  const directory = await mkdtemp(path.join(tmpdir(), 'vegalaunch-studio-'));
   const server = createApi(new ProjectRepository(directory), new MockProvider(), { mode: 'local-legacy' });
   let activeServer = server;
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));

@@ -15,12 +15,12 @@ function ed25519(key: KeyObject, kind: 'private' | 'public'): void {
 
 /** The API signs one immutable source snapshot. The worker has only the API public key. */
 export type WorkerClaim = Readonly<{
-  format: 'firelaunch-native-worker-claim-v1'; jobId: string; attempt: number;
+  format: 'vegalaunch-native-worker-claim-v1'; jobId: string; attempt: number;
   nonce: string; issuedAt: number; expiresAt: number; input: ReleaseBuildInput;
   signature: string;
 }>;
 export type WorkerReceipt = Readonly<{
-  format: 'firelaunch-native-worker-receipt-v1'; workerId: string;
+  format: 'vegalaunch-native-worker-receipt-v1'; workerId: string;
   jobId: string; attempt: number; nonce: string; claimSha256: string;
   completedAt: number; evidence: NativeBuildEvidence; signature: string;
 }>;
@@ -46,7 +46,7 @@ export function signWorkerClaim(input: ReleaseBuildInput, jobId: string, attempt
     !noncePattern.test(nonce)) deny('Invalid worker claim identity');
   ed25519(apiPrivateKey, 'private');
   assertWindow(issuedAt, expiresAt);
-  const body = { format: 'firelaunch-native-worker-claim-v1' as const,
+  const body = { format: 'vegalaunch-native-worker-claim-v1' as const,
     jobId, attempt, nonce, issuedAt, expiresAt, input };
   return Object.freeze({ ...body, signature: sign(null, claimBytes(body), apiPrivateKey).toString('hex') });
 }
@@ -54,7 +54,7 @@ export function signWorkerClaim(input: ReleaseBuildInput, jobId: string, attempt
 /** Called by the separately controlled worker before it materializes any source. */
 export function verifyWorkerClaim(claim: WorkerClaim, apiPublicKey: KeyObject, now = Date.now()): void {
   ed25519(apiPublicKey, 'public');
-  if (claim.format !== 'firelaunch-native-worker-claim-v1' || !jobPattern.test(claim.jobId) ||
+  if (claim.format !== 'vegalaunch-native-worker-claim-v1' || !jobPattern.test(claim.jobId) ||
     !Number.isSafeInteger(claim.attempt) || claim.attempt < 1 || claim.attempt > 3 ||
     !noncePattern.test(claim.nonce)) deny('Invalid worker claim identity');
   assertWindow(claim.issuedAt, claim.expiresAt);
@@ -69,7 +69,7 @@ export function signWorkerReceipt(claim: WorkerClaim, evidence: NativeBuildEvide
   ed25519(workerPrivateKey, 'private');
   if (!workerPattern.test(workerId) || !Number.isSafeInteger(completedAt) ||
     completedAt < claim.issuedAt || completedAt > claim.expiresAt) deny('Invalid worker receipt identity');
-  const body = { format: 'firelaunch-native-worker-receipt-v1' as const, workerId,
+  const body = { format: 'vegalaunch-native-worker-receipt-v1' as const, workerId,
     jobId: claim.jobId, attempt: claim.attempt, nonce: claim.nonce,
     claimSha256: sha256(claimBytes(claim)), completedAt, evidence };
   return Object.freeze({ ...body, signature: sign(null, receiptBytes(body), workerPrivateKey).toString('hex') });
@@ -82,7 +82,7 @@ export async function acceptWorkerReceipt(claim: WorkerClaim, receipt: WorkerRec
   consumeOnce: (jobId: string, attempt: number, nonce: string) => Promise<boolean>,
   isCanceled: (jobId: string) => Promise<boolean>, now = Date.now()): Promise<NativeExport> {
   verifyWorkerClaim(claim, apiPublicKey, now);
-  if (receipt.format !== 'firelaunch-native-worker-receipt-v1' || receipt.workerId !== workerId ||
+  if (receipt.format !== 'vegalaunch-native-worker-receipt-v1' || receipt.workerId !== workerId ||
     !workerPattern.test(workerId) || receipt.jobId !== claim.jobId ||
     receipt.attempt !== claim.attempt || receipt.nonce !== claim.nonce ||
     receipt.claimSha256 !== sha256(claimBytes(claim)) ||

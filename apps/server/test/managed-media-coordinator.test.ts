@@ -15,8 +15,8 @@ const job = id('job', 'e'); const item = id('ci', '9');
 const original = `media/${'a'.repeat(32)}/${'b'.repeat(32)}/${'c'.repeat(32)}/original/${'d'.repeat(32)}.mp4`;
 const staging = `media/${'a'.repeat(32)}/${'b'.repeat(32)}/${'c'.repeat(32)}/staged/${'1'.repeat(32)}/`;
 const config: MediaConvertConfig = { awsAccountId: '123456789012', awsRegion: 'us-east-2',
-  queueArn: 'arn:aws:mediaconvert:us-east-2:123456789012:queues/FireLaunch',
-  roleArn: 'arn:aws:iam::123456789012:role/FireLaunchMediaConvert',
+  queueArn: 'arn:aws:mediaconvert:us-east-2:123456789012:queues/VegaLaunch',
+  roleArn: 'arn:aws:iam::123456789012:role/VegaLaunchMediaConvert',
   originalsBucket: 'private-originals', stagingBucket: 'private-staging' };
 const profile = { hash: '7'.repeat(64), settings: {} } as Profile;
 const identity = { awsAccountId: config.awsAccountId, awsRegion: config.awsRegion, awsJobId: 'mc-123' };

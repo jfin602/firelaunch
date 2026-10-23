@@ -21,7 +21,7 @@ test('hosted export submits only the session owner snapshot and reports owned qu
   let enqueued: ReleaseBuildInput | null = null;
   let state: 'queued' | 'running' | 'ready' | 'failed' | 'expired' = 'queued';
   const jobId = `job_${'d'.repeat(32)}`;
-  const input = { format: 'firelaunch-vega-build-input-v1', creatorAccountId: owner,
+  const input = { format: 'vegalaunch-vega-build-input-v1', creatorAccountId: owner,
     projectId: project, fingerprint: 'e'.repeat(64), deploymentId: `dep_${'f'.repeat(32)}`,
     publishedRelease: { releaseId: `rel_${'1'.repeat(32)}`, sequence: 1 } } as ReleaseBuildInput;
   t.mock.method(PublicReleaseResolver.prototype, 'current', async () => ({ id: input.publishedRelease.releaseId,
@@ -51,7 +51,7 @@ test('hosted export submits only the session owner snapshot and reports owned qu
     session: () => principal ? { principal: { accountId: principal, issuer: 'test', subject: principal, email: 'test@example.com' }, csrf: 'valid' } : null,
     authorizedMutation: () => csrf
   } } as unknown as ServerMode;
-  const server = createApi(new ProjectRepository('/tmp/firelaunch-export-unused'), undefined, mode, hosted);
+  const server = createApi(new ProjectRepository('/tmp/vegalaunch-export-unused'), undefined, mode, hosted);
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('Server address unavailable');

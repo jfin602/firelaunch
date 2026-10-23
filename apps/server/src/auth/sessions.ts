@@ -32,6 +32,7 @@ export class HostedAuth {
   private readonly secure: boolean;
   private readonly sessionCookie: string;
   private readonly stateCookie: string;
+  private readonly retiredSessionCookie: string;
 
   constructor(readonly verifier: OidcVerifier, publicOrigin: string,
     private readonly resolveAccount: (principal: AuthenticatedPrincipal) => Promise<string>, env: NodeJS.ProcessEnv = process.env) {
@@ -40,8 +41,9 @@ export class HostedAuth {
     if (new URL(verifier.config.redirectUri).origin !== publicOrigin) throw new Error('OIDC callback origin mismatch');
     this.publicOrigin = publicOrigin;
     this.secure = origin.protocol === 'https:';
-    this.sessionCookie = this.secure ? '__Host-firelaunch_session' : 'firelaunch_local_session';
-    this.stateCookie = this.secure ? '__Host-firelaunch_state' : 'firelaunch_local_state';
+    this.sessionCookie = this.secure ? '__Host-vegalaunch_session' : 'vegalaunch_local_session';
+    this.stateCookie = this.secure ? '__Host-vegalaunch_state' : 'vegalaunch_local_state';
+    this.retiredSessionCookie = this.secure ? '__Host-firelaunch_session' : 'firelaunch_local_session';
   }
 
   private cookie(name: string, value: string, age: number): string {
@@ -78,14 +80,6 @@ export class HostedAuth {
   }
 
   begin(request: IncomingMessage, response: ServerResponse): void {
-    // Keep existing bookmarks usable without expanding the accepted OIDC callback origin.
-    if (this.publicOrigin === 'https://vegalaunch.jfin.dev' &&
-      request.headers.host === 'firelaunch.jfin.dev' &&
-      (request.headers['x-forwarded-host'] === undefined || request.headers['x-forwarded-host'] === 'firelaunch.jfin.dev') &&
-      request.headers['x-forwarded-proto'] === 'https' && !request.headers.forwarded) {
-      response.writeHead(302, { location: `${this.publicOrigin}/api/auth/login`, 'cache-control': 'no-store' }).end();
-      return;
-    }
     if (!this.safeHost(request)) { void audit(undefined, 'auth_denied', 'denied'); response.writeHead(400).end(); return; }
     for (const [key, login] of this.logins) if (login.expiresAt <= Date.now()) this.logins.delete(key);
     if (this.logins.size >= 10_000) { response.writeHead(503).end(); return; }
@@ -113,7 +107,7 @@ export class HostedAuth {
       if (this.sessions.size >= 10_000) { response.writeHead(503, { 'set-cookie': this.clear(this.stateCookie) }).end(); return; }
       const token = randomToken();
       this.sessions.set(hash(token), { principal: { ...identity.principal, accountId }, csrf: randomToken(), expiresAt: Math.min(Date.now() + SESSION_MS, identity.expiresAt) });
-      response.writeHead(302, { location: this.publicOrigin + '/', 'set-cookie': [this.clear(this.stateCookie), this.cookie(this.sessionCookie, token, Math.floor(SESSION_MS / 1000))], 'cache-control': 'no-store' }).end();
+      response.writeHead(302, { location: this.publicOrigin + '/', 'set-cookie': [this.clear(this.stateCookie), this.clear(this.retiredSessionCookie), this.cookie(this.sessionCookie, token, Math.floor(SESSION_MS / 1000))], 'cache-control': 'no-store' }).end();
     } catch {
       void audit(undefined, 'auth_failed', 'failure');
       response.writeHead(401, { 'set-cookie': this.clear(this.stateCookie), 'cache-control': 'no-store' }).end();

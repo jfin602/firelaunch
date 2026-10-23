@@ -6,11 +6,11 @@ import { CatalogRepository } from '../src/catalog-repository.js';
 import { CatalogProjectionService } from '../src/catalog-projection.js';
 import { HostedProjectRepository } from '../src/hosted-repository.js';
 
-const database = process.env.FIRELAUNCH_TEST_DATABASE_URL;
+const database = process.env.VEGALAUNCH_TEST_DATABASE_URL;
 
 (database ? test : test.skip)('projection enforces owner, review, selection, rights, stable bindings and revision checks', async () => {
   const admin = new Pool({ connectionString: database });
-  const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const name = `vegalaunch_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(database!); url.pathname = `/${name}`;
   await admin.query(`CREATE DATABASE ${name}`);
   let repository: HostedProjectRepository | undefined;

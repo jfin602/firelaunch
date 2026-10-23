@@ -24,16 +24,16 @@ function inspect(directory: string): string[] {
 test('Studio, TV presentation and generated metadata use VegaLaunch', () => {
   const surfaces = ['apps/studio/src', 'apps/studio/public', 'packages/generator/src', 'packages/tv/src'];
   const hits = surfaces.flatMap(inspect);
-  // Existing drafts use this browser storage key. Moving it would strand unsaved edits.
+  // The old draft key is read once to migrate unfinished edits.
   assert.deepEqual(hits, ['apps/studio/src/video-pages.ts']);
   assert.match(readFileSync('apps/studio/index.html', 'utf8'), /<title>VegaLaunch Studio<\/title>/);
   assert.match(readFileSync('apps/server/src/native-export.ts', 'utf8'), /format: 'vegalaunch-vega-export-v1', product: 'VegaLaunch'/);
   assert.match(readFileSync('apps/server/src/hosted-workspace.ts', 'utf8'), /format: 'vegalaunch-source-export-v1'/);
 });
 
-test('persisted database, session and staging identifiers stay compatible', () => {
-  assert.match(readFileSync('apps/server/src/hosted-repository.ts', 'utf8'), /firelaunch_schema_migrations/);
-  assert.match(readFileSync('apps/server/src/native-build-queue.ts', 'utf8'), /firelaunch_build\.jobs/);
-  assert.match(readFileSync('apps/server/src/auth/sessions.ts', 'utf8'), /__Host-firelaunch_session/);
-  assert.match(readFileSync('scripts/staging/lib.sh', 'utf8'), /base=\/srv\/firelaunch/);
+test('active database, session and staging identifiers use VegaLaunch', () => {
+  assert.match(readFileSync('apps/server/src/hosted-repository.ts', 'utf8'), /vegalaunch_schema_migrations/);
+  assert.match(readFileSync('apps/server/src/native-build-queue.ts', 'utf8'), /vegalaunch_build\.jobs/);
+  assert.match(readFileSync('apps/server/src/auth/sessions.ts', 'utf8'), /__Host-vegalaunch_session/);
+  assert.match(readFileSync('scripts/staging/lib.sh', 'utf8'), /base=\/srv\/vegalaunch/);
 });

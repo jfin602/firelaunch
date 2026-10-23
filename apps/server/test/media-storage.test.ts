@@ -14,13 +14,13 @@ const scope: MediaScope = { creatorAccountId: `cr_${'a'.repeat(32)}`, projectId:
 const other: MediaScope = { ...scope, creatorAccountId: `cr_${'d'.repeat(32)}` };
 const session = `up_${'e'.repeat(32)}`;
 const set = `rs_${'f'.repeat(32)}`;
-const config: MediaStorageConfig = { region: 'us-east-2', originalsBucket: 'firelaunch-originals-test',
-  deliveryBucket: 'firelaunch-delivery-test', cloudFrontOrigin: 'https://media.example.org/',
+const config: MediaStorageConfig = { region: 'us-east-2', originalsBucket: 'vegalaunch-originals-test',
+  deliveryBucket: 'vegalaunch-delivery-test', cloudFrontOrigin: 'https://media.example.org/',
   allowedCloudFrontHosts: ['media.example.org'] };
-const roleEnv = { FIRELAUNCH_MEDIA_AWS_REGION: config.region, FIRELAUNCH_MEDIA_ORIGINALS_BUCKET: config.originalsBucket,
-  FIRELAUNCH_MEDIA_DELIVERY_BUCKET: config.deliveryBucket, FIRELAUNCH_MEDIA_CLOUDFRONT_HOSTS: 'media.example.org',
-  FIRELAUNCH_MEDIA_CLOUDFRONT_ORIGIN: config.cloudFrontOrigin, FIRELAUNCH_MEDIACONVERT_ACCOUNT: '363242105231',
-  FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN: 'arn:aws:iam::363242105231:role/firelaunch/media-publisher' };
+const roleEnv = { VEGALAUNCH_MEDIA_AWS_REGION: config.region, VEGALAUNCH_MEDIA_ORIGINALS_BUCKET: config.originalsBucket,
+  VEGALAUNCH_MEDIA_DELIVERY_BUCKET: config.deliveryBucket, VEGALAUNCH_MEDIA_CLOUDFRONT_HOSTS: 'media.example.org',
+  VEGALAUNCH_MEDIA_CLOUDFRONT_ORIGIN: config.cloudFrontOrigin, VEGALAUNCH_MEDIACONVERT_ACCOUNT: '363242105231',
+  VEGALAUNCH_MEDIA_PUBLISHER_ROLE_ARN: 'arn:aws:iam::363242105231:role/vegalaunch/media-publisher' };
 const sha = (value: Buffer) => createHash('sha256').update(value).digest('hex');
 type ObjectRecord = { body: Buffer; type: string; encryption: string; checksumType: string; crc?: string; sha?: string; etag: string };
 class FakeS3 {
@@ -134,38 +134,38 @@ test('authenticated preview storage reads only bounded staged bytes with matchin
 
 test('media AWS configuration and CloudFront origin fail closed without echoing secrets', () => {
   assert.throws(() => mediaStorageConfigFromEnv({}), /invalid/);
-  const env = { FIRELAUNCH_MEDIA_AWS_REGION: 'us-east-2', FIRELAUNCH_MEDIA_ORIGINALS_BUCKET: config.originalsBucket,
-    FIRELAUNCH_MEDIA_DELIVERY_BUCKET: config.deliveryBucket, FIRELAUNCH_MEDIA_CLOUDFRONT_HOSTS: 'media.example.org',
-    FIRELAUNCH_MEDIA_CLOUDFRONT_ORIGIN: config.cloudFrontOrigin, AWS_SECRET_ACCESS_KEY: 'secret-value' };
+  const env = { VEGALAUNCH_MEDIA_AWS_REGION: 'us-east-2', VEGALAUNCH_MEDIA_ORIGINALS_BUCKET: config.originalsBucket,
+    VEGALAUNCH_MEDIA_DELIVERY_BUCKET: config.deliveryBucket, VEGALAUNCH_MEDIA_CLOUDFRONT_HOSTS: 'media.example.org',
+    VEGALAUNCH_MEDIA_CLOUDFRONT_ORIGIN: config.cloudFrontOrigin, AWS_SECRET_ACCESS_KEY: 'secret-value' };
   assert.equal(mediaStorageConfigFromEnv(env).cloudFrontOrigin, config.cloudFrontOrigin);
-  assert.equal(mediaStorageConfigFromEnv({ ...env, FIRELAUNCH_MEDIA_CLOUDFRONT_ORIGIN: '', FIRELAUNCH_MEDIA_CLOUDFRONT_HOSTS: '' }).cloudFrontOrigin, '');
+  assert.equal(mediaStorageConfigFromEnv({ ...env, VEGALAUNCH_MEDIA_CLOUDFRONT_ORIGIN: '', VEGALAUNCH_MEDIA_CLOUDFRONT_HOSTS: '' }).cloudFrontOrigin, '');
   for (const origin of ['http://media.example.org/', 'https://evil.example.org/', 'https://media.example.org.evil.test/',
     'https://user:secret-value@media.example.org/', 'https://media.example.org/path', 'https://media.example.org/?sig=secret-value',
     'https://media.example.org:444/', 'https://127.0.0.1/']) {
-    assert.throws(() => mediaStorageConfigFromEnv({ ...env, FIRELAUNCH_MEDIA_CLOUDFRONT_ORIGIN: origin }), error =>
+    assert.throws(() => mediaStorageConfigFromEnv({ ...env, VEGALAUNCH_MEDIA_CLOUDFRONT_ORIGIN: origin }), error =>
       error instanceof Error && !error.message.includes('secret-value'));
   }
-  assert.throws(() => mediaStorageConfigFromEnv({ ...env, FIRELAUNCH_MEDIA_DELIVERY_BUCKET: config.originalsBucket }), /invalid/);
-  assert.throws(() => mediaStorageConfigFromEnv({ ...env, FIRELAUNCH_MEDIA_CLOUDFRONT_HOSTS: 'media.example.org,127.0.0.1' }), /invalid/);
+  assert.throws(() => mediaStorageConfigFromEnv({ ...env, VEGALAUNCH_MEDIA_DELIVERY_BUCKET: config.originalsBucket }), /invalid/);
+  assert.throws(() => mediaStorageConfigFromEnv({ ...env, VEGALAUNCH_MEDIA_CLOUDFRONT_HOSTS: 'media.example.org,127.0.0.1' }), /invalid/);
 });
 
 test('publisher role must be a same-account IAM role when publication is configured', () => {
   const env = roleEnv;
   assert.equal(publisherRoleConfigFromEnv(env).accountId, '363242105231');
-  for (const roleArn of ['', 'arn:aws:iam::000000000000:role/firelaunch/media-publisher',
+  for (const roleArn of ['', 'arn:aws:iam::000000000000:role/vegalaunch/media-publisher',
     'arn:aws:iam::363242105231:user/media-publisher', 'arn:aws:iam::363242105231:role/../publisher',
     'arn:aws:iam::363242105231:role/publisher*']) {
-    assert.throws(() => publisherRoleConfigFromEnv({ ...env, FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN: roleArn }), /publisher role/);
+    assert.throws(() => publisherRoleConfigFromEnv({ ...env, VEGALAUNCH_MEDIA_PUBLISHER_ROLE_ARN: roleArn }), /publisher role/);
   }
-  assert.throws(() => publisherRoleConfigFromEnv({ ...env, FIRELAUNCH_MEDIACONVERT_ACCOUNT: '' }), /publisher role/);
-  assert.ok(mediaStorageFromEnv({ ...env, FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN: '' }));
+  assert.throws(() => publisherRoleConfigFromEnv({ ...env, VEGALAUNCH_MEDIACONVERT_ACCOUNT: '' }), /publisher role/);
+  assert.ok(mediaStorageFromEnv({ ...env, VEGALAUNCH_MEDIA_PUBLISHER_ROLE_ARN: '' }));
 });
 
 test('STS publisher credentials refresh without falling back to control credentials', async () => {
   const assumed: string[] = [];
   let fail = false;
   const requestHandler = { handle: async (request: { body: string }) => {
-    assert.match(String(request.body), /RoleArn=arn%3Aaws%3Aiam%3A%3A363242105231%3Arole%2Ffirelaunch%2Fmedia-publisher/);
+    assert.match(String(request.body), /RoleArn=arn%3Aaws%3Aiam%3A%3A363242105231%3Arole%2Fvegalaunch%2Fmedia-publisher/);
     if (fail) throw new Error('simulated STS denial: private-detail');
     const accessKeyId = `ASIAFAKE${assumed.length + 1}`;
     assumed.push(accessKeyId);

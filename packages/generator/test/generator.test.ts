@@ -184,7 +184,7 @@ test('native source and shared projection retain ordered static sections and foc
 });
 
 test('writes source once and never overwrites customized files', async () => {
-  const destination = await mkdtemp(join(tmpdir(), 'firelaunch-vega-'));
+  const destination = await mkdtemp(join(tmpdir(), 'vegalaunch-vega-'));
   try {
     const project = await writeGeneratedProject(fixtureChannel(), destination);
     assert.equal(await readFile(join(destination, 'src/channel.json'), 'utf8'), project.files.get('src/channel.json'));
@@ -195,7 +195,7 @@ test('writes source once and never overwrites customized files', async () => {
 });
 
 test('rejects occupied destinations without writing any generated files', async () => {
-  const destination = await mkdtemp(join(tmpdir(), 'firelaunch-vega-'));
+  const destination = await mkdtemp(join(tmpdir(), 'vegalaunch-vega-'));
   try {
     await writeFile(join(destination, 'custom.txt'), 'creator content');
     await assert.rejects(writeGeneratedProject(fixtureChannel(), destination), /empty, non-symlink/);

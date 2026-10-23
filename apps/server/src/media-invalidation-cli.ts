@@ -7,10 +7,10 @@ import { S3Client } from '@aws-sdk/client-s3';
 
 const run = promisify(execFile);
 const [flag, projectId, assetId] = process.argv.slice(2);
-const profile = process.env.FIRELAUNCH_MEDIA_INVALIDATION_PROFILE;
-const distribution = process.env.FIRELAUNCH_MEDIA_INVALIDATION_DISTRIBUTION_ID;
+const profile = process.env.VEGALAUNCH_MEDIA_INVALIDATION_PROFILE;
+const distribution = process.env.VEGALAUNCH_MEDIA_INVALIDATION_DISTRIBUTION_ID;
 if (flag !== '--execute' || process.argv.length !== 5 ||
-  process.env.FIRELAUNCH_MEDIA_INVALIDATION_ENABLED !== '1' ||
+  process.env.VEGALAUNCH_MEDIA_INVALIDATION_ENABLED !== '1' ||
   !profile || !/^[A-Za-z0-9_-]{3,64}$/.test(profile) || profile === 'default' ||
   !distribution || !/^[A-Z0-9]{8,32}$/.test(distribution) ||
   process.env.AWS_ACCESS_KEY_ID || process.env.AWS_SECRET_ACCESS_KEY || process.env.AWS_SESSION_TOKEN)

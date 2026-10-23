@@ -17,7 +17,7 @@ const oldEnvironment = process.env.NODE_ENV;
 process.env.NODE_ENV = 'test';
 
 test('hosted OIDC validates code flow, tokens, session rotation, CSRF and logout', async () => {
-  const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-auth-'));
+  const directory = await mkdtemp(path.join(tmpdir(), 'vegalaunch-auth-'));
   const { privateKey, publicKey } = await generateKeyPair('RS256');
   const jwk = { ...await exportJWK(publicKey), kid: 'fixture-key', alg: 'RS256', use: 'sig' };
   let issuer = '';
@@ -47,7 +47,7 @@ test('hosted OIDC validates code flow, tokens, session rotation, CSRF and logout
   const address = api.address(); assert.ok(address && typeof address !== 'string');
   const origin = `http://127.0.0.1:${address.port}`;
   assert.equal((await fetch(`${origin}/api/projects`)).status, 401);
-  const verifier = new OidcVerifier({ issuer, clientId: 'firelaunch-fixture', authorizationEndpoint: `${issuer}/authorize`, tokenEndpoint: `${issuer}/token`, jwksUri: `${issuer}/keys`, redirectUri: `${origin}/api/auth/callback` });
+  const verifier = new OidcVerifier({ issuer, clientId: 'vegalaunch-fixture', authorizationEndpoint: `${issuer}/authorize`, tokenEndpoint: `${issuer}/token`, jwksUri: `${issuer}/keys`, redirectUri: `${origin}/api/auth/callback` });
   const auth = new HostedAuth(verifier, origin, async principal => principal.accountId);
   // Recreate the API on the same port with the hosted configuration.
   await new Promise<void>(resolve => api.close(() => resolve()));
@@ -55,7 +55,7 @@ test('hosted OIDC validates code flow, tokens, session rotation, CSRF and logout
   hosted.listen(address.port, '127.0.0.1'); await once(hosted, 'listening');
   const sign = async (nonce: string, changes: Record<string, unknown> = {}) => {
     const now = Math.floor(Date.now() / 1000);
-    const claims = { iss: issuer, aud: 'firelaunch-fixture', sub: 'creator-1', email: 'creator@example.com', email_verified: true, nonce, iat: now, exp: now + 3600, ...changes };
+    const claims = { iss: issuer, aud: 'vegalaunch-fixture', sub: 'creator-1', email: 'creator@example.com', email_verified: true, nonce, iat: now, exp: now + 3600, ...changes };
     return new SignJWT(claims).setProtectedHeader({ alg: 'RS256', kid: 'fixture-key' }).sign(privateKey);
   };
   const begin = async () => {
@@ -93,7 +93,7 @@ test('hosted OIDC validates code flow, tokens, session rotation, CSRF and logout
     const valid = await begin(); token = await sign(valid.nonce);
     const completed = await finish(valid);
     assert.equal(completed.status, 302);
-    const sessionCookie = completed.headers.get('set-cookie')!.match(/firelaunch_local_session=[^;]+/)![0];
+    const sessionCookie = completed.headers.get('set-cookie')!.match(/vegalaunch_local_session=[^;]+/)![0];
     assert.match(completed.headers.get('set-cookie')!, /HttpOnly/);
     assert.match(completed.headers.get('set-cookie')!, /SameSite=Lax/);
     assert.equal((await finish(valid)).status, 400);
@@ -114,14 +114,14 @@ test('hosted OIDC validates code flow, tokens, session rotation, CSRF and logout
     const rotated = await finish(rotation, `${rotation.stateCookie}; ${sessionCookie}`);
     assert.equal(rotated.status, 302);
     assert.equal((await fetch(`${origin}/api/auth/session`, { headers: { cookie: sessionCookie } })).status, 401);
-    const nextCookie = rotated.headers.get('set-cookie')!.match(/firelaunch_local_session=[^;]+/)![0];
+    const nextCookie = rotated.headers.get('set-cookie')!.match(/vegalaunch_local_session=[^;]+/)![0];
     assert.notEqual(nextCookie, sessionCookie);
     const nextSession = await (await fetch(`${origin}/api/auth/session`, { headers: { cookie: nextCookie } })).json();
     assert.equal((await fetch(`${origin}/api/auth/logout`, { method: 'POST', headers: { cookie: nextCookie, origin, 'x-csrf-token': nextSession.csrfToken } })).status, 204);
     assert.equal((await fetch(`${origin}/api/auth/session`, { headers: { cookie: nextCookie } })).status, 401);
     const expiring = await begin(); token = await sign(expiring.nonce);
     const expiringResponse = await finish(expiring);
-    const expiringCookie = expiringResponse.headers.get('set-cookie')!.match(/firelaunch_local_session=[^;]+/)![0];
+    const expiringCookie = expiringResponse.headers.get('set-cookie')!.match(/vegalaunch_local_session=[^;]+/)![0];
     const present = Date.now;
     Date.now = () => present() + 9 * 60 * 60_000;
     try { assert.equal((await fetch(`${origin}/api/auth/session`, { headers: { cookie: expiringCookie } })).status, 401); }
@@ -136,12 +136,12 @@ test('hosted OIDC validates code flow, tokens, session rotation, CSRF and logout
 test('production configuration rejects fixture origins and missing Google secrets', () => {
   process.env.NODE_ENV = 'production';
   try {
-    assert.throws(() => serverModeFromEnv({ FIRELAUNCH_MODE: 'hosted', FIRELAUNCH_PUBLIC_ORIGIN: 'http://127.0.0.1:4000', FIRELAUNCH_OIDC_CLIENT_ID: 'fixture', FIRELAUNCH_OIDC_CLIENT_SECRET: 'secret' }));
-    assert.throws(() => serverModeFromEnv({ FIRELAUNCH_MODE: 'hosted', FIRELAUNCH_PUBLIC_ORIGIN: 'https://studio.example', FIRELAUNCH_OIDC_CLIENT_ID: 'fixture' }));
-    assert.throws(() => serverModeFromEnv({ FIRELAUNCH_MODE: 'hosted', FIRELAUNCH_PUBLIC_ORIGIN: 'https://studio.example', FIRELAUNCH_OIDC_CLIENT_ID: 'fixture', FIRELAUNCH_OIDC_CLIENT_SECRET: 'secret', FIRELAUNCH_OIDC_ISSUER: 'http://127.0.0.1:4000' }));
+    assert.throws(() => serverModeFromEnv({ VEGALAUNCH_MODE: 'hosted', VEGALAUNCH_PUBLIC_ORIGIN: 'http://127.0.0.1:4000', VEGALAUNCH_OIDC_CLIENT_ID: 'fixture', VEGALAUNCH_OIDC_CLIENT_SECRET: 'secret' }));
+    assert.throws(() => serverModeFromEnv({ VEGALAUNCH_MODE: 'hosted', VEGALAUNCH_PUBLIC_ORIGIN: 'https://studio.example', VEGALAUNCH_OIDC_CLIENT_ID: 'fixture' }));
+    assert.throws(() => serverModeFromEnv({ VEGALAUNCH_MODE: 'hosted', VEGALAUNCH_PUBLIC_ORIGIN: 'https://studio.example', VEGALAUNCH_OIDC_CLIENT_ID: 'fixture', VEGALAUNCH_OIDC_CLIENT_SECRET: 'secret', VEGALAUNCH_OIDC_ISSUER: 'http://127.0.0.1:4000' }));
     assert.throws(() => serverModeFromEnv({}));
-    assert.throws(() => serverModeFromEnv({ FIRELAUNCH_MODE: 'local-legacy', HOST: '0.0.0.0' }));
-    assert.throws(() => serverModeFromEnv({ FIRELAUNCH_MODE: 'local-legacy', NODE_ENV: 'production' }));
+    assert.throws(() => serverModeFromEnv({ VEGALAUNCH_MODE: 'local-legacy', HOST: '0.0.0.0' }));
+    assert.throws(() => serverModeFromEnv({ VEGALAUNCH_MODE: 'local-legacy', NODE_ENV: 'production' }));
   } finally { process.env.NODE_ENV = oldEnvironment; }
 });
 
@@ -149,12 +149,12 @@ test('local hosted development accepts only explicit loopback Google callback', 
   const previous = process.env.NODE_ENV;
   process.env.NODE_ENV = 'development';
   const account = async () => 'cr_local';
-  const base = { FIRELAUNCH_MODE: 'hosted', DATABASE_URL: 'postgresql://local@127.0.0.1/firelaunch_c2_source',
-    FIRELAUNCH_OIDC_CLIENT_ID: 'google-client', FIRELAUNCH_OIDC_CLIENT_SECRET: 'secret', FIRELAUNCH_LOCAL_HOSTED: '1' };
+  const base = { VEGALAUNCH_MODE: 'hosted', DATABASE_URL: 'postgresql://local@127.0.0.1/vegalaunch_c2_source',
+    VEGALAUNCH_OIDC_CLIENT_ID: 'google-client', VEGALAUNCH_OIDC_CLIENT_SECRET: 'secret', VEGALAUNCH_LOCAL_HOSTED: '1' };
   try {
     for (const host of ['localhost', '127.0.0.1']) {
       const origin = `http://${host}:4173`;
-      const mode = serverModeFromEnv({ ...base, NODE_ENV: 'development', FIRELAUNCH_PUBLIC_ORIGIN: origin }, account);
+      const mode = serverModeFromEnv({ ...base, NODE_ENV: 'development', VEGALAUNCH_PUBLIC_ORIGIN: origin }, account);
       assert.equal(mode.mode, 'hosted');
       if (mode.mode === 'hosted') {
         assert.equal(mode.auth.verifier.config.redirectUri, `${origin}/api/auth/callback`);
@@ -163,10 +163,10 @@ test('local hosted development accepts only explicit loopback Google callback', 
       }
     }
     for (const origin of ['http://evil.example:4173', 'http://127.0.0.2:4173', 'http://localhost.evil.example:4173'])
-      assert.throws(() => serverModeFromEnv({ ...base, NODE_ENV: 'development', FIRELAUNCH_PUBLIC_ORIGIN: origin }, account), /HTTPS/);
-    assert.throws(() => serverModeFromEnv({ ...base, NODE_ENV: 'development', FIRELAUNCH_PUBLIC_ORIGIN: 'http://localhost:4173', FIRELAUNCH_LOCAL_HOSTED: '0' }, account), /HTTPS/);
+      assert.throws(() => serverModeFromEnv({ ...base, NODE_ENV: 'development', VEGALAUNCH_PUBLIC_ORIGIN: origin }, account), /HTTPS/);
+    assert.throws(() => serverModeFromEnv({ ...base, NODE_ENV: 'development', VEGALAUNCH_PUBLIC_ORIGIN: 'http://localhost:4173', VEGALAUNCH_LOCAL_HOSTED: '0' }, account), /HTTPS/);
     process.env.NODE_ENV = 'production';
-    assert.throws(() => serverModeFromEnv({ ...base, NODE_ENV: 'production', FIRELAUNCH_PUBLIC_ORIGIN: 'http://localhost:4173' }, account), /HTTPS/);
+    assert.throws(() => serverModeFromEnv({ ...base, NODE_ENV: 'production', VEGALAUNCH_PUBLIC_ORIGIN: 'http://localhost:4173' }, account), /HTTPS/);
   } finally { process.env.NODE_ENV = previous; }
 });
 
@@ -190,14 +190,14 @@ test('HTTPS hosted login sets secure host-only cookies behind a matching proxy',
     });
     const result = await send('studio.example');
     assert.equal(result.status, 302);
-    assert.match(result.cookie, /^__Host-firelaunch_state=/);
+    assert.match(result.cookie, /^__Host-vegalaunch_state=/);
     assert.match(result.cookie, /; Secure/);
     assert.doesNotMatch(result.cookie, /Domain=/);
     assert.equal((await send('evil.example')).status, 400);
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); process.env.NODE_ENV = oldEnvironment; }
 });
 
-test('legacy staging login redirects to the configured canonical OAuth origin', async () => {
+test('hosted login accepts only the canonical OAuth origin', async () => {
   const verifier = new OidcVerifier({
     issuer: 'https://accounts.google.com', clientId: 'fixture',
     authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -217,12 +217,12 @@ test('legacy staging login redirects to the configured canonical OAuth origin', 
     request.on('error', reject); request.end();
   });
   try {
-    assert.deepEqual(await send('firelaunch.jfin.dev'), {
-      status: 302, location: 'https://vegalaunch.jfin.dev/api/auth/login', cookie: ''
-    });
-    assert.equal((await send('firelaunch.jfin.dev', 'evil.example')).status, 400);
-    assert.equal((await send('firelaunch.jfin.dev', 'firelaunch.jfin.dev', 'http')).status, 400);
+    const canonical = await send('vegalaunch.jfin.dev');
+    assert.equal(canonical.status, 302);
+    assert.match(canonical.location, /^https:\/\/accounts\.google\.com\//);
+    assert.match(canonical.cookie, /^__Host-vegalaunch_state=/);
+    assert.equal((await send('vegalaunch.jfin.dev', 'evil.example')).status, 400);
+    assert.equal((await send('vegalaunch.jfin.dev', 'vegalaunch.jfin.dev', 'http')).status, 400);
     assert.equal((await send('evil.example')).status, 400);
-    assert.equal((await send('vegalaunch.jfin.dev')).status, 302);
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
 });

@@ -5,7 +5,7 @@ const release = process.argv[2];
 if (!release?.startsWith('/srv/firelaunch/releases/')) throw new Error('Staging release required');
 const require = createRequire(`${release}/package.json`);
 const { Pool } = require('pg');
-const pool = new Pool({ connectionString: process.env.FIRELAUNCH_DATABASE_URL, max: 1 });
+const pool = new Pool({ connectionString: process.env.VEGALAUNCH_DATABASE_URL, max: 1 });
 const client = await pool.connect();
 try {
   await client.query('BEGIN');

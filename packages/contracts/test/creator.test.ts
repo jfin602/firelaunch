@@ -76,7 +76,7 @@ test('strict records reject unknown secrets, hostile URLs and oversized values',
   assert.equal(creatorAccountSchema.safeParse({ ...account(creatorA, 'a@example.com'), amazonPassword: 'secret' }).success, false);
   assert.equal(creatorProfileSchema.safeParse({ ...profile(creatorA), email: 'private@example.com' }).success, false);
   assert.equal(channelDeploymentSchema.safeParse({ ...d, signingKey: 'secret' }).success, false);
-  assert.equal(channelDeploymentSchema.safeParse({ ...d, releaseControl: 'firelaunch' }).success, false);
+  assert.equal(channelDeploymentSchema.safeParse({ ...d, releaseControl: 'vegalaunch' }).success, false);
   assert.equal(channelDeploymentSchema.safeParse({ ...d, consoleListingReference: '../secret' }).success, false);
   assert.equal(channelDeploymentSchema.safeParse({ ...d, appName: 'A'.repeat(121) }).success, false);
   assert.equal(channelDeploymentSchema.safeParse({ ...d, packageId: '../bad' }).success, false);

@@ -1,20 +1,21 @@
-# VegaLaunch naming and compatibility audit
+# VegaLaunch rename migration audit
 
-VegaLaunch is the product name in Studio, browser metadata, generated Vega app titles, source trees, and new export metadata. Version remains `0.9.4`.
+The previous compatibility exception for FireLaunch technical identifiers is retired. New source, cookies, environment keys, database objects, worker protocol, recovery archives, and generated projects use VegaLaunch names. Version remains `0.9.4`. The database rename is an explicit schema-15 transaction with a reverse script in `scripts/staging/rename-database-objects.{up,down}.sql`; it was rehearsed on a copy of staging data before live use.
 
-The installed staging system predates the product rename. Its technical identifiers stay in place because renaming them would require a separate infrastructure or data migration. In particular:
+## Deliberate reads of existing data
 
-| Legacy identifier | Locations | Reason retained |
-| --- | --- | --- |
-| `FIRELAUNCH_*` environment keys | `apps/server/src`, `packages/agent/src`, `.env*.example`, `scripts/local-hosted.mjs`, `scripts/staging` | The protected host and worker environments still supply these keys. Changing source readers would prevent startup, OIDC, media, backup, or native export. |
-| `__Host-firelaunch_session` and state cookies | `apps/server/src/auth/sessions.ts` | Preserves existing browser sessions and the Google callback flow. |
-| `firelaunch_schema_migrations`, `firelaunch_build.jobs`, SQL function names | `apps/server/src/hosted-repository.ts`, `apps/server/src/native-build-queue.ts`, `apps/server/migrations`, staging schema checks | These are installed PostgreSQL objects and the existing migration ledger; a source-only rename would create a second ledger or lose the worker queue. |
-| `firelaunch-vega-build-input-v1`, worker claim/receipt formats, recovery and account archive formats | `apps/server/src/release-build.ts`, `apps/server/src/native-worker-protocol.ts`, `apps/server/src/recovery.ts`, operations scripts | Queued jobs, receipts, and encrypted backups may predate the rename. Existing readers and signatures must remain compatible. |
-| `@firelaunch:lkg:v1` and `firelaunch-video-page:` | Vega remote release template and `apps/studio/src/video-pages.ts` | Stable client storage keys preserve the last verified TV release and unsaved Studio draft edits. |
-| `firelaunch:kind` and `firelaunchIntent` metadata | `apps/server/src/catalog-feed.ts`, `apps/server/src/media-convert-provider.ts` | Existing creator feeds and MediaConvert jobs use these keys. |
-| `firelaunch` service, profile, path, bucket, old domain, and public package IDs | `scripts/staging`, `infra/aws/staging`, installed host configuration and saved deployments | Existing service paths, AWS resources, and installed app identities remain in service. The configured OAuth origin is `https://vegalaunch.jfin.dev`; `HostedAuth.begin()` redirects an HTTPS sign-in request on the exact old host to that canonical origin. No infrastructure migration was authorized. |
-| Historical occurrences | `docs/tasks`, dated roadmap/current-state sections, decisions, earlier closeouts, and Git history | Preserve evidence and references as originally recorded. |
+These old strings are read only to preserve existing records. They are not aliases for creating new branded output.
 
-New source exports use `vegalaunch-source-export-v1`; the materializer still accepts the prior format. New native ZIP metadata uses `vegalaunch-vega-export-v1`. Existing deployed package IDs remain bound to their saved channel deployments. The generator only assigns a VegaLaunch package ID to a new, unbound channel.
+| Existing data | Migration behavior |
+| --- | --- |
+| Encrypted `firelaunch-recovery-v1` and account-export proofs | New writes use VegaLaunch formats. Readers still accept intact historical archives and proofs. |
+| MediaConvert `firelaunchIntent` and `firelaunchProfile` job metadata | New jobs write VegaLaunch keys. Recovery reads metadata already attached to AWS jobs. |
+| Imported `_firelaunch_kind` and `firelaunch:kind` | New feed metadata uses VegaLaunch keys. Existing external catalog records remain readable. |
+| Browser `firelaunch-video-page:` draft key and `@firelaunch:lkg:v1` TV cache key | Existing local values are copied to new keys on read. New writes use VegaLaunch keys. |
+| `__Host-firelaunch_session` browser cookie | A successful new login clears this cookie. Sessions are process-local, so a service restart requires login regardless of the cookie rename. |
 
-The product rename does not authorize a new public release, DNS/OIDC change, service rename, AWS policy update, database migration, or installed-app update.
+## External and historical identity
+
+AWS bucket names, IAM role ARNs, MediaConvert queue and EventBridge resources, old installed Vega package IDs, and signed client certificates are physical external identities. They require a separately verified resource and client migration. Do not edit these strings in persisted records, opaque object keys, or CloudFormation parameters by text replacement. The current public FREE release #1 pointer must retain its original bytes. Any remaining active external identity is a **NOT GREEN** rename blocker and must be enumerated in the final closeout.
+
+The exact `firelaunch.jfin.dev` application DNS record was removed on 2026-10-23. `tv.firelaunch.jfin.dev` is a separate public resolver record used by already installed clients; retiring it requires a compatible client update and verified pointer migration. Immutable Git history, dated closeouts, inactive archived releases and genuine creator-authored names are historical evidence, not application branding. Generated test fixtures and saved generated source should be migrated only after their provenance and bound package identity are verified.
