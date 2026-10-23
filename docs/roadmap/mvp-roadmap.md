@@ -1,5 +1,10 @@
 # FireLaunch MVP Roadmap
 
+## Owner P0 addition — P9-011 / c9-multimedia-editor (2026-10-22 local)
+
+Within active Phase 9 Polish, the Channel Editor must let creators explicitly select owned eligible **Video, Audio MP3 and Book** catalog items into existing Hero, Content Row, Content Grid and additional Rows. Every mixed-media tile uses type-aware More info and appropriate Watch / Listen / Book Showcase (book-only has no Play; optional book MP3 reuses the audio player), preserving focus/Back and current draft/export rights. [Detailed P9-011](../tasks/p9-polish/issues/P9-011-mixed-media-sections.md) and [manual c9-multimedia-editor assessment/plan/prompt](../tasks/c9-multimedia-editor/README.md) are **AUTHORED, NOT RUN**. This is an independent P0 correction, NOT a renumber of P9 P1–P11 and NOT Phase 10 live publishing. Actual source is last documented clean 0.9.0; no code, version, stage or native evidence changes from documentation. Run protected exact-source staging before connected owner Codex-browser acceptance; report native delivery separately.
+
+
 ## APPROVED ROADMAP — Phase 8 owner-closed -> clean Phase 9 MVP Polish (2026-10-22)
 
 **Lifecycle:** Phase 8 **CLOSED BY OWNER**, with historic **NOT GREEN / ACCEPTED QUALIFICATION EXCEPTIONS** recorded (do not falsely report all native and mixed-media public gates GREEN). [Final Phase 8 evidence](../tasks/p8/closeout.md), [C8 Hero later-source addendum](../tasks/c8-hero-multimedia/closeout.md), and [P8D appendix](../tasks/p8d/closeout.md) retain the facts. Final known functional Phase 8 source commit `69a750a43debd1068e3359487023c6f07681e280`, version `0.8.17`. Later Hero/video/catalog/cache commits postdate older staging evidence; docs handoff alone does not prove latest source active or Vega GREEN.

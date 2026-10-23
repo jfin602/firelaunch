@@ -8,6 +8,10 @@
 ## Baseline
 Current `main` at review has root/lock `0.8.17`, current schema 15. P8D Phase 8 overall NOT GREEN; `c8-hero-multimedia` correction at unchanged 0.8.17 remains a dependency. This is dated GitHub evidence, not a fresh local/staging preflight. The owner authorized a Phase 9 scope pivot, **not retroactive Phase 8 qualification**.
 
+## Additional P0 correction P9-011 — independent from mainline P1–P11
+
+Owner identified that P8D Audio and Book Library records are absent from Channel > Pages & Layout > Edit Section's `Choose content` list. [P9-011](../p9-polish/issues/P9-011-mixed-media-sections.md) and [c9-multimedia-editor](../c9-multimedia-editor/README.md) define one dedicated manual Sol High prompt with protected staging deploy and real owner browser, plus native parity where available. It reuses Video/Audio/Book ChannelSpec bindings and TV player, not new section layouts or an extra app framework. P9-011 is P0 and must be assessed independently before P11; no P1–P10 version renumbering. As with other P0s, NOT GREEN must remain visible if native media delivery is unqualified.
+
 ## One-issue partition
 1. **P9-001** Simple creation, low risk, one route/form.
 2. **P9-004** One-time rights attestation, use persisted per-media record rather than new legal gate, broad labels/screens; must precede P9-002 where practical.

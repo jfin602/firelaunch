@@ -12,6 +12,12 @@ At the time of this review, committed `main` root is **0.8.17** and [P8D final P
 
 **Preferred version allocation if entering from an accepted 0.8.17 baseline:** P1 `0.9.1`, P2 `0.9.2`, ... P10 `0.9.10`. This is a *planning guide, not authority to overwrite a changed baseline.* Each implementing agent reviews and owns the next semver, changes root package plus both root lock fields together, commits product source, and deploys the exact committed candidate. P11 final smoke has **no version bump**. If actual baseline differs, reconcile/adjust docs coherently instead of applying a predetermined bump.
 
+## Independent P0 correction — c9-multimedia-editor (P9-011; owner approved 2026-10-22)
+
+The owner found that `Channel > Pages & Layout > Edit Section > Choose content` only lists existing Video entries even though P8D supports MP3 Audio and Book Showcase. The code path currently passes `spec.content` to the section's checkbox list; owned catalog Audio/Books may be absent. **[P9-011 companion](../p9-polish/issues/P9-011-mixed-media-sections.md)** describes the missing catalog-to-authored-section binding and required type-aware More info/Watch/Listen/Book interactions for Hero/Rows/Grids.
+
+[Correction assessment, plan and SINGLE manual prompt](../c9-multimedia-editor/README.md) were authorized separately as `/docs-apply + /prompt-ass + /prompt-plan + /prompt-write c9-multimedia-editor`. **NOT EXECUTED**. Run `c9` manually, with staged exact-source deploy BEFORE owner Codex-browser verification and native export proof where relevant. It does not replace or renumber existing P9 P1–P11, cannot silently take another prompt's 0.9.x version, and does not authorize deferred P10 live publishing. Schedule the P0 correction before final P11; reconcile P9 P2/P3/P8 overlapping edits when necessary.
+
 ## Manual prompt sequence — one issue per prompt
 
 | Run | Issue | Prompt | Work | Priority |
@@ -28,7 +34,7 @@ At the time of this review, committed `main` root is **0.8.17** and [P8D final P
 | **P10** | P9-009 | [Login redesign](P10-login-redesign.txt) | Approved cyberpunk canyon and compact Google sign-in | P1 |
 | **P11** | integrated only | [Final MVP smoke and closeout](P11-manual-closeout.txt) | One combined creator walkthrough; no feature expansion | qualification |
 
-Issue requirements and tests remain authoritative in the [ten companion files](../p9-polish/README.md). Each prompt **fixes only its named issue**; cross-issue notes are dependencies/anti-regression checks, **not** permission to silently implement another issue in the same step. If an issue is already resolved in actual source, verify it on deployed staging, document evidence and avoid churning code/version unnecessarily.
+Issue requirements and tests remain authoritative in the [eleven companion files](../p9-polish/README.md). Each prompt **fixes only its named issue**; cross-issue notes are dependencies/anti-regression checks, **not** permission to silently implement another issue in the same step. If an issue is already resolved in actual source, verify it on deployed staging, document evidence and avoid churning code/version unnecessarily.
 
 ## Every P1–P10 prompt MUST perform this loop
 

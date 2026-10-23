@@ -1,5 +1,12 @@
 # FireLaunch Agent Instructions
 
+## CURRENT OWNER ADDENDUM — c9-multimedia-editor P0 (2026-10-22 local / 2026-10-23 UTC)
+
+Owner authorized `/docs-apply + /prompt-ass + /prompt-plan + /prompt-write c9-multimedia-editor` for **P9-011 — mixed-media Channel Editor section selection**. See [P9-011 issue](docs/tasks/p9-polish/issues/P9-011-mixed-media-sections.md) and [single manual Sol High correction prompt](docs/tasks/c9-multimedia-editor/README.md). **Documentation authored, NOT EXECUTED**. The correction must make eligible Video, MP3 Audio and Books available to the existing Choose content selector and persist explicitly selected Hero/Row/Grid members with type-correct More info, Watch, Listen and Book Showcase. No separate player, book reader, automatic public publish or installed-app OTA. P9-001...P9-010 and mainline P1–P11 remain unchanged/numbered; run c9 independently before final P11. Each execution tests, agent-commits current-source correction without consuming another P9 version, deploys exact tested SHA to protected schema-15-compatible staging, THEN runs real Codex browser tests with native proof separately qualified. Immutable FREE release #1 unchanged. Historical Phase 8 NOT GREEN qualification stays historical even though owner closed the lifecycle.
+
+---
+
+
 ## ACTIVE 2026-10-22 OWNER HANDOFF — PHASE 8 CLOSED; 0.9.0 BASELINE; P9 POLISH
 
 **Owner decision overrides dated historical instructions below.** Phase 8 development is **CLOSED BY OWNER** with archived historical NOT GREEN test gates retained in [Phase 8 closeout](docs/tasks/p8/closeout.md). P8/C8/D correction files are historical; **DO NOT start or rerun them** to begin P9. The final functional 0.8.17 source before docs/baseline was `69a750a43debd1068e3359487023c6f07681e280`, including recent video catalog reference fix, full-bleed selected Hero with ONE content row and Hero-art preloading/retained decoded-image transition. The code work after older C8/P8 closeouts does not magically establish native, owner-mock or mixed-publication GREEN. Protect immutable FREE release #1, existing owner/rights/CSRF, and real device proof.
