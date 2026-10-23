@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, type FormEvent } from 'react';
-import { createPortal } from 'react-dom';
+import { StudioModal, ModalHeader, ModalFooter } from './StudioModal.js';
 import { resolvedCatalogMetadata, type MediaAsset } from '@firelaunch/contracts';
 import { ApiError, deleteCatalogRecord, deletePrivateObject, readCatalog, readPrivateObjectMetadata,
   uploadPrivateAudio, uploadPrivateMedia, writeCatalog, type CatalogSnapshot } from './api.js';
@@ -36,9 +36,6 @@ export function BookWorkspace({ projectId, accountId, itemId, onIdentity, onClos
   const [newBookshelf, setNewBookshelf] = useState('');
   const [listening, setListening] = useState(false);
   const [audioUrl, setAudioUrl] = useState('');
-  const dialog = useRef<HTMLDivElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
-  const opener = useRef<HTMLElement | null>(null);
   const initialized = useRef('');
   const refresh = async () => {
     const data = await readCatalog(projectId);
@@ -66,14 +63,6 @@ export function BookWorkspace({ projectId, accountId, itemId, onIdentity, onClos
       (!audioAsset || audioAsset.tvPlaybackRights?.status === 'cleared'));
     setAttachAudio(!!audioAsset);
   }, [inventory, itemId, busy]);
-  useEffect(() => {
-    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const shell = document.querySelector<HTMLElement>('.app-shell');
-    const previous = document.body.style.overflow;
-    if (shell) shell.inert = true;
-    document.body.style.overflow = 'hidden'; closeButton.current?.focus();
-    return () => { if (shell) shell.inert = false; document.body.style.overflow = previous; opener.current?.focus(); };
-  }, []);
   const item = inventory?.items.find(value => value.id === itemId && value.kind === 'book');
   const audiobook = inventory?.mediaAssets.find(value => value.id === item?.audiobook?.audioAssetId && value.catalogItemId === item.id && value.kind === 'audio');
   const doWork = async (action: () => Promise<string>) => {
@@ -221,19 +210,9 @@ export function BookWorkspace({ projectId, accountId, itemId, onIdentity, onClos
     setAudioUrl(`/api/projects/${encodeURIComponent(projectId)}/private-objects/${encodeURIComponent(audiobook.location.objectId)}/audio`);
     setListening(true);
   };
-  const keyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Escape') { event.preventDefault(); if (!busy) onClose(); }
-    if (event.key !== 'Tab') return;
-    const controls = Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled)') ?? []);
-    if (event.shiftKey && document.activeElement === controls[0]) { event.preventDefault(); controls.at(-1)?.focus(); }
-    else if (!event.shiftKey && document.activeElement === controls.at(-1)) { event.preventDefault(); controls[0]?.focus(); }
-  };
-  return createPortal(<div className="video-workspace-backdrop"><div ref={dialog} className="video-workspace book-workspace"
-    role="dialog" aria-modal="true" aria-labelledby="book-workspace-title" onKeyDown={keyDown}>
-    <header className="video-workspace-header"><div><span className="eyebrow">PRIVATE BOOK WORKSPACE</span>
-      <h2 id="book-workspace-title">{item ? title || 'Book draft' : 'Add Book'}</h2>
-      <p>Showcase a book with an optional audiobook. There is no TV book reader.</p></div>
-      <button ref={closeButton} type="button" disabled={busy} onClick={onClose}>Close ×</button></header>
+  return <StudioModal className="video-workspace book-workspace" titleId="book-workspace-title" descriptionId="book-workspace-description" onClose={onClose} closeDisabled={busy} guardUnsaved resetDirtyKey={inventory?.revision}>
+    <ModalHeader eyebrow="PRIVATE BOOK WORKSPACE" title={item ? title || 'Book draft' : 'Add Book'} titleId="book-workspace-title"
+      descriptionId="book-workspace-description" description="Save a book showcase with optional audiobook." onClose={onClose} closeDisabled={busy}/>
     <div className="video-workspace-body">
       {error && <p role="alert" className="catalog-error">{error}</p>}{message && <p role="status">{message}</p>}
       {!inventory && !error && <p>Loading book library…</p>}
@@ -256,7 +235,7 @@ export function BookWorkspace({ projectId, accountId, itemId, onIdentity, onClos
         {attachAudio && <><label className="field">NARRATOR<input maxLength={160} value={narrator} onChange={event => setNarrator(event.target.value)}/></label>
           <label className="field">AUDIOBOOK MP3 · UP TO 2 HOURS / 320 MB<input type="file" accept=".mp3,audio/mpeg" onChange={event => { setAudioFile(event.target.files?.[0] ?? null); setRightsConfirmed(false); }}/></label>
           </>}
-        <button className="primary" disabled={busy}>{busy ? 'Saving privately…' : 'Save book draft'}</button>
+        <ModalFooter><button type="button" disabled={busy} onClick={onClose} data-modal-close>Cancel</button><button className="primary" disabled={busy}>{busy ? 'Saving privately…' : 'Save book draft'}</button></ModalFooter>
       </form>}
       {item && <div className="audio-workspace-summary"><strong>Saved status: PRIVATE</strong>
         <p>{audiobook ? 'Audiobook attached privately.' : 'Book showcase · no Play.'}</p>
@@ -267,5 +246,5 @@ export function BookWorkspace({ projectId, accountId, itemId, onIdentity, onClos
         {listening && audioUrl && audiobook?.tvPlaybackRights?.status === 'cleared' &&
           <AudioPlayer source={audioUrl} title={title} creator={narrator} onBack={() => setListening(false)} artwork={<OwnedArtwork item={item} assets={inventory!.mediaAssets}
             projectId={projectId} accountId={accountId} className="audio-workspace-player-art" fallback={<span>◇</span>}/>}/>}</div>}
-    </div></div></div>, document.body);
+    </div></StudioModal>;
 }

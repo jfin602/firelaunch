@@ -1063,3 +1063,80 @@ body:has(.preview-fullscreen){overflow:hidden}
 .tv-detail-text { min-height: 0; overflow: auto; scrollbar-width: thin; }
 .tv-detail-actions { flex: none; padding-top: .4em; background: var(--tv-bg); }
 .tv-detail-actions .tv-play { margin-bottom: .25em; }
+
+/* P9-007: one Desert Heat dialog system, based on Create a page. */
+.fl-modal-backdrop {
+  position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
+  padding: clamp(12px, 3vw, 32px); background: #09090bca;
+}
+.fl-modal {
+  width: min(740px, 100%); max-height: calc(100dvh - 24px); overflow: hidden;
+  display: flex; flex-direction: column; color: var(--fl-text);
+  background: #241e20; border: 1px solid #66595b; border-radius: 12px;
+  box-shadow: 0 24px 70px #000b;
+}
+.fl-modal:focus { outline: none; }
+.fl-modal.video-workspace { width: min(900px, 100%); }
+.fl-modal.audio-workspace, .fl-modal.book-workspace { width: min(820px, 100%); }
+.fl-modal.native-export-workspace { width: min(760px, 100%); min-height: 0; }
+.fl-modal.page-dialog { width: min(740px, 100%); padding: 24px; overflow: auto; }
+.fl-modal .fl-modal-header, .fl-modal .video-workspace-header {
+  display: flex; justify-content: space-between; align-items: start; gap: 20px;
+  padding: 24px; background: transparent; border-bottom: 1px solid #463c3e;
+}
+.fl-modal .fl-modal-header h2 { margin: 5px 0; font: 600 clamp(23px, 3vw, 28px) 'Space Grotesk', sans-serif; }
+.fl-modal .fl-modal-header p { margin: 0; color: #c4b9b9; font-size: 13px; line-height: 1.45; }
+.fl-modal .video-workspace-body { padding: 20px 24px 24px; overflow-y: auto; }
+.fl-modal .video-workspace-pages { background: transparent; border-color: #463c3e; }
+.fl-modal .fl-modal-footer, .fl-modal.page-dialog .fl-modal-footer {
+  display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin-top: 20px; padding-top: 16px; border-top: 1px solid #463c3e;
+}
+.fl-modal button:not(.page-template-option):not(.primary) {
+  background: #30282a; border: 1px solid #66595b; border-radius: 7px;
+  color: var(--fl-text); min-height: 40px; padding: 8px 13px;
+}
+.fl-modal button.primary, .fl-modal .fl-modal-footer button.primary {
+  background: #a94d27; border: 1px solid #e07842; border-radius: 7px;
+  color: #fff7f2; min-height: 40px; padding: 8px 16px; font-weight: 700;
+}
+.fl-modal button:not(:disabled):hover { border-color: #e49b69; }
+.fl-modal button.primary:not(:disabled):hover { background: #bd5a2d; }
+.fl-modal .fl-modal-header .fl-modal-close { white-space: nowrap; }
+.fl-modal .field { color: #e2d8d5; font-size: 11px; letter-spacing: .035em; }
+.fl-modal :is(input:not([type='radio']):not([type='checkbox']), select, textarea) {
+  color: var(--fl-text); background: #1a1719; border: 1px solid #756a69;
+  border-radius: 7px; min-height: 40px; padding: 9px 11px; max-width: 100%;
+}
+.fl-modal input[type='file'] { width: 100%; }
+.fl-modal input[type='file']::file-selector-button {
+  background: #30282a; color: var(--fl-text); border: 1px solid #756a69;
+  border-radius: 6px; padding: 7px 10px; margin-right: 12px;
+}
+.fl-modal :is(input, select, textarea, button):focus-visible,
+.fl-modal .page-template-option:focus-within { outline: 2px solid var(--fl-focus); outline-offset: 2px; }
+.fl-modal .page-template-option { background: #2d282a; border-color: #66595b; }
+.fl-modal .page-template-option.selected { background: #3e2d2a; border-color: #e5784e; }
+.fl-modal .page-template-preview { background: #171719; border-color: #756a69; }
+.fl-modal .page-dialog-error, .fl-modal [role='alert'] { color: #ffd0c6; }
+.fl-modal .video-upload-panel, .fl-modal .video-dropzone,
+.fl-modal .video-review, .fl-modal .audio-workspace-summary,
+.fl-modal .native-export-summary > div, .fl-modal .native-export-stage,
+.fl-modal .native-export-ready { background: #2e2729; border-color: #625557; box-shadow: none; }
+.fl-modal .video-upload-panel progress { accent-color: var(--fl-orange); }
+.fl-modal .video-dropzone.dragging { border-color: var(--fl-orange); background: #45302a; }
+.fl-modal .video-workspace-page-buttons button.active { background: #49302b; border-color: var(--fl-orange); }
+.fl-modal .video-workspace-page-mark { background: #625557; }
+.fl-modal .video-workspace-page-buttons button.active .video-workspace-page-mark { background: var(--fl-orange); }
+@media (max-width: 600px) {
+  .fl-modal-backdrop { padding: 8px; }
+  .fl-modal.video-workspace { width: 100%; height: auto; max-height: calc(100dvh - 16px); border-radius: 12px; }
+  .fl-modal.page-dialog { padding: 16px; }
+  .fl-modal .fl-modal-header { padding: 16px; }
+  .fl-modal .video-workspace-body { padding: 16px; }
+  .fl-modal .fl-modal-header h2 { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .fl-modal *, .fl-modal::before { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+.fl-modal-compact { width: min(440px, calc(100vw - 24px)); position: relative; z-index: 1011; }
+.fl-modal-compact .fl-modal-header { border: 0; padding-bottom: 4px; }
+.fl-modal-compact .fl-modal-footer { margin: 4px 24px 24px; }

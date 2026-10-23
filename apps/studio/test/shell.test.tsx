@@ -404,11 +404,11 @@ test('fullscreen left drawer reveals at the edge, stays open for focus and edits
     assert.ok(dock.querySelector('.layout-inspector'));
     fireEvent.click(dock.querySelector<HTMLButtonElement>('[aria-label="Close layout inspector"]')!);
     fireEvent.click(dock.querySelector<HTMLButtonElement>('.layout-page-rail button:last-child')!);
-    assert.ok(dock.querySelector('[role="dialog"]'));
+    assert.ok(document.querySelector('.fl-modal[role="dialog"]'));
     fireEvent.focusOut(dock, { relatedTarget: root.querySelector('.tv-frame') });
     await new Promise(resolve => setTimeout(resolve, 1300));
     assert.equal(root.classList.contains('dock-revealed'), true);
-    fireEvent.click(dock.querySelector<HTMLButtonElement>('.page-dialog button[type="button"]')!);
+    fireEvent.click(document.querySelector<HTMLButtonElement>('.page-dialog button[type="button"]')!);
     fireEvent.keyDown(root, { key: 'Escape' });
     await waitFor(() => assert.equal(root.classList.contains('preview-fullscreen'), false));
     assert.equal(editorBody.scrollTop, 125);

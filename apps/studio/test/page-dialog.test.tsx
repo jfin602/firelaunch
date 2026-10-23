@@ -70,6 +70,11 @@ test('new-page dialog keeps input on conflict, retries once, saves composition a
     fireEvent.click(opener);
     fireEvent.change(screen.getByRole('textbox', { name: 'Page name' }), { target: { value: 'Canceled' } });
     fireEvent.keyDown(screen.getByRole('dialog', { name: 'Create a page' }), { key: 'Escape' });
+    assert.ok(screen.getByRole('dialog', { name: 'Discard changes?' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    assert.ok(screen.getByRole('dialog', { name: 'Create a page' }));
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Create a page' }), { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
     await waitFor(() => assert.ok(document.activeElement === opener));
     assert.equal(current.spec.pages.length, 2);
     fireEvent.click(opener);

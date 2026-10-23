@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, type FormEvent } from 'react';
-import { createPortal } from 'react-dom';
+import { StudioModal, ModalHeader, ModalFooter } from './StudioModal.js';
 import { resolvedCatalogMetadata, type MediaAsset } from '@firelaunch/contracts';
 import { ApiError, deleteCatalogRecord, deletePrivateObject, readCatalog, readPrivateObjectMetadata, uploadPrivateAudio, uploadPrivateMedia,
   writeCatalog, type CatalogSnapshot } from './api.js';
@@ -35,9 +35,6 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [audioUrl, setAudioUrl] = useState('');
   const [listening, setListening] = useState(false);
-  const dialog = useRef<HTMLDivElement>(null);
-  const opener = useRef<HTMLElement | null>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
   const initialized = useRef('');
   const refresh = async () => {
     const data = await readCatalog(projectId);
@@ -60,14 +57,6 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
     const ownedAudio = [...inventory.mediaAssets].reverse().find(value => value.catalogItemId === itemId && value.kind === 'audio' && value.location.type === 'private_object');
     setRightsConfirmed(ownedAudio?.tvDisplayRights?.status === 'cleared' && ownedAudio.tvPlaybackRights?.status === 'cleared');
   }, [inventory, itemId, busy]);
-  useEffect(() => {
-    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const shell = document.querySelector<HTMLElement>('.app-shell');
-    const prior = document.body.style.overflow;
-    if (shell) shell.inert = true;
-    document.body.style.overflow = 'hidden'; closeButton.current?.focus();
-    return () => { if (shell) shell.inert = false; document.body.style.overflow = prior; opener.current?.focus(); };
-  }, []);
   const item = inventory?.items.find(value => value.id === itemId && value.kind === 'audio');
   const assets = inventory?.mediaAssets.filter(value => value.catalogItemId === item?.id) ?? [];
   const audioAsset = [...assets].reverse().find(value => value.kind === 'audio' && value.location.type === 'private_object' && value.tvPlaybackRights?.status !== 'revoked');
@@ -192,20 +181,9 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
     setListening(false); await refresh(); return 'Audio playback rights revoked; private listening stopped.';
   });
   const close = () => { if (!busy) onClose(); };
-  const keyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Escape') { event.preventDefault(); close(); }
-    if (event.key !== 'Tab') return;
-    const controls = Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled)') ?? []);
-    if (!controls.length) return;
-    if (event.shiftKey && document.activeElement === controls[0]) { event.preventDefault(); controls.at(-1)?.focus(); }
-    else if (!event.shiftKey && document.activeElement === controls.at(-1)) { event.preventDefault(); controls[0]?.focus(); }
-  };
-  return createPortal(<div className="video-workspace-backdrop"><div className="video-workspace audio-workspace" ref={dialog}
-    role="dialog" aria-modal="true" aria-labelledby="audio-workspace-title" onKeyDown={keyDown}>
-    <header className="video-workspace-header"><div><span className="eyebrow">PRIVATE AUDIO WORKSPACE</span>
-      <h2 id="audio-workspace-title">{item ? title || 'Audio draft' : 'Add Audio'}</h2>
-      <p>Save a track or episode with its own cover and rights. Publication is separate.</p></div>
-      <button ref={closeButton} type="button" disabled={busy} onClick={close}>Close ×</button></header>
+  return <StudioModal className="video-workspace audio-workspace" titleId="audio-workspace-title" descriptionId="audio-workspace-description" onClose={close} closeDisabled={busy} guardUnsaved resetDirtyKey={inventory?.revision}>
+    <ModalHeader eyebrow="PRIVATE AUDIO WORKSPACE" title={item ? title || 'Audio draft' : 'Add Audio'} titleId="audio-workspace-title"
+      descriptionId="audio-workspace-description" description="Save a track or episode with its cover. Publication is separate." onClose={close} closeDisabled={busy}/>
     <div className="video-workspace-body">
       {error && <p role="alert" className="catalog-error">{error}</p>}{message && <p role="status">{message}</p>}
       {!inventory && !error && <p>Loading audio library…</p>}
@@ -225,7 +203,7 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
           {inventory.collections.filter(value => ['album', 'playlist'].includes(value.kind)).map(value => <option key={value.id} value={value.id}>{value.title} · {value.kind}</option>)}</select></label>
         <div className="audio-workspace-fields"><label className="field">NEW COLLECTION<input maxLength={160} value={newCollection} onChange={event => setNewCollection(event.target.value)}/></label>
           <label className="field">TYPE<select value={collectionKind} onChange={event => setCollectionKind(event.target.value as 'album' | 'playlist')}><option value="album">Album</option><option value="playlist">Playlist</option></select></label></div>
-        <button className="primary" disabled={busy}>{busy ? 'Saving privately…' : 'Save audio draft'}</button>
+        <ModalFooter><button type="button" disabled={busy} onClick={close} data-modal-close>Cancel</button><button className="primary" disabled={busy}>{busy ? 'Saving privately…' : 'Save audio draft'}</button></ModalFooter>
       </form>}
       {item && <div className="audio-workspace-summary"><strong>Saved status: PRIVATE</strong>
         <p>{!audioAsset ? 'Add an MP3 to continue.' : audioAsset.tvPlaybackRights?.status === 'revoked' ? 'Needs attention · playback permission revoked.' : audioAsset.tvPlaybackRights?.status !== 'cleared' ? 'Needs attention · confirm playback permission.' : 'MP3 saved privately.'}</p>
@@ -234,5 +212,5 @@ export function AudioWorkspace({ projectId, accountId, itemId, onIdentity, onClo
         {listening && audioUrl && audioAsset?.tvPlaybackRights?.status !== 'revoked' &&
           <AudioPlayer source={audioUrl} title={title} creator={artist} artwork={<OwnedArtwork item={item} assets={inventory!.mediaAssets}
             projectId={projectId} accountId={accountId} className="audio-workspace-player-art" fallback={<span>♫</span>}/>}/>}</div>}
-    </div></div></div>, document.body);
+    </div></StudioModal>;
 }

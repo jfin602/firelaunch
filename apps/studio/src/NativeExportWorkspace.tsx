@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { StudioModal, ModalHeader, ModalFooter } from './StudioModal.js';
 import type { ChannelProject } from '@firelaunch/contracts';
 import { downloadNativeExport, nativeExportStatus, readDeployment, readLiveSummary,
   requestNativeBuild, type NativeExportStatus } from './api.js';
@@ -19,9 +19,6 @@ export function NativeExportWorkspace({ project, initial, onClose, onStatus }: {
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState('');
   const [clock, setClock] = useState(Date.now());
-  const dialog = useRef<HTMLDivElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
-  const opener = useRef<HTMLElement | null>(null);
   const pending = useRef(false);
   const refresh = async () => {
     if (pending.current) return;
@@ -53,26 +50,6 @@ export function NativeExportWorkspace({ project, initial, onClose, onStatus }: {
     const timer = window.setInterval(() => setClock(Date.now()), 1_000);
     return () => window.clearInterval(timer);
   }, []);
-  useEffect(() => {
-    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const shell = document.querySelector<HTMLElement>('.app-shell');
-    const priorOverflow = document.body.style.overflow;
-    if (shell) shell.inert = true;
-    document.body.style.overflow = 'hidden';
-    closeButton.current?.focus();
-    return () => { if (shell) shell.inert = false; document.body.style.overflow = priorOverflow;
-      if (opener.current?.isConnected) opener.current.focus(); };
-  }, []);
-  const onKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Escape') { event.preventDefault(); onClose(); return; }
-    if (event.key !== 'Tab') return;
-    const focusable = Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])') ?? [])
-      .filter(element => element.getClientRects().length > 0 || element === closeButton.current);
-    if (!focusable.length) { event.preventDefault(); closeButton.current?.focus(); return; }
-    const first = focusable[0]!; const last = focusable[focusable.length - 1]!;
-    if (event.shiftKey && (document.activeElement === first || !dialog.current?.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
-    else if (!event.shiftKey && (document.activeElement === last || !dialog.current?.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
-  };
   const retry = async () => {
     if (busy || !['failed', 'canceled', 'expired'].includes(status?.status ?? '')) return;
     setBusy(true); setError('');
@@ -92,8 +69,8 @@ export function NativeExportWorkspace({ project, initial, onClose, onStatus }: {
       status?.downloadReady ? 'Ready' : status?.status === 'failed' ? 'Failed' :
         status?.status === 'expired' ? 'Expired' : status?.status === 'canceled' ? 'Canceled' : 'Preparing';
   const elapsed = status?.job?.createdAt ? Math.max(0, Math.floor((clock - Date.parse(status.job.createdAt)) / 1000)) : 0;
-  return createPortal(<div className="video-workspace-backdrop"><div ref={dialog} className="video-workspace native-export-workspace" role="dialog" aria-modal="true" aria-labelledby="native-export-title" onKeyDown={onKeyDown}>
-    <header className="video-workspace-header"><div><span className="eyebrow">VEGA APP DELIVERY</span><h2 id="native-export-title">Build &amp; Export App</h2><p>{project.spec.title}</p></div><button ref={closeButton} type="button" onClick={onClose} aria-label="Close app export">Close ×</button></header>
+  return <StudioModal className="video-workspace native-export-workspace" titleId="native-export-title" descriptionId="native-export-description" onClose={onClose}>
+    <ModalHeader eyebrow="VEGA APP DELIVERY" title="Build & Export App" titleId="native-export-title" descriptionId="native-export-description" description={project.spec.title} onClose={onClose} closeLabel="Close app export"/>
     <div className="video-workspace-body native-export-body" aria-live="polite">
       <div className="native-export-summary"><div><small>APP</small><strong>{deployment?.appName ?? project.spec.title}</strong></div><div><small>APP PACKAGE</small><strong>{deployment?.packageId ?? 'No approved deployment'}</strong></div><div><small>PUBLISHED RELEASE</small><strong>{release ? `Release #${release.sequence}` : 'No approved release'}</strong></div></div>
       {error && <p role="alert" className="catalog-error">{error}</p>}
@@ -111,6 +88,7 @@ export function NativeExportWorkspace({ project, initial, onClose, onStatus }: {
         : ['failed', 'canceled', 'expired'].includes(status?.status ?? '') ? <button className="primary" type="button" disabled={loading || busy || !deployment || !release} onClick={() => void retry()}>{busy ? 'Checking approved release…' : 'Retry native build'}</button>
           : !deployment || !release ? <p>Approve a deployment and publish a rights-cleared release in Publish before exporting the native app.</p> : null}
       <p className="muted">The build continues after you close this popup. Reopen it to check progress or download the finished app.</p>
+      <ModalFooter><button type="button" onClick={onClose} data-modal-close>Close</button></ModalFooter>
     </div>
-  </div></div>, document.body);
+  </StudioModal>;
 }
