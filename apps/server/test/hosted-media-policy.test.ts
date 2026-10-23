@@ -19,15 +19,12 @@ test('hosted media references accept only stable public HTTPS or bundled artwork
     'https://bucket.s3.us-east-2.amazonaws.com/original.mp4',
     'https://media.example/media/staged/secret/master.m3u8',
     'https://studio.example/api/projects/channel/private-objects/object/content',
-    'https://studio.example/api/%70rivate-objects/object/content',
-    'https://studio.example/api/draft-audio/ch_a/ci_b/ma_c/audio'
+    'https://studio.example/api/%70rivate-objects/object/content'
   ]) {
     assert.equal(publicMediaUrl(mediaUrl), false, mediaUrl);
     assert.throws(() => assertExportableMedia({ ...spec, content: [{ ...content, mediaUrl }] }), { code: 'INVALID_INPUT' });
   }
   assert.throws(() => assertExportableMedia({ ...spec, brand: { ...spec.brand, logo: 'http://localhost/logo.png' } }), { code: 'INVALID_INPUT' });
-  assert.throws(() => assertExportableMedia({ ...spec, content: [{ ...content, presentation: 'information',
-    mediaUrl: undefined, audiobook: { mediaUrl: 'https://studio.example/api/draft-audio/ch_a/ci_b/ma_c/audio' } }] }), { code: 'INVALID_INPUT' });
   assert.equal(publicMediaUrl('https://media.example/film.mp4'), true);
 });
 

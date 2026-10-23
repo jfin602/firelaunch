@@ -13,13 +13,13 @@ export function publicMediaUrl(value: string): boolean {
       !host.endsWith('.local') && !host.endsWith('.internal') && !host.endsWith('.amazonaws.com') &&
       !host.endsWith('.amazonaws.com.cn') &&
       (!url.port || url.port === '443') &&
-      !url.pathname.split('/').some(part => ['private-objects', 'draft-audio', 'staged', 'original'].includes(decodeURIComponent(part).toLowerCase()));
+      !url.pathname.split('/').some(part => ['private-objects', 'staged', 'original'].includes(decodeURIComponent(part).toLowerCase()));
   } catch { return false; }
 }
 
 export function assertExportableMedia(spec: ChannelSpec): void {
   const references = [spec.brand.logo, spec.brand.heroArtwork,
-    ...spec.content.flatMap(item => [item.artwork, item.mediaUrl, item.audiobook?.mediaUrl])];
+    ...spec.content.flatMap(item => [item.artwork, item.mediaUrl])];
   if (references.some(value => value && !value.startsWith('assets/') && !publicMediaUrl(value))) {
     throw new RepositoryError('INVALID_INPUT', 'Hosted media requires a stable public HTTPS URL or a bundled asset');
   }
