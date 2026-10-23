@@ -116,7 +116,8 @@ test('Home reports saved audio rights and a book audiobook from their own assets
     const audioCard = await screen.findByRole('button', { name: 'Open Private Track in Library' });
     const bookCard = screen.getByRole('button', { name: 'Open Private Book in Library' });
     assert.doesNotMatch(audioCard.textContent ?? '', /rights asserted/);
-    assert.match(bookCard.textContent ?? '', /Book · audiobook attached/);
+    assert.match(audioCard.textContent ?? '', /Audio · Private/);
+    assert.match(bookCard.textContent ?? '', /Book · Private · audiobook attached/);
     assert.doesNotMatch(bookCard.textContent ?? '', /rights asserted/);
   } finally { mock.restore(); }
 });
