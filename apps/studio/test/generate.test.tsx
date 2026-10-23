@@ -43,6 +43,23 @@ test('Library uses one per-item Publish action and has no Generate flow', async 
   } finally { cleanup(); globalThis.fetch = previous; }
 });
 
+test('a private audio Publish denial stays visible and keeps the item Private', async () => {
+  const previous = globalThis.fetch;
+  const audio = { ...book, kind: 'audio' };
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).endsWith('/catalog') && !init?.method) return response({ ...inventory, items: [audio] });
+    if (String(input).endsWith('/media-inclusion') && init?.method === 'POST')
+      return response({ error: { message: 'audio is not ready with cleared rights and delivery' } }, 409);
+    throw new Error(String(input));
+  }) as typeof fetch;
+  try {
+    render(createElement(Catalog, { project, hosted: true, accountId: owner }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Publish First Book · audio' }));
+    assert.match((await screen.findByRole('alert')).textContent ?? '', /not ready with cleared rights and delivery/);
+    assert.ok(screen.getByText('Private'));
+  } finally { cleanup(); globalThis.fetch = previous; }
+});
+
 test('optional refinement stays disabled when provider is unavailable', async () => {
   const previous = globalThis.fetch;
   globalThis.fetch = (async () => response({ error: { message: 'Provider unavailable' } }, 503)) as typeof fetch;

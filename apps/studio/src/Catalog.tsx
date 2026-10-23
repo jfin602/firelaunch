@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, type FormEvent } from 'react';
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
 import { sourceUseEligible, type CatalogItem, type Collection, type MediaAsset, type ChannelProject } from '@firelaunch/contracts';
-import { ApiError, approveCatalogImport, deletePrivateObject, previewCatalogImport, readCatalog, readVideoAssetStatus, revokeVideoAsset, setMediaInclusion, uploadPrivateEvidence, uploadPrivateMedia, writeCatalog, type CatalogSnapshot, type ImportPreview, type VideoAssetStatus } from './api.js';
+import { approveCatalogImport, deletePrivateObject, previewCatalogImport, readCatalog, readVideoAssetStatus, revokeVideoAsset, setMediaInclusion, uploadPrivateEvidence, uploadPrivateMedia, writeCatalog, type CatalogSnapshot, type ImportPreview, type VideoAssetStatus } from './api.js';
 import { VideoLibraryStatus } from './VideoUpload.js';
 import { safeArtwork } from './artwork-url.js';
 import { OwnedArtwork, ownedArtworkObject } from './OwnedArtwork.js';
@@ -14,7 +14,7 @@ const sourceLabel: Record<SourceType, string> = { creator_csv: 'CSV file', creat
 const kindFor = (creator: CreatorType): CatalogItem['kind'] => creator === 'writing' ? 'book' : creator;
 const collectionFor = (creator: CreatorType): Collection['kind'] => creator === 'writing' ? 'bookshelf' : creator === 'audio' ? 'album' : 'series';
 const draftSource = (type: SourceType, endpointUrl: string) => ({ schemaVersion: 1, type, state: 'discovered', ...(type === 'creator_https_feed' ? { endpointUrl } : {}), permission: { retrieval: type === 'creator_https_feed' ? 'creator_asserted' : 'unknown', tvDisplay: 'unknown' } });
-const errorText = (reason: unknown): string => reason instanceof ApiError && reason.status === 409 ? 'Catalog or channel changed in another tab. Latest revision loaded; review and retry.' : reason instanceof Error ? reason.message : String(reason);
+const errorText = (reason: unknown): string => reason instanceof Error ? reason.message : String(reason);
 const playbackConfirmed = (asset: MediaAsset): boolean => asset.tvPlaybackRights?.status === 'cleared' &&
   asset.tvPlaybackRights.permittedUse === 'television_playback' && !!asset.tvPlaybackRights.assertedAt;
 const displayConfirmed = (asset: MediaAsset): boolean => asset.tvDisplayRights?.status === 'cleared' &&
@@ -89,7 +89,7 @@ export function Catalog({ project, projectId: legacyProjectId, accountId, hosted
   const run = async (action: () => Promise<string>) => {
     setWorking(true); setError(''); setMessage('');
     try { setMessage(await action()); }
-    catch (reason) { setError(errorText(reason)); if (reason instanceof ApiError && reason.status === 409) await refresh().catch(() => undefined); }
+    catch (reason) { setError(errorText(reason)); }
     finally { setWorking(false); }
   };
   const addSource = (event: FormEvent) => { event.preventDefault(); void run(async () => {
