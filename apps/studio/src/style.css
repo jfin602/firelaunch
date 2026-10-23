@@ -1205,3 +1205,33 @@ body:has(.preview-fullscreen){overflow:hidden}
   .login-card { padding: 28px 24px; }
 }
 @media (prefers-reduced-motion: reduce) { .login-cta { transition: none; } }
+
+/* Compact page and section editing controls. */
+.channel-editor .layout-page-rail .layout-new-page{width:100%;min-height:38px;margin-top:8px;padding:7px 10px;text-align:left;background:#332c2a;border:1px solid #62514b;color:var(--fl-text);font-weight:700}
+.channel-editor .layout-new-page span{color:var(--fl-orange);font-size:19px;line-height:1;vertical-align:middle}
+.channel-editor .layout-new-page:hover{background:#42312b}
+.channel-editor .layout-page-list button{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.channel-editor .layout-page-title{display:flex;align-items:center;gap:4px;min-width:0}
+.channel-editor .layout-page-title h2{min-width:0;overflow-wrap:anywhere;margin:2px 0}
+.channel-editor .editor-icon-button,.channel-editor .layout-section .editor-icon-button{display:inline-grid;place-items:center;flex:none;width:32px;height:32px;min-height:32px;padding:0;border:0;background:transparent;box-shadow:none;color:#babdc0;border-radius:7px}
+.channel-editor .editor-icon-button:hover:not(:disabled){background:#383b3e;color:#f0f0ed}
+.channel-editor .editor-icon-danger:hover:not(:disabled){background:#4a2929;color:#f3a5a0}
+.channel-editor .editor-icon-button:focus-visible{outline:2px solid var(--fl-focus);outline-offset:1px}
+.channel-editor .layout-section-heading{display:flex;flex-wrap:nowrap;gap:5px;min-width:0}
+.channel-editor .layout-section-heading>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.channel-editor .layout-section-actions{display:flex;gap:1px;align-items:center;flex:none;margin-left:auto}
+.channel-editor .layout-section{min-height:0;padding:10px 11px;border-radius:10px}
+.channel-editor .layout-hero{min-height:0}
+.channel-editor .layout-section h3{font-size:13px;margin:3px 0 5px;overflow-wrap:anywhere}
+.channel-editor .layout-section p{margin:5px 0;font-size:11px;line-height:1.35}
+.channel-editor .layout-sections{gap:7px;margin:8px 0}
+.channel-editor .layout-tile img,.channel-editor .layout-hero .layout-tile img{height:48px}
+.channel-editor .layout-tile span{font-size:11px;line-height:1.2}
+.channel-editor .section-add{display:grid;gap:5px;padding:9px;margin-top:8px;border:1px solid var(--fl-border-soft);border-radius:9px;background:var(--fl-surface)}
+.channel-editor .section-add h3{margin:0;font-size:12px}
+.channel-editor .section-add-fields{display:flex;align-items:end;flex-wrap:wrap;gap:6px}
+.channel-editor .section-add-fields label{display:grid;gap:3px;flex:1 1 110px;min-width:0;color:var(--fl-muted);font-size:10px}
+.channel-editor .section-add-fields select,.channel-editor .section-add-fields input{width:100%;min-width:0;min-height:34px;padding:5px 7px;border:1px solid var(--fl-border-soft);border-radius:6px;background:var(--fl-field);color:var(--fl-text);font-size:12px}
+.channel-editor .section-add-fields button.primary{min-height:34px;padding:5px 12px;background:var(--fl-orange);border-color:var(--fl-orange);color:#20110c}
+.channel-editor .section-add p:empty{display:none}
+@media(max-width:760px){.channel-editor .layout-page-rail .layout-new-page{width:auto;align-self:flex-start}.channel-editor .layout-section-actions{gap:0}}

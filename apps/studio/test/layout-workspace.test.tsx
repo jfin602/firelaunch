@@ -86,10 +86,10 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     assert.equal(within(rail).getByRole('button', { name: 'Home' }).getAttribute('aria-current'), 'page');
     assert.match(rail.textContent ?? '', /PAGES · 1 OF 2/);
     assert.equal((within(rail).getByRole('combobox', { name: 'Go to page' }) as HTMLSelectElement).options.length, 2);
-    assert.ok(within(rail).getByRole('button', { name: 'New page' }));
+    assert.ok(within(rail).getByRole('button', { name: 'New Page' }));
     const homeSection = screen.getByRole('region', { name: 'hero section 1' });
     assert.ok(within(homeSection).getByText('Oceans'));
-    const editSection = within(homeSection).getByRole('button', { name: 'Edit section' });
+    const editSection = within(homeSection).getByRole('button', { name: /Edit section/ });
     editSection.focus(); fireEvent.click(editSection);
     const inspector = screen.getByRole('complementary', { name: 'Layout inspector' });
     await waitFor(() => assert.equal(document.activeElement, within(inspector).getByRole('button', { name: 'Close layout inspector' })));
@@ -121,7 +121,7 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     assert.equal(dock.querySelector('.channel-editor'), editor);
     assert.equal(screen.queryByRole('button', { name: 'Close TV Preview' }), null);
     assert.equal(screen.queryByRole('button', { name: 'AI Assistant' }), null);
-    fireEvent.click(screen.getByRole('button', { name: 'Edit page' }));
+    fireEvent.click(screen.getByRole('button', { name: /Edit page/ }));
     fireEvent.change(screen.getByRole('textbox', { name: 'PAGE NAME' }), { target: { value: 'Home' } });
     fireEvent.click(screen.getByRole('button', { name: 'Rename page' }));
     assert.match(screen.getByRole('alert').textContent ?? '', /already exists/);
@@ -136,7 +136,7 @@ test('Pages & Layout selection, rename, guarded deletion and account-safe projec
     fireEvent.click(screen.getByRole('button', { name: 'Delete page' }));
     await waitFor(() => assert.equal(current.spec.pages.length, 1));
     assert.ok(within(rail).getByRole('button', { name: 'Home' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Edit page' }));
+    fireEvent.click(screen.getByRole('button', { name: /Edit page/ }));
     assert.equal((screen.getByRole('button', { name: 'Delete page' }) as HTMLButtonElement).disabled, true);
     fireEvent.click(screen.getByRole('button', { name: /Switch workspace, current channel/ }));
     fireEvent.click(screen.getByRole('button', { name: second.spec.title }));
@@ -229,7 +229,7 @@ test('Image + Text section saves bounded text and preset through the normal muta
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Section type' }), { target: { value: 'image-text' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add section' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     await waitFor(() => assert.equal(current.spec.pages[0]?.modules.at(-1)?.kind, 'image-text'));
     const inspector = screen.getByRole('complementary', { name: 'Layout inspector' });
     fireEvent.change(within(inspector).getByRole('textbox', { name: 'Section text' }), { target: { value: 'Our original story' } });
@@ -286,7 +286,7 @@ test('section edits reorder by stable IDs, preserve Library references and retai
     fireEvent.click(screen.getByRole('button', { name: 'Channel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
     const section = screen.getByRole('region', { name: 'hero section 1' });
-    fireEvent.click(within(section).getByRole('button', { name: 'Edit section' }));
+    fireEvent.click(within(section).getByRole('button', { name: /Edit section/ }));
     const inspector = screen.getByRole('complementary', { name: 'Layout inspector' });
     assert.equal((await within(inspector).findByRole('checkbox', { name: 'Oceans' }) as HTMLInputElement).checked, true);
     assert.ok(within(inspector).getByText('Choose content'));
@@ -298,7 +298,7 @@ test('section edits reorder by stable IDs, preserve Library references and retai
     assert.equal(current.spec.content[0]?.mediaUrl, originalMedia);
     fireEvent.click(within(inspector).getByRole('button', { name: 'Close layout inspector' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Section type' }), { target: { value: 'text' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add section' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     await waitFor(() => assert.equal(current.spec.pages[0]?.modules.length, 2));
     const textId = current.spec.pages[0]!.modules[1]!.id;
     const editor = screen.getByRole('complementary', { name: 'Layout inspector' });
@@ -319,10 +319,10 @@ test('section edits reorder by stable IDs, preserve Library references and retai
     await waitFor(() => assert.equal(current.spec.pages[0]?.modules[0]?.id, textId));
     assert.equal(document.activeElement, move);
     window.confirm = () => false;
-    fireEvent.click(screen.getAllByRole('button', { name: 'Remove section' })[0]!);
+    fireEvent.click(screen.getAllByRole('button', { name: /Remove section/ })[0]!);
     assert.equal(current.spec.pages[0]?.modules.length, 2);
     window.confirm = () => true;
-    fireEvent.click(screen.getAllByRole('button', { name: 'Remove section' })[0]!);
+    fireEvent.click(screen.getAllByRole('button', { name: /Remove section/ })[0]!);
     await waitFor(() => assert.equal(current.spec.pages[0]?.modules.length, 1));
     assert.equal(current.spec.content[0]?.title, 'Oceans');
     assert.deepEqual(writes.slice(0, 2), ['section-content', 'section-content']);

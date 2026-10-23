@@ -117,7 +117,8 @@ test('every Studio destination starts without a topbar and the card owns workspa
     assert.match(card.textContent ?? '', /SAVED PRIVATELY/);
     assert.equal(document.querySelector('.topbar'), null);
     assert.equal(document.querySelector('.project-select'), null);
-    for (const destination of ['Home', 'Library', 'Channel', 'Publish', 'Export']) {
+    assert.equal(screen.queryByRole('button', { name: 'Publish' }), null);
+    for (const destination of ['Home', 'Library', 'Channel', 'Export']) {
       fireEvent.click(screen.getByRole('button', { name: destination }));
       assert.equal(document.querySelector('.topbar'), null);
       assert.equal(document.querySelector('.studio-main')?.firstElementChild?.classList.contains('topbar'), false);
@@ -403,7 +404,7 @@ test('fullscreen left drawer reveals at the edge, stays open for focus and edits
     fireEvent.click(dock.querySelector<HTMLButtonElement>('.layout-section button')!);
     assert.ok(dock.querySelector('.layout-inspector'));
     fireEvent.click(dock.querySelector<HTMLButtonElement>('[aria-label="Close layout inspector"]')!);
-    fireEvent.click(dock.querySelector<HTMLButtonElement>('.layout-page-rail button:last-child')!);
+    fireEvent.click(dock.querySelector<HTMLButtonElement>('.layout-new-page')!);
     assert.ok(document.querySelector('.fl-modal[role="dialog"]'));
     fireEvent.focusOut(dock, { relatedTarget: root.querySelector('.tv-frame') });
     await new Promise(resolve => setTimeout(resolve, 1300));

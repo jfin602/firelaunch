@@ -43,7 +43,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     await waitFor(() => assert.ok(screen.getByText('REV 2 · LOCAL')));
     await waitFor(() => assert.equal((screen.getByRole('button', { name: /Save brand/ }) as HTMLButtonElement).disabled, true));
     fireEvent.click(screen.getByRole('button', { name: 'Pages & Layout' }));
-    fireEvent.click(within(screen.getByRole('region', { name: 'rail section 2' })).getByRole('button', { name: 'Edit section' }));
+    fireEvent.click(within(screen.getByRole('region', { name: 'rail section 2' })).getByRole('button', { name: 'Edit section 2' }));
     const inspector = screen.getByRole('complementary', { name: 'Layout inspector' });
     fireEvent.change(within(inspector).getByRole('textbox', { name: 'Section heading' }), { target: { value: 'Field Notes Picks' } });
     fireEvent.click(within(inspector).getByRole('button', { name: 'Save changes' }));
@@ -63,8 +63,7 @@ test('Studio golden path creates, edits, refines, generates, blocks build, hands
     fireEvent.click(screen.getByRole('button', { name: 'Build & Download' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Run Vega release build' }));
     await waitFor(() => assert.ok(screen.getByText(/VEGA_SDK_PATH not set/)));
-    fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
-    await screen.findByText(/Live publication requires an authenticated creator deployment/);
+    assert.equal(within(screen.getByRole('navigation', { name: 'Studio surfaces' })).queryByRole('button', { name: 'Publish' }), null);
     fireEvent.click(screen.getByRole('button', { name: 'Export' }));
     await screen.findByText('Submission handoff');
     await waitFor(() => assert.equal((screen.getByRole('button', { name: 'Create local submission bundle' }) as HTMLButtonElement).disabled, false));
