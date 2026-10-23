@@ -37,7 +37,7 @@ const server = createServer(async (request, response) => {
   if (file !== entry && !file.startsWith(`${dist}/`)) { response.writeHead(404); response.end(); return; }
   try {
     const bytes = await readFile(file);
-    response.writeHead(200, { 'content-type': extname(file) === '.js' ? 'text/javascript' : extname(file) === '.css' ? 'text/css' : extname(file) === '.webp' ? 'image/webp' : 'text/html', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+    response.writeHead(200, { 'content-type': extname(file) === '.js' ? 'text/javascript' : extname(file) === '.css' ? 'text/css' : extname(file) === '.webp' ? 'image/webp' : extname(file) === '.png' ? 'image/png' : 'text/html', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
     response.end(bytes);
   } catch {
     // Reproduce the current Nginx SPA fallback for a missing hashed asset.
@@ -97,7 +97,7 @@ try {
     assert.ok(state?.visible && state.root.includes(expected), `${label}: visible UI missing`);
     assert.equal(errors.length, 0, `${label}: browser console/runtime errors`);
   }
-  await check(first, 'signed-out', 'Sign in to VegaLaunch');
+  await check(first, 'signed-out', 'Sign in with Google');
   signedIn = true;
   await check(first, 'signed-in', 'Startup smoke channel');
   const { targetId } = await first.send('Target.createTarget', { url: 'about:blank' });
