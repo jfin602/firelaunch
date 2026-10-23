@@ -10,7 +10,7 @@ Decision: [ADR 0010](../decisions/0010-aws-media-delivery.md)
 
 ## Purpose and boundary
 
-Creator-controlled originals are directly uploaded to private S3, converted by an independent FFmpeg worker into HLS, verified, and delivered from a private S3 origin using CloudFront OAC. Keep evidence/private media objects already used by P2/P3 separate. The existing `firelaunch.jfin.dev` Studio/API on muffinos is the control plane only: 2 vCPU is not an appropriate multi-tenant transcoding or video-delivery machine. A locally operated Linux worker is acceptable for **initial qualification**, not unattended production.
+Creator-controlled originals are directly uploaded to private S3, converted by an independent FFmpeg worker into HLS, verified, and delivered from a private S3 origin using CloudFront OAC. Keep evidence/private media objects already used by P2/P3 separate. The `vegalaunch.jfin.dev` Studio/API on muffinos is the control plane only: 2 vCPU is not an appropriate multi-tenant transcoding or video-delivery machine. A locally operated Linux worker is acceptable for **initial qualification**, not unattended production. This 2026-10-11 architecture note predates the [final rename recovery](../tasks/rebrand-vegalaunch/final-rename-recovery-2026-10-23.md); it is not an assertion that the old AWS physical resources were renamed.
 
 ## AWS inventory (planned, no existing resources assumed)
 
