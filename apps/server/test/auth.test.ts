@@ -196,3 +196,33 @@ test('HTTPS hosted login sets secure host-only cookies behind a matching proxy',
     assert.equal((await send('evil.example')).status, 400);
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); process.env.NODE_ENV = oldEnvironment; }
 });
+
+test('legacy staging login redirects to the configured canonical OAuth origin', async () => {
+  const verifier = new OidcVerifier({
+    issuer: 'https://accounts.google.com', clientId: 'fixture',
+    authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenEndpoint: 'https://oauth2.googleapis.com/token',
+    jwksUri: 'https://www.googleapis.com/oauth2/v3/certs',
+    redirectUri: 'https://vegalaunch.jfin.dev/api/auth/callback'
+  });
+  const auth = new HostedAuth(verifier, 'https://vegalaunch.jfin.dev', async principal => principal.accountId);
+  const server = createServer((request, response) => auth.begin(request, response));
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  const address = server.address(); assert.ok(address && typeof address !== 'string');
+  const send = (host: string, forwardedHost = host, proto = 'https') => new Promise<{ status: number; location: string; cookie: string }>((resolve, reject) => {
+    const request = httpRequest({ hostname: '127.0.0.1', port: address.port, path: '/',
+      headers: { host, 'x-forwarded-host': forwardedHost, 'x-forwarded-proto': proto } }, response => {
+      response.resume(); response.on('end', () => resolve({ status: response.statusCode!, location: response.headers.location ?? '', cookie: response.headers['set-cookie']?.[0] ?? '' }));
+    });
+    request.on('error', reject); request.end();
+  });
+  try {
+    assert.deepEqual(await send('firelaunch.jfin.dev'), {
+      status: 302, location: 'https://vegalaunch.jfin.dev/api/auth/login', cookie: ''
+    });
+    assert.equal((await send('firelaunch.jfin.dev', 'evil.example')).status, 400);
+    assert.equal((await send('firelaunch.jfin.dev', 'firelaunch.jfin.dev', 'http')).status, 400);
+    assert.equal((await send('evil.example')).status, 400);
+    assert.equal((await send('vegalaunch.jfin.dev')).status, 302);
+  } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
+});

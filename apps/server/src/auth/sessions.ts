@@ -78,6 +78,14 @@ export class HostedAuth {
   }
 
   begin(request: IncomingMessage, response: ServerResponse): void {
+    // Keep existing bookmarks usable without expanding the accepted OIDC callback origin.
+    if (this.publicOrigin === 'https://vegalaunch.jfin.dev' &&
+      request.headers.host === 'firelaunch.jfin.dev' &&
+      (request.headers['x-forwarded-host'] === undefined || request.headers['x-forwarded-host'] === 'firelaunch.jfin.dev') &&
+      request.headers['x-forwarded-proto'] === 'https' && !request.headers.forwarded) {
+      response.writeHead(302, { location: `${this.publicOrigin}/api/auth/login`, 'cache-control': 'no-store' }).end();
+      return;
+    }
     if (!this.safeHost(request)) { void audit(undefined, 'auth_denied', 'denied'); response.writeHead(400).end(); return; }
     for (const [key, login] of this.logins) if (login.expiresAt <= Date.now()) this.logins.delete(key);
     if (this.logins.size >= 10_000) { response.writeHead(503).end(); return; }
