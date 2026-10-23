@@ -4,6 +4,10 @@
 
 **2026-10-22 / documentation-only authoring**. Execute only after reconciling c8-hero-multimedia and actual post-P8D local/staging source. Historical P8 closeout remains NOT GREEN. [Task README](README.md) is the execution contract; [issue companion files](../p9-polish/README.md) provide exact acceptance criteria.
 
+## P9-011 P0 targeted manual correction (2026-10-22 owner addendum)
+
+A new P0 issue, [P9-011](../p9-polish/issues/P9-011-mixed-media-sections.md), exposes a functional gap: Audio and Book catalog entries are absent from the Channel Editor section picker and need stable valid selection into the current ChannelSpec with the existing typed Hero/Row/Grid and More info/Watch/Listen/Book Showcase behavior. Use [`c9-multimedia-editor`](../c9-multimedia-editor/README.md), assessed and planned as ONE independently manual Sol High prompt with guarded staging + real owner Codex browser + native parity where possible. **No existing P9 P1–P11 renumbering and no extra preassigned 0.9.x version**; keep the correction at actual version where safe. Run before P11; if earlier P9 P2/P3/P8 code overlaps, reconcile completed commits first. Report native media delivery accurately, never assume private MP3 playback equals native public delivery.
+
 ## Manual sequence / suggested version mapping
 
 | Manual step | Issue | Candidate root version (conditional) | Dependency / test nucleus |
