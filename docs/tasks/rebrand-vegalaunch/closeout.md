@@ -6,7 +6,7 @@
 
 - Product commit: `e3bad07a0442aa8d81eec0b24492e0c8a669d57a` on `codex/vegalaunch-rename`; root and both lock versions `0.9.4`. The product commit changes 100 files. No schema migration or version bump.
 - Full typecheck passed. `npm run test` passed **401**, skipped **16**, failed **0** (kernel 194/16, Studio 101, runner 106). All seven workspace production builds passed, including Studio and server. Eight staging-helper tests passed. The production Studio smoke passed signed-out, fixture signed-in, fresh tab, and assembled archive entrypoints.
-- A fresh generated synthetic Vega project built as an x86_64 Release VPKG with SDK `0.24.12112`, CLI `1.4.4`, zero manifest errors, package `com.vegalaunch.channel.ch_11111111111111111111111111111111`. The VirtualDevice reported ready but exited or disappeared before install; no native render, navigation, or moving playback is claimed.
+- A fresh generated synthetic Vega project built as an x86_64 Release VPKG with SDK `0.24.12112`, CLI `1.4.4`, zero manifest errors, package `com.vegalaunch.channel.ch_11111111111111111111111111111111`. With graphics acceleration, one VirtualDevice `install-app` completed successfully. The device then disappeared between CLI calls; subsequent `launch-app` returned `Device not found` or `App could not be determined`. No native render, navigation, or moving playback is claimed.
 - The final search found no old product word in Studio presentation, generated app metadata, or TV presentation source. `firelaunch` remains in technical compatibility keys and historical records listed in [the audit](../../rebrand-compatibility.md). Built Studio JavaScript retains only the old private draft storage key, not visible product copy.
 
 ## Protected staging deployment
@@ -27,6 +27,6 @@
 
 - A saved private media title still reads **FireLaunch Staging Video Qualification 20261017T0300Z**, visible in Home and Library. An older creator-owned generated source tree for `snabble tv` still lists `firelaunch.json`. These records were left intact to preserve creator data and historical evidence. Fresh generated source uses `vegalaunch.json`.
 - The old `https://firelaunch.jfin.dev` host serves Studio, but `/api/auth/login` returns 400 because the configured OAuth origin is the canonical `https://vegalaunch.jfin.dev` (whose login returns 302). Existing old-host bookmarks need a separately reviewed redirect or migration path.
-- Native install/visual/playback, a fresh live ZIP export, a real upload, and full media-reference matrix remain unverified. No GREEN claim is made for those gates.
+- Native launch/visual/playback, a fresh live ZIP export, a real upload, and full media-reference matrix remain unverified. One disposable VPKG install succeeded, but that alone does not pass native qualification. No GREEN claim is made for those gates.
 
 The guarded rollback target is the previous schema-15 release above. Do not roll back merely for these historical creator-data references; the deployed candidate passed its runtime checks.
