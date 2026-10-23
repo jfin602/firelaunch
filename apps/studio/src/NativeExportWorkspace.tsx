@@ -14,6 +14,8 @@ export function NativeExportWorkspace({ project, initial, onClose, onStatus }: {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   const [error, setError] = useState('');
   const [clock, setClock] = useState(Date.now());
   const pending = useRef(false);
@@ -34,9 +36,10 @@ export function NativeExportWorkspace({ project, initial, onClose, onStatus }: {
   useEffect(() => {
     if (!status?.downloadReady || !status.job || downloadedJob.current === status.job.id) return;
     downloadedJob.current = status.job.id;
-    void downloadNativeExport(project.id, status.job.id).catch(reason => {
+    setDownloading(true);
+    void downloadNativeExport(project.id, status.job.id).then(() => setDownloaded(true)).catch(reason => {
       setError(reason instanceof Error ? reason.message : String(reason));
-    });
+    }).finally(() => setDownloading(false));
   }, [project.id, status?.downloadReady, status?.job?.id]);
   useEffect(() => {
     if (!active(status)) return;
@@ -52,14 +55,14 @@ export function NativeExportWorkspace({ project, initial, onClose, onStatus }: {
   const download = async () => {
     if (!status?.downloadReady || !status.job || busy) return;
     setBusy(true); setError('');
-    try { await downloadNativeExport(project.id, status.job.id); downloadedJob.current = status.job.id; }
+    try { await downloadNativeExport(project.id, status.job.id); downloadedJob.current = status.job.id; setDownloaded(true); }
     catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); await refresh(); }
     finally { setBusy(false); }
   };
-  const stage = busy && !status?.downloadReady ? 'Preparing' : verifying && status?.status === 'ready' ? 'Verifying' :
-    status?.status === 'queued' ? 'Queued' : status?.status === 'running' ? 'Building' :
-      status?.downloadReady ? 'Ready' : status?.status === 'failed' ? 'Failed' :
-        status?.status === 'expired' ? 'Expired' : status?.status === 'canceled' ? 'Canceled' : 'Preparing';
+  const stage = downloading ? 'Creating ZIP' : downloaded ? 'Download ready' :
+    status?.status === 'queued' ? 'Preparing build' : status?.status === 'running' ? 'Building application' :
+      status?.downloadReady ? 'Creating ZIP' : status?.status === 'failed' ? 'Build failed' :
+        status?.status === 'expired' ? 'Build expired' : status?.status === 'canceled' ? 'Build canceled' : 'Preparing build';
   const elapsed = status?.job?.createdAt ? Math.max(0, Math.floor((clock - Date.parse(status.job.createdAt)) / 1000)) : 0;
   return <StudioModal className="video-workspace native-export-workspace" titleId="native-export-title" descriptionId="native-export-description" onClose={onClose}>
     <ModalHeader eyebrow="VEGA APP DELIVERY" title="Build & Download" titleId="native-export-title" descriptionId="native-export-description" description={project.spec.title} onClose={onClose} closeLabel="Close app export"/>
@@ -73,6 +76,8 @@ export function NativeExportWorkspace({ project, initial, onClose, onStatus }: {
         {status?.status === 'failed' && <p>The build failed. Review the error before retrying.</p>}
         {status?.status === 'expired' && <p>The previous build expired. Retry to build the current channel draft.</p>}
         {status?.reason && <p>{status.reason}</p>}
+        {!!status?.warnings?.length && <div className="delivery-warning" role="note"><strong>Media warnings ({status.warnings.length})</strong><ul>{status.warnings.map((warning, index) =>
+          <li key={`${warning.contentId ?? 'channel'}-${warning.field}-${index}`}>{warning.message}</li>)}</ul></div>}
         {status?.job?.errorCode && <p>Worker result: {status.job.errorCode}</p>}
         {status?.job && <p className="native-export-meta">Job {status.job.id} · Attempt {status.job.attempt ?? 0}{active(status) && ` · Elapsed ${Math.floor(elapsed / 60)}m ${String(elapsed % 60).padStart(2,'0')}s`}</p>}
       </section>}

@@ -76,13 +76,14 @@ export function createNativeExport(input: ReleaseBuildInput, evidence: NativeBui
   const vpkgName = `${input.packageId}_x86_64.vpkg`;
   const delivery = input.mode === 'draft' ? `This package contains private draft revision ${input.draft.revision}. It does not follow a public release pointer.` :
     `The app reads its creator-approved published release from ${input.manifestEndpoint}.`;
-  const readme = Buffer.from(`# VegaLaunch Vega release\n\nPackage ID: ${input.packageId}\n\nThis ZIP contains the native x86_64 Release package. Verify SHA256SUMS before installing.\n\n1. Start Vega VirtualDevice and run \`vega device list\` to find its serial.\n2. Run \`vega device install-app --device <serial> --packagePath ${vpkgName}\`.\n3. Run \`vega device launch-app --device <serial> --appName ${input.packageId}.main\`.\n\n${delivery} Device playback and Amazon submission require separate qualification.\n`);
+  const warnings = input.mode === 'draft' ? input.warnings ?? [] : [];
+  const readme = Buffer.from(`# VegaLaunch Vega release\n\nPackage ID: ${input.packageId}\n\nThis ZIP contains the native x86_64 Release package. Verify SHA256SUMS before installing.\n\n1. Start Vega VirtualDevice and run \`vega device list\` to find its serial.\n2. Run \`vega device install-app --device <serial> --packagePath ${vpkgName}\`.\n3. Run \`vega device launch-app --device <serial> --appName ${input.packageId}.main\`.\n\n${delivery} ${warnings.length ? `${warnings.length} unresolved media warning(s) are listed in export-info.json. ` : ''}Device playback and Amazon submission require separate qualification.\n`);
   const info = Buffer.from(`${JSON.stringify({ format: 'vegalaunch-vega-export-v1', product: 'VegaLaunch', projectId: input.projectId,
     specRevision: input.specRevision, deploymentId: input.deploymentId, packageId: input.packageId,
     delivery: input.mode === 'draft' ? 'draft' : 'published',
     ...(input.mode === 'draft' ? { draft: input.draft } :
       { manifestEndpoint: input.manifestEndpoint, publishedRelease: input.publishedRelease }),
-    sourceHash: input.sourceHash, inputFingerprint: input.fingerprint,
+    sourceHash: input.sourceHash, inputFingerprint: input.fingerprint, warnings,
     vpkg: { name: vpkgName, bytes: vpkg.length, sha256: evidence.sha256 },
     toolchain: evidence.toolchain, dependencyLockSha256: evidence.dependencyLockSha256 }, null, 2)}\n`);
   const sums = Buffer.from(`${sha256(vpkg)}  ${vpkgName}\n${sha256(readme)}  README.md\n${sha256(info)}  export-info.json\n`);

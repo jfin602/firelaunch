@@ -141,8 +141,10 @@ function respond(response: ServerResponse, status: number, value: unknown): void
 }
 
 function nativeExportJobStatus(job: NonNullable<Awaited<ReturnType<NativeBuildQueue['status']>>>,
-  verified?: Awaited<ReturnType<typeof nativeExportForOwner>>) {
+  verified?: Awaited<ReturnType<typeof nativeExportForOwner>>,
+  warnings: readonly import('./hosted-media-policy.js').DraftMediaWarning[] = []) {
   return { status: job.state,
+    warnings: verified?.warnings ?? warnings,
     reason: job.state === 'failed' ? 'Native build failed; operator review is required' : undefined,
     job: { id: job.id, attempt: job.attempt, errorCode: job.errorCode, expiresAt: job.expiresAt,
       createdAt: job.createdAt,
@@ -231,16 +233,18 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             if (segments.length === 4 && request.method === 'GET') {
               await hostedRepository.read(principal, projectId);
               const job = await nativeBuildQueue!.latestStatus(principal.accountId, projectId);
+              let warnings: readonly import('./hosted-media-policy.js').DraftMediaWarning[] = [];
               if (job && (job.state === 'queued' || job.state === 'running')) {
                 if (job.buildKind === 'draft') {
                   const current = await hostedWorkspace.draftBuildInput(principal, projectId);
                   if (current.fingerprint !== job.inputFingerprint)
                     throw new RepositoryError('CONFLICT', 'Build input changed');
+                  warnings = current.warnings ?? [];
                 } else await hostedWorkspace.assertReleaseBuildInputCurrent(principal, projectId, job.inputFingerprint);
               }
               const verified = job?.state === 'ready' ? await nativeExportForOwner(nativeBuildQueue!, hostedWorkspace,
                 principal, projectId, job.id, process.env.VEGALAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights) : undefined;
-              respond(response, 200, job ? nativeExportJobStatus(job, verified) : { status: 'blocked', reason: 'No native build has been submitted for this project',
+              respond(response, 200, job ? nativeExportJobStatus(job, verified, warnings) : { status: 'blocked', reason: 'No native build has been submitted for this project',
                 job: null, downloadReady: false }); return;
             }
             if (segments.length === 4 && request.method === 'POST') {
@@ -255,7 +259,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
               if (!job) throw new RepositoryError('STORAGE_ERROR', 'Build job receipt unavailable');
               const verified = job.state === 'ready' ? await nativeExportForOwner(nativeBuildQueue!, hostedWorkspace,
                 principal, projectId, job.id, process.env.VEGALAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights) : undefined;
-              respond(response, job.state === 'ready' ? 200 : 202, nativeExportJobStatus(job, verified)); return;
+              respond(response, job.state === 'ready' ? 200 : 202, nativeExportJobStatus(job, verified, input.warnings)); return;
             }
             if (segments.length === 6 && segments[5] === 'download' && request.method === 'GET') {
               await hostedRepository.read(principal, projectId);

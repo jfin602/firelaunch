@@ -97,6 +97,7 @@ export const saveSource = (id: string, file: SourceFile, content: string) => req
 export const buildStatus = (id: string) => request(`/${id}/build`) as Promise<BuildEvidence>;
 export const runBuild = (id: string) => request(`/${id}/build`, json({})) as Promise<BuildEvidence>;
 export type NativeExportStatus = { status: 'blocked' | 'queued' | 'running' | 'ready' | 'failed' | 'canceled' | 'expired'; reason?: string;
+  warnings?: { contentId?: string; field: 'logo' | 'heroArtwork' | 'artwork' | 'playback' | 'audiobook'; message: string }[];
   job: { id: string; attempt?: number; errorCode?: string | null; expiresAt?: string; createdAt?: string;
     completedAt?: string | null; artifactBytes?: number | null; packageId?: string | null;
     deploymentId?: string | null; release?: { releaseId: string; sequence: number } | null } | null; downloadReady: boolean };

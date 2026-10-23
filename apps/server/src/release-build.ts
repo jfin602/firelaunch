@@ -8,6 +8,7 @@ import { generateProject } from '@vegalaunch/generator';
 import type { ChannelDeployment, ChannelProject } from '@vegalaunch/contracts';
 import { RepositoryError } from './repository.js';
 import { isTrustedVegaAsset, isTrustedVegaAssetPath, TRUSTED_VEGA_ASSET_MAX_BYTES } from './trusted-vega-assets.js';
+import type { DraftMediaWarning } from './hosted-media-policy.js';
 
 export const DEPENDENCY_LOCK_COMMAND = Object.freeze(['npm', 'install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund']);
 export const DEPENDENCY_INSTALL_COMMAND = Object.freeze(['npm', 'ci', '--no-audit', '--no-fund']);
@@ -38,6 +39,7 @@ export type ReleaseBuildInput = Readonly<{
   format: 'vegalaunch-vega-build-input-v1'; projectId: string; creatorAccountId: string;
   specRevision: number; generatorFingerprint: string; sourceRevision: number;
   deploymentId: string; packageId: string; manifestEndpoint: string;
+  warnings?: readonly DraftMediaWarning[];
   files: Readonly<Record<string, string>>;
   fileSha256: Readonly<Record<string, string>>; sourceHash: string; fingerprint: string;
 }> & BuildIdentity;
@@ -90,7 +92,8 @@ function validFiles(files: Record<string, string>): Record<string, string> {
 }
 
 async function createBuildInput(project: ChannelProject, source: StoredSource | null,
-  deployment: ChannelDeployment, identity: BuildIdentity | null, creatorAccountId: string): Promise<ReleaseBuildInput> {
+  deployment: ChannelDeployment, identity: BuildIdentity | null, creatorAccountId: string,
+  warnings: readonly DraftMediaWarning[] = []): Promise<ReleaseBuildInput> {
   if (!source) throw new RepositoryError('CONFLICT', 'Generate deployment-bound source before building');
   if (!identity || (identity.mode === 'draft' ?
     !Number.isSafeInteger(identity.draft.revision) || identity.draft.revision < 1 ||
@@ -134,6 +137,7 @@ async function createBuildInput(project: ChannelProject, source: StoredSource | 
     creatorAccountId: deployment.creatorAccountId, specRevision: project.revision,
     generatorFingerprint: generated.fingerprint, sourceRevision: source.specRevision,
     deploymentId: deployment.id, packageId: deployment.packageId, manifestEndpoint: endpoint,
+    ...(identity.mode === 'draft' ? { warnings } : {}),
     ...identity, files, fileSha256, sourceHash };
   return Object.freeze({ ...snapshot, fingerprint: sha256(JSON.stringify({ ...snapshot, files: undefined })) }) as ReleaseBuildInput;
 }
@@ -143,10 +147,11 @@ export async function createReleaseBuildInput(project: ChannelProject, source: S
   return createBuildInput(project, source, deployment, release ? { publishedRelease: release } : null, creatorAccountId);
 }
 export async function createDraftBuildInput(project: ChannelProject, source: StoredSource | null,
-  deployment: ChannelDeployment, creatorAccountId: string): Promise<ReleaseBuildInput> {
+  deployment: ChannelDeployment, creatorAccountId: string,
+  warnings: readonly DraftMediaWarning[] = []): Promise<ReleaseBuildInput> {
   const digest = sha256(source?.files['src/channel.json'] ?? '');
   return createBuildInput(project, source, deployment,
-    { mode: 'draft', draft: { revision: project.revision, snapshotSha256: digest } }, creatorAccountId);
+    { mode: 'draft', draft: { revision: project.revision, snapshotSha256: digest } }, creatorAccountId, warnings);
 }
 
 /** The isolated worker calls this in its empty disposable directory. The hosted API never calls it. */
@@ -179,6 +184,11 @@ export async function materializeReleaseBuildInput(input: ReleaseBuildInput, des
     invalid('Invalid build input identity');
   const files = validFiles({ ...input.files });
   if (input.mode === 'draft') {
+    if (input.warnings && (input.warnings.length > 1002 || input.warnings.some(warning =>
+      !warning || !['logo', 'heroArtwork', 'artwork', 'playback', 'audiobook'].includes(warning.field) ||
+      typeof warning.message !== 'string' || warning.message.length > 250 ||
+      warning.contentId !== undefined && !/^item_[a-f0-9]{32}$/.test(warning.contentId))))
+      invalid('Invalid draft media warnings');
     if (files['src/release-config.json'] || files['src/remote-release.js'] ||
       sha256(files['src/channel.json'] ?? '') !== input.draft.snapshotSha256)
       conflict('Build input draft snapshot changed');

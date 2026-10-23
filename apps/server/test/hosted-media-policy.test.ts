@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { starterChannel } from '@vegalaunch/channel-engine';
-import { assertEditableDraftMedia, assertExportableMedia, publicMediaUrl } from '../src/hosted-media-policy.js';
+import { assertEditableDraftMedia, assertExportableMedia, prepareDraftMedia, publicMediaUrl } from '../src/hosted-media-policy.js';
 import { HostedWorkspaceService } from '../src/hosted-workspace.js';
 import type { HostedProjectRepository } from '../src/hosted-repository.js';
 import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
@@ -61,4 +61,39 @@ test('legacy unsafe hosted media cannot enter generated source or export', async
   await assert.rejects(workspace.generate(principal, spec.id), { code: 'INVALID_INPUT' });
   await assert.rejects(workspace.exportSource(principal, spec.id), { code: 'INVALID_INPUT' });
   assert.equal(sourceReads, 0, 'unsafe legacy spec is rejected before source is read or generated');
+});
+
+test('private draft packages retain content without exporting private media capabilities', () => {
+  const spec = starterChannel('Private media');
+  const video = { id: `item_${'1'.repeat(32)}`, title: 'Uploaded film', description: 'Creator film',
+    artwork: 'https://studio.example/api/private-objects/cover', presentation: 'video' as const,
+    mediaUrl: 'https://studio.example/api/preview?token=secret' };
+  const hosted = { id: `item_${'2'.repeat(32)}`, title: 'Public film', description: '',
+    artwork: 'https://media.example/film.jpg', presentation: 'video' as const,
+    mediaUrl: 'https://media.example/film.m3u8' };
+  const book = { id: `item_${'3'.repeat(32)}`, title: 'Audio book', description: '',
+    artwork: 'assets/catalog-placeholder.png', presentation: 'information' as const,
+    audiobook: { mediaUrl: 'https://studio.example/api/draft-audio/audio' } };
+  const draft = { ...spec, brand: { ...spec.brand, logo: 'https://studio.example/api/private-objects/logo' },
+    content: [video, hosted, book] };
+  const bindings = [
+    { contentId: video.id, baseline: null, blockedReason: 'playback_rights_or_delivery_missing' as const },
+    { contentId: hosted.id, baseline: hosted },
+    { contentId: book.id, baseline: { ...book, audiobook: undefined } }
+  ] as Parameters<typeof prepareDraftMedia>[1];
+  const result = prepareDraftMedia(draft, bindings);
+  assert.equal(result.spec.content.length, 3);
+  assert.equal(result.spec.content[0]?.presentation, 'information');
+  assert.equal(result.spec.content[0]?.mediaUrl, undefined);
+  assert.equal(result.spec.content[0]?.artwork, 'assets/catalog-placeholder.png');
+  assert.equal(result.spec.content[1]?.mediaUrl, hosted.mediaUrl);
+  assert.equal(result.spec.content[2]?.audiobook, undefined);
+  assert.equal(result.spec.brand.logo, undefined);
+  assert.ok(result.warnings.some(warning => warning.contentId === video.id && warning.field === 'playback'));
+  assert.ok(result.warnings.some(warning => warning.contentId === book.id && warning.field === 'audiobook'));
+  assert.equal(JSON.stringify(result).includes('token=secret'), false);
+  assert.equal(JSON.stringify(result).includes('private-objects'), false);
+  assert.throws(() => prepareDraftMedia(draft, bindings.slice(1)), { code: 'CONFLICT' });
+  assert.throws(() => prepareDraftMedia(draft, [{ ...bindings[0]!, blockedReason: 'source_revoked' }, ...bindings.slice(1)]),
+    { code: 'CONFLICT' });
 });

@@ -22,7 +22,10 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
   useEffect(() => {
     let active = true;
     setCode(null); setFile(null); setBuild(null); setNativeExport(null); setExportOpen(false); setPublish(null); setBundle(''); setError('');
-    void Promise.allSettled([codeOverview(project.id), buildStatus(project.id), readiness(project.id), hosted ? nativeExportStatus(project.id) : Promise.resolve(null)])
+    void Promise.allSettled([hosted && surface === 'Build' ? Promise.resolve(null) : codeOverview(project.id),
+      hosted && surface === 'Build' ? Promise.resolve(null) : buildStatus(project.id),
+      hosted && surface === 'Build' ? Promise.resolve(null) : readiness(project.id),
+      hosted ? nativeExportStatus(project.id) : Promise.resolve(null)])
       .then(([source, evidence, checks, exportState]) => {
         if (!active) return;
         if (source.status === 'fulfilled') setCode(source.value);
@@ -69,7 +72,7 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
     } finally { exportPending.current = false; setExportStarting(false); }
   }
   return <div className="panel-content delivery"><span className="eyebrow">{surface.toUpperCase()} / CREATOR-OWNED</span>
-    {!code && !error && <p role="status">Loading source, build and readiness evidence…</p>}
+    {!code && !error && !(hosted && surface === 'Build') && <p role="status">Loading source, build and readiness evidence…</p>}
     {error && <p role="alert" className="delivery-error">{error}</p>}
     {surface === 'Code' && <><h2>Vega source</h2><p className="muted">{code?.path ? <>An ordinary source tree at <code>{code.path}</code>.</> : 'Creator-owned source is stored privately for this project.'} ChannelSpec changes require explicit regeneration; custom edits block it.</p>
       <button disabled={busy || !code || !!file && draft !== file.content} onClick={() => void action(async () => { if (code?.generated && !window.confirm('Regenerate clean source from current ChannelSpec? Existing custom edits are protected.')) return; setCode(await generateCode(project.id)); setFile(null); setPublish(await readiness(project.id)); })}>{code?.generated ? 'Regenerate source' : 'Generate source'}</button>
