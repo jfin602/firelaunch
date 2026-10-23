@@ -8,7 +8,7 @@ import { RepositoryError } from './repository.js';
 import { sourceMatchesBaseline } from './hosted-workspace.js';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { CompositionKind } from './catalog-composition.js';
-import { assertExportableMedia } from './hosted-media-policy.js';
+import { assertEditableDraftMedia, assertExportableMedia } from './hosted-media-policy.js';
 
 type ProjectRow = { id: string; revision: number; spec: unknown; created_at: Date; updated_at: Date };
 const channelId = z.string().regex(/^ch_[a-f0-9]{32}$/);
@@ -204,13 +204,18 @@ export class HostedProjectRepository {
   async update(principal: AuthenticatedPrincipal, id: string, expectedRevision: number, rawSpec: unknown): Promise<ChannelProject> {
     projectId(id);
     const spec: ChannelSpec = channelSpecSchema.parse(rawSpec);
-    assertExportableMedia(spec);
     if (spec.id !== id) throw new z.ZodError([{ code: 'custom', path: ['spec', 'id'], message: 'Channel ID cannot change' }]);
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) throw new RepositoryError('INVALID_INPUT', 'Invalid revision');
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
       const owner = await this.owner(principal, client);
+      const prior = await client.query<ProjectRow>(`SELECT p.id, p.spec, p.revision, p.created_at, p.updated_at
+        FROM channel_projects p JOIN channel_ownerships o ON o.project_id = p.id AND o.creator_account_id = p.creator_account_id
+        WHERE p.id = $1 AND o.creator_account_id = $2 FOR UPDATE OF p`, [id, owner]);
+      if (!prior.rows[0]) throw new RepositoryError('NOT_FOUND', 'Project not found');
+      if (prior.rows[0].revision !== expectedRevision) throw new RepositoryError('CONFLICT', 'Project revision changed');
+      assertEditableDraftMedia(spec, project(prior.rows[0]).spec);
       const updated = await client.query<ProjectRow>(`UPDATE channel_projects p SET spec = $4::jsonb, revision = p.revision + 1, updated_at = now()
         FROM channel_ownerships o WHERE p.id = $1 AND p.creator_account_id = $2 AND p.revision = $3
         AND o.project_id = p.id AND o.creator_account_id = $2
@@ -230,7 +235,6 @@ export class HostedProjectRepository {
     expectedCatalogRevision: number, rawSpec: unknown): Promise<ChannelProject> {
     projectId(id);
     const spec = channelSpecSchema.parse(rawSpec);
-    assertExportableMedia(spec);
     if (spec.id !== id || !Number.isSafeInteger(expectedRevision) || expectedRevision < 1 ||
       !Number.isSafeInteger(expectedCatalogRevision) || expectedCatalogRevision < 0)
       throw new RepositoryError('INVALID_INPUT', 'Invalid channel selection');
@@ -244,6 +248,11 @@ export class HostedProjectRepository {
         WHERE project_id = $1 AND creator_account_id = $2 FOR UPDATE`, [id, owner]);
       if ((catalog.rows[0]?.revision ?? 0) !== expectedCatalogRevision)
         throw new RepositoryError('CONFLICT', 'Library changed; review and retry');
+      const prior = await client.query<ProjectRow>(`SELECT id, spec, revision, created_at, updated_at FROM channel_projects
+        WHERE id = $1 AND creator_account_id = $2 FOR UPDATE`, [id, owner]);
+      if (!prior.rows[0]) throw new RepositoryError('NOT_FOUND', 'Project not found');
+      if (prior.rows[0].revision !== expectedRevision) throw new RepositoryError('CONFLICT', 'Channel changed; review and retry');
+      assertEditableDraftMedia(spec, project(prior.rows[0]).spec);
       const updated = await client.query<ProjectRow>(`UPDATE channel_projects SET spec = $4::jsonb,
         revision = revision + 1, updated_at = now() WHERE id = $1 AND creator_account_id = $2
         AND revision = $3 RETURNING id, spec, revision, created_at, updated_at`,

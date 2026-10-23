@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { starterChannel } from '@firelaunch/channel-engine';
-import { assertExportableMedia, publicMediaUrl } from '../src/hosted-media-policy.js';
+import { assertEditableDraftMedia, assertExportableMedia, publicMediaUrl } from '../src/hosted-media-policy.js';
 import { HostedWorkspaceService } from '../src/hosted-workspace.js';
 import type { HostedProjectRepository } from '../src/hosted-repository.js';
 import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
@@ -19,13 +19,35 @@ test('hosted media references accept only stable public HTTPS or bundled artwork
     'https://bucket.s3.us-east-2.amazonaws.com/original.mp4',
     'https://media.example/media/staged/secret/master.m3u8',
     'https://studio.example/api/projects/channel/private-objects/object/content',
-    'https://studio.example/api/%70rivate-objects/object/content'
+    'https://studio.example/api/%70rivate-objects/object/content',
+    'https://studio.example/api/draft-audio/ch_a/ci_b/ma_c/audio'
   ]) {
     assert.equal(publicMediaUrl(mediaUrl), false, mediaUrl);
     assert.throws(() => assertExportableMedia({ ...spec, content: [{ ...content, mediaUrl }] }), { code: 'INVALID_INPUT' });
   }
   assert.throws(() => assertExportableMedia({ ...spec, brand: { ...spec.brand, logo: 'http://localhost/logo.png' } }), { code: 'INVALID_INPUT' });
+  assert.throws(() => assertExportableMedia({ ...spec, content: [{ ...content, presentation: 'information',
+    mediaUrl: undefined, audiobook: { mediaUrl: 'https://studio.example/api/draft-audio/ch_a/ci_b/ma_c/audio' } }] }), { code: 'INVALID_INPUT' });
   assert.equal(publicMediaUrl('https://media.example/film.mp4'), true);
+});
+
+test('only an unchanged legacy audiobook URL can remain in an edited draft', () => {
+  const spec = starterChannel('Legacy book');
+  const legacy = 'https://studio.example/api/draft-audio/ch_a/ci_b/ma_c/audio';
+  const book = { id: `item_${'b'.repeat(32)}`, title: 'Book', description: '', artwork: 'assets/book.png',
+    presentation: 'information' as const, audiobook: { mediaUrl: legacy } };
+  const previous = { ...spec, content: [book] };
+  assert.doesNotThrow(() => assertEditableDraftMedia({ ...previous, name: 'Edited' }, previous));
+  assert.throws(() => assertEditableDraftMedia(previous, spec), { code: 'INVALID_INPUT' });
+  assert.throws(() => assertEditableDraftMedia({ ...previous, content: [{ ...book,
+    audiobook: { mediaUrl: `${legacy}?token=new` } }] }, previous), { code: 'INVALID_INPUT' });
+  assert.throws(() => assertExportableMedia(previous), { code: 'INVALID_INPUT' });
+  const audio = { ...book, presentation: 'audio' as const, mediaUrl: legacy,
+    artwork: legacy.replace('/audio', '/cover'), audiobook: undefined };
+  const priorAudio = { ...spec, content: [audio] };
+  assert.doesNotThrow(() => assertEditableDraftMedia(priorAudio, priorAudio));
+  assert.throws(() => assertEditableDraftMedia(priorAudio, spec), { code: 'INVALID_INPUT' });
+  assert.throws(() => assertExportableMedia(priorAudio), { code: 'INVALID_INPUT' });
 });
 
 test('legacy unsafe hosted media cannot enter generated source or export', async () => {
