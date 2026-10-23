@@ -72,11 +72,11 @@ CREATE TABLE publication_audit_events (
   FOREIGN KEY (project_id, creator_account_id) REFERENCES channel_ownerships(project_id, creator_account_id) ON DELETE CASCADE
 );
 
-CREATE FUNCTION vegalaunch_publication_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE FUNCTION firelaunch_publication_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   RAISE EXCEPTION 'Publication history is immutable';
 END $$;
-CREATE FUNCTION vegalaunch_release_lineage() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE FUNCTION firelaunch_release_lineage() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE predecessor_sequence integer;
 BEGIN
   IF NEW.sequence > 1 THEN
@@ -89,8 +89,8 @@ BEGIN
   RETURN NEW;
 END $$;
 CREATE TRIGGER publication_release_lineage BEFORE INSERT ON publication_releases
-  FOR EACH ROW EXECUTE FUNCTION vegalaunch_release_lineage();
-CREATE FUNCTION vegalaunch_live_sequence() RETURNS trigger LANGUAGE plpgsql AS $$
+  FOR EACH ROW EXECUTE FUNCTION firelaunch_release_lineage();
+CREATE FUNCTION firelaunch_live_sequence() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE released_sequence integer;
 DECLARE predecessor text;
 BEGIN
@@ -104,12 +104,12 @@ BEGIN
   RETURN NEW;
 END $$;
 CREATE TRIGGER publication_live_sequence BEFORE INSERT OR UPDATE ON publication_live_pointers
-  FOR EACH ROW EXECUTE FUNCTION vegalaunch_live_sequence();
+  FOR EACH ROW EXECUTE FUNCTION firelaunch_live_sequence();
 CREATE TRIGGER publication_approval_no_update BEFORE UPDATE ON publication_approvals
-  FOR EACH ROW EXECUTE FUNCTION vegalaunch_publication_immutable();
+  FOR EACH ROW EXECUTE FUNCTION firelaunch_publication_immutable();
 CREATE TRIGGER publication_release_no_update BEFORE UPDATE ON publication_releases
-  FOR EACH ROW EXECUTE FUNCTION vegalaunch_publication_immutable();
-CREATE FUNCTION vegalaunch_publication_no_direct_delete() RETURNS trigger LANGUAGE plpgsql AS $$
+  FOR EACH ROW EXECUTE FUNCTION firelaunch_publication_immutable();
+CREATE FUNCTION firelaunch_publication_no_direct_delete() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   -- Cascading account/project erasure remains possible. Direct history deletion while
   -- its project exists would silently rewrite the creator's publication record.
@@ -119,6 +119,6 @@ BEGIN
   RETURN OLD;
 END $$;
 CREATE TRIGGER publication_approval_no_delete BEFORE DELETE ON publication_approvals
-  FOR EACH ROW EXECUTE FUNCTION vegalaunch_publication_no_direct_delete();
+  FOR EACH ROW EXECUTE FUNCTION firelaunch_publication_no_direct_delete();
 CREATE TRIGGER publication_release_no_delete BEFORE DELETE ON publication_releases
-  FOR EACH ROW EXECUTE FUNCTION vegalaunch_publication_no_direct_delete();
+  FOR EACH ROW EXECUTE FUNCTION firelaunch_publication_no_direct_delete();

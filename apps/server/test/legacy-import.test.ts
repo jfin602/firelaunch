@@ -14,7 +14,7 @@ import { LegacyImporter, readLegacyProject } from '../src/migration/legacy-impor
 import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
 
 async function fixture(action: (root: string, repository: ProjectRepository, workspace: WorkspaceService) => Promise<void>) {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'vegalaunch-import-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firelaunch-import-'));
   try {
     const repository = new ProjectRepository(root);
     await action(root, repository, new WorkspaceService(repository));
@@ -51,10 +51,10 @@ test('legacy reader preserves customized source and rejects corrupt, symlink and
   assert.equal((await importer.run(linkedId)).status, 'error');
 }));
 
-const dbUrl = process.env.VEGALAUNCH_TEST_DATABASE_URL;
+const dbUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
 (dbUrl ? test : test.skip)('Postgres importer is dry-run, atomic, idempotent, owner-bound and source-portable', async () => {
   const admin = new Pool({ connectionString: dbUrl });
-  const database = `vegalaunch_import_${randomUUID().replaceAll('-', '')}`;
+  const database = `firelaunch_import_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(dbUrl!); url.pathname = `/${database}`;
   await admin.query(`CREATE DATABASE ${database}`);
   let hosted: HostedProjectRepository | undefined;

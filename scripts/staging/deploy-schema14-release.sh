@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-time, protected staging cutover for c6-supporting-media migration 014.
-# Install as root in /opt/vegalaunch-staging-ops; never run from the checkout.
+# Install as root in /opt/firelaunch-staging-ops; never run from the checkout.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -12,7 +12,7 @@ expected_current="${3:?Independently observed current release name required}"
 require_operator
 require_layout
 health || die 'Existing staging HTTPS health check failed'
-[[ "$artifact" = /home/deploy/vegalaunch-incoming/*.tar.gz && -f "$artifact" && ! -L "$artifact" && -f "$artifact.sha256" ]] || die 'Unexpected archive path'
+[[ "$artifact" = /home/deploy/firelaunch-incoming/*.tar.gz && -f "$artifact" && ! -L "$artifact" && -f "$artifact.sha256" ]] || die 'Unexpected archive path'
 [[ "$(cut -d' ' -f1 "$artifact.sha256")" = "$operator_hash" &&
    "$(sha256sum "$artifact" | cut -d' ' -f1)" = "$operator_hash" ]] || die 'Archive checksum mismatch'
 validate_archive "$artifact"
@@ -42,10 +42,10 @@ if [[ "$(systemctl is-active "$unit" || true)" != inactive || "$(database_schema
   die 'Service did not stop cleanly or database changed'
 fi
 
-if ! runuser -u postgres -- psql -X -v ON_ERROR_STOP=1 -1 -d vegalaunch_alpha_067 \
+if ! runuser -u postgres -- psql -X -v ON_ERROR_STOP=1 -1 -d firelaunch_alpha_067 \
     -f "$target/apps/server/migrations/014_video_subtitles.up.sql" \
-    -c 'GRANT SELECT, INSERT, UPDATE, DELETE ON video_subtitle_tracks TO vegalaunch_staging' \
-    -c 'INSERT INTO vegalaunch_schema_migrations(version) VALUES (14)' >/dev/null; then
+    -c 'GRANT SELECT, INSERT, UPDATE, DELETE ON video_subtitle_tracks TO firelaunch_staging' \
+    -c 'INSERT INTO firelaunch_schema_migrations(version) VALUES (14)' >/dev/null; then
   systemctl start "$unit" || true
   die 'Migration failed; old release retained'
 fi
@@ -63,11 +63,11 @@ fi
 
 # Automatic recovery is safe only before any private subtitle is stored.
 systemctl stop "$unit" || true
-if [[ "$(runuser -u postgres -- psql -X -Atqc "SELECT count(*) FROM video_subtitle_tracks" -d vegalaunch_alpha_067)" = 0 &&
-      "$(runuser -u postgres -- psql -X -Atqc "SELECT count(*) FROM private_objects WHERE content_type='text/vtt'" -d vegalaunch_alpha_067)" = 0 ]]; then
-  runuser -u postgres -- psql -X -v ON_ERROR_STOP=1 -1 -d vegalaunch_alpha_067 \
+if [[ "$(runuser -u postgres -- psql -X -Atqc "SELECT count(*) FROM video_subtitle_tracks" -d firelaunch_alpha_067)" = 0 &&
+      "$(runuser -u postgres -- psql -X -Atqc "SELECT count(*) FROM private_objects WHERE content_type='text/vtt'" -d firelaunch_alpha_067)" = 0 ]]; then
+  runuser -u postgres -- psql -X -v ON_ERROR_STOP=1 -1 -d firelaunch_alpha_067 \
     -f "$target/apps/server/migrations/014_video_subtitles.down.sql" \
-    -c 'DELETE FROM vegalaunch_schema_migrations WHERE version=14' >/dev/null
+    -c 'DELETE FROM firelaunch_schema_migrations WHERE version=14' >/dev/null
   switch_release "$(basename "$old")"
   if systemctl start "$unit" && wait_health; then
     die 'Candidate failed health; schema-13 release and database restored'

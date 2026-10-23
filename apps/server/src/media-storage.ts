@@ -73,16 +73,16 @@ export function validateMediaStorageConfig(raw: MediaStorageConfig): MediaStorag
 
 export function mediaStorageConfigFromEnv(env: NodeJS.ProcessEnv): MediaStorageConfig {
   return validateMediaStorageConfig({
-    region: env.VEGALAUNCH_MEDIA_AWS_REGION ?? '', originalsBucket: env.VEGALAUNCH_MEDIA_ORIGINALS_BUCKET ?? '',
-    deliveryBucket: env.VEGALAUNCH_MEDIA_DELIVERY_BUCKET ?? '',
-    cloudFrontOrigin: env.VEGALAUNCH_MEDIA_CLOUDFRONT_ORIGIN ?? '',
-    allowedCloudFrontHosts: (env.VEGALAUNCH_MEDIA_CLOUDFRONT_HOSTS ?? '').split(',').map(value => value.trim()).filter(Boolean)
+    region: env.FIRELAUNCH_MEDIA_AWS_REGION ?? '', originalsBucket: env.FIRELAUNCH_MEDIA_ORIGINALS_BUCKET ?? '',
+    deliveryBucket: env.FIRELAUNCH_MEDIA_DELIVERY_BUCKET ?? '',
+    cloudFrontOrigin: env.FIRELAUNCH_MEDIA_CLOUDFRONT_ORIGIN ?? '',
+    allowedCloudFrontHosts: (env.FIRELAUNCH_MEDIA_CLOUDFRONT_HOSTS ?? '').split(',').map(value => value.trim()).filter(Boolean)
   });
 }
 
 export function publisherRoleConfigFromEnv(env: NodeJS.ProcessEnv): PublisherRoleConfig {
-  const accountId = env.VEGALAUNCH_MEDIACONVERT_ACCOUNT ?? '';
-  const roleArn = env.VEGALAUNCH_MEDIA_PUBLISHER_ROLE_ARN ?? '';
+  const accountId = env.FIRELAUNCH_MEDIACONVERT_ACCOUNT ?? '';
+  const roleArn = env.FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN ?? '';
   const match = /^arn:aws:iam::([0-9]{12}):role\/(?:[A-Za-z0-9+=,.@_-]+\/)*[A-Za-z0-9+=,.@_-]+$/.exec(roleArn);
   if (!/^[0-9]{12}$/.test(accountId) || !match || match[1] !== accountId ||
     roleArn.slice(roleArn.indexOf(':role/') + 6).split('/').some(segment => segment === '.' || segment === '..'))
@@ -95,7 +95,7 @@ export function publisherCredentialsFromEnv(env: NodeJS.ProcessEnv,
   const role = publisherRoleConfigFromEnv(env);
   const region = mediaStorageConfigFromEnv(env).region;
   return fromTemporaryCredentials({
-    params: { RoleArn: role.roleArn, RoleSessionName: 'vegalaunch-media-publisher', DurationSeconds: 3600 },
+    params: { RoleArn: role.roleArn, RoleSessionName: 'firelaunch-media-publisher', DurationSeconds: 3600 },
     ...options, clientConfig: { ...options.clientConfig, region }
   });
 }
@@ -644,10 +644,10 @@ export class S3MediaStorage {
 export function mediaStorageFromEnv(env: NodeJS.ProcessEnv,
   clients?: { originals: S3Client; staging: S3Client; publisher?: S3Client; operator?: S3Client }): S3MediaStorage {
   const config = mediaStorageConfigFromEnv(env);
-  if (env.VEGALAUNCH_MEDIA_PUBLISHER_ROLE_ARN) publisherRoleConfigFromEnv(env);
+  if (env.FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN) publisherRoleConfigFromEnv(env);
   const originals = clients?.originals ?? new S3Client({ region: config.region, maxAttempts: 3 });
   const staging = clients?.staging ?? new S3Client({ region: config.region, maxAttempts: 3 });
-  const publisher = env.VEGALAUNCH_MEDIA_PUBLISHER_ROLE_ARN
+  const publisher = env.FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN
     ? clients?.publisher ?? new S3Client({ region: config.region, maxAttempts: 3, credentials: publisherCredentialsFromEnv(env) })
     : undefined;
   return new S3MediaStorage(config, originals, staging, publisher, clients?.operator);

@@ -7,12 +7,12 @@ import { CatalogRepository } from '../src/catalog-repository.js';
 import { PrivateObjectService, type PrivateObjectStore } from '../src/private-objects.js';
 import { mediaUseEligible } from '@vegalaunch/contracts';
 
-const baseUrl = process.env.VEGALAUNCH_TEST_DATABASE_URL;
+const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
 const databaseTest = baseUrl ? test : test.skip;
 
 databaseTest('catalog SQL ownership, revisions, references and rollback with two creators', async () => {
   const admin = new Pool({ connectionString: baseUrl });
-  const name = `vegalaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(baseUrl!); url.pathname = `/${name}`;
   await admin.query(`CREATE DATABASE ${name}`);
   let first: HostedProjectRepository | undefined;

@@ -22,25 +22,25 @@ export class NativeBuildQueue {
 
   /** Caller must obtain input from HostedWorkspaceService under a verified session. */
   async enqueue(input: ReleaseBuildInput): Promise<string> {
-    if (input.format !== 'vegalaunch-vega-build-input-v1' ||
+    if (input.format !== 'firelaunch-vega-build-input-v1' ||
       !/^ch_[a-f0-9]{32}$/.test(input.projectId) || !/^cr_[a-f0-9]{32}$/.test(input.creatorAccountId) ||
       !/^[a-f0-9]{64}$/.test(input.fingerprint)) fail('Invalid build snapshot');
     return this.transaction(async client => {
       await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
         [`native-build:${input.creatorAccountId}:${input.projectId}`]);
       const current = await client.query<{ id: string; input_fingerprint: string; state: State }>(
-        `SELECT id,input_fingerprint,state FROM vegalaunch_build.jobs WHERE creator_account_id=$1 AND project_id=$2
+        `SELECT id,input_fingerprint,state FROM firelaunch_build.jobs WHERE creator_account_id=$1 AND project_id=$2
          AND state IN ('queued','running','ready') FOR UPDATE`, [input.creatorAccountId, input.projectId]);
       if (current.rows[0]) {
         if (current.rows[0].input_fingerprint === input.fingerprint) return current.rows[0].id;
         if (current.rows[0].state !== 'ready') fail('Existing native build has a different source');
-        await client.query(`UPDATE vegalaunch_build.jobs SET state='canceled',updated_at=now()
+        await client.query(`UPDATE firelaunch_build.jobs SET state='canceled',updated_at=now()
           WHERE id=$1 AND creator_account_id=$2 AND project_id=$3 AND state='ready'`,
           [current.rows[0].id,input.creatorAccountId,input.projectId]);
       }
       const jobId = id();
       const result = await client.query<{ id: string }>(
-        `INSERT INTO vegalaunch_build.jobs (id,creator_account_id,project_id,deployment_id,package_id,release_id,
+        `INSERT INTO firelaunch_build.jobs (id,creator_account_id,project_id,deployment_id,package_id,release_id,
           release_sequence,input_fingerprint,source_hash,input)
          SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10 FROM channel_deployments d
          JOIN channel_ownerships o ON o.project_id=d.project_id AND o.creator_account_id=d.creator_account_id
@@ -66,20 +66,20 @@ export class NativeBuildQueue {
   async claim(): Promise<{ jobId: string; leaseToken: string; attempt: number; input: ReleaseBuildInput } | null> {
     return this.transaction(async client => {
       await client.query('SELECT pg_advisory_xact_lock($1)', [712904]);
-      await client.query(`UPDATE vegalaunch_build.jobs SET state=CASE WHEN attempt>=3 OR expires_at<=now() THEN 'failed' ELSE 'queued' END,
+      await client.query(`UPDATE firelaunch_build.jobs SET state=CASE WHEN attempt>=3 OR expires_at<=now() THEN 'failed' ELSE 'queued' END,
         lease_token=NULL,lease_until=NULL,error_code='LEASE_LOST',updated_at=now()
         WHERE state='running' AND lease_until<=now()`);
-      await client.query(`UPDATE vegalaunch_build.jobs SET state='expired',updated_at=now()
+      await client.query(`UPDATE firelaunch_build.jobs SET state='expired',updated_at=now()
         WHERE state IN ('queued','ready','failed') AND expires_at<=now()`);
-      const active = await client.query(`SELECT id FROM vegalaunch_build.jobs WHERE state='running' LIMIT 1`);
+      const active = await client.query(`SELECT id FROM firelaunch_build.jobs WHERE state='running' LIMIT 1`);
       if (active.rows.length) return null;
       const result = await client.query<Row>(`SELECT id,creator_account_id,project_id,state,attempt,lease_token,input,expires_at
-        FROM vegalaunch_build.jobs WHERE state='queued' AND attempt<3 AND expires_at>now()
+        FROM firelaunch_build.jobs WHERE state='queued' AND attempt<3 AND expires_at>now()
         ORDER BY created_at,id LIMIT 1 FOR UPDATE SKIP LOCKED`);
       const row = result.rows[0];
       if (!row) return null;
       const leaseToken = token();
-      await client.query(`UPDATE vegalaunch_build.jobs SET state='running',attempt=attempt+1,lease_token=$2,
+      await client.query(`UPDATE firelaunch_build.jobs SET state='running',attempt=attempt+1,lease_token=$2,
         lease_until=now()+interval '90 seconds',heartbeat_at=now(),updated_at=now() WHERE id=$1`, [row.id,leaseToken]);
       return { jobId: row.id, leaseToken, attempt: row.attempt + 1,
         input: JSON.parse(row.input) as ReleaseBuildInput };
@@ -87,14 +87,14 @@ export class NativeBuildQueue {
   }
 
   async heartbeat(jobId: string, leaseToken: string): Promise<boolean> {
-    const result = await this.pool.query(`UPDATE vegalaunch_build.jobs SET lease_until=now()+interval '90 seconds',
+    const result = await this.pool.query(`UPDATE firelaunch_build.jobs SET lease_until=now()+interval '90 seconds',
       heartbeat_at=now(),updated_at=now() WHERE id=$1 AND lease_token=$2 AND state='running'
       AND lease_until>now() AND expires_at>now()`, [jobId,leaseToken]);
     return result.rowCount === 1;
   }
 
   async complete(jobId: string, leaseToken: string, evidence: NativeBuildEvidence): Promise<boolean> {
-    const result = await this.pool.query(`UPDATE vegalaunch_build.jobs SET state='ready',lease_token=NULL,lease_until=NULL,
+    const result = await this.pool.query(`UPDATE firelaunch_build.jobs SET state='ready',lease_token=NULL,lease_until=NULL,
       artifact_name=id||'.vpkg',artifact_sha256=$3,artifact_bytes=$4,evidence=$5::jsonb,updated_at=now()
       WHERE id=$1 AND lease_token=$2 AND state='running' AND lease_until>now() AND expires_at>now()
       AND input_fingerprint=$6 AND source_hash=$7 AND deployment_id=$8 AND package_id=$9 AND release_id=$10
@@ -107,20 +107,20 @@ export class NativeBuildQueue {
 
   async fail(jobId: string, leaseToken: string, code: string): Promise<boolean> {
     if (!/^[A-Z_]{3,40}$/.test(code)) fail('Unsafe worker error');
-    const result = await this.pool.query(`UPDATE vegalaunch_build.jobs SET state='failed',lease_token=NULL,
+    const result = await this.pool.query(`UPDATE firelaunch_build.jobs SET state='failed',lease_token=NULL,
       lease_until=NULL,error_code=$3,updated_at=now() WHERE id=$1 AND lease_token=$2 AND state='running'`, [jobId,leaseToken,code]);
     return result.rowCount === 1;
   }
 
   async cancel(ownerId: string, projectId: string, jobId: string): Promise<boolean> {
-    const result = await this.pool.query(`UPDATE vegalaunch_build.jobs SET state='canceled',lease_token=NULL,
+    const result = await this.pool.query(`UPDATE firelaunch_build.jobs SET state='canceled',lease_token=NULL,
       lease_until=NULL,updated_at=now() WHERE id=$3 AND creator_account_id=$1 AND project_id=$2
       AND state IN ('queued','running','ready')`, [ownerId,projectId,jobId]);
     return result.rowCount === 1;
   }
 
   async retry(ownerId: string, projectId: string, jobId: string): Promise<boolean> {
-    const result = await this.pool.query(`UPDATE vegalaunch_build.jobs SET state='queued',error_code=NULL,updated_at=now()
+    const result = await this.pool.query(`UPDATE firelaunch_build.jobs SET state='queued',error_code=NULL,updated_at=now()
       WHERE id=$3 AND creator_account_id=$1 AND project_id=$2 AND state='failed'
       AND attempt<3 AND expires_at>now()`, [ownerId,projectId,jobId]);
     return result.rowCount === 1;
@@ -135,7 +135,7 @@ export class NativeBuildQueue {
       input_fingerprint:string;
       artifact_sha256:string|null;artifact_bytes:string|null;expires_at:Date;created_at:Date;updated_at:Date }>(
       `SELECT id,state,attempt,error_code,input_fingerprint,artifact_sha256,artifact_bytes,expires_at,created_at,updated_at
-       FROM vegalaunch_build.jobs WHERE id=$3 AND creator_account_id=$1 AND project_id=$2`,
+       FROM firelaunch_build.jobs WHERE id=$3 AND creator_account_id=$1 AND project_id=$2`,
       [ownerId,projectId,jobId]);
     const row = result.rows[0];
     return row ? { id:row.id,state:row.expires_at.getTime() <= Date.now() ? 'expired' : row.state,
@@ -155,7 +155,7 @@ export class NativeBuildQueue {
       input_fingerprint:string;source_hash:string;deployment_id:string;package_id:string;
       release_id:string;release_sequence:number }>(
       `SELECT input,evidence,artifact_name,artifact_sha256,artifact_bytes,input_fingerprint,source_hash,
-        deployment_id,package_id,release_id,release_sequence FROM vegalaunch_build.jobs
+        deployment_id,package_id,release_id,release_sequence FROM firelaunch_build.jobs
        WHERE id=$3 AND creator_account_id=$1 AND project_id=$2 AND state='ready' AND expires_at>now()`,
       [ownerId,projectId,jobId]);
     const row = result.rows[0];
@@ -173,7 +173,7 @@ export class NativeBuildQueue {
   /** The export route has one active job per owned project; expose its most recent receipt. */
   async latestStatus(ownerId: string, projectId: string): Promise<Awaited<ReturnType<NativeBuildQueue['status']>>> {
     const result = await this.pool.query<{ id: string }>(
-      `SELECT id FROM vegalaunch_build.jobs WHERE creator_account_id=$1 AND project_id=$2
+      `SELECT id FROM firelaunch_build.jobs WHERE creator_account_id=$1 AND project_id=$2
        ORDER BY created_at DESC,id DESC LIMIT 1`, [ownerId,projectId]);
     return result.rows[0] ? this.status(ownerId,projectId,result.rows[0].id) : null;
   }
@@ -181,21 +181,21 @@ export class NativeBuildQueue {
   /** Opaque names only; expired rows cannot be retried or downloaded. */
   async expiredArtifacts(): Promise<{ jobId: string; name: string }[]> {
     const result = await this.pool.query<{ id: string; artifact_name: string }>(
-      `SELECT id,artifact_name FROM vegalaunch_build.jobs WHERE state IN ('expired','canceled','failed') AND artifact_name IS NOT NULL
+      `SELECT id,artifact_name FROM firelaunch_build.jobs WHERE state IN ('expired','canceled','failed') AND artifact_name IS NOT NULL
        ORDER BY updated_at LIMIT 20`);
     return result.rows.filter(row => row.artifact_name === `${row.id}.vpkg`)
       .map(row => ({ jobId: row.id, name: row.artifact_name }));
   }
 
   async acknowledgeArtifactRemoval(jobId: string, name: string): Promise<void> {
-    await this.pool.query(`UPDATE vegalaunch_build.jobs SET artifact_name=NULL,artifact_sha256=NULL,
+    await this.pool.query(`UPDATE firelaunch_build.jobs SET artifact_name=NULL,artifact_sha256=NULL,
       artifact_bytes=NULL,evidence=NULL,updated_at=now() WHERE id=$1 AND artifact_name=$2
       AND state IN ('expired','canceled','failed')`,
       [jobId,name]);
   }
 
   async retainArtifact(jobId: string, name: string): Promise<boolean> {
-    const result = await this.pool.query(`SELECT id FROM vegalaunch_build.jobs
+    const result = await this.pool.query(`SELECT id FROM firelaunch_build.jobs
       WHERE id=$1 AND artifact_name=$2 AND state IN ('ready','running') LIMIT 1`,[jobId,name]);
     return result.rows.length === 1;
   }

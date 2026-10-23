@@ -80,7 +80,7 @@ The formerly planned automatic catalog synchronization/source polling and standa
 
 ## Mission
 
-FireLaunch is a code-optional agentic studio for creating branded TV channels and shipping them as real Amazon Fire TV applications.
+VegaLaunch is a code-optional agentic studio for creating branded TV channels and shipping them as real Amazon Fire TV applications.
 
 The hackathon product must prove one golden path:
 
@@ -93,7 +93,7 @@ Creator intent
 -> build/readiness evidence
 -> real Fire TV or Vega simulator demo
 
-FireLaunch is not merely an AI code generator and not a generic website builder. The durable product abstraction is the channel.
+VegaLaunch is not merely an AI code generator and not a generic website builder. The durable product abstraction is the channel.
 
 ## Historical 2026-10-11 activation gate (superseded)
 
@@ -128,7 +128,7 @@ Historical P0 P7 was NOT GREEN. The completed `c0-real-tv-qualification` correct
 - Local single-user persistence is enough for the hackathon. No auth, billing or multi-user system in P0.
 - Amazon Devices Builder Tools for AI should be used when available for Vega-specific grounding and validation.
 - The runtime channel agent is provider-neutral. Bedrock is the primary real integration for the hackathon; deterministic mock mode keeps tests and offline demos reproducible.
-- FireLaunch may prepare Amazon submission assets/readiness but must not pretend it submitted an app when a real Developer Console action was not performed.
+- VegaLaunch may prepare Amazon submission assets/readiness but must not pretend it submitted an app when a real Developer Console action was not performed.
 - Never report a VPKG, simulator pass, device pass or Appstore readiness item as successful without direct evidence.
 
 ## Canonical docs

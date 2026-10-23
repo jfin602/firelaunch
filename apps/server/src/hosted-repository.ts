@@ -47,76 +47,76 @@ export class HostedProjectRepository {
     try {
       await client.query('BEGIN');
       await client.query('SELECT pg_advisory_xact_lock($1)', [482921]);
-      await client.query('CREATE TABLE IF NOT EXISTS vegalaunch_schema_migrations (version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
-      const result = await client.query<{ version: number }>('SELECT version FROM vegalaunch_schema_migrations ORDER BY version');
+      await client.query('CREATE TABLE IF NOT EXISTS firelaunch_schema_migrations (version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
+      const result = await client.query<{ version: number }>('SELECT version FROM firelaunch_schema_migrations ORDER BY version');
       if (result.rows.some(row => ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].includes(row.version))) throw new Error('Unsupported hosted database migration');
       if (!result.rows.some(row => row.version === 1)) {
         const sql = await readFile(new URL('../migrations/001_hosted_ownership.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [1]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [1]);
       }
       if (!result.rows.some(row => row.version === 2)) {
         const sql = await readFile(new URL('../migrations/002_hosted_source.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [2]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [2]);
       }
       if (!result.rows.some(row => row.version === 3)) {
         const sql = await readFile(new URL('../migrations/003_private_objects.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [3]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [3]);
       }
       if (!result.rows.some(row => row.version === 4)) {
         const sql = await readFile(new URL('../migrations/004_operations.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [4]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [4]);
       }
       if (!result.rows.some(row => row.version === 5)) {
         const sql = await readFile(new URL('../migrations/005_catalog.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [5]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [5]);
       }
       if (!result.rows.some(row => row.version === 6)) {
         const sql = await readFile(new URL('../migrations/006_catalog_import_previews.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [6]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [6]);
       }
       if (!result.rows.some(row => row.version === 7)) {
         const sql = await readFile(new URL('../migrations/007_catalog_media_rights.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [7]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [7]);
       }
       if (!result.rows.some(row => row.version === 8)) {
         const sql = await readFile(new URL('../migrations/008_catalog_item_approvals.up.sql', import.meta.url), 'utf8');
         await client.query(sql);
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [8]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [8]);
       }
       if (!result.rows.some(row => row.version === 9)) {
         await client.query(await readFile(new URL('../migrations/009_catalog_drafts.up.sql', import.meta.url), 'utf8'));
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [9]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [9]);
       }
       if (!result.rows.some(row => row.version === 10)) {
         await client.query(await readFile(new URL('../migrations/010_publication.up.sql', import.meta.url), 'utf8'));
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [10]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [10]);
       }
       if (!result.rows.some(row => row.version === 11)) {
         await client.query(await readFile(new URL('../migrations/011_media_pipeline.up.sql', import.meta.url), 'utf8'));
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [11]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [11]);
       }
       if (!result.rows.some(row => row.version === 12)) {
         await client.query(await readFile(new URL('../migrations/012_direct_media_upload.up.sql', import.meta.url), 'utf8'));
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [12]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [12]);
       }
       if (!result.rows.some(row => row.version === 13)) {
         await client.query(await readFile(new URL('../migrations/013_managed_media_jobs.up.sql', import.meta.url), 'utf8'));
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [13]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [13]);
       }
       if (!result.rows.some(row => row.version === 14)) {
         await client.query(await readFile(new URL('../migrations/014_video_subtitles.up.sql', import.meta.url), 'utf8'));
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [14]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [14]);
       }
       if (!result.rows.some(row => row.version === 15)) {
         await client.query(await readFile(new URL('../migrations/015_private_audio.up.sql', import.meta.url), 'utf8'));
-        await client.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [15]);
+        await client.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [15]);
       }
       await client.query('COMMIT');
     } catch (error) { await client.query('ROLLBACK'); throw error; }

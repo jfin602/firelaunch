@@ -14,7 +14,7 @@ try { execFileSync(join(bin,'initdb'),['--version'],{ stdio:'ignore' }); }
 catch { available = false; }
 const hex = (digit: string) => digit.repeat(32);
 function input(digit: string): ReleaseBuildInput {
-  return { format:'vegalaunch-vega-build-input-v1',projectId:`ch_${hex(digit)}`,
+  return { format:'firelaunch-vega-build-input-v1',projectId:`ch_${hex(digit)}`,
     creatorAccountId:`cr_${hex(digit)}`,specRevision:1,generatorFingerprint:'a'.repeat(64),
     sourceRevision:1,deploymentId:`dep_${hex(digit)}`,packageId:`com.example.creator${digit}`,
     manifestEndpoint:`https://example.test/public/v1/deployments/dep_${hex(digit)}/current`,
@@ -24,7 +24,7 @@ function input(digit: string): ReleaseBuildInput {
 
 test('real PostgreSQL queue serializes claims, reclaims leases and enforces owner actions',
   { skip: !available && 'PostgreSQL initdb unavailable' }, async () => {
-    const root = await mkdtemp(join(tmpdir(),'vegalaunch-build-queue-'));
+    const root = await mkdtemp(join(tmpdir(),'firelaunch-build-queue-'));
     const data = join(root,'data');
     const socket = join(root,'socket');
     const fs = await import('node:fs/promises');
@@ -48,18 +48,18 @@ test('real PostgreSQL queue serializes claims, reclaims leases and enforces owne
         await pool.query(`CREATE ROLE build_api LOGIN; CREATE ROLE build_worker LOGIN;
           GRANT SELECT ON channel_deployments,channel_ownerships,channel_projects,publication_live_pointers,
             publication_releases,publication_approvals TO build_api;
-          GRANT USAGE ON SCHEMA vegalaunch_build TO build_api,build_worker;
-          GRANT SELECT,INSERT,UPDATE ON vegalaunch_build.jobs TO build_api;
-          GRANT SELECT ON vegalaunch_build.jobs TO build_worker;
+          GRANT USAGE ON SCHEMA firelaunch_build TO build_api,build_worker;
+          GRANT SELECT,INSERT,UPDATE ON firelaunch_build.jobs TO build_api;
+          GRANT SELECT ON firelaunch_build.jobs TO build_worker;
           GRANT UPDATE (state,attempt,lease_token,lease_until,heartbeat_at,updated_at,error_code,
-            artifact_name,artifact_sha256,artifact_bytes,evidence) ON vegalaunch_build.jobs TO build_worker`);
+            artifact_name,artifact_sha256,artifact_bytes,evidence) ON firelaunch_build.jobs TO build_worker`);
         const apiPool = new Pool({ host:socket,port:54329,database:'postgres',user:'build_api',max:4 });
         const workerPool = new Pool({ host:socket,port:54329,database:'postgres',user:'build_worker',max:4 });
         const queue = new NativeBuildQueue(apiPool);
         const worker = new NativeBuildQueue(workerPool);
         try {
         await assert.rejects(workerPool.query('SELECT * FROM channel_deployments'), /permission denied/);
-        await assert.rejects(workerPool.query('INSERT INTO vegalaunch_build.jobs(id) VALUES ($1)', ['job_'+'a'.repeat(32)]), /permission denied/);
+        await assert.rejects(workerPool.query('INSERT INTO firelaunch_build.jobs(id) VALUES ($1)', ['job_'+'a'.repeat(32)]), /permission denied/);
         for (const digit of ['1','2']) {
           const owned = input(digit);
           await pool.query('INSERT INTO channel_ownerships VALUES($1,$2)',[owned.projectId,owned.creatorAccountId]);
@@ -91,7 +91,7 @@ test('real PostgreSQL queue serializes claims, reclaims leases and enforces owne
         assert.equal(await worker.heartbeat(lease.jobId,lease.leaseToken),true);
         assert.equal(await worker.heartbeat(lease.jobId,'0'.repeat(64)),false);
         assert.equal(await queue.cancel(input('2').creatorAccountId,input('2').projectId,lease.jobId),false);
-        await pool.query("UPDATE vegalaunch_build.jobs SET lease_until=now()-interval '1 second' WHERE id=$1",[lease.jobId]);
+        await pool.query("UPDATE firelaunch_build.jobs SET lease_until=now()-interval '1 second' WHERE id=$1",[lease.jobId]);
         const recovered = await worker.claim();
         assert.equal(recovered?.jobId,lease.jobId);
         assert.equal(recovered?.attempt,2);
@@ -134,10 +134,10 @@ test('real PostgreSQL queue serializes claims, reclaims leases and enforces owne
         assert.equal(await worker.retainArtifact(secondOwner.jobId,`${secondOwner.jobId}.vpkg`),false);
         await worker.acknowledgeArtifactRemoval(secondOwner.jobId,`${secondOwner.jobId}.vpkg`);
         assert.deepEqual(await worker.expiredArtifacts(),[]);
-        await pool.query(`UPDATE vegalaunch_build.jobs SET created_at=now()-interval '2 days',
+        await pool.query(`UPDATE firelaunch_build.jobs SET created_at=now()-interval '2 days',
           expires_at=now()-interval '1 day' WHERE id=$1`,[replacementId]);
         assert.equal((await queue.status(input('2').creatorAccountId,input('2').projectId,replacementId))?.state,'expired');
-        const migration = await pool.query("SELECT to_regclass('public.vegalaunch_schema_migrations') AS core");
+        const migration = await pool.query("SELECT to_regclass('public.firelaunch_schema_migrations') AS core");
         assert.equal(migration.rows[0].core,null,'queue never creates or bumps core migration');
         } finally { await apiPool.end(); await workerPool.end(); }
       } finally { await pool.end(); }

@@ -9,7 +9,7 @@ operator_hash="${2:?Exact SHA-256 required}"
 require_operator
 require_layout
 health || die 'Existing staging health failed'
-[[ "$artifact" = /home/deploy/vegalaunch-incoming/*.tar.gz && -f "$artifact" && ! -L "$artifact" && -f "$artifact.sha256" ]] || die 'Unsafe release archive'
+[[ "$artifact" = /home/deploy/firelaunch-incoming/*.tar.gz && -f "$artifact" && ! -L "$artifact" && -f "$artifact.sha256" ]] || die 'Unsafe release archive'
 [[ "$(cut -d' ' -f1 "$artifact.sha256")" = "$operator_hash" && "$(sha256sum "$artifact" | cut -d' ' -f1)" = "$operator_hash" ]] || die 'Release checksum mismatch'
 validate_archive "$artifact"
 
@@ -30,7 +30,7 @@ chmod -R go-w "$target"
 "$(dirname "${BASH_SOURCE[0]}")/backup.sh" "${release}-pre-audio-schema15"
 "$node_bin" --env-file="$env_file" "$target/scripts/staging/rehearse-audio-restore.mjs" "$old" \
   "$backup_dir/${release}-pre-audio-schema15-schema-14.flrec"
-nginx_site=/etc/nginx/sites-available/vegalaunch-staging
+nginx_site=/etc/nginx/sites-available/firelaunch-staging
 nginx_saved="$backup_dir/${release}-nginx-before-audio-schema15.conf"
 [[ -f "$nginx_site" && ! -L "$nginx_site" && ! -e "$nginx_saved" ]] || die 'Nginx configuration cannot be protected'
 install -o root -g root -m 0600 "$nginx_site" "$nginx_saved"

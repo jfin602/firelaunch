@@ -40,8 +40,8 @@ export class HostedAuth {
     if (new URL(verifier.config.redirectUri).origin !== publicOrigin) throw new Error('OIDC callback origin mismatch');
     this.publicOrigin = publicOrigin;
     this.secure = origin.protocol === 'https:';
-    this.sessionCookie = this.secure ? '__Host-vegalaunch_session' : 'vegalaunch_local_session';
-    this.stateCookie = this.secure ? '__Host-vegalaunch_state' : 'vegalaunch_local_state';
+    this.sessionCookie = this.secure ? '__Host-firelaunch_session' : 'firelaunch_local_session';
+    this.stateCookie = this.secure ? '__Host-firelaunch_state' : 'firelaunch_local_state';
   }
 
   private cookie(name: string, value: string, age: number): string {

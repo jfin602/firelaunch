@@ -25,7 +25,7 @@ async function runSandbox(image: string, jobDir: string, signal: AbortSignal): P
     '--bind',join(jobDir,'sdk-workspace'),SDK_WORKSPACE,'--proc','/proc','--tmpfs','/proc/sys','--dev','/dev',
     '--ro-bind','/sys/fs/cgroup','/sys/fs/cgroup','--tmpfs','/tmp',
     '--setenv','HOME','/tmp','--setenv','PATH','/usr/bin:/bin:/opt/vega/bin',
-    '--chdir','/job','/usr/bin/node','/opt/vegalaunch-build-app/apps/server/dist/native-build-child.js'];
+    '--chdir','/job','/usr/bin/node','/opt/firelaunch-build-app/apps/server/dist/native-build-child.js'];
   await new Promise<void>((resolvePromise, reject) => {
     const child = spawn('/usr/bin/bwrap', args, { env: { PATH: '/usr/bin:/bin' },
       stdio: ['ignore','ignore','pipe'], detached: true });
@@ -154,8 +154,8 @@ async function pruneOrphans(queue: NativeBuildQueue, root: string): Promise<void
 
 async function main(): Promise<void> {
   if (process.getuid?.() === 0) throw new Error('Worker must run under its dedicated unprivileged UID');
-  const root = path('VEGALAUNCH_BUILD_STORAGE_ROOT');
-  const image = path('VEGALAUNCH_BUILD_RUNTIME_IMAGE');
+  const root = path('FIRELAUNCH_BUILD_STORAGE_ROOT');
+  const image = path('FIRELAUNCH_BUILD_RUNTIME_IMAGE');
   const [rootInfo,imageInfo,disk] = await Promise.all([lstat(root),lstat(image),statfs(root)]);
   if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink() || !imageInfo.isDirectory() || imageInfo.isSymbolicLink() ||
     await realpath(root) !== root || await realpath(image) !== image ||
@@ -163,7 +163,7 @@ async function main(): Promise<void> {
     (rootInfo.mode & 0o077) !== 0o050 ||
     imageInfo.uid !== 0 || (imageInfo.mode & 0o022) !== 0 ||
     disk.bsize * disk.blocks > 20_000_000_000 || disk.bsize * disk.blocks < 1_000_000_000 ||
-    !image.startsWith('/opt/vegalaunch-build-runtime')) throw new Error('Qualified bounded storage/runtime image absent');
+    !image.startsWith('/opt/firelaunch-build-runtime')) throw new Error('Qualified bounded storage/runtime image absent');
   const cgroup = (await readFile('/proc/self/cgroup','utf8')).trim().split('\n').find(line => line.startsWith('0::'))?.slice(3);
   if (!cgroup || cgroup.includes('..')) throw new Error('Dedicated cgroup v2 absent');
   const group = join('/sys/fs/cgroup',cgroup);
@@ -173,7 +173,7 @@ async function main(): Promise<void> {
   const bwrap = await lstat('/usr/bin/bwrap');
   if (!bwrap.isFile()) throw new Error('Sandbox executable absent');
   for (const name of ['usr/bin/node','usr/bin/npm','usr/bin/vpt','opt/vega/bin/vega',
-    'opt/vegalaunch-build-app/apps/server/dist/native-build-child.js','opt/npm-cache','job','artifact.vpkg','sys/fs/cgroup']) {
+    'opt/firelaunch-build-app/apps/server/dist/native-build-child.js','opt/npm-cache','job','artifact.vpkg','sys/fs/cgroup']) {
     await lstat(join(image,name));
   }
   await mkdir(join(root,'jobs'),{ recursive:true,mode:0o700 });
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
         info.gid !== process.getgid?.() || (info.mode & 0o077) !== 0o050))
       throw new Error('Unsafe worker storage directory');
   }
-  const pool = new Pool({ connectionString: required('VEGALAUNCH_BUILD_DATABASE_URL'), max: 2 });
+  const pool = new Pool({ connectionString: required('FIRELAUNCH_BUILD_DATABASE_URL'), max: 2 });
   const queue = new NativeBuildQueue(pool);
   try {
     for (;;) {

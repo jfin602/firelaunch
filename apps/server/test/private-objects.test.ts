@@ -11,45 +11,45 @@ import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
 
 test('private S3 configuration fails closed without server-only credentials or HTTPS', () => {
   assert.throws(() => privateObjectStoreFromEnv({}), /required/);
-  assert.throws(() => privateObjectStoreFromEnv({ VEGALAUNCH_OBJECT_STORE: 's3', VEGALAUNCH_OBJECT_BUCKET: 'test-bucket', VEGALAUNCH_OBJECT_REGION: 'us-east-1' }), /incomplete/);
-  assert.throws(() => privateObjectStoreFromEnv({ VEGALAUNCH_OBJECT_STORE: 's3', VEGALAUNCH_OBJECT_BUCKET: 'test-bucket', VEGALAUNCH_OBJECT_REGION: 'us-east-1',
-    VEGALAUNCH_OBJECT_ACCESS_KEY_ID: 'test', VEGALAUNCH_OBJECT_SECRET_ACCESS_KEY: 'test', VEGALAUNCH_OBJECT_ENDPOINT: 'http://example.com' }), /HTTPS/);
+  assert.throws(() => privateObjectStoreFromEnv({ FIRELAUNCH_OBJECT_STORE: 's3', FIRELAUNCH_OBJECT_BUCKET: 'test-bucket', FIRELAUNCH_OBJECT_REGION: 'us-east-1' }), /incomplete/);
+  assert.throws(() => privateObjectStoreFromEnv({ FIRELAUNCH_OBJECT_STORE: 's3', FIRELAUNCH_OBJECT_BUCKET: 'test-bucket', FIRELAUNCH_OBJECT_REGION: 'us-east-1',
+    FIRELAUNCH_OBJECT_ACCESS_KEY_ID: 'test', FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY: 'test', FIRELAUNCH_OBJECT_ENDPOINT: 'http://example.com' }), /HTTPS/);
 });
 
 test('private AWS profile is explicit, native-S3 only, and does not fall back to static keys', () => {
-  const base = { VEGALAUNCH_OBJECT_STORE: 's3', VEGALAUNCH_OBJECT_BUCKET: 'approved-private-bucket',
-    VEGALAUNCH_OBJECT_REGION: 'us-east-2', VEGALAUNCH_OBJECT_ACCESS_KEY_ID: 'invalid-static-key',
-    VEGALAUNCH_OBJECT_SECRET_ACCESS_KEY: 'invalid-static-secret' };
-  assert.ok(privateObjectStoreFromEnv({ ...base, VEGALAUNCH_OBJECT_AUTH: 'aws-profile', AWS_PROFILE: 'vegalaunch-staging-app' }));
-  assert.throws(() => privateObjectStoreFromEnv({ ...base, VEGALAUNCH_OBJECT_AUTH: 'aws-profile' }), /named profile/);
-  assert.throws(() => privateObjectStoreFromEnv({ ...base, VEGALAUNCH_OBJECT_AUTH: 'aws-profile', AWS_PROFILE: 'vegalaunch-staging-app',
-    VEGALAUNCH_OBJECT_ENDPOINT: 'https://s3.example.test' }), /native S3/);
-  assert.throws(() => privateObjectStoreFromEnv({ ...base, VEGALAUNCH_OBJECT_AUTH: 'unknown' }), /Unsupported/);
+  const base = { FIRELAUNCH_OBJECT_STORE: 's3', FIRELAUNCH_OBJECT_BUCKET: 'approved-private-bucket',
+    FIRELAUNCH_OBJECT_REGION: 'us-east-2', FIRELAUNCH_OBJECT_ACCESS_KEY_ID: 'invalid-static-key',
+    FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY: 'invalid-static-secret' };
+  assert.ok(privateObjectStoreFromEnv({ ...base, FIRELAUNCH_OBJECT_AUTH: 'aws-profile', AWS_PROFILE: 'firelaunch-staging-app' }));
+  assert.throws(() => privateObjectStoreFromEnv({ ...base, FIRELAUNCH_OBJECT_AUTH: 'aws-profile' }), /named profile/);
+  assert.throws(() => privateObjectStoreFromEnv({ ...base, FIRELAUNCH_OBJECT_AUTH: 'aws-profile', AWS_PROFILE: 'firelaunch-staging-app',
+    FIRELAUNCH_OBJECT_ENDPOINT: 'https://s3.example.test' }), /native S3/);
+  assert.throws(() => privateObjectStoreFromEnv({ ...base, FIRELAUNCH_OBJECT_AUTH: 'unknown' }), /Unsupported/);
   assert.ok(privateObjectStoreFromEnv({ ...base }));
 });
 
 test('local S3 HTTP requires explicit development and loopback', () => {
   const previous = process.env.NODE_ENV;
-  const base = { VEGALAUNCH_OBJECT_STORE: 's3', VEGALAUNCH_OBJECT_BUCKET: 'vegalaunch-source', VEGALAUNCH_OBJECT_REGION: 'us-east-1',
-    VEGALAUNCH_OBJECT_ACCESS_KEY_ID: 'test', VEGALAUNCH_OBJECT_SECRET_ACCESS_KEY: 'test', VEGALAUNCH_LOCAL_HOSTED: '1' };
+  const base = { FIRELAUNCH_OBJECT_STORE: 's3', FIRELAUNCH_OBJECT_BUCKET: 'firelaunch-source', FIRELAUNCH_OBJECT_REGION: 'us-east-1',
+    FIRELAUNCH_OBJECT_ACCESS_KEY_ID: 'test', FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY: 'test', FIRELAUNCH_LOCAL_HOSTED: '1' };
   try {
     process.env.NODE_ENV = 'development';
     for (const host of ['localhost', '127.0.0.1'])
-      assert.ok(privateObjectStoreFromEnv({ ...base, NODE_ENV: 'development', VEGALAUNCH_OBJECT_ENDPOINT: `http://${host}:9000` }));
+      assert.ok(privateObjectStoreFromEnv({ ...base, NODE_ENV: 'development', FIRELAUNCH_OBJECT_ENDPOINT: `http://${host}:9000` }));
     for (const endpoint of ['http://evil.example:9000', 'http://127.0.0.2:9000', 'http://localhost:9000/path'])
-      assert.throws(() => privateObjectStoreFromEnv({ ...base, NODE_ENV: 'development', VEGALAUNCH_OBJECT_ENDPOINT: endpoint }), /HTTPS/);
-    assert.throws(() => privateObjectStoreFromEnv({ ...base, NODE_ENV: 'development', VEGALAUNCH_LOCAL_HOSTED: '0', VEGALAUNCH_OBJECT_ENDPOINT: 'http://localhost:9000' }), /HTTPS/);
+      assert.throws(() => privateObjectStoreFromEnv({ ...base, NODE_ENV: 'development', FIRELAUNCH_OBJECT_ENDPOINT: endpoint }), /HTTPS/);
+    assert.throws(() => privateObjectStoreFromEnv({ ...base, NODE_ENV: 'development', FIRELAUNCH_LOCAL_HOSTED: '0', FIRELAUNCH_OBJECT_ENDPOINT: 'http://localhost:9000' }), /HTTPS/);
     process.env.NODE_ENV = 'production';
-    assert.throws(() => privateObjectStoreFromEnv({ ...base, NODE_ENV: 'production', VEGALAUNCH_OBJECT_ENDPOINT: 'http://localhost:9000' }), /HTTPS/);
+    assert.throws(() => privateObjectStoreFromEnv({ ...base, NODE_ENV: 'production', FIRELAUNCH_OBJECT_ENDPOINT: 'http://localhost:9000' }), /HTTPS/);
   } finally { process.env.NODE_ENV = previous; }
 });
 
-const baseUrl = process.env.VEGALAUNCH_TEST_DATABASE_URL;
+const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
 (baseUrl ? test : test.skip)('schema 15 stores a bounded large private MP3 without widening other private types', async () => {
   const admin = new Pool({ connectionString: baseUrl });
-  const dbName = `vegalaunch_audio_${randomUUID().replaceAll('-', '')}`;
+  const dbName = `firelaunch_audio_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(baseUrl!); url.pathname = `/${dbName}`;
-  const root = await mkdtemp(path.join(tmpdir(), 'vegalaunch-audio-objects-'));
+  const root = await mkdtemp(path.join(tmpdir(), 'firelaunch-audio-objects-'));
   let repository: HostedProjectRepository | undefined;
   const oldEnv = process.env.NODE_ENV; process.env.NODE_ENV = 'test';
   try {
@@ -78,11 +78,11 @@ const baseUrl = process.env.VEGALAUNCH_TEST_DATABASE_URL;
 });
 (baseUrl ? test : test.skip)('private object ownership, expiry, revocation, deletion and orphan cleanup on real Postgres', async () => {
   const admin = new Pool({ connectionString: baseUrl });
-  const dbName = `vegalaunch_p4_${randomUUID().replaceAll('-', '')}`;
+  const dbName = `firelaunch_p4_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(baseUrl!);
   url.pathname = `/${dbName}`;
   await admin.query(`CREATE DATABASE ${dbName}`);
-  const root = await mkdtemp(path.join(tmpdir(), 'vegalaunch-p4-objects-'));
+  const root = await mkdtemp(path.join(tmpdir(), 'firelaunch-p4-objects-'));
   const oldEnv = process.env.NODE_ENV;
   process.env.NODE_ENV = 'test';
   let repository: HostedProjectRepository | undefined;

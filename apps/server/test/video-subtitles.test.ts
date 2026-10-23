@@ -36,7 +36,7 @@ test('subtitle route requires CSRF and owner access before reading private track
   let csrf = false;
   const mode = { mode: 'hosted', auth: { session: () => ({ principal: { accountId: owner, issuer: 'test', subject: 'test', email: 'test@example.com' }, csrf: 'valid' }),
     authorizedMutation: () => csrf } } as unknown as ServerMode;
-  const server = createApi(new ProjectRepository('/tmp/vegalaunch-subtitle-test'), undefined, mode, hosted, {} as PrivateObjectService);
+  const server = createApi(new ProjectRepository('/tmp/firelaunch-subtitle-test'), undefined, mode, hosted, {} as PrivateObjectService);
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('Server address unavailable');

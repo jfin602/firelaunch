@@ -1,6 +1,6 @@
 # VegaLaunch
 
-VegaLaunch is the current product name. The dated phase notes below are historical execution records; see [current state](docs/CURRENT-STATE.md) for current work. Existing `firelaunch` service, storage, database, and public app identifiers are retained for compatibility.
+VegaLaunch is the current product name. The dated phase notes below are historical execution records; see [current state](docs/CURRENT-STATE.md) for current work. Existing `firelaunch` service, storage, database, and public app identifiers are retained for compatibility; see the [naming audit](docs/rebrand-compatibility.md).
 
 ## Current creative UX direction — Phase 8 Wave 2 (2026-10-21)
 

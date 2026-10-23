@@ -163,7 +163,7 @@ export function createChannelLoader(config, bundled, { get = xhrGet, storage, on
     !/^dep_[a-f0-9]{32}$/.test(config.deploymentId) || bundled.id !== config.channelId ||
     !/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){2,}$/.test(config.packageId))
     throw new Error('Invalid native release configuration');
-  const key = `@vegalaunch:lkg:v1:${config.deploymentId}:${config.packageId}`;
+  const key = `@firelaunch:lkg:v1:${config.deploymentId}:${config.packageId}`;
   const base = `${config.origin}/public/v1/deployments/${config.deploymentId}`;
   let current = 0;
   let busy = false;

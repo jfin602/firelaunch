@@ -6,17 +6,17 @@ import { localHostedHttp } from '../local-hosted.js';
 export type ServerMode = { mode: 'local-legacy' } | { mode: 'hosted'; auth: HostedAuth };
 
 export function serverModeFromEnv(env: NodeJS.ProcessEnv, resolveAccount?: (principal: AuthenticatedPrincipal) => Promise<string>): ServerMode {
-  if (env.VEGALAUNCH_MODE === 'local-legacy') {
+  if (env.FIRELAUNCH_MODE === 'local-legacy') {
     if (env.NODE_ENV === 'production') throw new Error('Local legacy mode is unavailable in production');
     if (env.HOST && !['127.0.0.1', 'localhost', '::1'].includes(env.HOST)) throw new Error('Local legacy mode requires loopback');
     return { mode: 'local-legacy' };
   }
-  if (env.VEGALAUNCH_MODE !== 'hosted') throw new Error('Set VEGALAUNCH_MODE to hosted or local-legacy');
+  if (env.FIRELAUNCH_MODE !== 'hosted') throw new Error('Set FIRELAUNCH_MODE to hosted or local-legacy');
   if (!env.DATABASE_URL) throw new Error('Hosted PostgreSQL connection is required');
-  const origin = env.VEGALAUNCH_PUBLIC_ORIGIN;
-  const clientId = env.VEGALAUNCH_OIDC_CLIENT_ID;
-  const clientSecret = env.VEGALAUNCH_OIDC_CLIENT_SECRET;
-  if (!origin || !clientId || !clientSecret || env.VEGALAUNCH_OIDC_ISSUER && env.VEGALAUNCH_OIDC_ISSUER !== 'https://accounts.google.com') throw new Error('Hosted Google OIDC configuration incomplete');
+  const origin = env.FIRELAUNCH_PUBLIC_ORIGIN;
+  const clientId = env.FIRELAUNCH_OIDC_CLIENT_ID;
+  const clientSecret = env.FIRELAUNCH_OIDC_CLIENT_SECRET;
+  if (!origin || !clientId || !clientSecret || env.FIRELAUNCH_OIDC_ISSUER && env.FIRELAUNCH_OIDC_ISSUER !== 'https://accounts.google.com') throw new Error('Hosted Google OIDC configuration incomplete');
   const publicUrl = new URL(origin);
   if (publicUrl.origin !== origin || publicUrl.username || publicUrl.password || publicUrl.hash ||
     (publicUrl.protocol !== 'https:' && !localHostedHttp(publicUrl, env))) throw new Error('Hosted public origin must be HTTPS');

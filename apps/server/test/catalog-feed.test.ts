@@ -10,7 +10,7 @@ import { CatalogRepository } from '../src/catalog-repository.js';
 import { HostedProjectRepository } from '../src/hosted-repository.js';
 
 const json = JSON.stringify({ version: 'https://jsonfeed.org/version/1.1', items: [
-  { id: 'https://creator.example/story/1', title: 'First', summary: 'A story', _vegalaunch_kind: 'book' }
+  { id: 'https://creator.example/story/1', title: 'First', summary: 'A story', _firelaunch_kind: 'book' }
 ] });
 
 function harness(routes: Record<string, { status: number; headers?: Record<string, string>; body?: string }>,
@@ -79,10 +79,10 @@ test('each redirect resolves and pins a validated address before reading bounded
   await assert.rejects(fetchFeedSnapshot('https://feed.example/feed', oversized.transport), { code: 'INVALID_INPUT' });
 });
 
-const database = process.env.VEGALAUNCH_TEST_DATABASE_URL;
+const database = process.env.FIRELAUNCH_TEST_DATABASE_URL;
 (database ? test : test.skip)('feed snapshot uses owner-scoped preview receipt and explicit approval', async () => {
   const admin = new Pool({ connectionString: database });
-  const name = `vegalaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(database!); url.pathname = `/${name}`;
   await admin.query(`CREATE DATABASE ${name}`);
   let repository: HostedProjectRepository | undefined;

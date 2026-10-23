@@ -51,7 +51,7 @@ CREATE UNIQUE INDEX managed_media_aws_job_identity ON managed_media_job_attempts
 CREATE INDEX managed_media_reconcile_due ON managed_media_job_attempts(reconcile_after, intent_token)
   WHERE state IN ('intent','submitted','progressing','complete');
 
-CREATE FUNCTION vegalaunch_managed_job_identity_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE FUNCTION firelaunch_managed_job_identity_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW.intent_token IS DISTINCT FROM OLD.intent_token OR
      NEW.processing_job_id IS DISTINCT FROM OLD.processing_job_id OR
@@ -69,4 +69,4 @@ BEGIN
   RETURN NEW;
 END $$;
 CREATE TRIGGER managed_media_job_identity_immutable BEFORE UPDATE ON managed_media_job_attempts
-  FOR EACH ROW EXECUTE FUNCTION vegalaunch_managed_job_identity_immutable();
+  FOR EACH ROW EXECUTE FUNCTION firelaunch_managed_job_identity_immutable();

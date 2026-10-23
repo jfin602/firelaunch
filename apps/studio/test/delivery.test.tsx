@@ -16,7 +16,7 @@ Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.
 const { cleanup, fireEvent, render, screen, waitFor } = await import('@testing-library/react');
 
 test('Export Advanced Source edit, blocked build and local bundle remain truthful', async () => {
-  const directory = await mkdtemp(path.join(tmpdir(), 'vegalaunch-delivery-'));
+  const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-delivery-'));
   const repository = new ProjectRepository(directory);
   const project = await repository.create({ title: 'Wild Earth' });
   const server = createApi(repository, undefined, { mode: 'local-legacy' });

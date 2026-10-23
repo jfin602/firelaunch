@@ -20,7 +20,7 @@ const projection: CatalogProjection = { projectRevision: 1, catalogRevision: 2, 
 ] };
 
 test('catalog grounding is paginated and reveals only approved presentation fields', async () => {
-  const directory = await mkdtemp(path.join(tmpdir(), 'vegalaunch-grounding-'));
+  const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-grounding-'));
   try {
     const repository = new ProjectRepository(directory);
     const project = await repository.create({ title: 'Books' });

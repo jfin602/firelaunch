@@ -8,7 +8,7 @@ import { ProjectRepository } from '../src/repository.js';
 import { createApi } from '../src/api.js';
 
 async function temporary<T>(action: (root: string) => Promise<T>): Promise<T> {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'vegalaunch-test-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firelaunch-test-'));
   try { return await action(root); } finally { await rm(root, { recursive: true, force: true }); }
 }
 

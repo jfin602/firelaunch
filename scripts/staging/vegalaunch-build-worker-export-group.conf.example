@@ -1,3 +1,0 @@
-[Service]
-# Dedicated group can read only /var/lib/vegalaunch-build/artifacts, not jobs.
-Group=vegalaunch-export

@@ -9,13 +9,13 @@ import { MediaPipelineRepository } from '../src/media-pipeline-repository.js';
 import { ManagedMediaJobRepository } from '../src/managed-media-job-repository.js';
 import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
 
-const databaseTest = process.env.VEGALAUNCH_TEST_DATABASE_URL ? test : test.skip;
+const databaseTest = process.env.FIRELAUNCH_TEST_DATABASE_URL ? test : test.skip;
 const id = (prefix: string) => `${prefix}_${randomUUID().replaceAll('-', '')}`;
 
 databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and revocation', async () => {
-  const base = process.env.VEGALAUNCH_TEST_DATABASE_URL!;
+  const base = process.env.FIRELAUNCH_TEST_DATABASE_URL!;
   const admin = new Pool({ connectionString: base });
-  const name = `vegalaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(base); url.pathname = `/${name}`;
   await admin.query(`CREATE DATABASE ${name}`);
   let first: HostedProjectRepository | undefined;
@@ -24,13 +24,13 @@ databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and r
     const preMigrationPool = new Pool({ connectionString: url.toString() });
     try {
       await preMigrationPool.query('BEGIN');
-      await preMigrationPool.query('CREATE TABLE vegalaunch_schema_migrations (version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
+      await preMigrationPool.query('CREATE TABLE firelaunch_schema_migrations (version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
       const names = (await readdir(new URL('../migrations/', import.meta.url)))
         .filter(name => /^0(0[1-9]|10)_.*\.up\.sql$/.test(name)).sort();
       assert.equal(names.length, 10);
       for (const [index, name] of names.entries()) {
         await preMigrationPool.query(await readFile(new URL(`../migrations/${name}`, import.meta.url), 'utf8'));
-        await preMigrationPool.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES ($1)', [index + 1]);
+        await preMigrationPool.query('INSERT INTO firelaunch_schema_migrations(version) VALUES ($1)', [index + 1]);
       }
       await preMigrationPool.query('COMMIT');
       const old = new HostedProjectRepository(preMigrationPool);
@@ -299,16 +299,16 @@ databaseTest('migration 011, owned media jobs, CAS leases, replay, restart and r
 });
 
 databaseTest('migration 013 preserves a READY rendition created under migration 012', async () => {
-  const base = process.env.VEGALAUNCH_TEST_DATABASE_URL!;
+  const base = process.env.FIRELAUNCH_TEST_DATABASE_URL!;
   const admin = new Pool({ connectionString: base });
-  const name = `vegalaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(base); url.pathname = `/${name}`;
   await admin.query(`CREATE DATABASE ${name}`);
   let hosted: HostedProjectRepository | undefined;
   try {
     hosted = await HostedProjectRepository.connect(url.toString());
     await hosted.pool.query(await readFile(new URL('../migrations/013_managed_media_jobs.down.sql', import.meta.url), 'utf8'));
-    await hosted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version=13');
+    await hosted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version=13');
     const owner: AuthenticatedPrincipal = { accountId: await hosted.accountForIdentity({
       issuer: 'https://issuer.example', subject: 'legacy-ready', email: 'legacy@example.com'
     }), issuer: 'https://issuer.example', subject: 'legacy-ready', email: 'legacy@example.com' };

@@ -11,7 +11,7 @@ async function main(): Promise<void> {
   if (!dataRoot || !account || args.length !== expected.length || args.some((arg, index) => arg !== expected[index]))
     throw new Error('Usage: npm run migration:p0 -- --data-root ABSOLUTE_PATH --creator-account cr_ID [--apply]');
   if (!dataRoot.startsWith('/')) throw new Error('Legacy data root must be absolute');
-  const repository = await HostedProjectRepository.connect(process.env.VEGALAUNCH_DATABASE_URL ?? '');
+  const repository = await HostedProjectRepository.connect(process.env.FIRELAUNCH_DATABASE_URL ?? '');
   try {
     const importer = new LegacyImporter(repository.pool, dataRoot, account);
     const results = [];

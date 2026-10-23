@@ -96,7 +96,7 @@ export async function privateAudioBody(request: IncomingMessage): Promise<{ file
   const length = Number(request.headers['content-length']);
   if (!Number.isSafeInteger(length) || length < 1 || length > MAX_PRIVATE_AUDIO_BYTES)
     throw new RepositoryError('INVALID_INPUT', 'MP3 must be 1 byte to 320 MB');
-  const directory = await mkdtemp(path.join(tmpdir(), 'vegalaunch-audio-'));
+  const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-audio-'));
   const file = path.join(directory, 'upload.mp3');
   const handle = await open(file, 'wx', 0o600);
   const hash = createHash('sha256');
@@ -153,7 +153,7 @@ function nativeExportJobStatus(job: NonNullable<Awaited<ReturnType<NativeBuildQu
 }
 
 export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository, privateObjects?: PrivateObjectService, mediaUploads?: MediaUploadService, mediaPublisher?: S3MediaStorage, managedArtwork?: ManagedArtworkDelivery, draftAudio?: DraftAudioDelivery) {
-  const status = selectedProvider ? selectedProvider.name === 'mock' ? providerStatus({ VEGALAUNCH_AGENT_PROVIDER: 'mock' }) : { provider: selectedProvider.name, configured: true, message: `${selectedProvider.name} injected for this server; this status does not verify provider availability or request success.` } : providerStatus(process.env);
+  const status = selectedProvider ? selectedProvider.name === 'mock' ? providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'mock' }) : { provider: selectedProvider.name, configured: true, message: `${selectedProvider.name} injected for this server; this status does not verify provider availability or request success.` } : providerStatus(process.env);
   const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : status.provider === 'bedrock' ? new BedrockProvider(process.env.BEDROCK_MODEL_ID!) : new OpenAIProvider(process.env.OPENAI_MODEL!, process.env.OPENAI_API_KEY!))) : null;
   const workspace = mode?.mode === 'local-legacy' ? new WorkspaceService(repository) : null;
   const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository) : null;
@@ -233,7 +233,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
               if (job && (job.state === 'queued' || job.state === 'running'))
                 await hostedWorkspace.assertReleaseBuildInputCurrent(principal, projectId, job.inputFingerprint);
               const verified = job?.state === 'ready' ? await nativeExportForOwner(nativeBuildQueue!, hostedWorkspace,
-                principal, projectId, job.id, process.env.VEGALAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights) : undefined;
+                principal, projectId, job.id, process.env.FIRELAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights) : undefined;
               respond(response, 200, job ? nativeExportJobStatus(job, verified) : { status: 'blocked', reason: 'No native build has been submitted for this project',
                 job: null, downloadReady: false }); return;
             }
@@ -246,13 +246,13 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
               const job = await nativeBuildQueue!.status(principal.accountId, projectId, jobId);
               if (!job) throw new RepositoryError('STORAGE_ERROR', 'Build job receipt unavailable');
               const verified = job.state === 'ready' ? await nativeExportForOwner(nativeBuildQueue!, hostedWorkspace,
-                principal, projectId, job.id, process.env.VEGALAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights) : undefined;
+                principal, projectId, job.id, process.env.FIRELAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights) : undefined;
               respond(response, job.state === 'ready' ? 200 : 202, nativeExportJobStatus(job, verified)); return;
             }
             if (segments.length === 6 && segments[5] === 'download' && request.method === 'GET') {
               await hostedRepository.read(principal, projectId);
               const exported = await nativeExportForOwner(nativeBuildQueue!, hostedWorkspace, principal,
-                projectId, segments[4]!, process.env.VEGALAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights);
+                projectId, segments[4]!, process.env.FIRELAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights);
               response.writeHead(200, { 'content-type': 'application/zip',
                 'content-length': exported.zip.length, 'content-disposition': `attachment; filename="${exported.packageId}_vega_release.zip"`,
                 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff',

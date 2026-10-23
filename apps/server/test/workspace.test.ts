@@ -10,7 +10,7 @@ import { WorkspaceService } from '../src/workspace.js';
 import { createApi } from '../src/api.js';
 
 async function fixture(action: (workspace: WorkspaceService, repository: ProjectRepository, id: string, directory: string) => Promise<void>) {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'vegalaunch-workspace-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firelaunch-workspace-'));
   try {
     const repository = new ProjectRepository(root);
     const project = await repository.create({ title: 'Wild Earth' });

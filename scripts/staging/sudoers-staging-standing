@@ -1,2 +1,2 @@
-deploy ALL=(root) NOPASSWD: /opt/vegalaunch-staging-ops/deploy-release.sh ^/home/deploy/vegalaunch-incoming/vegalaunch-[A-Za-z0-9._-]+[.]tar[.]gz [0-9a-f]{64}$
-deploy ALL=(root) NOPASSWD: /opt/vegalaunch-staging-ops/rollback.sh ""
+deploy ALL=(root) NOPASSWD: /opt/firelaunch-staging-ops/deploy-release.sh ^/home/deploy/firelaunch-incoming/firelaunch-[A-Za-z0-9._-]+[.]tar[.]gz [0-9a-f]{64}$
+deploy ALL=(root) NOPASSWD: /opt/firelaunch-staging-ops/rollback.sh ""

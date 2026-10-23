@@ -3,14 +3,14 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-artifact="${1:?Usage: sudo deploy-release.sh /home/deploy/vegalaunch-incoming/release.tar.gz EXPECTED_SHA256}"
+artifact="${1:?Usage: sudo deploy-release.sh /home/deploy/firelaunch-incoming/release.tar.gz EXPECTED_SHA256}"
 operator_hash="${2:?Record the build workstation SHA-256 independently before deployment}"
 [[ $# = 2 ]] || die 'Schema-changing cutover is disabled pending an isolated restore rehearsal and reviewed procedure'
 [[ "$operator_hash" =~ ^[a-f0-9]{64}$ ]] || die 'Invalid operator-provided SHA-256'
 require_operator
 require_layout
 health || die 'Existing staging HTTPS health check failed'
-[[ "$artifact" = /home/deploy/vegalaunch-incoming/*.tar.gz && -f "$artifact" && ! -L "$artifact" && -f "$artifact.sha256" ]] || die 'Release archive must be a regular file in the staging incoming directory'
+[[ "$artifact" = /home/deploy/firelaunch-incoming/*.tar.gz && -f "$artifact" && ! -L "$artifact" && -f "$artifact.sha256" ]] || die 'Release archive must be a regular file in the staging incoming directory'
 expected="$(cut -d' ' -f1 "$artifact.sha256")"
 [[ "$expected" = "$operator_hash" && "$(sha256sum "$artifact" | cut -d' ' -f1)" = "$operator_hash" ]] || die 'Release checksum mismatch'
 validate_archive "$artifact"

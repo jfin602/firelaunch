@@ -80,14 +80,14 @@ test('malformed calls refuse and partial saves remain reported', async () => {
   assert.equal(response.project.revision, 2);
   assert.equal(response.project.spec.pages.length, 2);
   assert.match(response.events.at(-1)!.text, /Invalid set_brand/);
-  assert.deepEqual(providerStatus({ VEGALAUNCH_AGENT_PROVIDER: 'bedrock' }).configured, false);
-  assert.equal(providerStatus({ VEGALAUNCH_AGENT_PROVIDER: 'bedrock', BEDROCK_MODEL_ID: '  ' }).configured, false);
-  const bedrockStatus = providerStatus({ VEGALAUNCH_AGENT_PROVIDER: 'bedrock', BEDROCK_MODEL_ID: 'amazon.nova-lite-v1:0', AWS_REGION: 'us-east-2' });
+  assert.deepEqual(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'bedrock' }).configured, false);
+  assert.equal(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'bedrock', BEDROCK_MODEL_ID: '  ' }).configured, false);
+  const bedrockStatus = providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'bedrock', BEDROCK_MODEL_ID: 'amazon.nova-lite-v1:0', AWS_REGION: 'us-east-2' });
   assert.equal(bedrockStatus.configured, true);
   assert.match(bedrockStatus.message, /does not verify region, credentials, model access or request success/);
-  assert.throws(() => providerStatus({ VEGALAUNCH_AGENT_PROVIDER: 'unknown' }), /Unsupported/);
-  assert.equal(providerStatus({ VEGALAUNCH_AGENT_PROVIDER: 'openai' }).configured, false);
-  assert.equal(providerStatus({ VEGALAUNCH_AGENT_PROVIDER: 'openai', OPENAI_API_KEY: 'server-token', OPENAI_MODEL: 'test-model' }).configured, true);
+  assert.throws(() => providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'unknown' }), /Unsupported/);
+  assert.equal(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'openai' }).configured, false);
+  assert.equal(providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'openai', OPENAI_API_KEY: 'server-token', OPENAI_MODEL: 'test-model' }).configured, true);
 });
 
 test('Bedrock Converse adapter sends tool schemas and marshals tool results without credentials', async () => {

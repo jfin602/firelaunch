@@ -8,7 +8,7 @@ const [input, output] = process.argv.slice(2);
 const textName = /\.(?:js|jsx|ts|tsx|json|toml|md|txt)$|^(?:README|LICENSE)$/i;
 if (!input || !output || process.argv.length !== 4) throw new Error('Usage: node scripts/materialize-source-export.mjs EXPORT.json EMPTY_DIRECTORY');
 const bundle = JSON.parse(await readFile(input, 'utf8'));
-if (bundle.format !== 'vegalaunch-source-export-v1' || !/^ch_[a-f0-9]{32}$/.test(bundle.projectId) ||
+if (!['firelaunch-source-export-v1', 'vegalaunch-source-export-v1'].includes(bundle.format) || !/^ch_[a-f0-9]{32}$/.test(bundle.projectId) ||
   !Number.isSafeInteger(bundle.revision) || bundle.revision < 1 || !/^[a-f0-9]{64}$/.test(bundle.generatorFingerprint) ||
   !bundle.files || !bundle.sha256 || typeof bundle.files !== 'object' || Array.isArray(bundle.files) ||
   typeof bundle.sha256 !== 'object' || Array.isArray(bundle.sha256)) throw new Error('Invalid source export');

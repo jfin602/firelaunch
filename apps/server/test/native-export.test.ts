@@ -23,6 +23,8 @@ const evidence = {
 
 test('native ZIP has four bounded verified entries and two SHA-256 identities', () => {
   const result = createNativeExport(input, evidence, vpkg);
+  assert.ok(result.zip.includes(Buffer.from('"format": "vegalaunch-vega-export-v1"')));
+  assert.ok(!result.zip.includes(Buffer.from('"format": "firelaunch-vega-export-v1"')));
   assert.equal(result.zipSha256, sha(result.zip));
   assert.equal(result.vpkgSha256, sha(vpkg));
   assert.equal(result.vpkgName, 'com.creator.channel_x86_64.vpkg');

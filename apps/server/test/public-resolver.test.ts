@@ -72,7 +72,7 @@ test('public resolver serves only valid approved immutable bytes and one-snapsho
     return { rows: selected && releases.has(selected) ? [releases.get(selected)] : [] };
   } } } as unknown as HostedProjectRepository;
   const auth = { session: () => null } as unknown as HostedAuth;
-  const api = createApi(new ProjectRepository('/tmp/vegalaunch-public-resolver-unused'), undefined,
+  const api = createApi(new ProjectRepository('/tmp/firelaunch-public-resolver-unused'), undefined,
     { mode: 'hosted', auth }, repository);
   api.listen(0, '127.0.0.1');
   await once(api, 'listening');
@@ -168,7 +168,7 @@ test('public resolver serves only valid approved immutable bytes and one-snapsho
   } finally {
     await new Promise<void>(resolve => api.close(() => resolve()));
   }
-  const local = createApi(new ProjectRepository('/tmp/vegalaunch-public-resolver-unused'), undefined,
+  const local = createApi(new ProjectRepository('/tmp/firelaunch-public-resolver-unused'), undefined,
     { mode: 'local-legacy' });
   local.listen(0, '127.0.0.1');
   await once(local, 'listening');
@@ -239,7 +239,7 @@ test('public thumbnail route requires an approved release, unchanged private sou
   const key = `private/${createHash('sha256').update(`published-artwork-v1\0${deploymentId}\0${releaseId}\0${artworkId}\0${imageHash}`).digest('hex')}`;
   copied.set(key, image);
   const repository = { pool } as HostedProjectRepository;
-  const api = createApi(new ProjectRepository('/tmp/vegalaunch-managed-artwork-unused'), undefined,
+  const api = createApi(new ProjectRepository('/tmp/firelaunch-managed-artwork-unused'), undefined,
     { mode: 'hosted', auth: { session: () => null } as HostedAuth }, repository, undefined, undefined, undefined, delivery);
   api.listen(0, '127.0.0.1'); await once(api, 'listening');
   const address = api.address(); assert.ok(address && typeof address !== 'string');

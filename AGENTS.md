@@ -1,4 +1,4 @@
-# FireLaunch Agent Instructions
+# VegaLaunch Agent Instructions
 
 ## CURRENT OWNER ADDENDUM — c9-multimedia-editor P0 (2026-10-22 local / 2026-10-23 UTC)
 

@@ -46,7 +46,7 @@ const server = createServer(async (request, response) => {
   }
 });
 
-const profile = await mkdtemp(join(tmpdir(), 'vegalaunch-studio-smoke-'));
+const profile = await mkdtemp(join(tmpdir(), 'firelaunch-studio-smoke-'));
 let chrome;
 try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -89,16 +89,15 @@ try {
     for (let i = 0; i < 60; i++) {
       const result = await send('Runtime.evaluate', { expression: `({ready:document.readyState, root:document.querySelector('#root')?.innerText ?? '', visible:!!document.querySelector('#root') && getComputedStyle(document.querySelector('#root')).display !== 'none'})`, returnByValue: true });
       state = result.result.value;
-      if (state?.root && [expected].flat().some(text => state.root.includes(text)) || errors.length) break;
+      if (state?.root?.includes(expected) || errors.length) break;
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     await new Promise(resolve => setTimeout(resolve, 250));
     console.log(`${label}: root=${JSON.stringify(state?.root?.slice(0, 180))} errors=${JSON.stringify(errors)}`);
-    assert.ok(state?.visible && [expected].flat().some(text => state.root.includes(text)), `${label}: visible UI missing`);
+    assert.ok(state?.visible && state.root.includes(expected), `${label}: visible UI missing`);
     assert.equal(errors.length, 0, `${label}: browser console/runtime errors`);
   }
-  // A cached pre-rebrand entrypoint may still load while its hashed assets are retained.
-  await check(first, 'signed-out', process.argv[3] ? ['Sign in to VegaLaunch', 'Sign in to VegaLaunch'] : 'Sign in to VegaLaunch');
+  await check(first, 'signed-out', 'Sign in to VegaLaunch');
   signedIn = true;
   await check(first, 'signed-in', 'Startup smoke channel');
   const { targetId } = await first.send('Target.createTarget', { url: 'about:blank' });
