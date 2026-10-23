@@ -67,13 +67,16 @@ test('creator build input pins published deployment and preserves safe edited so
 });
 
 test('draft build pins current bundled content and has no published release identity', async () => {
-  const generated = await generateProject(spec, deployment, 'draft');
+  const privateDeployment = { ...deployment, nativeReleaseApproval: 'pending_creator' as const,
+    manifestEndpoint: undefined };
+  const generated = await generateProject(spec, privateDeployment, 'draft');
   const files = Object.fromEntries(generated.files);
   const source = { specRevision: project.revision, fingerprint: generated.fingerprint,
     files, baseline: { ...files } };
-  const input = await createDraftBuildInput(project, source, deployment, owner.accountId);
+  const input = await createDraftBuildInput(project, source, privateDeployment, owner.accountId);
   assert.equal(input.mode, 'draft');
   assert.equal(input.publishedRelease, undefined);
+  assert.equal(input.manifestEndpoint, '');
   assert.equal(input.draft?.revision, project.revision);
   assert.deepEqual(releaseBuildCommand(input), [...RELEASE_BUILD_COMMAND, '--build-number', String(project.revision)]);
   assert.equal(input.files['src/channel.json']!.includes(spec.content[0]!.mediaUrl!), true);
@@ -82,9 +85,9 @@ test('draft build pins current bundled content and has no published release iden
   try { await materializeReleaseBuildInput(input, dir); }
   finally { await rm(dir, { recursive:true, force:true }); }
   await assert.rejects(createDraftBuildInput({ ...project, revision: project.revision + 1 }, source,
-    deployment, owner.accountId), { code:'CONFLICT' });
+    privateDeployment, owner.accountId), { code:'CONFLICT' });
   source.files['src/channel.json'] = source.files['src/channel.json']!.replace(spec.content[0]!.title, 'Wrong title');
-  await assert.rejects(createDraftBuildInput(project, source, deployment, owner.accountId), { code:'CONFLICT' });
+  await assert.rejects(createDraftBuildInput(project, source, privateDeployment, owner.accountId), { code:'CONFLICT' });
 });
 
 test('stale, missing, foreign binding and absent publication fail closed', async () => {

@@ -100,7 +100,7 @@ async function createBuildInput(project: ChannelProject, source: StoredSource | 
     throw new RepositoryError('CONFLICT', 'Invalid native build snapshot identity');
   if (deployment.projectId !== project.id || deployment.channelId !== project.id || deployment.creatorAccountId !== creatorAccountId)
     conflict('Deployment identity differs from project');
-  const endpoint = validEndpoint(deployment.manifestEndpoint ?? '', deployment.id);
+  const endpoint = identity.mode === 'draft' ? '' : validEndpoint(deployment.manifestEndpoint ?? '', deployment.id);
   const generated = await generateProject(project.spec, deployment, identity.mode === 'draft' ? 'draft' : 'published');
   if (source.specRevision !== project.revision || source.fingerprint !== generated.fingerprint)
     conflict('Generated source is stale for channel or deployment');
@@ -174,7 +174,8 @@ export async function materializeReleaseBuildInput(input: ReleaseBuildInput, des
       !/^[a-f0-9]{64}$/.test(input.draft.snapshotSha256) || input.draft.revision !== input.specRevision :
       !/^rel_[a-f0-9]{32}$/.test(input.publishedRelease.releaseId) ||
       !Number.isSafeInteger(input.publishedRelease.sequence) || input.publishedRelease.sequence < 1) ||
-    validEndpoint(input.manifestEndpoint, input.deploymentId) !== input.manifestEndpoint)
+    (input.mode === 'draft' ? input.manifestEndpoint !== '' :
+      validEndpoint(input.manifestEndpoint, input.deploymentId) !== input.manifestEndpoint))
     invalid('Invalid build input identity');
   const files = validFiles({ ...input.files });
   if (input.mode === 'draft') {

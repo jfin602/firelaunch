@@ -56,8 +56,7 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
         // changes. Only the click may request a newly checked build.
         if (!(reason instanceof ApiError) || reason.status !== 409) throw reason;
       }
-      const next = current && (current.status === 'failed' || current.status === 'expired' || current.status === 'canceled' ||
-        current.status === 'queued' || current.status === 'running' || current.downloadReady)
+      const next = current && (current.status === 'queued' || current.status === 'running' || current.downloadReady)
         ? current : await requestNativeBuild(projectId);
       if (currentProject.current !== projectId) return;
       setNativeExport(next);
@@ -65,8 +64,7 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
     } catch (reason) {
       if (currentProject.current === projectId) {
         const message = reason instanceof Error ? reason.message : String(reason);
-        setError(/deployment not found/i.test(message)
-          ? 'Create an owned app deployment before exporting this channel draft.' : message);
+        setError(message);
       }
     } finally { exportPending.current = false; setExportStarting(false); }
   }
@@ -87,7 +85,7 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
       {build?.output && <pre tabIndex={0} aria-label="Build command output">{build.output}</pre>}
       {build?.toolchain && <div><h3>Toolchain doctor</h3>{(['node', 'npm', 'vegaSdk', 'vegaCli', 'device'] as const).map(key => <p key={key}>{key}: {build.toolchain[key].detail}</p>)}</div>}
     </>}
-    {surface === 'Build' && hosted && <section aria-label="Export App"><h2>Export App</h2><p role="status">{nativeExport ? <><strong>{nativeExport.status}</strong>{nativeExport.job && ` · job ${nativeExport.job.id}`}</> : 'Loading export availability…'}</p><button className="primary" disabled={exportStarting} onClick={() => void beginNativeExport()}>{exportStarting ? 'Checking channel draft…' : 'Build & Export App'}</button><p className="muted">Export builds a Vega app from the content currently included in this saved channel draft. Changes made after this build require a new package.</p></section>}
+    {surface === 'Build' && hosted && <section aria-label="Export App"><h2>Build & Download</h2><p role="status">{nativeExport?.job ? <><strong>{nativeExport.status}</strong> · job {nativeExport.job.id}</> : nativeExport?.status === 'blocked' && nativeExport.reason && !/No native build has been submitted/i.test(nativeExport.reason) ? nativeExport.reason : 'Ready to build your saved channel.'}</p><button className="primary" disabled={exportStarting} onClick={() => void beginNativeExport()}>{exportStarting ? 'Checking channel draft…' : 'Build & Download'}</button><p className="muted">Build a Vega app from the content in this saved channel draft. Changes after a build require a new package.</p></section>}
     {surface === 'Publish' && <LivePublication project={project} hosted={hosted}/>}
     {surface === 'Build' && !hosted && <><h2>Submission handoff</h2><p className="muted">Export prepares the native app package and creator-owned submission materials. Submit through your own Amazon account.</p>
       {publish?.checks.map(check => <p key={check.group}><strong>{check.ready ? '✓' : '○'} {check.group}</strong><br/>{check.detail}</p>)}

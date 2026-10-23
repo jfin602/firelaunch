@@ -51,6 +51,9 @@ test('hosted export submits only the session owner snapshot and reports owned qu
   const hosted = { read: async (caller: { accountId: string }, id: string) => {
     if (caller.accountId !== owner || id !== project) throw new RepositoryError('NOT_FOUND', 'Project not found');
     return { id: project };
+  }, ensureDraftDeployment: async (caller: { accountId: string }, id: string) => {
+    assert.equal(caller.accountId, owner); assert.equal(id, project);
+    return {};
   }, pool: { query: async () => ({ rows: [], rowCount: 0 }) } } as unknown as HostedProjectRepository;
   const mode = { mode: 'hosted', auth: {
     session: () => principal ? { principal: { accountId: principal, issuer: 'test', subject: principal, email: 'test@example.com' }, csrf: 'valid' } : null,

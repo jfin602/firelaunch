@@ -80,11 +80,26 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     });
     await first.createDeployment(a, deployment(a, created.id));
     assert.equal((await second.readDeployment(a, created.id)).packageId, packageId);
+    assert.equal((await second.ensureDraftDeployment(a, created.id)).packageId, packageId,
+      'a valid owned deployment is reused');
+    const freshA = await first.create(a, { title: 'Fresh A' });
+    const freshB = await second.create(b, { title: 'Fresh B' });
+    const [autoA1, autoA2, autoB] = await Promise.all([
+      first.ensureDraftDeployment(a, freshA.id), second.ensureDraftDeployment(a, freshA.id),
+      second.ensureDraftDeployment(b, freshB.id)
+    ]);
+    assert.equal(autoA1.id, autoA2.id, 'repeated clicks cannot create duplicate deployments');
+    assert.notEqual(autoA1.id, autoB.id);
+    assert.notEqual(autoA1.packageId, autoB.packageId);
+    assert.equal(autoA1.nativeReleaseApproval, 'pending_creator');
+    assert.equal(autoA1.manifestEndpoint, undefined);
+    await assert.rejects(second.ensureDraftDeployment(b, freshA.id), { code: 'NOT_FOUND' });
+    await assert.rejects(first.readDeployment(a, freshB.id), { code: 'NOT_FOUND' });
     await assert.rejects(second.readDeployment(b, created.id), { code: 'NOT_FOUND' });
     await assert.rejects(second.createDeployment(b, deployment(b, other.id)), { code: 'CONFLICT' });
     await assert.rejects(second.createDeployment(b, deployment(b, created.id)), { code: 'NOT_FOUND' });
-    assert.equal((await second.pool.query('SELECT count(*)::int AS count FROM channel_deployments')).rows[0].count, 1);
-    assert.equal((await second.pool.query('SELECT count(*)::int AS count FROM channel_ownerships')).rows[0].count, 2);
+    assert.equal((await second.pool.query('SELECT count(*)::int AS count FROM channel_deployments')).rows[0].count, 3);
+    assert.equal((await second.pool.query('SELECT count(*)::int AS count FROM channel_ownerships')).rows[0].count, 4);
 
     await first.pool.end(); first = undefined;
     const restarted = await HostedProjectRepository.connect(url.toString());
@@ -94,7 +109,7 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     await restarted.pool.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES (999)');
     await assert.rejects(restarted.migrate(), /Unsupported hosted database migration/);
     await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 999');
-    assert.equal((await restarted.pool.query('SELECT count(*)::int AS count FROM channel_projects')).rows[0].count, 2);
+    assert.equal((await restarted.pool.query('SELECT count(*)::int AS count FROM channel_projects')).rows[0].count, 4);
 
     const directory = await mkdtemp(path.join(tmpdir(), 'vegalaunch-hosted-api-'));
     const { privateKey, publicKey } = await generateKeyPair('RS256');

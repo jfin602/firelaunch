@@ -31,7 +31,7 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
   const bound = deployment ? channelDeploymentSchema.parse(deployment) : undefined;
   if (bound && (bound.projectId !== valid.id || bound.channelId !== valid.id)) throw new Error('Deployment differs from channel');
   let origin: string | undefined;
-  if (bound) {
+  if (bound && delivery === 'published') {
     if (!bound.manifestEndpoint) throw new Error('Bound deployment needs a pinned HTTPS resolver');
     const endpoint = new URL(bound.manifestEndpoint);
     origin = endpoint.origin;

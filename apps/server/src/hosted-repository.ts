@@ -330,6 +330,44 @@ export class HostedProjectRepository {
     finally { client.release(); }
   }
 
+  /** Create the private draft package identity once, under the channel's owner. */
+  async ensureDraftDeployment(principal: AuthenticatedPrincipal, projectId: string): Promise<ChannelDeployment> {
+    if (!channelId.safeParse(projectId).success) throw new RepositoryError('NOT_FOUND', 'Project not found');
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const owner = await this.owner(principal, client);
+      const channel = await client.query<{ spec: ChannelSpec }>(`SELECT c.spec FROM channel_projects c
+        JOIN channel_ownerships o ON o.project_id=c.id AND o.creator_account_id=c.creator_account_id
+        WHERE c.id=$1 AND o.creator_account_id=$2`, [projectId, owner]);
+      if (!channel.rows[0]) throw new RepositoryError('NOT_FOUND', 'Project not found');
+      const deployment = channelDeploymentSchema.parse({
+        schemaVersion: 1, id: `dep_${randomUUID().replaceAll('-', '')}`,
+        creatorAccountId: owner, projectId, channelId: projectId,
+        appName: channelSpecSchema.parse(channel.rows[0].spec).title,
+        packageId: `com.vegalaunch.channel.${projectId}`,
+        releaseControl: 'creator', nativeReleaseApproval: 'pending_creator',
+        consoleEvidence: { state: 'none' }
+      });
+      await client.query(`INSERT INTO channel_deployments(id, creator_account_id, project_id, channel_id, package_id, deployment)
+        SELECT $1,$2,$3,$3,$4,$5::jsonb FROM channel_ownerships
+        WHERE project_id=$3 AND creator_account_id=$2 ON CONFLICT(project_id) DO NOTHING`,
+      [deployment.id, owner, projectId, deployment.packageId, JSON.stringify(deployment)]);
+      const result = await client.query<{ deployment: unknown }>(`SELECT d.deployment FROM channel_deployments d
+        JOIN channel_ownerships o ON o.project_id=d.project_id AND o.creator_account_id=d.creator_account_id
+        WHERE d.project_id=$1 AND o.creator_account_id=$2 FOR UPDATE OF d`, [projectId, owner]);
+      if (!result.rows[0]) throw new RepositoryError('NOT_FOUND', 'Project not found');
+      let existing: ChannelDeployment;
+      try { existing = channelDeploymentSchema.parse(result.rows[0].deployment); }
+      catch { throw new RepositoryError('STORAGE_ERROR', 'Invalid deployment record'); }
+      if (existing.creatorAccountId !== owner || existing.projectId !== projectId || existing.channelId !== projectId)
+        throw new RepositoryError('STORAGE_ERROR', 'Deployment ownership differs from channel');
+      await client.query('COMMIT');
+      return existing;
+    } catch (error) { await client.query('ROLLBACK'); return sqlError(error); }
+    finally { client.release(); }
+  }
+
   async source(principal: AuthenticatedPrincipal, id: string): Promise<{ specRevision: number; fingerprint: string; files: Record<string, string>; baseline: Record<string, string> } | null> {
     projectId(id);
     const client = await this.pool.connect();

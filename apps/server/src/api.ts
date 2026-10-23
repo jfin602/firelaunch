@@ -246,6 +246,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             if (segments.length === 4 && request.method === 'POST') {
               await hostedRepository.read(principal, projectId);
               const requestBody = z.strictObject({ mode: z.literal('draft').optional() }).parse(await body(request));
+              if (requestBody.mode === 'draft') await hostedRepository.ensureDraftDeployment(principal, projectId);
               const input = requestBody.mode === 'draft' ? await hostedWorkspace.draftBuildInput(principal, projectId) :
                 await hostedWorkspace.releaseBuildInput(principal, projectId);
               await assertNativeRights(input);
