@@ -364,7 +364,7 @@ export function Preview({ spec, selectedPageId, hosted = false, accountId, libra
               </div> : module.kind === 'text' ? <p className={`tv-text-${module.alignment ?? 'left'} tv-text-${module.background ?? 'theme'} tv-text-${module.spacing ?? 'comfortable'}`}>{module.body}</p> : <div className={`tv-items tv-spacing-${module.spacing ?? 'comfortable'}`}>{module.items.map(content => {
                 const id = itemFocusId(page.id, module.id, content.id);
                 const bookCard = inventory?.items.some(value => value.kind === 'book' && catalogContentId(value.id) === content.id);
-                return <button key={id} data-tv-focus={id} className={'tv-card' + (bookCard ? ' tv-book-card' : '') + focus(id)} onClick={() => selectFocus(id)} aria-label={`Open ${content.title}`}>
+                return <button key={id} data-tv-focus={id} className={'tv-card' + (bookCard ? ' tv-book-card' : contentPresentation(content) === 'audio' ? ' tv-audio-card' : '') + focus(id)} onClick={() => selectFocus(id)} aria-label={`Open ${content.title}`}>
                   <span className="tv-art"><PreviewArtwork contentId={content.id} source={content.artwork} inventory={inventory} projectId={spec.id} accountId={accountId}/></span><span className="tv-card-caption">{content.title}</span>
                 </button>;
               })}</div>}

@@ -19,6 +19,7 @@ import { MAX_PRIVATE_AUDIO_BYTES, type PrivateObjectService } from './private-ob
 import { audit } from './operations.js';
 import { CatalogRepository, catalogKinds, type CatalogKind } from './catalog-repository.js';
 import { CatalogProjectionService } from './catalog-projection.js';
+import { changeSectionContent } from './section-content.js';
 import { agentCatalogGrounding } from './agent-grounding.js';
 import { PublicationRepository } from './publication-repository.js';
 import { PublicReleaseResolver, publicArtworkRoute, publicReleaseRoute } from './public-resolver.js';
@@ -48,6 +49,11 @@ const feedApproveSchema = feedPreviewSchema.extend({ content: z.string().max(512
 const mediaInclusionSchema = z.strictObject({ expectedRevision: z.number().int().positive(),
   expectedCatalogRevision: z.number().int().nonnegative(), itemId: z.string().regex(/^ci_[a-f0-9]{32}$/),
   action: z.enum(['publish', 'remove']) });
+const sectionContentSchema = z.strictObject({ expectedRevision: z.number().int().positive(),
+  expectedCatalogRevision: z.number().int().nonnegative(), pageId: z.string().regex(/^page_[a-f0-9]{32}$/),
+  moduleId: z.string().regex(/^mod_[a-f0-9]{32}$/), itemId: z.string().regex(/^ci_[a-f0-9]{32}$/).optional(),
+  contentId: z.string().regex(/^item_[a-f0-9]{32}$/), selected: z.boolean() })
+  .refine(value => !value.selected || !!value.itemId, 'Catalog item is required for selection');
 const releaseIdSchema = z.string().regex(/^rel_[a-f0-9]{32}$/);
 const publicationSnapshotSchema = z.strictObject({
   revisions: z.strictObject({ channel: z.number().int().positive(), catalog: z.number().int().nonnegative() }),
@@ -153,7 +159,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
   const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository) : null;
   const nativeBuildQueue = mode?.mode === 'hosted' && hostedRepository ? new NativeBuildQueue(hostedRepository.pool) : null;
   const catalog = hostedRepository ? new CatalogRepository(hostedRepository) : null;
-  const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog, mediaPublisher, draftAudio) : null;
+  const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog, mediaPublisher) : null;
   const publication = hostedRepository ? new PublicationRepository(hostedRepository, mediaPublisher, managedArtwork) : null;
   const publicResolver = mode?.mode === 'hosted' && hostedRepository ? new PublicReleaseResolver(hostedRepository, managedArtwork) : null;
   const assertNativeRights = async (input: ReleaseBuildInput) => {
@@ -174,6 +180,8 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
       }
       if (request.url?.startsWith('/api/draft-audio/') || request.url === '/api/draft-audio') {
         if (!draftAudio || request.method !== 'GET') throw new RepositoryError('NOT_FOUND', 'Route not found');
+        const session = mode?.mode === 'hosted' ? mode.auth.session(request) : null;
+        if (!session || !hostedRepository) { respond(response, 401, { error: { code: 'UNAUTHENTICATED', message: 'Sign in required' } }); return; }
         const url = new URL(request.url, 'http://localhost');
         const parts = url.pathname.split('/').filter(Boolean);
         if (parts.length !== 6 || parts[0] !== 'api' || parts[1] !== 'draft-audio' || url.search ||
@@ -183,14 +191,14 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
         if (range && !match) throw new RepositoryError('INVALID_INPUT', 'Unsupported audio range');
         const kind = parts[5] as 'audio' | 'cover';
         if (kind === 'cover' && range) throw new RepositoryError('INVALID_INPUT', 'Artwork range unavailable');
+        await hostedRepository.read(session.principal, parts[2]!);
         const part = await draftAudio.read(parts[2]!, parts[3]!, parts[4]!, kind,
           match ? Number(match[1]) : 0, match?.[2] ? Number(match[2]) : undefined);
         response.writeHead(kind === 'audio' ? 206 : 200, { 'content-type': part.contentType,
           'content-length': part.content.length,
           ...(kind === 'audio' ? { 'content-range': `bytes ${part.start}-${part.end}/${part.size}`,
             'accept-ranges': 'bytes' } : {}), 'cache-control': 'no-store',
-          'x-content-type-options': 'nosniff', 'access-control-allow-origin': '*',
-          'cross-origin-resource-policy': 'cross-origin' });
+          'x-content-type-options': 'nosniff', 'cross-origin-resource-policy': 'same-origin' });
         response.end(part.content); return;
       }
       if (request.url?.startsWith('/public/') || request.url === '/public') {
@@ -473,6 +481,59 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             const input = mutationRequestSchema.parse(await body(request));
             if (current.revision !== input.expectedRevision) throw new RepositoryError('CONFLICT', 'Project revision changed');
             respond(response, 200, await hostedRepository.update(principal, current.id, input.expectedRevision, applyMutation(current.spec, input.mutation))); return;
+          }
+          if (segments.length === 4 && !url.search && segments[3] === 'section-content' && projection && catalog && request.method === 'GET') {
+            const id = segments[2]!;
+            const [current, inventory] = await Promise.all([hostedRepository.read(principal, id), catalog.read(principal, id)]);
+            const items = inventory.items.filter(item => item.kind === 'video' || item.kind === 'audio' || item.kind === 'book');
+            const approvals = await hostedRepository.pool.query<{ item_id: string }>(`SELECT item_id FROM catalog_item_approvals
+              WHERE project_id = $1 AND creator_account_id = $2 AND item_id = ANY($3::text[])`,
+            [id, principal.accountId, items.map(item => item.id)]);
+            const approved = new Set(approvals.rows.map(row => row.item_id));
+            const selected = items.filter(item => approved.has(item.id)).slice(0, 500);
+            const projected = selected.length ? await projection.project(principal, id, {
+              expectedProjectRevision: current.revision, expectedCatalogRevision: inventory.revision,
+              itemIds: selected.map(item => item.id), collectionIds: [] }) : null;
+            const bindings = new Map(projected?.bindings.map(binding => [binding.catalogItemId, binding]));
+            respond(response, 200, { projectRevision: current.revision, catalogRevision: inventory.revision,
+              items: items.map(item => {
+                const binding = bindings.get(item.id);
+                const metadata = { ...item.sourceRecord.metadata, ...item.creatorOverrides };
+                const reason = !approved.has(item.id) ? 'Catalog item needs approval' :
+                  !binding ? 'Channel content limit reached' : binding.blockedReason === 'source_revoked' ? 'Source permission revoked' :
+                  binding.blockedReason ? item.kind === 'audio' ? 'MP3 needs cleared public device delivery' : 'Playback rights or delivery unavailable' : undefined;
+                return { itemId: item.id, contentId: binding?.contentId ?? `item_${createHash('sha256').update('catalog-content-v1\0').update(item.id).digest('hex').slice(0, 32)}`,
+                  kind: item.kind, title: metadata.title, byline: item.kind === 'book' ? metadata.author : item.kind === 'audio' ? metadata.artist : undefined,
+                  ...(reason ? { reason } : {}), ...(item.kind === 'book' && item.audiobook ? { audiobook: true } : {}) };
+              }) }); return;
+          }
+          if (segments.length === 4 && !url.search && segments[3] === 'section-content' && projection && catalog && request.method === 'POST') {
+            const id = segments[2]!;
+            const input = sectionContentSchema.parse(await body(request));
+            const [current, inventory] = await Promise.all([hostedRepository.read(principal, id), catalog.read(principal, id)]);
+            if (current.revision !== input.expectedRevision || inventory.revision !== input.expectedCatalogRevision)
+              throw new RepositoryError('CONFLICT', 'Channel or Library changed; review and retry');
+            const item = input.selected ? inventory.items.find(value => value.id === input.itemId &&
+              (value.kind === 'video' || value.kind === 'audio' || value.kind === 'book')) : undefined;
+            if (input.selected && !item) throw new RepositoryError('NOT_FOUND', 'Catalog item not found');
+            const contentId = item ? `item_${createHash('sha256').update('catalog-content-v1\0').update(item.id).digest('hex').slice(0, 32)}` : input.contentId;
+            if (contentId !== input.contentId) throw new RepositoryError('INVALID_INPUT', 'Catalog content ID mismatch');
+            const module = current.spec.pages.find(value => value.id === input.pageId)?.modules.find(value => value.id === input.moduleId);
+            if (!module || (module.kind !== 'hero' && module.kind !== 'rail' && module.kind !== 'grid'))
+              throw new RepositoryError('NOT_FOUND', 'Section not found');
+            if (module.contentIds.includes(contentId) === input.selected) { respond(response, 200, current); return; }
+            let baseline;
+            if (input.selected) {
+              const selected = await projection.project(principal, id, { expectedProjectRevision: current.revision,
+                expectedCatalogRevision: inventory.revision, itemIds: [item!.id], collectionIds: [] });
+              const binding = selected.bindings[0];
+              if (!binding?.baseline || binding.contentId !== contentId)
+                throw new RepositoryError('CONFLICT', 'Content needs cleared rights and public device delivery');
+              baseline = binding.baseline;
+            }
+            const spec = changeSectionContent(current.spec, input.pageId, input.moduleId, contentId, input.selected, baseline);
+            respond(response, 200, await hostedRepository.updateWithCatalogRevision(principal, id, current.revision,
+              input.expectedCatalogRevision, spec)); return;
           }
           if (segments.length === 4 && !url.search && ['video-inclusion', 'media-inclusion'].includes(segments[3]!) && projection && catalog && request.method === 'POST') {
             const id = segments[2]!;

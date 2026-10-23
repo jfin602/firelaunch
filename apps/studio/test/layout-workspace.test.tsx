@@ -254,6 +254,23 @@ test('section edits reorder by stable IDs, preserve Library references and retai
     if (url === '/api/auth/session') return json(session);
     if (url === '/api/projects') return json([current, second]);
     if (url === `/api/projects/${current.id}`) return json(current);
+    if (url === `/api/projects/${first.id}/section-content` && !init?.method) return json({
+      projectRevision: current.revision, catalogRevision: 1,
+      items: [{ itemId: `ci_${'9'.repeat(32)}`, contentId: current.spec.content[0]!.id,
+        kind: 'video', title: 'Oceans' }]
+    });
+    if (url === `/api/projects/${first.id}/section-content` && init?.method === 'POST') {
+      const choice = JSON.parse(String(init.body)) as { pageId: string; moduleId: string; itemId: string; selected: boolean };
+      writes.push('section-content');
+      const module = current.spec.pages.flatMap(page => page.modules).find(value => value.id === choice.moduleId)!;
+      if (module.kind === 'hero' || module.kind === 'rail' || module.kind === 'grid') {
+        current = { ...current, revision: current.revision + 1, spec: applyMutation(current.spec, {
+          type: 'updateModule', pageId: choice.pageId, module: { ...module,
+            contentIds: choice.selected ? [...module.contentIds, current.spec.content[0]!.id] : [] }
+        }) };
+      }
+      return json(current);
+    }
     if (url === `/api/projects/${first.id}/mutations`) {
       const { mutation } = JSON.parse(String(init?.body));
       writes.push(mutation.type);
@@ -271,7 +288,7 @@ test('section edits reorder by stable IDs, preserve Library references and retai
     const section = screen.getByRole('region', { name: 'hero section 1' });
     fireEvent.click(within(section).getByRole('button', { name: 'Edit section' }));
     const inspector = screen.getByRole('complementary', { name: 'Layout inspector' });
-    assert.equal((within(inspector).getByRole('checkbox', { name: 'Oceans' }) as HTMLInputElement).checked, true);
+    assert.equal((await within(inspector).findByRole('checkbox', { name: 'Oceans' }) as HTMLInputElement).checked, true);
     assert.ok(within(inspector).getByText('Choose content'));
     const originalMedia = current.spec.content[0]?.mediaUrl;
     fireEvent.click(within(inspector).getByRole('checkbox', { name: 'Oceans' }));
@@ -308,7 +325,7 @@ test('section edits reorder by stable IDs, preserve Library references and retai
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove section' })[0]!);
     await waitFor(() => assert.equal(current.spec.pages[0]?.modules.length, 1));
     assert.equal(current.spec.content[0]?.title, 'Oceans');
-    assert.deepEqual(writes.slice(0, 2), ['updateModule', 'updateModule']);
+    assert.deepEqual(writes.slice(0, 2), ['section-content', 'section-content']);
     assert.ok(writes.includes('reorderModules'));
   } finally { cleanup(); globalThis.fetch = originalFetch; window.confirm = originalConfirm; dom.window.history.replaceState(null, '', '/'); }
 });

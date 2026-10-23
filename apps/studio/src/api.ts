@@ -66,6 +66,16 @@ export async function setMediaInclusion(project: ChannelProject, catalogRevision
     expectedRevision: project.revision, expectedCatalogRevision: catalogRevision, itemId, action
   })));
 }
+export type SectionCandidate = { itemId: string; contentId: string; kind: 'video' | 'audio' | 'book';
+  title: string; byline?: string; reason?: string; audiobook?: boolean };
+export type SectionCandidates = { projectRevision: number; catalogRevision: number; items: SectionCandidate[] };
+export const readSectionCandidates = (projectId: string) =>
+  request(`/${projectId}/section-content`) as Promise<SectionCandidates>;
+export const setSectionContent = (project: ChannelProject, catalogRevision: number, pageId: string,
+  moduleId: string, itemId: string, contentId: string, selected: boolean) =>
+  request(`/${project.id}/section-content`, json({ expectedRevision: project.revision,
+    expectedCatalogRevision: catalogRevision, pageId, moduleId, contentId,
+    ...(itemId.startsWith('ci_') ? { itemId } : {}), selected })) as Promise<ChannelProject>;
 
 export async function agentStatus(id: string): Promise<{ provider: string; configured: boolean; message: string }> {
   return await request(`/${id}/agent-status`) as { provider: string; configured: boolean; message: string };

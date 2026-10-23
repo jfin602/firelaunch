@@ -323,6 +323,8 @@ body { min-width: 0; }
 .book-workspace-cover img { width: 100%; height: 100%; object-fit: cover; }
 .tv-book-card .tv-art { aspect-ratio: 2 / 3; width: 55%; margin-inline: auto; }
 .tv-book-card .tv-art img { object-fit: contain; }
+.tv-audio-card .tv-art { aspect-ratio: 1 / 1; width: 70%; margin-inline: auto; }
+.tv-audio-card .tv-art img { object-fit: contain; }
 .tv-detail:has(.tv-book-author)>img { aspect-ratio: 2 / 3; object-fit: contain; }
 .tv-book-author { font-weight: 700; }
 .catalog-library-art img { display: block; width: 100%; height: 100%; object-fit: cover; filter: none; }

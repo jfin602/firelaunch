@@ -225,6 +225,36 @@ export class HostedProjectRepository {
     finally { client.release(); }
   }
 
+  /** Save a catalog-derived section choice only while the catalog revision used to project it still holds. */
+  async updateWithCatalogRevision(principal: AuthenticatedPrincipal, id: string, expectedRevision: number,
+    expectedCatalogRevision: number, rawSpec: unknown): Promise<ChannelProject> {
+    projectId(id);
+    const spec = channelSpecSchema.parse(rawSpec);
+    assertExportableMedia(spec);
+    if (spec.id !== id || !Number.isSafeInteger(expectedRevision) || expectedRevision < 1 ||
+      !Number.isSafeInteger(expectedCatalogRevision) || expectedCatalogRevision < 0)
+      throw new RepositoryError('INVALID_INPUT', 'Invalid channel selection');
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const owner = await this.owner(principal, client);
+      const owned = await client.query('SELECT 1 FROM channel_ownerships WHERE project_id = $1 AND creator_account_id = $2 FOR UPDATE', [id, owner]);
+      if (!owned.rowCount) throw new RepositoryError('NOT_FOUND', 'Project not found');
+      const catalog = await client.query<{ revision: number }>(`SELECT revision FROM catalog_revisions
+        WHERE project_id = $1 AND creator_account_id = $2 FOR UPDATE`, [id, owner]);
+      if ((catalog.rows[0]?.revision ?? 0) !== expectedCatalogRevision)
+        throw new RepositoryError('CONFLICT', 'Library changed; review and retry');
+      const updated = await client.query<ProjectRow>(`UPDATE channel_projects SET spec = $4::jsonb,
+        revision = revision + 1, updated_at = now() WHERE id = $1 AND creator_account_id = $2
+        AND revision = $3 RETURNING id, spec, revision, created_at, updated_at`,
+      [id, owner, expectedRevision, JSON.stringify(spec)]);
+      if (!updated.rows[0]) throw new RepositoryError('CONFLICT', 'Channel changed; review and retry');
+      await client.query('COMMIT');
+      return project(updated.rows[0]);
+    } catch (error) { await client.query('ROLLBACK'); return sqlError(error); }
+    finally { client.release(); }
+  }
+
   async catalogDraftBaseline(principal: AuthenticatedPrincipal, id: string): Promise<{ kind: CompositionKind; spec: ChannelSpec; selection: { itemIds: string[]; collectionIds: string[] } } | null> {
     await this.read(principal, id);
     const result = await this.pool.query<{ creator_type: CompositionKind; baseline: unknown; selection: unknown }>(
