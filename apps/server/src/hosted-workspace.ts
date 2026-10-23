@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { generateProject } from '@vegalaunch/generator';
-import type { ChannelProject, ChannelDeployment } from '@vegalaunch/contracts';
+import type { ChannelProject, ChannelDeployment, ChannelSpec } from '@vegalaunch/contracts';
 import { RepositoryError } from './repository.js';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
@@ -70,6 +70,16 @@ const blockedBuild = { status: 'blocked' as const, reason: NATIVE_EXPORT_BLOCKER
   toolchain: { missing: ['isolated hosted build'], node: { detail: 'Hosted build disabled' }, npm: { detail: 'Hosted build disabled' },
     vegaSdk: { detail: 'Hosted build disabled' }, vegaCli: { detail: 'Hosted build disabled' }, device: { detail: 'No device evidence' } } };
 
+/** A draft package contains only content explicitly placed in its saved sections. */
+export function selectedDraftChannel(spec: ChannelSpec): ChannelSpec {
+  const selected = new Set(spec.pages.flatMap(page => page.modules.flatMap(module =>
+    module.kind === 'hero' || module.kind === 'rail' || module.kind === 'grid' ? module.contentIds : [])));
+  const content = spec.content.filter(item => selected.has(item.id));
+  if (selected.size !== content.length)
+    throw new RepositoryError('CONFLICT', 'Draft section references missing or duplicate content');
+  return { ...spec, content };
+}
+
 export class HostedWorkspaceService {
   constructor(private readonly repository: HostedProjectRepository,
     private readonly publication: Pick<PublicationRepository, 'currentSummary' | 'currentBuildSnapshot'> = new PublicationRepository(repository),
@@ -79,10 +89,11 @@ export class HostedWorkspaceService {
     const projection = this.projection;
     if (!projection) throw new RepositoryError('CONFLICT', 'Draft catalog verification unavailable');
     const assemble = async () => {
-      const project = await this.repository.read(principal, id);
+      const savedProject = await this.repository.read(principal, id);
       const deployment = await this.repository.readDeployment(principal, id);
-      if (deployment.creatorAccountId !== principal.accountId || deployment.projectId !== project.id)
+      if (deployment.creatorAccountId !== principal.accountId || deployment.projectId !== savedProject.id)
         throw new RepositoryError('NOT_FOUND', 'Project not found');
+      const project = { ...savedProject, spec: selectedDraftChannel(savedProject.spec) };
       assertExportableMedia(project.spec);
       const inventory = await new CatalogRepository(this.repository).read(principal, id);
       const stableId = (itemId: string) => `item_${hash(`catalog-content-v1\0${itemId}`).slice(0, 32)}`;
