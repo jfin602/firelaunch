@@ -62,6 +62,10 @@ These may be tabs, a clearly separated section selector, or a small category rai
 9. On real authenticated staging browser, inspect desktop and narrow layout, category navigation, uploads/dialogs, empty states, error and retry flows, focus and accessible names. A short visual checklist documents that Library actually looks like one finished cohesive product.
 10. Cleanup obsolete video-only instructions (e.g. "Your video library", generic "other catalog content" teaser where inappropriate) and reduce repeated rights or unsupported-media promises. Preserve truly functional import paths in a suitable category.
 
+## Relationship to P9-011 (owner follow-up 2026-10-22)
+
+**[P9-011 — Mixed-media Channel Editor sections](P9-011-mixed-media-sections.md)** is a separate P0 correction, not part of this Library IA task. P9-010 groups Video/Audio/Books/Assets and clarifies upload/reuse workflows. P9-011 must ensure library Audio MP3 and Book entries are discoverable from **Channel > Pages & Layout > Edit Section > Choose content** and explicitly bind into saved Hero, Content Row, Content Grid and additional Rows using the shared type-aware TV renderer. Reuse the same owned catalog IDs/eligibility, but avoid adding an asset as TV content merely because it exists in the Library. P9-010 implementation must not overwrite an accepted P9-011 section picker or its More info/Watch/Listen/Book Showcase behavior.
+
 ## Dependencies and implementation sequencing
 
 - **Blocker: finish P8D multimedia** first. This issue is the polish integration layer, **not** permission to reimplement P8D or fake audio/book support. Reconcile exact resulting types, flows, contracts and deployment status.
