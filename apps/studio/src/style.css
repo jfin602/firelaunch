@@ -1162,3 +1162,46 @@ body:has(.preview-fullscreen){overflow:hidden}
   .wordmark .studio-brand-icon { display: block; width: 42px; height: 42px; }
   .wordmark small { display: none; }
 }
+
+/* Signed-out Creator Studio entry. The color remains usable if the image fails to load. */
+.login-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background-color: #160e0d;
+  background-image: linear-gradient(90deg, #09090bc4, #160b0a8a 48%, #09090bc4),
+    linear-gradient(0deg, #0b090ae0, transparent 28%, transparent 72%, #0b090a80),
+    url('/login-canyon.png');
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.login-card {
+  width: min(100%, 430px);
+  padding: clamp(28px, 5vw, 38px);
+  border: 1px solid #b78368a3;
+  border-radius: 18px;
+  background: #1b1719e8;
+  box-shadow: 0 24px 70px #000b, inset 0 1px #ffffff17;
+  backdrop-filter: blur(14px);
+  color: #fff8f2;
+}
+.login-kicker { color: #e99568; font: 700 11px 'DM Sans', sans-serif; letter-spacing: .2em; }
+.login-card h1 { margin: 19px 0 15px; font: 600 clamp(25px, 5vw, 31px)/1.2 'Space Grotesk', sans-serif; letter-spacing: -.04em; }
+.login-card h1 img { display: block; width: min(100%, 275px); height: auto; margin-top: 12px; }
+.login-intro { margin: 0 0 26px; color: #e0d1ca; font-size: 14px; line-height: 1.55; }
+.login-notice, .login-error { margin: 0 0 16px; padding: 11px 13px; border-radius: 7px; font-size: 13px; line-height: 1.45; }
+.login-notice { border: 1px solid #c8875c80; background: #5c352b99; color: #ffe0ce; }
+.login-error { border: 1px solid #da6a6580; background: #5a272ba8; color: #ffe4e3; }
+.login-cta { display: flex; align-items: center; justify-content: center; min-height: 48px; width: 100%; padding: 12px 18px; border: 1px solid #ee9a55; border-radius: 8px; background: #bd582a; box-shadow: 0 7px 20px #10090780; color: #fffaf6; font-weight: 700; text-decoration: none; transition: background-color .16s, box-shadow .16s; }
+.login-cta:hover { background: #d26934; box-shadow: 0 9px 25px #100907a8; }
+.login-cta:focus-visible { outline: 3px solid #fff2df; outline-offset: 3px; }
+.login-cta[aria-disabled='true'] { opacity: .7; pointer-events: none; }
+.login-footnote { margin: 17px 0 0; color: #bca9a0; font-size: 11px; text-align: center; }
+@media (max-width: 480px) {
+  .login-screen { padding: 16px; background-position: 53% center; }
+  .login-card { padding: 28px 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .login-cta { transition: none; } }
