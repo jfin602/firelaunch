@@ -98,7 +98,7 @@ Resources:
       VersioningConfiguration: {Status: Enabled}
       CorsConfiguration:
         CorsRules:
-          - AllowedOrigins: ["https://firelaunch.jfin.dev"]
+          - AllowedOrigins: ["https://vegalaunch.jfin.dev", "https://firelaunch.jfin.dev"]
             AllowedMethods: [PUT]
             AllowedHeaders: ["content-type", "x-amz-checksum-*", "x-amz-sdk-checksum-algorithm"]
             ExposedHeaders: [ETag]
