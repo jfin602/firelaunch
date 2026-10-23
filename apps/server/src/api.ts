@@ -254,7 +254,7 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
               const input = requestBody.mode === 'draft' ? await hostedWorkspace.draftBuildInput(principal, projectId) :
                 await hostedWorkspace.releaseBuildInput(principal, projectId);
               await assertNativeRights(input);
-              const jobId = await nativeBuildQueue!.enqueue(input);
+              const jobId = await nativeBuildQueue!.enqueue(input, requestBody.mode === 'draft');
               const job = await nativeBuildQueue!.status(principal.accountId, projectId, jobId);
               if (!job) throw new RepositoryError('STORAGE_ERROR', 'Build job receipt unavailable');
               const verified = job.state === 'ready' ? await nativeExportForOwner(nativeBuildQueue!, hostedWorkspace,

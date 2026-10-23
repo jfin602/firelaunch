@@ -59,7 +59,7 @@ export function Delivery({ project, surface, hosted = false }: { project: Channe
         // changes. Only the click may request a newly checked build.
         if (!(reason instanceof ApiError) || reason.status !== 409) throw reason;
       }
-      const next = current && (current.status === 'queued' || current.status === 'running' || current.downloadReady)
+      const next = current && (current.status === 'queued' || current.status === 'running')
         ? current : await requestNativeBuild(projectId);
       if (currentProject.current !== projectId) return;
       setNativeExport(next);

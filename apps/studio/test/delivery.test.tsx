@@ -138,19 +138,19 @@ test('one Export click submits once, reopening only reads, and terminal retry is
     fireEvent.click(screen.getByRole('button', { name: 'Close app export' }));
     state = 'ready';
     fireEvent.click(screen.getByRole('button', { name: 'Build & Download' }));
-    assert.ok(await screen.findByRole('button', { name: 'Download ZIP again' }));
+    assert.ok(await screen.findByText(/Your build is in the queue/));
     assert.equal(screen.queryByText(/Hosted local build disabled/), null, 'hosted Export cannot show the legacy local-build block beside a ready ZIP');
     assert.equal(screen.queryByRole('button', { name: 'Run Vega release build' }), null);
-    assert.equal(posts, 2, 'verified ready ZIP needs no new build');
+    assert.equal(posts, 3, 'Build & Download starts a fresh job after a ready ZIP');
     fireEvent.click(screen.getByRole('button', { name: 'Close app export' }));
     stale = true;
     fireEvent.click(screen.getByRole('button', { name: 'Build & Download' }));
     assert.ok(await screen.findByRole('dialog', { name: 'Build & Download' }));
-    assert.equal(posts, 3, 'stale ready receipt starts a newly checked build from the click');
+    assert.equal(posts, 4, 'stale ready receipt starts a newly checked build from the click');
     fireEvent.click(screen.getByRole('button', { name: 'Close app export' }));
     state = 'blocked'; approved = false;
     fireEvent.click(screen.getByRole('button', { name: 'Build & Download' }));
     assert.ok(await screen.findByText(/Deployment not found/i));
-    assert.equal(posts, 4);
+    assert.equal(posts, 5);
   } finally { cleanup(); globalThis.fetch = nativeFetch; }
 });

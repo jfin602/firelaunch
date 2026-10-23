@@ -95,6 +95,13 @@ test('real PostgreSQL queue serializes claims, reclaims leases and enforces owne
         const draftRow = await pool.query('SELECT build_kind,release_id,release_sequence,draft_revision,draft_snapshot_sha256 FROM vegalaunch_build.jobs WHERE id=$1',[draftJob]);
         assert.deepEqual(draftRow.rows[0], { build_kind:'draft',release_id:null,release_sequence:null,
           draft_revision:1,draft_snapshot_sha256:'e'.repeat(64) });
+        assert.equal(await queue.enqueue(draft,true),draftJob,'an active draft build remains idempotent');
+        await pool.query(`UPDATE vegalaunch_build.jobs SET state='ready',artifact_name=id||'.vpkg',
+          artifact_sha256=$2,artifact_bytes=2048,evidence='{}'::jsonb WHERE id=$1`,[draftJob,'a'.repeat(64)]);
+        const rebuiltDraft = await queue.enqueue(draft,true);
+        assert.notEqual(rebuiltDraft,draftJob,'a second creator click queues a fresh completed draft');
+        assert.equal((await queue.status(draft.creatorAccountId,draft.projectId,draftJob))?.state,'canceled');
+        await queue.acknowledgeArtifactRemoval(draftJob,`${draftJob}.vpkg`);
         assert.equal((await queue.latestStatus(input('1').creatorAccountId,input('1').projectId))?.state,'queued');
         assert.equal(await queue.latestStatus(input('2').creatorAccountId,input('1').projectId),null);
         await assert.rejects(queue.enqueue({ ...input('1'),fingerprint:'e'.repeat(64) }),

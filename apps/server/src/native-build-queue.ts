@@ -21,7 +21,7 @@ export class NativeBuildQueue {
   }
 
   /** Caller must obtain input from HostedWorkspaceService under a verified session. */
-  async enqueue(input: ReleaseBuildInput): Promise<string> {
+  async enqueue(input: ReleaseBuildInput, freshDraft = false): Promise<string> {
     if (input.format !== 'vegalaunch-vega-build-input-v1' ||
       !/^ch_[a-f0-9]{32}$/.test(input.projectId) || !/^cr_[a-f0-9]{32}$/.test(input.creatorAccountId) ||
       !/^[a-f0-9]{64}$/.test(input.fingerprint)) fail('Invalid build snapshot');
@@ -32,7 +32,8 @@ export class NativeBuildQueue {
         `SELECT id,input_fingerprint,state FROM vegalaunch_build.jobs WHERE creator_account_id=$1 AND project_id=$2
          AND state IN ('queued','running','ready') FOR UPDATE`, [input.creatorAccountId, input.projectId]);
       if (current.rows[0]) {
-        if (current.rows[0].input_fingerprint === input.fingerprint) return current.rows[0].id;
+        if (current.rows[0].input_fingerprint === input.fingerprint &&
+          !(freshDraft && input.mode === 'draft' && current.rows[0].state === 'ready')) return current.rows[0].id;
         if (current.rows[0].state !== 'ready') fail('Existing native build has a different source');
         await client.query(`UPDATE vegalaunch_build.jobs SET state='canceled',updated_at=now()
           WHERE id=$1 AND creator_account_id=$2 AND project_id=$3 AND state='ready'`,

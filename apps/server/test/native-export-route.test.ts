@@ -37,7 +37,8 @@ test('hosted export submits only the session owner snapshot and reports owned qu
   t.mock.method(HostedWorkspaceService.prototype, 'assertReleaseBuildInputCurrent', async (_caller, _id, fingerprint) => {
     if (fingerprint !== currentFingerprint) throw new RepositoryError('CONFLICT', 'Build input changed');
   });
-  t.mock.method(NativeBuildQueue.prototype, 'enqueue', async value => { enqueued = value; return jobId; });
+  let freshDraft = false;
+  t.mock.method(NativeBuildQueue.prototype, 'enqueue', async (value, fresh) => { enqueued = value; freshDraft = fresh; return jobId; });
   t.mock.method(NativeBuildQueue.prototype, 'latestStatus', async (accountId, id) => {
     assert.equal(accountId, owner); assert.equal(id, project);
     return enqueued ? { id: jobId, state, attempt: 1, inputFingerprint: input.fingerprint, errorCode: state === 'failed' ? 'SANDBOX_BUILD_FAILED' : null,
@@ -109,5 +110,6 @@ test('hosted export submits only the session owner snapshot and reports owned qu
     assert.equal((await fetch(url, { method:'POST', headers:{ 'content-type':'application/json' },
       body: JSON.stringify({ mode:'draft' }) })).status, 202);
     assert.equal(enqueued, draftInput, 'explicit draft request uses the private snapshot');
+    assert.equal(freshDraft, true, 'a creator click can rebuild a completed private draft');
   } finally { server.close(); await once(server, 'close'); }
 });
