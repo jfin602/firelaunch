@@ -111,7 +111,7 @@ test('one Export click submits once, reopening only reads, and terminal retry is
     if (url.endsWith('/export-app')) {
       if (init?.method === 'POST') {
         posts++;
-        if (!approved) return Response.json({ error: { message: 'No creator-approved published release' } }, { status: 409 });
+        if (!approved) return Response.json({ error: { message: 'Deployment not found' } }, { status: 404 });
         state = 'queued'; stale = false;
       }
       if (stale) return Response.json({ error: { message: 'Build input changed' } }, { status: 409 });
@@ -153,7 +153,7 @@ test('one Export click submits once, reopening only reads, and terminal retry is
     fireEvent.click(screen.getByRole('button', { name: 'Close app export' }));
     state = 'blocked'; approved = false;
     fireEvent.click(screen.getByRole('button', { name: 'Build & Export App' }));
-    assert.ok(await screen.findByText(/publish a rights-cleared release in Publish/i));
+    assert.ok(await screen.findByText(/Create an owned app deployment before exporting this channel draft/i));
     assert.equal(posts, 4);
   } finally { cleanup(); globalThis.fetch = nativeFetch; }
 });

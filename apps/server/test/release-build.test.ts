@@ -9,7 +9,7 @@ import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.j
 import { HostedWorkspaceService } from '../src/hosted-workspace.js';
 import type { HostedProjectRepository } from '../src/hosted-repository.js';
 import type { PublicationRepository } from '../src/publication-repository.js';
-import { createReleaseBuildInput, materializeReleaseBuildInput, produceIsolatedRelease,
+import { createDraftBuildInput, createReleaseBuildInput, materializeReleaseBuildInput, produceIsolatedRelease,
   RELEASE_BUILD_COMMAND, releaseBuildCommand, DEPENDENCY_LOCK_COMMAND, DEPENDENCY_INSTALL_COMMAND, type StoredSource } from '../src/release-build.js';
 
 const spec = fixtureChannel();
@@ -64,6 +64,27 @@ test('creator build input pins published deployment and preserves safe edited so
     assert.equal(await readFile(join(dir, 'src/App.js'), 'utf8'), source.files['src/App.js']);
     await assert.rejects(materializeReleaseBuildInput(input, dir), { code: 'CONFLICT' });
   } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('draft build pins current bundled content and has no published release identity', async () => {
+  const generated = await generateProject(spec, deployment, 'draft');
+  const files = Object.fromEntries(generated.files);
+  const source = { specRevision: project.revision, fingerprint: generated.fingerprint,
+    files, baseline: { ...files } };
+  const input = await createDraftBuildInput(project, source, deployment, owner.accountId);
+  assert.equal(input.mode, 'draft');
+  assert.equal(input.publishedRelease, undefined);
+  assert.equal(input.draft?.revision, project.revision);
+  assert.deepEqual(releaseBuildCommand(input), [...RELEASE_BUILD_COMMAND, '--build-number', String(project.revision)]);
+  assert.equal(input.files['src/channel.json']!.includes(spec.content[0]!.mediaUrl!), true);
+  assert.equal(input.files['src/release-config.json'], undefined);
+  const dir = await mkdtemp(join(tmpdir(), 'vegalaunch-draft-input-'));
+  try { await materializeReleaseBuildInput(input, dir); }
+  finally { await rm(dir, { recursive:true, force:true }); }
+  await assert.rejects(createDraftBuildInput({ ...project, revision: project.revision + 1 }, source,
+    deployment, owner.accountId), { code:'CONFLICT' });
+  source.files['src/channel.json'] = source.files['src/channel.json']!.replace(spec.content[0]!.title, 'Wrong title');
+  await assert.rejects(createDraftBuildInput(project, source, deployment, owner.accountId), { code:'CONFLICT' });
 });
 
 test('stale, missing, foreign binding and absent publication fail closed', async () => {

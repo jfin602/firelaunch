@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
-import type { NativeBuildEvidence, ReleaseBuildInput } from './release-build.js';
+import { sameBuildIdentity, type NativeBuildEvidence, type ReleaseBuildInput } from './release-build.js';
 import { RepositoryError } from './repository.js';
 
 type State = 'queued' | 'running' | 'ready' | 'failed' | 'canceled' | 'expired';
@@ -39,7 +39,14 @@ export class NativeBuildQueue {
           [current.rows[0].id,input.creatorAccountId,input.projectId]);
       }
       const jobId = id();
-      const result = await client.query<{ id: string }>(
+      const result = await client.query<{ id: string }>(input.mode === 'draft' ?
+        `INSERT INTO vegalaunch_build.jobs (id,creator_account_id,project_id,deployment_id,package_id,build_kind,
+          draft_revision,draft_snapshot_sha256,input_fingerprint,source_hash,input)
+         SELECT $1,$2,$3,$4,$5,'draft',$6,$7,$8,$9,$10 FROM channel_deployments d
+         JOIN channel_ownerships o ON o.project_id=d.project_id AND o.creator_account_id=d.creator_account_id
+         JOIN channel_projects c ON c.id=d.project_id AND c.creator_account_id=d.creator_account_id
+         WHERE d.id=$4 AND d.project_id=$3 AND d.creator_account_id=$2 AND d.package_id=$5
+           AND c.revision=$6 RETURNING id` :
         `INSERT INTO vegalaunch_build.jobs (id,creator_account_id,project_id,deployment_id,package_id,release_id,
           release_sequence,input_fingerprint,source_hash,input)
          SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10 FROM channel_deployments d
@@ -54,9 +61,12 @@ export class NativeBuildQueue {
          WHERE d.id=$4 AND d.project_id=$3 AND d.creator_account_id=$2 AND d.package_id=$5
            AND d.deployment->>'nativeReleaseApproval'='creator_approved'
            AND a.channel_revision=$11 AND p.release_id=$6 AND p.sequence=$7 RETURNING id`,
-        [jobId,input.creatorAccountId,input.projectId,input.deploymentId,input.packageId,
-          input.publishedRelease.releaseId,input.publishedRelease.sequence,input.fingerprint,input.sourceHash,
-          JSON.stringify(input),input.specRevision]);
+        input.mode === 'draft' ?
+          [jobId,input.creatorAccountId,input.projectId,input.deploymentId,input.packageId,
+            input.draft.revision,input.draft.snapshotSha256,input.fingerprint,input.sourceHash,JSON.stringify(input)] :
+          [jobId,input.creatorAccountId,input.projectId,input.deploymentId,input.packageId,
+            input.publishedRelease.releaseId,input.publishedRelease.sequence,input.fingerprint,input.sourceHash,
+            JSON.stringify(input),input.specRevision]);
       if (!result.rows[0]) fail('Build owner, deployment or published release changed');
       return jobId;
     });
@@ -97,11 +107,15 @@ export class NativeBuildQueue {
     const result = await this.pool.query(`UPDATE vegalaunch_build.jobs SET state='ready',lease_token=NULL,lease_until=NULL,
       artifact_name=id||'.vpkg',artifact_sha256=$3,artifact_bytes=$4,evidence=$5::jsonb,updated_at=now()
       WHERE id=$1 AND lease_token=$2 AND state='running' AND lease_until>now() AND expires_at>now()
-      AND input_fingerprint=$6 AND source_hash=$7 AND deployment_id=$8 AND package_id=$9 AND release_id=$10
-      AND release_sequence=$11`,
+      AND input_fingerprint=$6 AND source_hash=$7 AND deployment_id=$8 AND package_id=$9
+      AND build_kind=$10 AND release_id IS NOT DISTINCT FROM $11 AND release_sequence IS NOT DISTINCT FROM $12
+      AND draft_revision IS NOT DISTINCT FROM $13 AND draft_snapshot_sha256 IS NOT DISTINCT FROM $14`,
       [jobId,leaseToken,evidence.sha256,evidence.bytes,JSON.stringify(evidence),evidence.inputFingerprint,
-        evidence.sourceHash,evidence.deploymentId,evidence.packageId,evidence.publishedRelease.releaseId,
-        evidence.publishedRelease.sequence]);
+        evidence.sourceHash,evidence.deploymentId,evidence.packageId,evidence.mode === 'draft' ? 'draft' : 'published',
+        evidence.mode === 'draft' ? null : evidence.publishedRelease.releaseId,
+        evidence.mode === 'draft' ? null : evidence.publishedRelease.sequence,
+        evidence.mode === 'draft' ? evidence.draft.revision : null,
+        evidence.mode === 'draft' ? evidence.draft.snapshotSha256 : null]);
     return result.rowCount === 1;
   }
 
@@ -128,18 +142,18 @@ export class NativeBuildQueue {
 
   async status(ownerId: string, projectId: string, jobId: string): Promise<{
     id: string; state: State; attempt: number; errorCode: string | null;
-    inputFingerprint: string;
+    inputFingerprint: string; buildKind: 'draft' | 'published';
     artifactSha256: string | null; artifactBytes: number | null; expiresAt: string; createdAt: string; completedAt: string | null;
   } | null> {
     const result = await this.pool.query<{ id:string;state:State;attempt:number;error_code:string|null;
-      input_fingerprint:string;
+      input_fingerprint:string;build_kind:'draft'|'published';
       artifact_sha256:string|null;artifact_bytes:string|null;expires_at:Date;created_at:Date;updated_at:Date }>(
-      `SELECT id,state,attempt,error_code,input_fingerprint,artifact_sha256,artifact_bytes,expires_at,created_at,updated_at
+      `SELECT id,state,attempt,error_code,input_fingerprint,build_kind,artifact_sha256,artifact_bytes,expires_at,created_at,updated_at
        FROM vegalaunch_build.jobs WHERE id=$3 AND creator_account_id=$1 AND project_id=$2`,
       [ownerId,projectId,jobId]);
     const row = result.rows[0];
     return row ? { id:row.id,state:row.expires_at.getTime() <= Date.now() ? 'expired' : row.state,
-      attempt:row.attempt,errorCode:row.error_code,inputFingerprint:row.input_fingerprint,
+      attempt:row.attempt,errorCode:row.error_code,inputFingerprint:row.input_fingerprint,buildKind:row.build_kind,
       artifactSha256:row.state === 'ready' && row.expires_at.getTime() > Date.now() ? row.artifact_sha256 : null,
       artifactBytes:row.state === 'ready' && row.expires_at.getTime() > Date.now() ? Number(row.artifact_bytes) : null,
       expiresAt:row.expires_at.toISOString(), createdAt:row.created_at.toISOString(),
@@ -153,9 +167,10 @@ export class NativeBuildQueue {
     const result = await this.pool.query<{ input:string; evidence:NativeBuildEvidence;
       artifact_name:string;artifact_sha256:string;artifact_bytes:string;
       input_fingerprint:string;source_hash:string;deployment_id:string;package_id:string;
-      release_id:string;release_sequence:number }>(
+      build_kind:string;release_id:string|null;release_sequence:number|null;
+      draft_revision:number|null;draft_snapshot_sha256:string|null }>(
       `SELECT input,evidence,artifact_name,artifact_sha256,artifact_bytes,input_fingerprint,source_hash,
-        deployment_id,package_id,release_id,release_sequence FROM vegalaunch_build.jobs
+        deployment_id,package_id,build_kind,release_id,release_sequence,draft_revision,draft_snapshot_sha256 FROM vegalaunch_build.jobs
        WHERE id=$3 AND creator_account_id=$1 AND project_id=$2 AND state='ready' AND expires_at>now()`,
       [ownerId,projectId,jobId]);
     const row = result.rows[0];
@@ -164,7 +179,11 @@ export class NativeBuildQueue {
     if (row.artifact_name !== `${jobId}.vpkg` || input.creatorAccountId !== ownerId || input.projectId !== projectId ||
       input.fingerprint !== row.input_fingerprint || input.sourceHash !== row.source_hash ||
       input.deploymentId !== row.deployment_id || input.packageId !== row.package_id ||
-      input.publishedRelease.releaseId !== row.release_id || input.publishedRelease.sequence !== row.release_sequence)
+      (input.mode === 'draft' ? row.build_kind !== 'draft' || input.draft.revision !== row.draft_revision ||
+        input.draft.snapshotSha256 !== row.draft_snapshot_sha256 || row.release_id !== null || row.release_sequence !== null :
+        row.build_kind !== 'published' || input.publishedRelease.releaseId !== row.release_id ||
+        input.publishedRelease.sequence !== row.release_sequence || row.draft_revision !== null || row.draft_snapshot_sha256 !== null) ||
+      !sameBuildIdentity(input, row.evidence))
       fail('Native job binding differs');
     return { input, evidence: row.evidence, name: row.artifact_name,
       sha256: row.artifact_sha256, bytes: Number(row.artifact_bytes) };

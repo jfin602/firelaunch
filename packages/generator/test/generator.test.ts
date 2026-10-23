@@ -258,6 +258,12 @@ test('bound deployments pin public identity while legacy generation remains stat
   assert.match(generated.files.get('babel.config.js')!, /@babel\/plugin-transform-export-namespace-from/);
   assert.equal(JSON.parse(generated.files.get('package.json')!).dependencies['@react-native-async-storage/async-storage'],
     'npm:@amazon-devices/react-native-async-storage__async-storage@2.1.9000000000');
+  const draft = await generateProject(spec, deployment, 'draft');
+  assert.equal(JSON.parse(draft.files.get('app.json')!).name, 'com.creator.channel.main');
+  assert.equal(draft.files.has('src/release-config.json'), false);
+  assert.equal(draft.files.has('src/remote-release.js'), false);
+  assert.equal(draft.files.get('src/channel.json')!.includes(spec.content[0]!.mediaUrl!), true);
+  assert.notEqual(draft.fingerprint, generated.fingerprint);
   await assert.rejects(generateProject(spec, { ...deployment, manifestEndpoint: undefined }), /pinned HTTPS/);
   await assert.rejects(generateProject(spec, { ...deployment, manifestEndpoint: 'https://channels.example.org/elsewhere' }), /Invalid deployment resolver/);
   await assert.rejects(generateProject(spec, { ...deployment, manifestEndpoint: 'https://localhost./' }), /Unsafe deployment resolver/);

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { releaseBuildCommand, type NativeBuildEvidence, type ReleaseBuildInput } from './release-build.js';
+import { releaseBuildCommand, sameBuildIdentity, type NativeBuildEvidence, type ReleaseBuildInput } from './release-build.js';
 import { RepositoryError } from './repository.js';
 
 const MAX_VPKG_BYTES = 500_000_000;
@@ -64,8 +64,7 @@ export function createNativeExport(input: ReleaseBuildInput, evidence: NativeBui
   if (evidence.inputFingerprint !== input.fingerprint || evidence.sourceHash !== input.sourceHash ||
     evidence.deploymentId !== input.deploymentId || evidence.packageId !== input.packageId ||
     evidence.inspectedPackageId !== input.packageId || evidence.target !== 'x86_64' || evidence.buildType !== 'Release' ||
-    evidence.publishedRelease.releaseId !== input.publishedRelease.releaseId ||
-    evidence.publishedRelease.sequence !== input.publishedRelease.sequence ||
+    !sameBuildIdentity(input, evidence) ||
     JSON.stringify(evidence.command) !== JSON.stringify(releaseBuildCommand(input)) ||
     !/^[a-f0-9]{64}$/.test(evidence.dependencyLockSha256) ||
     !/^v24\.\d+\.\d+$/.test(evidence.toolchain.node) || !/^12\.\d+\.\d+$/.test(evidence.toolchain.npm) ||
@@ -75,10 +74,14 @@ export function createNativeExport(input: ReleaseBuildInput, evidence: NativeBui
     !Buffer.isBuffer(vpkg) || vpkg.length < 1024 || vpkg.length > MAX_VPKG_BYTES ||
     evidence.bytes !== vpkg.length || evidence.sha256 !== sha256(vpkg)) fail('Native worker artifact identity or checksum differs from build input');
   const vpkgName = `${input.packageId}_x86_64.vpkg`;
-  const readme = Buffer.from(`# VegaLaunch Vega release\n\nPackage ID: ${input.packageId}\n\nThis ZIP contains the native x86_64 Release package. Verify SHA256SUMS before installing.\n\n1. Start Vega VirtualDevice and run \`vega device list\` to find its serial.\n2. Run \`vega device install-app --device <serial> --packagePath ${vpkgName}\`.\n3. Run \`vega device launch-app --device <serial> --appName ${input.packageId}.main\`.\n\nThe app reads its creator-approved published release from ${input.manifestEndpoint}. Device playback and Amazon submission require separate qualification.\n`);
+  const delivery = input.mode === 'draft' ? `This package contains private draft revision ${input.draft.revision}. It does not follow a public release pointer.` :
+    `The app reads its creator-approved published release from ${input.manifestEndpoint}.`;
+  const readme = Buffer.from(`# VegaLaunch Vega release\n\nPackage ID: ${input.packageId}\n\nThis ZIP contains the native x86_64 Release package. Verify SHA256SUMS before installing.\n\n1. Start Vega VirtualDevice and run \`vega device list\` to find its serial.\n2. Run \`vega device install-app --device <serial> --packagePath ${vpkgName}\`.\n3. Run \`vega device launch-app --device <serial> --appName ${input.packageId}.main\`.\n\n${delivery} Device playback and Amazon submission require separate qualification.\n`);
   const info = Buffer.from(`${JSON.stringify({ format: 'vegalaunch-vega-export-v1', product: 'VegaLaunch', projectId: input.projectId,
     specRevision: input.specRevision, deploymentId: input.deploymentId, packageId: input.packageId,
-    manifestEndpoint: input.manifestEndpoint, publishedRelease: input.publishedRelease,
+    delivery: input.mode === 'draft' ? 'draft' : 'published',
+    ...(input.mode === 'draft' ? { draft: input.draft } :
+      { manifestEndpoint: input.manifestEndpoint, publishedRelease: input.publishedRelease }),
     sourceHash: input.sourceHash, inputFingerprint: input.fingerprint,
     vpkg: { name: vpkgName, bytes: vpkg.length, sha256: evidence.sha256 },
     toolchain: evidence.toolchain, dependencyLockSha256: evidence.dependencyLockSha256 }, null, 2)}\n`);

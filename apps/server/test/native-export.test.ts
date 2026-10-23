@@ -36,6 +36,19 @@ test('native ZIP has four bounded verified entries and two SHA-256 identities', 
   assert.ok(result.zip.includes(Buffer.from('"product": "VegaLaunch"')));
 });
 
+test('draft ZIP identifies its bundled revision without claiming a published release', () => {
+  const draftInput = { ...input, publishedRelease: undefined, mode: 'draft' as const,
+    draft: { revision: input.specRevision, snapshotSha256: 'd'.repeat(64) } } as ReleaseBuildInput;
+  const draftEvidence = { ...evidence, publishedRelease: undefined, mode: 'draft' as const,
+    draft: draftInput.draft, command: releaseBuildCommand(draftInput) } as NativeBuildEvidence;
+  const result = createNativeExport(draftInput, draftEvidence, vpkg);
+  assert.ok(result.zip.includes(Buffer.from('private draft revision 7')));
+  assert.ok(result.zip.includes(Buffer.from('"delivery": "draft"')));
+  assert.ok(!result.zip.includes(Buffer.from('"publishedRelease"')));
+  assert.doesNotThrow(() => verifyNativeExport(result.zip, result.vpkgName, result.vpkgSha256));
+  assert.throws(() => createNativeExport(draftInput, evidence, vpkg), { code:'CONFLICT' });
+});
+
 test('changed identity, stale input, wrong bytes and unsafe artifact path never create ZIP', () => {
   for (const changed of [
     { ...evidence, inputFingerprint: 'd'.repeat(64) },

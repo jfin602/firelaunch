@@ -33,7 +33,7 @@ test('owner ZIP delivery requires a current private, untampered READY receipt', 
   const receipt = { input, evidence, name: `${job}.vpkg`, sha256: digest, bytes: bytes.length };
   const queue = { readyArtifact: async (accountId: string, projectId: string, jobId: string) =>
     ready && accountId === owner && projectId === project && jobId === job ? receipt : null } as unknown as NativeBuildQueue;
-  const workspace = { assertReleaseBuildInputCurrent: async () => {
+  const workspace = { assertBuildInputCurrent: async () => {
     if (!current) throw new RepositoryError('CONFLICT', 'Build input changed');
   } } as unknown as HostedWorkspaceService;
   const file = join(root, `${job}.vpkg`);

@@ -77,7 +77,24 @@ test('real PostgreSQL queue serializes claims, reclaims leases and enforces owne
             [`ap_${hex(digit)}`,owned.deploymentId,owned.projectId,owned.creatorAccountId,owned.specRevision]);
           assert.equal(await queue.enqueue(owned),await queue.enqueue(owned));
         }
+        const draftDdl = await readFile(new URL('../migrations/build_queue_002.up.sql',import.meta.url),'utf8');
+        await pool.query(draftDdl);
+        const migrated = await pool.query("SELECT count(*)::int AS count FROM vegalaunch_build.jobs WHERE build_kind='published' AND release_id IS NOT NULL");
+        assert.equal(migrated.rows[0].count,2,'existing published receipts survive additive migration');
         await assert.rejects(queue.enqueue(input('3')), /changed/);
+        const { publishedRelease: _unused, ...draftBase } = input('3');
+        const draft: ReleaseBuildInput = { ...draftBase, mode: 'draft',
+          draft: { revision: 1, snapshotSha256: 'e'.repeat(64) } };
+        await pool.query('INSERT INTO channel_ownerships VALUES($1,$2)',[draft.projectId,draft.creatorAccountId]);
+        await pool.query('INSERT INTO channel_projects VALUES($1,$2,$3)',
+          [draft.projectId,draft.creatorAccountId,draft.specRevision]);
+        await pool.query('INSERT INTO channel_deployments VALUES($1,$2,$3,$4,$5)',
+          [draft.deploymentId,draft.projectId,draft.creatorAccountId,draft.packageId,
+            { nativeReleaseApproval:'pending_creator' }]);
+        const draftJob = await queue.enqueue(draft);
+        const draftRow = await pool.query('SELECT build_kind,release_id,release_sequence,draft_revision,draft_snapshot_sha256 FROM vegalaunch_build.jobs WHERE id=$1',[draftJob]);
+        assert.deepEqual(draftRow.rows[0], { build_kind:'draft',release_id:null,release_sequence:null,
+          draft_revision:1,draft_snapshot_sha256:'e'.repeat(64) });
         assert.equal((await queue.latestStatus(input('1').creatorAccountId,input('1').projectId))?.state,'queued');
         assert.equal(await queue.latestStatus(input('2').creatorAccountId,input('1').projectId),null);
         await assert.rejects(queue.enqueue({ ...input('1'),fingerprint:'e'.repeat(64) }),

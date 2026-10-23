@@ -6,7 +6,9 @@ import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { assertExportableMedia } from './hosted-media-policy.js';
 import { PublicationRepository } from './publication-repository.js';
-import { createReleaseBuildInput, type ReleaseBuildInput, type StoredSource } from './release-build.js';
+import { createDraftBuildInput, createReleaseBuildInput, type ReleaseBuildInput, type StoredSource } from './release-build.js';
+import { CatalogRepository } from './catalog-repository.js';
+import type { CatalogProjectionService } from './catalog-projection.js';
 import { isTrustedVegaAsset, isTrustedVegaAssetPath, TRUSTED_VEGA_ASSET_MAX_BYTES } from './trusted-vega-assets.js';
 
 const textName = /\.(?:js|jsx|ts|tsx|json|toml|md|txt)$|^(?:README|LICENSE)$/i;
@@ -70,7 +72,66 @@ const blockedBuild = { status: 'blocked' as const, reason: NATIVE_EXPORT_BLOCKER
 
 export class HostedWorkspaceService {
   constructor(private readonly repository: HostedProjectRepository,
-    private readonly publication: Pick<PublicationRepository, 'currentSummary' | 'currentBuildSnapshot'> = new PublicationRepository(repository)) {}
+    private readonly publication: Pick<PublicationRepository, 'currentSummary' | 'currentBuildSnapshot'> = new PublicationRepository(repository),
+    private readonly projection?: CatalogProjectionService) {}
+
+  async draftBuildInput(principal: AuthenticatedPrincipal, id: string): Promise<ReleaseBuildInput> {
+    const projection = this.projection;
+    if (!projection) throw new RepositoryError('CONFLICT', 'Draft catalog verification unavailable');
+    const assemble = async () => {
+      const project = await this.repository.read(principal, id);
+      const deployment = await this.repository.readDeployment(principal, id);
+      if (deployment.creatorAccountId !== principal.accountId || deployment.projectId !== project.id)
+        throw new RepositoryError('NOT_FOUND', 'Project not found');
+      assertExportableMedia(project.spec);
+      const inventory = await new CatalogRepository(this.repository).read(principal, id);
+      const stableId = (itemId: string) => `item_${hash(`catalog-content-v1\0${itemId}`).slice(0, 32)}`;
+      const ids = project.spec.content.map(content => {
+        const item = inventory.items.find(candidate => stableId(candidate.id) === content.id);
+        if (!item) throw new RepositoryError('CONFLICT', 'Draft content is not an approved owned catalog item');
+        return item.id;
+      });
+      if (new Set(ids).size !== ids.length) throw new RepositoryError('CONFLICT', 'Duplicate draft content');
+      if (ids.length) {
+        const linkedAssetIds = inventory.items.filter(item => ids.includes(item.id)).flatMap(item => item.mediaAssetIds);
+        if (linkedAssetIds.length) {
+          const revoked = await this.repository.pool.query(`SELECT 1 FROM media_asset_lifecycle
+            WHERE project_id=$1 AND creator_account_id=$2 AND asset_id=ANY($3::text[]) AND revoked_at IS NOT NULL LIMIT 1`,
+          [id, principal.accountId, linkedAssetIds]);
+          if (revoked.rowCount) throw new RepositoryError('CONFLICT', 'Draft media asset was revoked');
+        }
+        const projected = await projection.project(principal, id, { expectedProjectRevision: project.revision,
+          expectedCatalogRevision: inventory.revision, itemIds: ids, collectionIds: [] });
+        for (const content of project.spec.content) {
+          const baseline = projected.bindings.find(binding => binding.contentId === content.id)?.baseline;
+          if (!baseline || baseline.presentation !== content.presentation || baseline.mediaUrl !== content.mediaUrl ||
+            baseline.audiobook?.mediaUrl !== content.audiobook?.mediaUrl)
+            throw new RepositoryError('CONFLICT', 'Draft media is revoked, unready or lacks device delivery');
+        }
+      }
+      const saved = await this.repository.source(principal, id);
+      if (saved && [...new Set([...Object.keys(saved.files), ...Object.keys(saved.baseline)])]
+        .some(name => !sourceMatchesBaseline(saved.files[name], saved.baseline[name])))
+        throw new RepositoryError('CONFLICT', 'Saved custom source needs review before draft export');
+      const generated = await generateProject(project.spec, deployment, 'draft');
+      const files = Object.fromEntries(generated.files);
+      const source = { specRevision: project.revision, fingerprint: generated.fingerprint,
+        files, baseline: { ...files } };
+      return { input: await createDraftBuildInput(project, source, deployment, principal.accountId),
+        catalogRevision: inventory.revision };
+    };
+    const first = await assemble();
+    const confirmed = await assemble();
+    if (first.input.fingerprint !== confirmed.input.fingerprint || first.catalogRevision !== confirmed.catalogRevision)
+      throw new RepositoryError('CONFLICT', 'Draft build input changed during snapshot');
+    return first.input;
+  }
+
+  async assertBuildInputCurrent(principal: AuthenticatedPrincipal, id: string, input: ReleaseBuildInput): Promise<void> {
+    const current = input.mode === 'draft' ? await this.draftBuildInput(principal, id) :
+      await this.releaseBuildInput(principal, id);
+    if (current.fingerprint !== input.fingerprint) throw new RepositoryError('CONFLICT', 'Build input changed');
+  }
 
   /** Internal worker submission contract. No hosted build route calls this in P1. */
   async releaseBuildInput(principal: AuthenticatedPrincipal, id: string): Promise<ReleaseBuildInput> {

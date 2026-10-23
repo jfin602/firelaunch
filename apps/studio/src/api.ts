@@ -101,7 +101,7 @@ export type NativeExportStatus = { status: 'blocked' | 'queued' | 'running' | 'r
     completedAt?: string | null; artifactBytes?: number | null; packageId?: string | null;
     deploymentId?: string | null; release?: { releaseId: string; sequence: number } | null } | null; downloadReady: boolean };
 export const nativeExportStatus = (id: string) => request(`/${encodeURIComponent(id)}/export-app`) as Promise<NativeExportStatus>;
-export const requestNativeBuild = (id: string) => request(`/${encodeURIComponent(id)}/export-app`, json({})) as Promise<NativeExportStatus>;
+export const requestNativeBuild = (id: string) => request(`/${encodeURIComponent(id)}/export-app`, json({ mode: 'draft' })) as Promise<NativeExportStatus>;
 export async function downloadNativeExport(projectId: string, jobId: string): Promise<void> {
   const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/export-app/${encodeURIComponent(jobId)}/download`,
     { credentials: 'same-origin', cache: 'no-store' });

@@ -156,13 +156,14 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
   const status = selectedProvider ? selectedProvider.name === 'mock' ? providerStatus({ VEGALAUNCH_AGENT_PROVIDER: 'mock' }) : { provider: selectedProvider.name, configured: true, message: `${selectedProvider.name} injected for this server; this status does not verify provider availability or request success.` } : providerStatus(process.env);
   const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : status.provider === 'bedrock' ? new BedrockProvider(process.env.BEDROCK_MODEL_ID!) : new OpenAIProvider(process.env.OPENAI_MODEL!, process.env.OPENAI_API_KEY!))) : null;
   const workspace = mode?.mode === 'local-legacy' ? new WorkspaceService(repository) : null;
-  const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository) : null;
   const nativeBuildQueue = mode?.mode === 'hosted' && hostedRepository ? new NativeBuildQueue(hostedRepository.pool) : null;
   const catalog = hostedRepository ? new CatalogRepository(hostedRepository) : null;
   const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog, mediaPublisher) : null;
+  const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository, undefined, projection ?? undefined) : null;
   const publication = hostedRepository ? new PublicationRepository(hostedRepository, mediaPublisher, managedArtwork) : null;
   const publicResolver = mode?.mode === 'hosted' && hostedRepository ? new PublicReleaseResolver(hostedRepository, managedArtwork) : null;
   const assertNativeRights = async (input: ReleaseBuildInput) => {
+    if (input.mode === 'draft') return;
     if (!publicResolver) throw new RepositoryError('CONFLICT', 'Public release resolver unavailable');
     const current = await publicResolver.current(input.deploymentId);
     if (current.id !== input.publishedRelease.releaseId || current.sequence !== input.publishedRelease.sequence ||
@@ -230,8 +231,13 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             if (segments.length === 4 && request.method === 'GET') {
               await hostedRepository.read(principal, projectId);
               const job = await nativeBuildQueue!.latestStatus(principal.accountId, projectId);
-              if (job && (job.state === 'queued' || job.state === 'running'))
-                await hostedWorkspace.assertReleaseBuildInputCurrent(principal, projectId, job.inputFingerprint);
+              if (job && (job.state === 'queued' || job.state === 'running')) {
+                if (job.buildKind === 'draft') {
+                  const current = await hostedWorkspace.draftBuildInput(principal, projectId);
+                  if (current.fingerprint !== job.inputFingerprint)
+                    throw new RepositoryError('CONFLICT', 'Build input changed');
+                } else await hostedWorkspace.assertReleaseBuildInputCurrent(principal, projectId, job.inputFingerprint);
+              }
               const verified = job?.state === 'ready' ? await nativeExportForOwner(nativeBuildQueue!, hostedWorkspace,
                 principal, projectId, job.id, process.env.VEGALAUNCH_BUILD_ARTIFACT_ROOT ?? '', assertNativeRights) : undefined;
               respond(response, 200, job ? nativeExportJobStatus(job, verified) : { status: 'blocked', reason: 'No native build has been submitted for this project',
@@ -239,8 +245,9 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             }
             if (segments.length === 4 && request.method === 'POST') {
               await hostedRepository.read(principal, projectId);
-              z.strictObject({}).parse(await body(request));
-              const input = await hostedWorkspace.releaseBuildInput(principal, projectId);
+              const requestBody = z.strictObject({ mode: z.literal('draft').optional() }).parse(await body(request));
+              const input = requestBody.mode === 'draft' ? await hostedWorkspace.draftBuildInput(principal, projectId) :
+                await hostedWorkspace.releaseBuildInput(principal, projectId);
               await assertNativeRights(input);
               const jobId = await nativeBuildQueue!.enqueue(input);
               const job = await nativeBuildQueue!.status(principal.accountId, projectId, jobId);

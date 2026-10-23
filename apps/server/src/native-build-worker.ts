@@ -6,7 +6,7 @@ import { isAbsolute, join, resolve } from 'node:path';
 import { Pool } from 'pg';
 import { NativeBuildQueue } from './native-build-queue.js';
 import { assertNativeBuildLimits } from './native-build-limits.js';
-import { releaseBuildCommand, type NativeBuildEvidence, type ReleaseBuildInput } from './release-build.js';
+import { buildNumber, releaseBuildCommand, sameBuildIdentity, type NativeBuildEvidence, type ReleaseBuildInput } from './release-build.js';
 
 type Job = NonNullable<Awaited<ReturnType<NativeBuildQueue['claim']>>>;
 const MAX_VPKG = 500_000_000;
@@ -97,15 +97,14 @@ async function processJob(queue: NativeBuildQueue, job: Job, root: string, image
     if (!info.isFile() || info.isSymbolicLink() || info.size < 1024 || info.size > MAX_VPKG ||
       evidence.inputFingerprint !== input.fingerprint || evidence.sourceHash !== input.sourceHash ||
       evidence.deploymentId !== input.deploymentId || evidence.packageId !== input.packageId ||
-      evidence.publishedRelease.releaseId !== input.publishedRelease.releaseId ||
-      evidence.publishedRelease.sequence !== input.publishedRelease.sequence ||
+      !sameBuildIdentity(input, evidence) ||
       evidence.inspectedPackageId !== input.packageId ||
       evidence.target !== 'x86_64' || evidence.buildType !== 'Release' ||
       JSON.stringify(evidence.command) !== JSON.stringify(releaseBuildCommand(input)) ||
       JSON.stringify(evidence.toolchain) !== JSON.stringify({ node:'v24.21.0',npm:'12.2.0',vegaCli:'1.4.4',vegaSdk:'0.24.12112' }) ||
       !/^[a-f0-9]{64}$/.test(evidence.dependencyLockSha256) ||
       evidence.bytes !== info.size || evidence.sha256 !== await digest(source)) throw new Error('Artifact differs from claim');
-    await inspectPackage(image,source,input.packageId,input.publishedRelease.sequence,root);
+    await inspectPackage(image,source,input.packageId,buildNumber(input),root);
     const target = join(root,'artifacts',`${job.jobId}.vpkg`);
     await rename(source,target);
     // The worker service's dedicated export group may read only artifacts, never jobs or source.

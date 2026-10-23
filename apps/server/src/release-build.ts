@@ -13,9 +13,10 @@ export const DEPENDENCY_LOCK_COMMAND = Object.freeze(['npm', 'install', '--packa
 export const DEPENDENCY_INSTALL_COMMAND = Object.freeze(['npm', 'ci', '--no-audit', '--no-fund']);
 export const RELEASE_BUILD_COMMAND = Object.freeze(['./node_modules/.bin/react-native', 'build-vega', '--target', 'x86_64', '--build-type', 'Release']);
 export function releaseBuildCommand(input: ReleaseBuildInput): readonly string[] {
-  if (!Number.isSafeInteger(input.publishedRelease.sequence) || input.publishedRelease.sequence < 1)
+  const sequence = buildNumber(input);
+  if (!Number.isSafeInteger(sequence) || sequence < 1)
     invalid('Invalid native build number');
-  return Object.freeze([...RELEASE_BUILD_COMMAND, '--build-number', String(input.publishedRelease.sequence)]);
+  return Object.freeze([...RELEASE_BUILD_COMMAND, '--build-number', String(sequence)]);
 }
 export const VPT_INFO_COMMAND = Object.freeze(['vpt', 'info', '--json']);
 export const VPT_VALIDATE_COMMAND = Object.freeze(['vpt', 'validate', '--no-color']);
@@ -23,13 +24,23 @@ const sha256 = (value: string | Buffer) => createHash('sha256').update(value).di
 const conflict = (message: string): never => { throw new RepositoryError('CONFLICT', message); };
 const invalid = (message: string): never => { throw new RepositoryError('INVALID_INPUT', message); };
 export type ReleaseIdentity = Readonly<{ releaseId: string; sequence: number }>;
+export type DraftIdentity = Readonly<{ revision: number; snapshotSha256: string }>;
+type BuildIdentity = Readonly<{ mode?: 'published'; publishedRelease: ReleaseIdentity; draft?: never }> |
+  Readonly<{ mode: 'draft'; draft: DraftIdentity; publishedRelease?: never }>;
+export const buildNumber = (input: BuildIdentity): number => input.mode === 'draft' ? input.draft.revision : input.publishedRelease.sequence;
+export function sameBuildIdentity(a: BuildIdentity, b: BuildIdentity): boolean {
+  return a.mode === 'draft' ? b.mode === 'draft' && a.draft.revision === b.draft?.revision &&
+    a.draft.snapshotSha256 === b.draft?.snapshotSha256 : b.mode !== 'draft' &&
+    a.publishedRelease.releaseId === b.publishedRelease?.releaseId &&
+    a.publishedRelease.sequence === b.publishedRelease?.sequence;
+}
 export type ReleaseBuildInput = Readonly<{
   format: 'vegalaunch-vega-build-input-v1'; projectId: string; creatorAccountId: string;
   specRevision: number; generatorFingerprint: string; sourceRevision: number;
   deploymentId: string; packageId: string; manifestEndpoint: string;
-  publishedRelease: ReleaseIdentity; files: Readonly<Record<string, string>>;
+  files: Readonly<Record<string, string>>;
   fileSha256: Readonly<Record<string, string>>; sourceHash: string; fingerprint: string;
-}>;
+}> & BuildIdentity;
 export type StoredSource = { specRevision: number; fingerprint: string; files: Record<string, string>; baseline: Record<string, string> };
 
 function validEndpoint(endpoint: string, deploymentId: string): string {
@@ -78,23 +89,34 @@ function validFiles(files: Record<string, string>): Record<string, string> {
   return Object.freeze(Object.fromEntries(names.map(name => [name, files[name]!])));
 }
 
-export async function createReleaseBuildInput(project: ChannelProject, source: StoredSource | null,
-  deployment: ChannelDeployment, release: ReleaseIdentity | null, creatorAccountId: string): Promise<ReleaseBuildInput> {
+async function createBuildInput(project: ChannelProject, source: StoredSource | null,
+  deployment: ChannelDeployment, identity: BuildIdentity | null, creatorAccountId: string): Promise<ReleaseBuildInput> {
   if (!source) throw new RepositoryError('CONFLICT', 'Generate deployment-bound source before building');
-  if (!release || !/^rel_[a-f0-9]{32}$/.test(release.releaseId) || !Number.isSafeInteger(release.sequence) || release.sequence < 1)
-    throw new RepositoryError('CONFLICT', 'No creator-approved published release');
+  if (!identity || (identity.mode === 'draft' ?
+    !Number.isSafeInteger(identity.draft.revision) || identity.draft.revision < 1 ||
+      !/^[a-f0-9]{64}$/.test(identity.draft.snapshotSha256) || identity.draft.revision !== project.revision :
+    !/^rel_[a-f0-9]{32}$/.test(identity.publishedRelease.releaseId) ||
+      !Number.isSafeInteger(identity.publishedRelease.sequence) || identity.publishedRelease.sequence < 1))
+    throw new RepositoryError('CONFLICT', 'Invalid native build snapshot identity');
   if (deployment.projectId !== project.id || deployment.channelId !== project.id || deployment.creatorAccountId !== creatorAccountId)
     conflict('Deployment identity differs from project');
   const endpoint = validEndpoint(deployment.manifestEndpoint ?? '', deployment.id);
-  const generated = await generateProject(project.spec, deployment);
+  const generated = await generateProject(project.spec, deployment, identity.mode === 'draft' ? 'draft' : 'published');
   if (source.specRevision !== project.revision || source.fingerprint !== generated.fingerprint)
     conflict('Generated source is stale for channel or deployment');
   const files = validFiles(source.files);
   if (Object.keys(source.baseline).some(name => !Object.hasOwn(files, name))) conflict('Generated source file is missing');
-  const binding = JSON.parse(files['src/release-config.json'] ?? 'null');
-  const expectedBinding = { deploymentId: deployment.id, channelId: project.id, packageId: deployment.packageId,
-    origin: new URL(endpoint).origin };
-  if (JSON.stringify(binding) !== JSON.stringify(expectedBinding)) conflict('Release configuration differs from deployment');
+  if (identity.mode === 'draft') {
+    if (files['src/release-config.json'] || files['src/remote-release.js'] ||
+      files['src/channel.json'] !== generated.files.get('src/channel.json') ||
+      identity.draft.snapshotSha256 !== sha256(files['src/channel.json'] ?? ''))
+      conflict('Draft bundle differs from saved channel snapshot');
+  } else {
+    const binding = JSON.parse(files['src/release-config.json'] ?? 'null');
+    const expectedBinding = { deploymentId: deployment.id, channelId: project.id, packageId: deployment.packageId,
+      origin: new URL(endpoint).origin };
+    if (JSON.stringify(binding) !== JSON.stringify(expectedBinding)) conflict('Release configuration differs from deployment');
+  }
   const manifest = files['manifest.toml'] ?? '';
   if (!manifest.includes(`id = "${deployment.packageId}"`) ||
     !/^min = "1\.2"$/m.test(manifest) || !/^target = "1\.2"$/m.test(manifest) ||
@@ -108,12 +130,23 @@ export async function createReleaseBuildInput(project: ChannelProject, source: S
     conflict('Unsupported Vega package or app identity');
   const fileSha256 = Object.freeze(Object.fromEntries(Object.entries(files).map(([name, body]) => [name, sha256(body)])));
   const sourceHash = sha256(JSON.stringify(fileSha256));
-  const identity = { format: 'vegalaunch-vega-build-input-v1' as const, projectId: project.id,
+  const snapshot = { format: 'vegalaunch-vega-build-input-v1' as const, projectId: project.id,
     creatorAccountId: deployment.creatorAccountId, specRevision: project.revision,
     generatorFingerprint: generated.fingerprint, sourceRevision: source.specRevision,
     deploymentId: deployment.id, packageId: deployment.packageId, manifestEndpoint: endpoint,
-    publishedRelease: Object.freeze({ ...release }), files, fileSha256, sourceHash };
-  return Object.freeze({ ...identity, fingerprint: sha256(JSON.stringify({ ...identity, files: undefined })) });
+    ...identity, files, fileSha256, sourceHash };
+  return Object.freeze({ ...snapshot, fingerprint: sha256(JSON.stringify({ ...snapshot, files: undefined })) }) as ReleaseBuildInput;
+}
+
+export async function createReleaseBuildInput(project: ChannelProject, source: StoredSource | null,
+  deployment: ChannelDeployment, release: ReleaseIdentity | null, creatorAccountId: string): Promise<ReleaseBuildInput> {
+  return createBuildInput(project, source, deployment, release ? { publishedRelease: release } : null, creatorAccountId);
+}
+export async function createDraftBuildInput(project: ChannelProject, source: StoredSource | null,
+  deployment: ChannelDeployment, creatorAccountId: string): Promise<ReleaseBuildInput> {
+  const digest = sha256(source?.files['src/channel.json'] ?? '');
+  return createBuildInput(project, source, deployment,
+    { mode: 'draft', draft: { revision: project.revision, snapshotSha256: digest } }, creatorAccountId);
 }
 
 /** The isolated worker calls this in its empty disposable directory. The hosted API never calls it. */
@@ -137,15 +170,23 @@ export async function materializeReleaseBuildInput(input: ReleaseBuildInput, des
     conflict('Build input fingerprint changed');
   if (input.format !== 'vegalaunch-vega-build-input-v1' || !/^ch_[a-f0-9]{32}$/.test(input.projectId) ||
     !/^cr_[a-f0-9]{32}$/.test(input.creatorAccountId) || !/^dep_[a-f0-9]{32}$/.test(input.deploymentId) ||
-    !/^rel_[a-f0-9]{32}$/.test(input.publishedRelease.releaseId) ||
-    !Number.isSafeInteger(input.publishedRelease.sequence) || input.publishedRelease.sequence < 1 ||
+    (input.mode === 'draft' ? !Number.isSafeInteger(input.draft.revision) || input.draft.revision < 1 ||
+      !/^[a-f0-9]{64}$/.test(input.draft.snapshotSha256) || input.draft.revision !== input.specRevision :
+      !/^rel_[a-f0-9]{32}$/.test(input.publishedRelease.releaseId) ||
+      !Number.isSafeInteger(input.publishedRelease.sequence) || input.publishedRelease.sequence < 1) ||
     validEndpoint(input.manifestEndpoint, input.deploymentId) !== input.manifestEndpoint)
     invalid('Invalid build input identity');
   const files = validFiles({ ...input.files });
-  const binding = JSON.parse(files['src/release-config.json'] ?? 'null');
-  if (JSON.stringify(binding) !== JSON.stringify({ deploymentId: input.deploymentId, channelId: input.projectId,
-    packageId: input.packageId, origin: new URL(input.manifestEndpoint).origin }))
-    conflict('Build input release binding changed');
+  if (input.mode === 'draft') {
+    if (files['src/release-config.json'] || files['src/remote-release.js'] ||
+      sha256(files['src/channel.json'] ?? '') !== input.draft.snapshotSha256)
+      conflict('Build input draft snapshot changed');
+  } else {
+    const binding = JSON.parse(files['src/release-config.json'] ?? 'null');
+    if (JSON.stringify(binding) !== JSON.stringify({ deploymentId: input.deploymentId, channelId: input.projectId,
+      packageId: input.packageId, origin: new URL(input.manifestEndpoint).origin }))
+      conflict('Build input release binding changed');
+  }
   if (!(files['manifest.toml'] ?? '').includes(`id = "${input.packageId}"`))
     conflict('Build input package identity changed');
   for (const [name, body] of Object.entries(files)) {
@@ -163,7 +204,7 @@ export async function materializeReleaseBuildInput(input: ReleaseBuildInput, des
 export type NativeBuildEvidence = Readonly<{ inputFingerprint: string; sourceHash: string; command: readonly string[];
   target: 'x86_64'; buildType: 'Release'; toolchain: NativeToolchain; dependencyLockSha256: string;
   artifactPath: string; bytes: number; sha256: string;
-  deploymentId: string; packageId: string; publishedRelease: ReleaseIdentity; inspectedPackageId: string }>;
+  deploymentId: string; packageId: string; inspectedPackageId: string }> & BuildIdentity;
 export type NativeToolchain = Readonly<{ node: string; npm: string; vegaCli: string; vegaSdk: string }>;
 
 /** SDK 0.24 autolinking adds only these pinned Kepler modules before [wants]. */
@@ -276,7 +317,7 @@ export async function produceIsolatedRelease(input: ReleaseBuildInput, destinati
   try { packageInfo = JSON.parse(packageResult.stdout ?? ''); }
   catch { return conflict('Native package inspection failed'); }
   if (packageResult.exitCode !== 0 || validation.exitCode !== 0 || packageInfo.id !== input.packageId ||
-    packageInfo.build_number !== input.publishedRelease.sequence ||
+    packageInfo.build_number !== buildNumber(input) ||
     !Array.isArray(packageInfo.os_version_registry?.os_versions) ||
     !packageInfo.os_version_registry.os_versions.includes('1.2'))
     conflict('Native package identity, validation or OS differs from build input');
@@ -295,5 +336,6 @@ export async function produceIsolatedRelease(input: ReleaseBuildInput, destinati
     command, target: 'x86_64', buildType: 'Release', toolchain, dependencyLockSha256,
     artifactPath: relative(destination, file).split(sep).join('/'), bytes: info.size,
     sha256: artifactHash, deploymentId: input.deploymentId, packageId: input.packageId,
-    publishedRelease: input.publishedRelease, inspectedPackageId: input.packageId });
+    ...(input.mode === 'draft' ? { mode: 'draft' as const, draft: input.draft } :
+      { publishedRelease: input.publishedRelease }), inspectedPackageId: input.packageId }) as NativeBuildEvidence;
 }

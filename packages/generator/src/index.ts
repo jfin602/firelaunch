@@ -25,7 +25,8 @@ async function templateFiles(root: string, prefix = ''): Promise<Map<string, str
 
 function json(value: unknown): string { return `${JSON.stringify(value, null, 2)}\n`; }
 
-export async function generateProject(spec: ChannelSpec, deployment?: ChannelDeployment): Promise<GeneratedProject> {
+export async function generateProject(spec: ChannelSpec, deployment?: ChannelDeployment,
+  delivery: 'published' | 'draft' = 'published'): Promise<GeneratedProject> {
   const valid = channelSpecSchema.parse(spec);
   const bound = deployment ? channelDeploymentSchema.parse(deployment) : undefined;
   if (bound && (bound.projectId !== valid.id || bound.channelId !== valid.id)) throw new Error('Deployment differs from channel');
@@ -40,7 +41,8 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
     if (endpoint.search || endpoint.hash || (endpoint.pathname !== '/' &&
       endpoint.pathname !== `/public/v1/deployments/${bound.id}/current`)) throw new Error('Invalid deployment resolver endpoint');
   }
-  const bundled = bound ? channelSpecSchema.parse({ ...valid,
+  const remote = !!bound && delivery === 'published';
+  const bundled = remote ? channelSpecSchema.parse({ ...valid,
     brand: { ...valid.brand, logo: undefined, heroArtwork: undefined }, navigation: [valid.navigation[0]],
     pages: [{ id: valid.navigation[0], title: 'Channel', modules: [{ id: `mod_${'0'.repeat(32)}`,
       kind: 'text', title: 'Offline', body: 'Connect to load this channel.' }] }], content: [] }) : valid;
@@ -53,11 +55,12 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
   templateHash.update('src/tv-runtime.js').update('\0').update(runtime);
   templateHash.update('src/hero-image-queue.js').update('\0').update(heroQueue);
   const templateFingerprint = templateHash.digest('hex');
-  const publicBinding = bound ? { deploymentId: bound.id, channelId: valid.id, packageId: bound.packageId, origin } : null;
+  const publicBinding = remote ? { deploymentId: bound!.id, channelId: valid.id, packageId: bound!.packageId, origin } : null;
   const appName = bound?.appName ?? valid.title;
   const fingerprint = createHash('sha256').update(TEMPLATE_VERSION).update('\0')
     .update(templateFingerprint).update('\0').update(JSON.stringify(valid)).update('\0')
-    .update(JSON.stringify(publicBinding)).update('\0').update(appName).digest('hex');
+    .update(JSON.stringify(publicBinding)).update('\0').update(appName)
+    .update(delivery === 'draft' ? '\0draft' : '').digest('hex');
   const packageName = `vegalaunch-${valid.slug}`;
   const applicationId = bound?.packageId ?? `com.vegalaunch.channel.${valid.id}`;
   files.set('package.json', json({ name: packageName, version: TEMPLATE_VERSION, private: true, scripts: {
@@ -66,14 +69,14 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
     react: '19.2.0', '@amazon-devices/react-native-w3cmedia': '~2.3.2',
     '@xmldom/xmldom': '0.8.15', 'base-64': '1.0.0',
     'fastestsmallesttextencoderdecoder': '1.0.22',
-    ...(bound ? {
+    ...(remote ? {
       '@react-native-async-storage/async-storage': 'npm:@amazon-devices/react-native-async-storage__async-storage@2.1.9000000000',
       zod: '4.6.5'
     } : {}) },
   devDependencies: { '@amazon-devices/kepler-cli-platform': '^0', '@types/react': '^19.2.0',
     '@react-native-community/cli': '20.0.0', '@react-native/babel-preset': '0.83.0',
     '@react-native/metro-config': '0.83.0',
-    ...(bound ? { '@babel/plugin-transform-export-namespace-from': '7.29.7' } : {}) },
+    ...(remote ? { '@babel/plugin-transform-export-namespace-from': '7.29.7' } : {}) },
   kepler: { projectType: 'application', appName: packageName, targets: ['tv'] } }));
   files.set('app.json', json({ name: `${applicationId}.main`, displayName: appName }));
   files.set('manifest.toml', files.get('manifest.toml')!
@@ -83,7 +86,7 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
   files.set('src/tv-runtime.js', runtime);
   files.set('src/hero-image-queue.js', heroQueue);
   files.set('src/channel.json', json(tv));
-  if (bound) {
+  if (remote) {
     files.set('babel.config.js', `module.exports = {\n  presets: ['module:@react-native/babel-preset'],\n  plugins: ['@babel/plugin-transform-export-namespace-from']\n};\n`);
     files.set('src/release-config.json', json(publicBinding));
     files.set('src/release-client.js', `import AsyncStorage from '@react-native-async-storage/async-storage';\nimport config from './release-config.json';\nimport { createChannelLoader } from './remote-release';\n\nexport function installRelease(bundled, onChannel) {\n  const loader = createChannelLoader(config, bundled, { storage: AsyncStorage, onChannel });\n  loader.start();\n  const interval = setInterval(() => loader.refresh(), 60_000);\n  return () => clearInterval(interval);\n}\n`);

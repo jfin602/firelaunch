@@ -24,10 +24,15 @@ test('hosted export submits only the session owner snapshot and reports owned qu
   const input = { format: 'vegalaunch-vega-build-input-v1', creatorAccountId: owner,
     projectId: project, fingerprint: 'e'.repeat(64), deploymentId: `dep_${'f'.repeat(32)}`,
     publishedRelease: { releaseId: `rel_${'1'.repeat(32)}`, sequence: 1 } } as ReleaseBuildInput;
+  const draftInput = { ...input, publishedRelease: undefined, mode: 'draft' as const,
+    draft: { revision: 2, snapshotSha256: 'a'.repeat(64) }, fingerprint: 'a'.repeat(64) } as ReleaseBuildInput;
   t.mock.method(PublicReleaseResolver.prototype, 'current', async () => ({ id: input.publishedRelease.releaseId,
     sequence: 1, creator_account_id: owner, project_id: project, sha256: 'a'.repeat(64), manifest_bytes: '{}' }));
   t.mock.method(HostedWorkspaceService.prototype, 'releaseBuildInput', async (caller, id) => {
     assert.equal(caller.accountId, owner); assert.equal(id, project); snapshotCalls++; return input;
+  });
+  t.mock.method(HostedWorkspaceService.prototype, 'draftBuildInput', async (caller, id) => {
+    assert.equal(caller.accountId, owner); assert.equal(id, project); return draftInput;
   });
   t.mock.method(HostedWorkspaceService.prototype, 'assertReleaseBuildInputCurrent', async (_caller, _id, fingerprint) => {
     if (fingerprint !== currentFingerprint) throw new RepositoryError('CONFLICT', 'Build input changed');
@@ -97,5 +102,9 @@ test('hosted export submits only the session owner snapshot and reports owned qu
     assert.equal((await post()).status, 404);
     assert.equal((await fetch(`${url}/job_deadbeef/download`)).status, 404);
     assert.equal(snapshotCalls, 1);
+    principal = owner; state = 'failed';
+    assert.equal((await fetch(url, { method:'POST', headers:{ 'content-type':'application/json' },
+      body: JSON.stringify({ mode:'draft' }) })).status, 202);
+    assert.equal(enqueued, draftInput, 'explicit draft request uses the private snapshot');
   } finally { server.close(); await once(server, 'close'); }
 });

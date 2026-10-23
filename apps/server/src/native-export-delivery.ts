@@ -20,7 +20,7 @@ export async function nativeExportForOwner(queue: NativeBuildQueue, workspace: H
   if (!artifactRoot || !isAbsolute(artifactRoot) || resolve(artifactRoot) === '/' ||
     !/^job_[a-f0-9]{32}\.vpkg$/.test(receipt.name) || receipt.name !== `${jobId}.vpkg`)
     fail('Native artifact store unavailable');
-  await workspace.assertReleaseBuildInputCurrent(principal, projectId, receipt.input.fingerprint);
+  await workspace.assertBuildInputCurrent(principal, projectId, receipt.input);
   await assertRights(receipt.input);
   const root = resolve(artifactRoot);
   const rootInfo = await lstat(root).catch(() => null);
@@ -37,11 +37,13 @@ export async function nativeExportForOwner(queue: NativeBuildQueue, workspace: H
   } finally { await handle.close(); }
   const exported = createNativeExport(receipt.input, receipt.evidence, vpkg);
   if (exported.vpkgSha256 !== receipt.sha256) fail('Native artifact receipt differs');
-  await workspace.assertReleaseBuildInputCurrent(principal, projectId, receipt.input.fingerprint);
+  await workspace.assertBuildInputCurrent(principal, projectId, receipt.input);
   await assertRights(receipt.input);
   const stillReady = await queue.readyArtifact(principal.accountId, projectId, jobId);
   if (!stillReady || stillReady.sha256 !== receipt.sha256 || stillReady.bytes !== receipt.bytes ||
     stillReady.input.fingerprint !== receipt.input.fingerprint) fail('Native artifact changed during download');
   return { ...exported, bytes: receipt.bytes, packageId: receipt.input.packageId,
-    deploymentId: receipt.input.deploymentId, release: receipt.input.publishedRelease };
+    deploymentId: receipt.input.deploymentId,
+    release: receipt.input.mode === 'draft' ? null : receipt.input.publishedRelease,
+    draft: receipt.input.mode === 'draft' ? receipt.input.draft : null };
 }
