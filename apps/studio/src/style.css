@@ -313,6 +313,9 @@ body { min-width: 0; }
 .catalog-panel .catalog-library-item { display: flex; align-items: stretch; flex-direction: column; padding: 0; overflow: hidden; border-radius: var(--fl-radius); }
 .catalog-panel .catalog-library-item:hover { background: var(--fl-surface-raised); border-color: var(--fl-border); }
 .catalog-panel .catalog-library-item.selected { border-color: var(--fl-orange); box-shadow: 0 0 0 1px var(--fl-orange), var(--fl-shadow); }
+.catalog-library-entry { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.catalog-library-entry > .catalog-library-item { flex: 1; }
+.catalog-library-entry > .button-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .catalog-library-art { display: grid; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 0; background: #30282a; color: var(--fl-muted); }
 .catalog-library-art-audio { aspect-ratio: 1 / 1; max-height: 230px; }
 .catalog-library-art-book, .catalog-library-art-listing { aspect-ratio: 2 / 3; max-height: 230px; }

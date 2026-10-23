@@ -20,8 +20,6 @@ import { audit } from './operations.js';
 import { CatalogRepository, catalogKinds, type CatalogKind } from './catalog-repository.js';
 import { CatalogProjectionService } from './catalog-projection.js';
 import { agentCatalogGrounding } from './agent-grounding.js';
-import { composeCatalogDraft } from './catalog-composition.js';
-import { selectionAfterVideoRemoval } from './catalog-inclusion-selection.js';
 import { PublicationRepository } from './publication-repository.js';
 import { PublicReleaseResolver, publicArtworkRoute, publicReleaseRoute } from './public-resolver.js';
 import type { ManagedArtworkDelivery } from './managed-artwork.js';
@@ -46,10 +44,7 @@ const filePreviewSchema = z.strictObject({ sourceId: z.string().regex(/^src_[a-f
 const fileApproveSchema = filePreviewSchema.extend({ expectedRevision: z.number().int().nonnegative(), fingerprint: z.string().regex(/^[a-f0-9]{64}$/) });
 const feedPreviewSchema = z.strictObject({ sourceId: z.string().regex(/^src_[a-f0-9]{32}$/) });
 const feedApproveSchema = feedPreviewSchema.extend({ content: z.string().max(512_000), expectedRevision: z.number().int().nonnegative(), fingerprint: z.string().regex(/^[a-f0-9]{64}$/) });
-const draftSchema = z.strictObject({ creatorType: z.enum(['video', 'audio', 'writing']), expectedRevision: z.number().int().positive(),
-  expectedCatalogRevision: z.number().int().nonnegative(), itemIds: z.array(z.string().regex(/^ci_[a-f0-9]{32}$/)).max(500),
-  collectionIds: z.array(z.string().regex(/^col_[a-f0-9]{32}$/)).max(100) });
-const videoInclusionSchema = z.strictObject({ expectedRevision: z.number().int().positive(),
+const mediaInclusionSchema = z.strictObject({ expectedRevision: z.number().int().positive(),
   expectedCatalogRevision: z.number().int().nonnegative(), itemId: z.string().regex(/^ci_[a-f0-9]{32}$/),
   action: z.enum(['publish', 'remove']) });
 const releaseIdSchema = z.string().regex(/^rel_[a-f0-9]{32}$/);
@@ -457,29 +452,34 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
             if (current.revision !== input.expectedRevision) throw new RepositoryError('CONFLICT', 'Project revision changed');
             respond(response, 200, await hostedRepository.update(principal, current.id, input.expectedRevision, applyMutation(current.spec, input.mutation))); return;
           }
-          if (segments.length === 4 && !url.search && segments[3] === 'video-inclusion' && projection && catalog && request.method === 'POST') {
+          if (segments.length === 4 && !url.search && ['video-inclusion', 'media-inclusion'].includes(segments[3]!) && projection && catalog && request.method === 'POST') {
             const id = segments[2]!;
-            const input = videoInclusionSchema.parse(await body(request));
+            const input = mediaInclusionSchema.parse(await body(request));
             const [current, inventory] = await Promise.all([hostedRepository.read(principal, id), catalog.read(principal, id)]);
             if (current.revision !== input.expectedRevision || inventory.revision !== input.expectedCatalogRevision)
               throw new RepositoryError('CONFLICT', 'Project or catalog changed; reopen this video');
-            const item = inventory.items.find(value => value.id === input.itemId && value.kind === 'video');
-            if (!item) throw new RepositoryError('NOT_FOUND', 'Video not found in this channel');
+            const item = inventory.items.find(value => value.id === input.itemId &&
+              (segments[3] === 'media-inclusion' ? ['video', 'audio', 'book'].includes(value.kind) : value.kind === 'video'));
+            if (!item) throw new RepositoryError('NOT_FOUND', 'Media item not found in this channel');
             const contentId = `item_${createHash('sha256').update('catalog-content-v1\0').update(item.id).digest('hex').slice(0, 32)}`;
             let spec = current.spec;
             if (input.action === 'remove') {
               if (spec.content.some(value => value.id === contentId)) spec = applyMutation(spec, { type: 'removeContent', contentId });
             } else {
               const source = inventory.sources.find(value => value.id === item.sourceRecord.sourceId);
-              const playable = inventory.mediaAssets.find(value => item.mediaAssetIds.includes(value.id) &&
-                value.catalogItemId === item.id && value.kind === 'video' && value.location.type === 'managed_hls' &&
-                value.deliveryEligible && !!source && sourceUseEligible(source, value, 'television_playback'));
-              if (!playable) throw new RepositoryError('CONFLICT', 'Video source or playback permission is unavailable');
+              if (!source || source.permission.retrieval === 'revoked' || source.permission.tvDisplay === 'revoked')
+                throw new RepositoryError('CONFLICT', 'Media source permission is unavailable');
+              if (item.kind === 'video') {
+                const playable = inventory.mediaAssets.find(value => item.mediaAssetIds.includes(value.id) &&
+                  value.catalogItemId === item.id && value.kind === 'video' && value.location.type === 'managed_hls' &&
+                  value.deliveryEligible && sourceUseEligible(source, value, 'television_playback'));
+                if (!playable) throw new RepositoryError('CONFLICT', 'Video source or playback permission is unavailable');
+              }
               const selected = await projection.project(principal, id, { expectedProjectRevision: current.revision,
                 expectedCatalogRevision: inventory.revision, itemIds: [item.id], collectionIds: [] });
               const binding = selected.bindings[0];
-              if (!binding?.baseline || binding.baseline.presentation !== 'video')
-                throw new RepositoryError('CONFLICT', 'Video is not ready with cleared playback rights');
+              if (!binding?.baseline || binding.baseline.presentation !== (item.kind === 'book' ? 'information' : item.kind))
+                throw new RepositoryError('CONFLICT', `${item.kind} is not ready with cleared rights and delivery`);
               if (!spec.content.some(value => value.id === contentId)) spec = applyMutation(spec, { type: 'addContent', content: binding.baseline });
               const placed = spec.pages.some(page => page.modules.some(module =>
                 (module.kind === 'hero' || module.kind === 'rail' || module.kind === 'grid') && module.contentIds.includes(contentId)));
@@ -496,44 +496,11 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
                 if (rail && (rail.kind === 'rail' || rail.kind === 'grid')) spec = applyMutation(spec, { type: 'updateModule', pageId: targetPage.id,
                   module: { ...rail, contentIds: [...rail.contentIds, contentId] } });
                 else spec = applyMutation(spec, { type: 'addModule', pageId: home.id,
-                  module: { id: `mod_${createHash('sha256').update(`video-inclusion-v1\0${id}`).digest('hex').slice(0, 32)}`,
-                    kind: 'rail', title: 'Videos', contentIds: [contentId] } });
+                  module: { id: `mod_${createHash('sha256').update(`media-inclusion-v1\0${id}\0${item.kind}`).digest('hex').slice(0, 32)}`,
+                    kind: 'rail', title: item.kind === 'book' ? 'Books' : item.kind === 'audio' ? 'Audio' : 'Videos', contentIds: [contentId] } });
               }
             }
             respond(response, 200, spec === current.spec ? current : await hostedRepository.update(principal, id, current.revision, spec)); return;
-          }
-          if (segments.length === 4 && !url.search && segments[3] === 'catalog-draft' && projection && request.method === 'POST') {
-            const id = segments[2]!;
-            const input = draftSchema.parse(await body(request));
-            const current = await hostedRepository.read(principal, id);
-            const selected = await projection.project(principal, id, { expectedProjectRevision: input.expectedRevision,
-              expectedCatalogRevision: input.expectedCatalogRevision, itemIds: input.itemIds, collectionIds: input.collectionIds });
-            const prior = await hostedRepository.catalogDraftBaseline(principal, id);
-            if (prior && prior.kind !== input.creatorType) throw new RepositoryError('CONFLICT', 'This draft uses another creator type; start a new channel to change type');
-            const composed = composeCatalogDraft(input.creatorType, current.spec, selected, prior?.spec);
-            const before = new Set(current.spec.content.map(item => item.id));
-            const after = new Set(composed.spec.content.map(item => item.id));
-            const existing = new Map(current.spec.content.map(item => [item.id, item]));
-            const changes = { added: [...after].filter(value => !before.has(value)).length,
-              removed: [...before].filter(value => !after.has(value)).length,
-              updated: composed.spec.content.filter(item => existing.has(item.id) && JSON.stringify(existing.get(item.id)) !== JSON.stringify(item)).length,
-              pages: composed.spec.pages.map(page => page.title), notices: composed.notices };
-            if (input.creatorType !== 'writing' && !composed.spec.content.some(item => item.presentation === input.creatorType))
-              throw new RepositoryError('INVALID_INPUT', 'No selected licensed playable media is ready. Review rights and delivery before Generate.');
-            const saved = await hostedRepository.saveCatalogDraft(principal, id, input.expectedRevision, input.expectedCatalogRevision,
-              input.creatorType, composed.spec, composed.baseline, { itemIds: input.itemIds, collectionIds: input.collectionIds });
-            respond(response, 200, { project: saved, changes }); return;
-          }
-          if (segments.length === 4 && !url.search && segments[3] === 'catalog-draft' && request.method === 'GET') {
-            const prior = await hostedRepository.catalogDraftBaseline(principal, segments[2]!);
-            if (!prior) { respond(response, 200, null); return; }
-            const [current, inventory] = await Promise.all([
-              hostedRepository.read(principal, segments[2]!), catalog!.read(principal, segments[2]!)
-            ]);
-            const selection = prior.kind === 'video'
-              ? selectionAfterVideoRemoval(prior.selection, prior.spec, current.spec, inventory) : prior.selection;
-            respond(response, 200, { creatorType: prior.kind, selection: { ...selection,
-              expectedCatalogRevision: inventory.revision } }); return;
           }
           if (segments.length === 4 && !url.search) {
             const id = segments[2]!;

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { ChannelMutation } from '@firelaunch/channel-engine';
 import { createPageFromTemplate, type ChannelProject, type ContentItem, type Module, type PageTemplate } from '@firelaunch/contracts';
-import { ApiError, askAgent, createProject, getProject, getSession, listProjects, logout, mutateProject, readCatalog, type CatalogSelection, type CatalogSnapshot, type StudioSession } from './api.js';
+import { ApiError, askAgent, createProject, getProject, getSession, listProjects, logout, mutateProject, readCatalog, type CatalogSnapshot, type StudioSession } from './api.js';
 import { Preview, PreviewArtwork, eligibleStaticImageContent } from './Preview.js';
 import { Delivery } from './Delivery.js';
 import { Catalog } from './Catalog.js';
@@ -264,7 +264,6 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [newChannel, setNewChannel] = useState(false);
-  const [catalogSelections, setCatalogSelections] = useState<Record<string, { selection: CatalogSelection; creator: 'video' | 'audio' | 'writing' }>>({});
   const [session, setSession] = useState<StudioSession | null>(null);
   const [videoSelection, setVideoSelection] = useState<{ projectId: string; accountId: string; itemId?: string } | null>(null);
   const [audioSelection, setAudioSelection] = useState<{ projectId: string; accountId: string; itemId?: string } | null>(null);
@@ -396,7 +395,7 @@ export default function App() {
   const select = (next: ChannelProject) => { projectRef.current = next; setProject(next); window.history.replaceState(null, '', `?project=${next.id}`); };
   const acceptProject = (next: ChannelProject) => { select(next); setProjects(previous => previous.map(item => item.id === next.id ? next : item)); };
   useEffect(() => {
-    const expired = () => { if (accountRef.current) clearVideoTransfers(accountRef.current); identityGeneration.current++; switchGeneration.current++; accountRef.current = null; setVideoSelection(null); setAudioSelection(null); setBookSelection(null); setInspectorProject(null); inspectorDirty.current = false; setSignedOut(true); setSession(null); setProjects([]); setProject(null); setCatalogSelections({}); projectRef.current = null; window.history.replaceState(null, '', window.location.pathname); };
+    const expired = () => { if (accountRef.current) clearVideoTransfers(accountRef.current); identityGeneration.current++; switchGeneration.current++; accountRef.current = null; setVideoSelection(null); setAudioSelection(null); setBookSelection(null); setInspectorProject(null); inspectorDirty.current = false; setSignedOut(true); setSession(null); setProjects([]); setProject(null); projectRef.current = null; window.history.replaceState(null, '', window.location.pathname); };
     const checkSession = () => { if (!accountRef.current) return; void getSession().then(active => {
       if (!active || active.accountId !== accountRef.current) { expired(); return; }
       setSession(active);
@@ -462,7 +461,6 @@ export default function App() {
       select(created); setVideoSelection(null); setAudioSelection(null); setBookSelection(null); setProjects(previous => [...previous, created]); setNewChannel(false); setSurface('Channel'); setChannelView('Pages & Layout');
     } finally { setBusy(false); }
   };
-  const draftSelection = project ? catalogSelections[project.id] : undefined;
   const editorPageId = project && editorPageSelection?.projectId === project.id && project.spec.navigation.includes(editorPageSelection.pageId)
     ? editorPageSelection.pageId : project?.spec.navigation[0];
   const openChannel = (view: ChannelView) => { if (!leaveSectionDraft()) return; if (inspectorProject && !closeInspector()) return; setWorkspaceMenuOpen(false); setInspectorProject(view === 'Appearance' ? project?.id ?? null : null); setChannelView(view); setSurface('Channel'); setNewChannel(false); };
@@ -501,7 +499,7 @@ export default function App() {
             <div className="channel-tv-stage"><div id="tv-preview">{fullscreenNotice && <p className="preview-fullscreen-notice" role="status">{fullscreenNotice}</p>}<Preview key={`${session?.accountId ?? 'local'}:${project.id}`} spec={project.spec} selectedPageId={editorPageId} hosted={!!session} accountId={session?.accountId} libraryRevision={libraryRevision} fullscreen={!!previewFullscreen} controlsVisible={fullscreenUiMode === 'controls'} onHideControls={() => { cancelDockHide(); dockHover.current = false; setDockVisible(false); setFullscreenUiMode('clean'); window.setTimeout(() => { if (fullscreenRoot.current?.classList.contains('clean-view')) fullscreenRoot.current.querySelector<HTMLElement>('.tv-frame')?.focus(); }, 0); }} onEnterFullscreen={enterPreviewFullscreen} onExitFullscreen={exitPreviewFullscreen} enterButtonRef={fullscreenTrigger} exitButtonRef={fullscreenExit}/></div></div>
             {previewFullscreen && fullscreenUiMode === 'controls' && <button type="button" className="channel-dock-handle" aria-label={`${dockVisible ? 'Hide' : 'Show'} editing drawer (Alt+E)`} aria-expanded={dockVisible} aria-controls="channel-editor-drawer" onPointerEnter={() => { dockHover.current = true; revealDock(); }} onPointerLeave={() => { dockHover.current = false; scheduleDockHide(); }} onClick={() => { dockHover.current = false; if (dockVisible && !dockMustStayOpen()) { cancelDockHide(); setDockVisible(false); } else revealDock(); }}>Edit channel <span aria-hidden="true">{dockVisible ? '‹' : '›'}</span></button>}
             {previewFullscreen && fullscreenUiMode === 'clean' && <button type="button" className="fullscreen-corner-recovery" aria-label="Show full-screen controls (H)" onPointerEnter={() => { setFullscreenUiMode('controls'); }} onClick={() => { setFullscreenUiMode('controls'); window.setTimeout(() => fullscreenExit.current?.focus(), 0); }} />}
-          </div> : <div className="channel-editor">{surface === 'Library' ? <Catalog project={project} hosted={!!session} {...(session ? { accountId: session.accountId } : {})} libraryRevision={libraryRevision} onOpenVideo={openVideo} onOpenAudio={openAudio} onOpenBook={openBook} onCatalogChange={() => setLibraryRevision(value => value + 1)} {...(draftSelection ? { initialSelection: draftSelection.selection, initialCreator: draftSelection.creator } : {})} onGenerated={(next, selection, creator) => { acceptProject(next); setCatalogSelections(previous => ({ ...previous, [next.id]: { selection, creator } })); }} onSelectionRestored={(selection, creator) => setCatalogSelections(previous => ({ ...previous, [project.id]: { selection, creator } }))} onRefine={() => openChannel('Pages & Layout')}/> : <Delivery key={`${project.id}:${surface}:${exportView}`} project={project} surface={surface === 'Publish' ? 'Publish' : exportView === 'Advanced Source' ? 'Code' : 'Build'} hosted={!!session} />}</div>}
+          </div> : <div className="channel-editor">{surface === 'Library' ? <Catalog project={project} hosted={!!session} {...(session ? { accountId: session.accountId } : {})} libraryRevision={libraryRevision} onOpenVideo={openVideo} onOpenAudio={openAudio} onOpenBook={openBook} onCatalogChange={() => setLibraryRevision(value => value + 1)} onProjectUpdate={acceptProject}/> : <Delivery key={`${project.id}:${surface}:${exportView}`} project={project} surface={surface === 'Publish' ? 'Publish' : exportView === 'Advanced Source' ? 'Code' : 'Build'} hosted={!!session} />}</div>}
         </div>
       </div>}
       <span className="sr-only" role="status" aria-live="polite">{inspectorProject === project?.id && surface === 'Channel' && channelView === 'Appearance' ? 'Appearance inspector open' : 'Appearance inspector closed'}</span>

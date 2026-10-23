@@ -60,6 +60,12 @@ export async function setVideoInclusion(project: ChannelProject, catalogRevision
     expectedRevision: project.revision, expectedCatalogRevision: catalogRevision, itemId, action
   })));
 }
+export async function setMediaInclusion(project: ChannelProject, catalogRevision: number, itemId: string,
+  action: 'publish' | 'remove'): Promise<ChannelProject> {
+  return projectSchema.parse(await request(`/${project.id}/media-inclusion`, json({
+    expectedRevision: project.revision, expectedCatalogRevision: catalogRevision, itemId, action
+  })));
+}
 
 export async function agentStatus(id: string): Promise<{ provider: string; configured: boolean; message: string }> {
   return await request(`/${id}/agent-status`) as { provider: string; configured: boolean; message: string };
@@ -108,14 +114,6 @@ export const createBundle = (id: string) => request(`/${id}/bundle`, json({})) a
 import { catalogInventorySchema, type CatalogSource, type CatalogItem, type Collection, type MediaAsset } from '@firelaunch/contracts';
 export type CatalogSnapshot = ReturnType<typeof catalogInventorySchema.parse> & { revision: number };
 export type CatalogSelection = { expectedCatalogRevision: number; itemIds: string[]; collectionIds: string[] };
-export type DraftChanges = { added: number; removed: number; updated: number; pages: string[]; notices: string[] };
-export async function readCatalogDraft(id: string): Promise<{ creatorType: 'video' | 'audio' | 'writing'; selection: CatalogSelection } | null> {
-  return await request(`/${id}/catalog-draft`) as { creatorType: 'video' | 'audio' | 'writing'; selection: CatalogSelection } | null;
-}
-export async function generateCatalogDraft(project: ChannelProject, creatorType: 'video' | 'audio' | 'writing', selection: CatalogSelection): Promise<{ project: ChannelProject; changes: DraftChanges }> {
-  const result = await request(`/${project.id}/catalog-draft`, json({ creatorType, expectedRevision: project.revision, ...selection })) as { project: unknown; changes: DraftChanges };
-  return { project: projectSchema.parse(result.project), changes: result.changes };
-}
 export type ImportPreview = { sourceId: string; format: 'csv' | 'json' | 'feed'; revision: number; fingerprint: string; content?: string; rows: { line: number; externalId: string; kind: CatalogItem['kind']; metadata: { title: string }; action: 'create' | 'update' | 'unchanged' | 'ambiguous' }[]; issues: { line: number; code: string; message: string }[] };
 export const readCatalog = async (id: string): Promise<CatalogSnapshot> => {
   const data = await request(`/${id}/catalog`) as CatalogSnapshot;
