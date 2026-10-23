@@ -4,13 +4,13 @@
 
 **Owner decision:** 2026-10-22  
 **Deadline:** 2026-10-23 noon (owner delivery deadline; verify authoritative timezone in final handoff)  
-**Status:** TEN issues documented; one-issue-at-a-time manual Phase 9 prompts **AUTHORED, NOT EXECUTED**. Phase 8 P8D final closeout is NOT GREEN and `c8-hero-multimedia` correction must be reconciled first. See [active Phase 9 prompt plan](../p9/README.md).
+**Status:** ELEVEN issues documented (P9-011 added); one-issue-at-a-time manual Phase 9 prompts **AUTHORED, NOT EXECUTED**. Phase 8 P8D final closeout is NOT GREEN and `c8-hero-multimedia` correction must be reconciled first. See [active Phase 9 prompt plan](../p9/README.md).
 
 ## Scope pivot
 
 The previously authored `docs/tasks/p9/` **Live Channel Publishing & App Updates** plan is **deferred beyond the MVP deadline**. Phase 9 will instead be **MVP Polish**: make the working core product understandable, remove unfinished/planned UI paths that did not make the MVP cut, stabilize create/edit/video/export, and give testers a truthful channel experience.
 
-This issue journal records **owner-reported problems**, not implementation completion or source truth. Do not mutate old Phase 9 publishing evidence or pretend the product has been changed merely because these reports exist. The [new Phase 9 manual prompts](../p9/README.md), [assessment](../p9/prompt-assessment.md) and [implementation plan](../p9/implementation-plan.md) are now authored: ten prompts, exactly one owner issue each, followed by one final integrated smoke. Each agent must reconcile actual Phase 8 result, code/version and staging before execution. The previous publishing prompts have been migrated to [deferred Phase 10](../p10/README.md). No implementation, source version change or deployment is implied by prompt authoring.
+This issue journal records **owner-reported problems**, not implementation completion or source truth. Do not mutate old Phase 9 publishing evidence or pretend the product has been changed merely because these reports exist. The [new Phase 9 manual prompts](../p9/README.md), [assessment](../p9/prompt-assessment.md) and [implementation plan](../p9/implementation-plan.md) are now authored: ten existing mainline prompts plus one independent [P9-011 correction](../c9-multimedia-editor/README.md), followed by one final integrated smoke. Each agent must reconcile actual Phase 8 result, code/version and staging before execution. The previous publishing prompts have been migrated to [deferred Phase 10](../p10/README.md). No implementation, source version change or deployment is implied by prompt authoring.
 
 ## Issue index
 
@@ -26,6 +26,7 @@ This issue journal records **owner-reported problems**, not implementation compl
 | **P9-008** | P1 required | Fix clipped foreground artwork in interactive/fullscreen Vega Preview and export; support non-16:9 aspect ratios without breaking TV layout | Reported | [P9-008 details](issues/P9-008-prevent-preview-image-clipping.md) |
 | **P9-009** | P1 required | Redesign login with the owner-approved cyberpunk Desert Heat canyon image and a compact centered Google sign-in card | Reported; visual approved | [P9-009 details](issues/P9-009-login-page-redesign.md) |
 | **P9-010** | P1 required | After P8D, formalize Library sections for Videos, Audio, Books and non-content Assets (logos/backgrounds/section art) | Reported; depends on P8D | [P9-010 details](issues/P9-010-multimedia-library-formalization.md) |
+| **P9-011** | **P0 critical** | Make Video, Audio MP3 and Books selectable from Channel Editor in Hero/Rows/Grids, with More info and type-correct Watch/Listen/Book detail | Reported; manual correction authored, NOT RUN | [P9-011 details](issues/P9-011-mixed-media-sections.md) |
 
 ## Per-issue companion-file contract
 
@@ -40,7 +41,7 @@ Every new issue gets a permanent sequential **P9-NNN** ID and a separate Markdow
 
 The owner-approved P9-009 canyon background is preserved in the 2026-10-22 image-generation conversation, **not yet committed to this repository**; P9 implementation must acquire that exact asset rather than inventing a substitute. P9-010 is conditional on the **actual P8D multimedia baseline**, which should be independently verified at implementation time.
 
-Issue intake is **documentation only**. Don't implement an issue when it is merely reported. The ten issue IDs are stable; follow the [manual execution order](../p9/README.md) with one staged/browser-validated issue at a time (NO runner). `P0` = core journey broken or seriously confusing; `P1` = deadline-required usability; `P2` = optional polish only if time.
+Issue intake is **documentation only**. Don't implement an issue when it is merely reported. The eleven issue IDs are stable; existing P9 P1–P11 prompt files are not renumbered; [c9-multimedia-editor](../c9-multimedia-editor/README.md) separately owns P9-011.  follow the [manual execution order](../p9/README.md) with one staged/browser-validated issue at a time (NO runner). `P0` = core journey broken or seriously confusing; `P1` = deadline-required usability; `P2` = optional polish only if time.
 
 ## Immediate MVP user journey
 
