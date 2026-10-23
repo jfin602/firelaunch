@@ -61,6 +61,10 @@ The broader prior Phase 9 **Live Publishing & App Updates** plan is postponed un
 
 Additional smoke: exercise at least two videos and more than one channel, validate absent unpublished art-only cards on home/browse pages, confirm previous included video's playback and rights boundaries, and ensure no live deployment or Amazon publishing API was called.
 
+## Related P9-011 — Mixed-media section selection
+
+[**P9-011**](P9-011-mixed-media-sections.md) independently makes owned Video, MP3 Audio and Books discoverable/selectable into existing Hero/Rows/Grids with type-correct detail/player actions. **P9-002 remains the private Library vs channel-inclusion contract for videos**, not a requirement to rebuild the section editor or to automatically include every owned Audio/Book. Both issues must use a coherent explicit draft membership model and enforce real rights and public export readiness. If either correction has already changed the relevant catalog/ChannelSpec bindings, reconcile its committed source and evidence before modifying the same files. Neither action triggers Phase 10 immutable live publication.
+
 ## Dependencies / batching notes
 
 - High-priority Phase 9 MVP behavior; coordinate with P8C media/artwork clarity changes and native export parity.
