@@ -18,19 +18,19 @@ function exact(input: Map<string, string>, command: string, keys: string[]): voi
 }
 function destinationStore() {
   const env = process.env;
-  if (!env.FIRELAUNCH_RESTORE_OBJECT_BUCKET || env.FIRELAUNCH_RESTORE_OBJECT_BUCKET === env.FIRELAUNCH_OBJECT_BUCKET) throw new Error('Separate restore bucket required');
-  return new S3PrivateObjectStore(env.FIRELAUNCH_RESTORE_OBJECT_BUCKET, privateS3OptionsFromEnv(env));
+  if (!env.VEGALAUNCH_RESTORE_OBJECT_BUCKET || env.VEGALAUNCH_RESTORE_OBJECT_BUCKET === env.VEGALAUNCH_OBJECT_BUCKET) throw new Error('Separate restore bucket required');
+  return new S3PrivateObjectStore(env.VEGALAUNCH_RESTORE_OBJECT_BUCKET, privateS3OptionsFromEnv(env));
 }
 
 async function main(): Promise<void> {
   const input = args();
   const command = input.get('command');
-  const databaseUrl = process.env.FIRELAUNCH_DATABASE_URL ?? '';
-  const key = process.env.FIRELAUNCH_RECOVERY_KEY ?? '';
-  if (!databaseUrl) throw new Error('FIRELAUNCH_DATABASE_URL is required');
+  const databaseUrl = process.env.VEGALAUNCH_DATABASE_URL ?? '';
+  const key = process.env.VEGALAUNCH_RECOVERY_KEY ?? '';
+  if (!databaseUrl) throw new Error('VEGALAUNCH_DATABASE_URL is required');
   if (command === 'restore') {
     exact(input, 'restore', ['--in']);
-    const target = process.env.FIRELAUNCH_RESTORE_DATABASE_URL;
+    const target = process.env.VEGALAUNCH_RESTORE_DATABASE_URL;
     if (!target || target === databaseUrl) throw new Error('Separate disposable restore database required');
     const archive = await loadRecoveryArchive(input.get('--in')!);
     const manifest = await restoreRecoveryArchive(archive, key, target, destinationStore());
@@ -62,7 +62,7 @@ async function main(): Promise<void> {
       exact(input, 'account-export', ['--account', '--out']);
       const account = input.get('--account')!;
       const result = await exportAccount(repository.pool, store, account);
-      await saveRecoveryArchive(input.get('--out')!, sealPrivatePayload({ format: 'firelaunch-account-export-v1', accountId: account, data: result }, key));
+      await saveRecoveryArchive(input.get('--out')!, sealPrivatePayload({ format: 'vegalaunch-account-export-v1', accountId: account, data: result }, key));
       await audit(repository.pool, 'account_exported', 'success', account, result.objects.length);
       process.stdout.write(`${JSON.stringify({ status: 'exported', accountId: account, projects: result.projects.length, objects: result.objects.length })}\n`);
     } else if (command === 'account-delete') {
@@ -70,7 +70,7 @@ async function main(): Promise<void> {
       const account = input.get('--account')!;
       if (input.get('--confirm') !== account) throw new Error('Exact account confirmation required');
       const proof = openPrivatePayload(await loadRecoveryArchive(input.get('--confirmed-export')!), key) as { format?: string; accountId?: string };
-      if (proof.format !== 'firelaunch-account-export-v1' || proof.accountId !== account) throw new Error('Matching encrypted account export required');
+      if (proof.format !== 'vegalaunch-account-export-v1' || proof.accountId !== account) throw new Error('Matching encrypted account export required');
       const result = await deleteAccount(repository.pool, store, account);
       process.stdout.write(`${JSON.stringify({ status: result.failed ? 'deleted_cleanup_pending' : 'deleted', accountId: account, ...result })}\n`);
       if (result.failed) process.exitCode = 1;

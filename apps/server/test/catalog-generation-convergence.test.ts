@@ -11,7 +11,7 @@ import { CatalogRepository } from '../src/catalog-repository.js';
 import { HostedProjectRepository } from '../src/hosted-repository.js';
 import { HostedWorkspaceService } from '../src/hosted-workspace.js';
 
-const database = process.env.FIRELAUNCH_TEST_DATABASE_URL;
+const database = process.env.VEGALAUNCH_TEST_DATABASE_URL;
 const cleared = (use: 'television_display' | 'television_playback') => ({
   status: 'cleared', basis: 'creator_asserted', permittedUse: use, assertedAt: '2026-10-10T00:00:00.000Z'
 });
@@ -21,7 +21,7 @@ const unknown = { status: 'unknown', basis: 'none', permittedUse: 'none' };
   const priorProviderKey = process.env.OPENAI_API_KEY;
   const syntheticProviderKey = 'synthetic-provider-secret-for-export-regression';
   const admin = new Pool({ connectionString: database });
-  const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const name = `vegalaunch_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(database!); url.pathname = `/${name}`;
   await admin.query(`CREATE DATABASE ${name}`);
   let repository: HostedProjectRepository | undefined;
@@ -147,7 +147,7 @@ const unknown = { status: 'unknown', basis: 'none', permittedUse: 'none' };
       const output = JSON.stringify(exported);
       for (const sensitive of [owner.accountId, source.id, ...selectedIds, ...inventory.mediaAssets.map(value => value.id),
         'evidenceId', 'objectId', 'private-objects', 'X-Amz-Signature', 'x-private-capability',
-        'FIRELAUNCH_AGENT_PROVIDER', 'AWS_SECRET_ACCESS_KEY', 'OPENAI_API_KEY', syntheticProviderKey])
+        'VEGALAUNCH_AGENT_PROVIDER', 'AWS_SECRET_ACCESS_KEY', 'OPENAI_API_KEY', syntheticProviderKey])
         assert.equal(output.includes(sensitive), false, `export leaked ${sensitive}`);
       await assert.rejects(workspace.exportSource(foreign, created.id), { code: 'NOT_FOUND' });
       await assert.rejects(repository.read(foreign, created.id), { code: 'NOT_FOUND' });

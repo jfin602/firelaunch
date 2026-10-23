@@ -166,7 +166,7 @@ export class HostedWorkspaceService {
     if (!source) throw new RepositoryError('NOT_FOUND', 'Generated source not found');
     const files = Object.fromEntries(Object.entries(source.files).sort(([a], [b]) => a.localeCompare(b)));
     const sha256 = Object.fromEntries(Object.entries(files).map(([name, content]) => [name, hash(content)]));
-    return { format: 'firelaunch-source-export-v1' as const, projectId: project.id, revision: project.revision,
+    return { format: 'vegalaunch-source-export-v1' as const, projectId: project.id, revision: project.revision,
       generatorFingerprint: source.fingerprint, rights: 'No media or artwork license is inferred by this export',
       sha256, files };
   }

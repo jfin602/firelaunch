@@ -18,12 +18,12 @@ import { createApi } from '../src/api.js';
 import { MockProvider, type AgentProvider } from '@vegalaunch/agent';
 import { IsolatedObjectStore, PrivateObjectService } from '../src/private-objects.js';
 
-const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
+const baseUrl = process.env.VEGALAUNCH_TEST_DATABASE_URL;
 const databaseTest = baseUrl ? test : test.skip;
 
 databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollback', async () => {
   const admin = new Pool({ connectionString: baseUrl });
-  const dbName = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const dbName = `vegalaunch_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(baseUrl!);
   url.pathname = `/${dbName}`;
   await admin.query(`CREATE DATABASE ${dbName}`);
@@ -91,12 +91,12 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     first = restarted;
     assert.equal(await restarted.accountForIdentity({ issuer: a.issuer, subject: a.subject, email: a.email }), aId);
     assert.equal((await restarted.read(a, created.id)).revision, 2);
-    await restarted.pool.query('INSERT INTO firelaunch_schema_migrations(version) VALUES (999)');
+    await restarted.pool.query('INSERT INTO vegalaunch_schema_migrations(version) VALUES (999)');
     await assert.rejects(restarted.migrate(), /Unsupported hosted database migration/);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 999');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 999');
     assert.equal((await restarted.pool.query('SELECT count(*)::int AS count FROM channel_projects')).rows[0].count, 2);
 
-    const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-hosted-api-'));
+    const directory = await mkdtemp(path.join(tmpdir(), 'vegalaunch-hosted-api-'));
     const { privateKey, publicKey } = await generateKeyPair('RS256');
     const jwk = { ...await exportJWK(publicKey), kid: 'hosted-test', alg: 'RS256', use: 'sig' };
     let signedToken = '';
@@ -135,7 +135,7 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
         const finish = await fetch(`${origin}/api/auth/callback?state=${authUrl.searchParams.get('state')}&code=code`, {
           headers: { cookie: start.headers.get('set-cookie')!.split(';')[0]! }, redirect: 'manual' });
         assert.equal(finish.status, 302);
-        const cookie = finish.headers.get('set-cookie')!.match(/firelaunch_local_session=[^;]+/)![0];
+        const cookie = finish.headers.get('set-cookie')!.match(/vegalaunch_local_session=[^;]+/)![0];
         const session = await (await fetch(`${origin}/api/auth/session`, { headers: { cookie } })).json();
         return { cookie, session };
       };
@@ -337,7 +337,7 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       assert.deepEqual((await (await fetch(`${ownedPath}/code`, { headers: { cookie: firstLogin.cookie } })).json()).changed, ['manifest.toml']);
       assert.match((await second.source({ accountId: firstLogin.session.accountId, issuer, subject: 'http-a', email: 'http-a@example.com' }, owned.id))!.files['manifest.toml']!, /owned edit/);
       const exported = await (await fetch(`${ownedPath}/code/export`, { headers: { cookie: firstLogin.cookie } })).json();
-      assert.equal(exported.format, 'firelaunch-source-export-v1');
+      assert.equal(exported.format, 'vegalaunch-source-export-v1');
       assert.match(exported.files['manifest.toml'], /owned edit/);
       assert.equal((await fetch(`${ownedPath}/code`, { method: 'POST', headers: ownerHeaders, body: '{}' })).status, 409);
       assert.equal((await fetch(`${ownedPath}/build`, { method: 'POST', headers: ownerHeaders, body: '{}' })).status, 200);
@@ -425,7 +425,7 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
       }
       assert.equal((await fetch(`${endpoint}/..%2f..%2fetc%2fpasswd/code/file?path=manifest.toml`, { headers: { cookie: firstLogin.cookie } })).status, 404);
       assert.equal((await fetch(`${ownedPath}/code/file?path=..%2fproject.json`, { headers: { cookie: firstLogin.cookie } })).status, 400);
-      assert.equal((await fetch(`${endpoint}`, { headers: { cookie: 'firelaunch_local_session=stale' } })).status, 401);
+      assert.equal((await fetch(`${endpoint}`, { headers: { cookie: 'vegalaunch_local_session=stale' } })).status, 401);
       assert.equal((await fetch(`${ownedPath}/agent`, { method: 'POST', headers: { ...foreignHeaders, 'x-csrf-token': 'bad' }, body: JSON.stringify({ expectedRevision: 1, message: 'probe' }) })).status, 403);
       assert.equal((await fetch(`${origin}/api/auth/logout`, { method: 'POST', headers: foreignHeaders })).status, 204);
       assert.equal((await fetch(endpoint, { headers: { cookie: secondLogin.cookie } })).status, 401);
@@ -499,33 +499,33 @@ databaseTest('Postgres ownership, CAS, uniqueness, restart and migration rollbac
     const subtitlesDown = await readFile(new URL('../migrations/014_video_subtitles.down.sql', import.meta.url), 'utf8');
     await restarted.pool.query('BEGIN');
     await restarted.pool.query(subtitlesDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 14');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 14');
     await restarted.pool.query(managedDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 13');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 13');
     await restarted.pool.query(directUploadDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 12');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 12');
     await restarted.pool.query(pipelineDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 11');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 11');
     await restarted.pool.query(publicationDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 10');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 10');
     await restarted.pool.query(draftsDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 9');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 9');
     await restarted.pool.query(approvalsDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 8');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 8');
     await restarted.pool.query(mediaRightsDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 7');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 7');
     await restarted.pool.query(importDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 6');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 6');
     await restarted.pool.query(catalogDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 5');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 5');
     await restarted.pool.query(operationsDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 4');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 4');
     await restarted.pool.query(objectDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 3');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 3');
     await restarted.pool.query(sourceDown);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 2');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 2');
     await restarted.pool.query(down);
-    await restarted.pool.query('DELETE FROM firelaunch_schema_migrations WHERE version = 1');
+    await restarted.pool.query('DELETE FROM vegalaunch_schema_migrations WHERE version = 1');
     await restarted.pool.query('COMMIT');
     await restarted.migrate();
     assert.equal((await restarted.pool.query('SELECT count(*)::int AS count FROM creator_accounts')).rows[0].count, 0);

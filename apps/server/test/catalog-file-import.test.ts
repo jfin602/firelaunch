@@ -36,10 +36,10 @@ test('file preview shows invalid, duplicate and ambiguous rows and rejects malfo
   assert.throws(() => parseCatalogFile('json', `[{"externalId":"x","kind":"book","title":"\ud800"}]`, sourceId), { code: 'INVALID_INPUT' });
 });
 
-const database = process.env.FIRELAUNCH_TEST_DATABASE_URL;
+const database = process.env.VEGALAUNCH_TEST_DATABASE_URL;
 (database ? test : test.skip)('approved import is atomic, revision-bound, owner-scoped and preserves overrides on reimport', async () => {
   const admin = new Pool({ connectionString: database });
-  const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const name = `vegalaunch_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(database!); url.pathname = `/${name}`;
   await admin.query(`CREATE DATABASE ${name}`);
   let repository: HostedProjectRepository | undefined;

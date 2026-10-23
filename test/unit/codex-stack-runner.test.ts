@@ -1225,7 +1225,7 @@ test('interactive dashboard colors semantic states while disabled output stays p
     colorEnabled: true,
   });
   const escape = String.fromCharCode(27);
-  assert.ok(colored.includes(`${escape}[1;36mFIRELAUNCH`));
+  assert.ok(colored.includes(`${escape}[1;36mVEGALAUNCH`));
   assert.ok(colored.includes(`${escape}[32m  [+] PASSED`));
   assert.ok(colored.includes(`${escape}[36m  [>] RUNNING`));
   assert.ok(colored.includes(`${escape}[31m  [X] FAILED`));
@@ -1759,7 +1759,7 @@ test('phase loop commits each prompt before the next starts with exact multiline
     );
     assert.match(output.read(), /P1 passed - commit [0-9a-f]{7}/);
     assert.match(output.read(), /P2 passed - commit [0-9a-f]{7}/);
-    assert.doesNotMatch(output.read(), /FIRELAUNCH - CODEX PHASE RUNNER/);
+    assert.doesNotMatch(output.read(), /VEGALAUNCH - CODEX PHASE RUNNER/);
   } finally {
     await rm(rootDirectory, { recursive: true, force: true });
   }

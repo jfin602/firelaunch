@@ -20,20 +20,20 @@ const restoreDump = (databaseName, database) => new Promise((resolve, reject) =>
   child.stdin.end(database);
 });
 const [release, archivePath] = process.argv.slice(2);
-if (!release?.startsWith('/srv/firelaunch/releases/') || !archivePath?.startsWith('/var/backups/firelaunch-staging/') ||
-    !/^[a-f0-9]{64}$/i.test(process.env.FIRELAUNCH_RECOVERY_KEY ?? '')) throw new Error('Unsafe recovery rehearsal input');
+if (!release?.startsWith('/srv/vegalaunch/releases/') || !archivePath?.startsWith('/var/backups/vegalaunch-staging/') ||
+    !/^[a-f0-9]{64}$/i.test(process.env.VEGALAUNCH_RECOVERY_KEY ?? '')) throw new Error('Unsafe recovery rehearsal input');
 const { inspectRecoveryArchive } = await import(pathToFileURL(`${release}/apps/server/dist/recovery.js`).href);
 const encrypted = await readFile(archivePath);
-const manifest = inspectRecoveryArchive(encrypted, process.env.FIRELAUNCH_RECOVERY_KEY);
+const manifest = inspectRecoveryArchive(encrypted, process.env.VEGALAUNCH_RECOVERY_KEY);
 if (encrypted.subarray(0, 6).toString() !== 'FLREC1') throw new Error('Unsupported recovery archive');
-const decipher = createDecipheriv('aes-256-gcm', Buffer.from(process.env.FIRELAUNCH_RECOVERY_KEY, 'hex'), encrypted.subarray(6, 18));
+const decipher = createDecipheriv('aes-256-gcm', Buffer.from(process.env.VEGALAUNCH_RECOVERY_KEY, 'hex'), encrypted.subarray(6, 18));
 decipher.setAuthTag(encrypted.subarray(-16));
 const data = JSON.parse(Buffer.concat([decipher.update(encrypted.subarray(18, -16)), decipher.final()]).toString('utf8'));
 const database = Buffer.from(data.databaseBase64, 'base64');
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 if (sha(database) !== manifest.databaseSha256 || data.objects.length !== manifest.objects.length) throw new Error('Recovery inspection changed');
-const scratch = await mkdtemp('/var/backups/firelaunch-staging/audio-restore-rehearsal-');
-const databaseName = `firelaunch_restore_audio_${randomBytes(8).toString('hex')}`;
+const scratch = await mkdtemp('/var/backups/vegalaunch-staging/audio-restore-rehearsal-');
+const databaseName = `vegalaunch_restore_audio_${randomBytes(8).toString('hex')}`;
 let created = false;
 try {
   await run('runuser', ['-u', 'postgres', '--', 'createdb', databaseName]); created = true;

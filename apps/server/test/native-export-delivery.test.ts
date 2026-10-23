@@ -12,13 +12,13 @@ import { RepositoryError } from '../src/repository.js';
 import { releaseBuildCommand, type NativeBuildEvidence, type ReleaseBuildInput } from '../src/release-build.js';
 
 test('owner ZIP delivery requires a current private, untampered READY receipt', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'firelaunch-native-delivery-'));
+  const root = await mkdtemp(join(tmpdir(), 'vegalaunch-native-delivery-'));
   const owner = `cr_${'1'.repeat(32)}`; const project = `ch_${'2'.repeat(32)}`;
   const job = `job_${'3'.repeat(32)}`;
   const principal = { accountId: owner, issuer: 'test', subject: 'owner', email: 'owner@test.invalid' };
   const bytes = Buffer.alloc(2048, 7);
   const digest = createHash('sha256').update(bytes).digest('hex');
-  const input = { format: 'firelaunch-vega-build-input-v1', creatorAccountId: owner,
+  const input = { format: 'vegalaunch-vega-build-input-v1', creatorAccountId: owner,
     projectId: project, fingerprint: 'a'.repeat(64), sourceHash: 'b'.repeat(64),
     deploymentId: `dep_${'4'.repeat(32)}`, packageId: 'com.creator.channel',
     specRevision: 8, publishedRelease: { releaseId: `rel_${'5'.repeat(32)}`, sequence: 1 },

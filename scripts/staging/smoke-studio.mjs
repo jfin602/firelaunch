@@ -46,7 +46,7 @@ const server = createServer(async (request, response) => {
   }
 });
 
-const profile = await mkdtemp(join(tmpdir(), 'firelaunch-studio-smoke-'));
+const profile = await mkdtemp(join(tmpdir(), 'vegalaunch-studio-smoke-'));
 let chrome;
 try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -98,7 +98,7 @@ try {
     assert.equal(errors.length, 0, `${label}: browser console/runtime errors`);
   }
   // A cached pre-rebrand entrypoint may still load while its hashed assets are retained.
-  await check(first, 'signed-out', process.argv[3] ? ['Sign in to VegaLaunch', 'Sign in to FireLaunch'] : 'Sign in to VegaLaunch');
+  await check(first, 'signed-out', process.argv[3] ? ['Sign in to VegaLaunch', 'Sign in to VegaLaunch'] : 'Sign in to VegaLaunch');
   signedIn = true;
   await check(first, 'signed-in', 'Startup smoke channel');
   const { targetId } = await first.send('Target.createTarget', { url: 'about:blank' });

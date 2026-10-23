@@ -41,7 +41,7 @@ const minioData = join(state, 'minio');
 const minioLog = join(state, 'minio.log');
 const s3Endpoint = 'http://127.0.0.1:9000';
 const origin = 'http://127.0.0.1:4173';
-const callback = env => `${env.FIRELAUNCH_PUBLIC_ORIGIN}/api/auth/callback`;
+const callback = env => `${env.VEGALAUNCH_PUBLIC_ORIGIN}/api/auth/callback`;
 const pgUrl = (password, name) => `postgresql://jfin:${encodeURIComponent(password)}@127.0.0.1:55437/${name}`;
 const secret = () => randomBytes(32).toString('hex');
 const pgCtl = (action) => run(binary('pg_ctl'), ['-D', pgData, '-l', join(state, 'postgres.log'), '-o', `-h 127.0.0.1 -p 55437 -k ${state}`, action]);
@@ -56,8 +56,8 @@ async function startServices(env) {
     mkdirSync(minioData, { recursive: true, mode: 0o700 });
     const log = openSync(minioLog, 'a', 0o600);
     const child = spawn(minioBin, ['server', '--address', '127.0.0.1:9000', '--console-address', '127.0.0.1:9001', minioData], {
-      env: { ...process.env, MINIO_ROOT_USER: env.FIRELAUNCH_OBJECT_ACCESS_KEY_ID, MINIO_ROOT_PASSWORD: env.FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY,
-        MINIO_KMS_SECRET_KEY: `local-c2:${Buffer.from(env.FIRELAUNCH_LOCAL_KMS_KEY, 'hex').toString('base64')}` },
+      env: { ...process.env, MINIO_ROOT_USER: env.VEGALAUNCH_OBJECT_ACCESS_KEY_ID, MINIO_ROOT_PASSWORD: env.VEGALAUNCH_OBJECT_SECRET_ACCESS_KEY,
+        MINIO_KMS_SECRET_KEY: `local-c2:${Buffer.from(env.VEGALAUNCH_LOCAL_KMS_KEY, 'hex').toString('base64')}` },
       stdio: ['ignore', log, log], detached: true
     });
     child.unref(); closeSync(log);
@@ -67,12 +67,12 @@ async function startServices(env) {
 }
 function s3(env) {
   return new S3Client({ region: 'us-east-1', endpoint: s3Endpoint, forcePathStyle: true,
-    credentials: { accessKeyId: env.FIRELAUNCH_OBJECT_ACCESS_KEY_ID, secretAccessKey: env.FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY } });
+    credentials: { accessKeyId: env.VEGALAUNCH_OBJECT_ACCESS_KEY_ID, secretAccessKey: env.VEGALAUNCH_OBJECT_SECRET_ACCESS_KEY } });
 }
 async function checkBuckets(env, create = false) {
   const client = s3(env);
   try {
-    for (const bucket of ['firelaunch-source', 'firelaunch-restore']) {
+    for (const bucket of ['vegalaunch-source', 'vegalaunch-restore']) {
       try { await client.send(new HeadBucketCommand({ Bucket: bucket })); }
       catch (error) {
         if (!create || error?.$metadata?.httpStatusCode !== 404) throw error;
@@ -99,14 +99,14 @@ async function setup() {
     try { run(binary('initdb'), ['-D', pgData, '-U', 'jfin', '-A', 'scram-sha-256', '--pwfile', passwordFile]); }
     finally { await import('node:fs/promises').then(fs => fs.rm(passwordFile, { force: true })); }
     env = {
-    NODE_ENV: 'development', FIRELAUNCH_MODE: 'hosted', FIRELAUNCH_LOCAL_HOSTED: '1', FIRELAUNCH_PUBLIC_ORIGIN: origin,
-    FIRELAUNCH_OIDC_CLIENT_ID: '', FIRELAUNCH_OIDC_CLIENT_SECRET: '', FIRELAUNCH_OIDC_ISSUER: 'https://accounts.google.com',
-    DATABASE_URL: pgUrl(password, 'firelaunch_c2_source'), FIRELAUNCH_DATABASE_URL: pgUrl(password, 'firelaunch_c2_source'),
-    FIRELAUNCH_RESTORE_DATABASE_URL: pgUrl(password, `firelaunch_restore_c2_${randomBytes(4).toString('hex')}`),
-    FIRELAUNCH_OBJECT_STORE: 's3', FIRELAUNCH_OBJECT_BUCKET: 'firelaunch-source', FIRELAUNCH_RESTORE_OBJECT_BUCKET: 'firelaunch-restore',
-    FIRELAUNCH_OBJECT_REGION: 'us-east-1', FIRELAUNCH_OBJECT_ENDPOINT: s3Endpoint,
-    FIRELAUNCH_OBJECT_ACCESS_KEY_ID: `c2${randomBytes(10).toString('hex')}`,
-    FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY: secret(), FIRELAUNCH_LOCAL_KMS_KEY: secret(), FIRELAUNCH_RECOVERY_KEY: secret(), PORT: '4174'
+    NODE_ENV: 'development', VEGALAUNCH_MODE: 'hosted', VEGALAUNCH_LOCAL_HOSTED: '1', VEGALAUNCH_PUBLIC_ORIGIN: origin,
+    VEGALAUNCH_OIDC_CLIENT_ID: '', VEGALAUNCH_OIDC_CLIENT_SECRET: '', VEGALAUNCH_OIDC_ISSUER: 'https://accounts.google.com',
+    DATABASE_URL: pgUrl(password, 'vegalaunch_c2_source'), VEGALAUNCH_DATABASE_URL: pgUrl(password, 'vegalaunch_c2_source'),
+    VEGALAUNCH_RESTORE_DATABASE_URL: pgUrl(password, `vegalaunch_restore_c2_${randomBytes(4).toString('hex')}`),
+    VEGALAUNCH_OBJECT_STORE: 's3', VEGALAUNCH_OBJECT_BUCKET: 'vegalaunch-source', VEGALAUNCH_RESTORE_OBJECT_BUCKET: 'vegalaunch-restore',
+    VEGALAUNCH_OBJECT_REGION: 'us-east-1', VEGALAUNCH_OBJECT_ENDPOINT: s3Endpoint,
+    VEGALAUNCH_OBJECT_ACCESS_KEY_ID: `c2${randomBytes(10).toString('hex')}`,
+    VEGALAUNCH_OBJECT_SECRET_ACCESS_KEY: secret(), VEGALAUNCH_LOCAL_KMS_KEY: secret(), VEGALAUNCH_RECOVERY_KEY: secret(), PORT: '4174'
     };
     save(env);
   }
@@ -114,33 +114,33 @@ async function setup() {
   const adminUrl = new URL(env.DATABASE_URL); adminUrl.pathname = '/postgres';
   const admin = new Pool({ connectionString: adminUrl.toString() });
   try {
-    const found = await admin.query("SELECT 1 FROM pg_database WHERE datname = 'firelaunch_c2_source'");
-    if (!found.rowCount) await admin.query('CREATE DATABASE firelaunch_c2_source');
+    const found = await admin.query("SELECT 1 FROM pg_database WHERE datname = 'vegalaunch_c2_source'");
+    if (!found.rowCount) await admin.query('CREATE DATABASE vegalaunch_c2_source');
   } finally { await admin.end(); }
   await checkBuckets(env, true);
   process.stdout.write(`Local c2 resources ready. Set Google client credentials in .env.c2-local (mode 0600).\nRedirect URI: ${callback(env)}\n`);
 }
 function validateBase(env) {
-  const required = ['DATABASE_URL', 'FIRELAUNCH_RECOVERY_KEY', 'FIRELAUNCH_OBJECT_ACCESS_KEY_ID', 'FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY', 'FIRELAUNCH_LOCAL_KMS_KEY'];
+  const required = ['DATABASE_URL', 'VEGALAUNCH_RECOVERY_KEY', 'VEGALAUNCH_OBJECT_ACCESS_KEY_ID', 'VEGALAUNCH_OBJECT_SECRET_ACCESS_KEY', 'VEGALAUNCH_LOCAL_KMS_KEY'];
   for (const key of required) if (!env[key]) throw new Error(`${key} is required in .env.c2-local`);
   const source = new URL(env.DATABASE_URL);
-  const restore = new URL(env.FIRELAUNCH_RESTORE_DATABASE_URL ?? '');
-  if (env.NODE_ENV !== 'development' || env.FIRELAUNCH_MODE !== 'hosted' || env.FIRELAUNCH_LOCAL_HOSTED !== '1' ||
-      !['http://127.0.0.1:4173', 'http://localhost:4173'].includes(env.FIRELAUNCH_PUBLIC_ORIGIN) || env.FIRELAUNCH_OBJECT_ENDPOINT !== s3Endpoint ||
-      env.FIRELAUNCH_OBJECT_BUCKET !== 'firelaunch-source' || env.FIRELAUNCH_RESTORE_OBJECT_BUCKET !== 'firelaunch-restore' ||
-      env.FIRELAUNCH_DATABASE_URL !== env.DATABASE_URL || source.hostname !== '127.0.0.1' || source.port !== '55437' || source.pathname !== '/firelaunch_c2_source' ||
-      restore.hostname !== '127.0.0.1' || restore.port !== '55437' || !/^\/firelaunch_restore_c2_[a-f0-9]{8}$/.test(restore.pathname)) throw new Error('Unexpected local hosted configuration');
+  const restore = new URL(env.VEGALAUNCH_RESTORE_DATABASE_URL ?? '');
+  if (env.NODE_ENV !== 'development' || env.VEGALAUNCH_MODE !== 'hosted' || env.VEGALAUNCH_LOCAL_HOSTED !== '1' ||
+      !['http://127.0.0.1:4173', 'http://localhost:4173'].includes(env.VEGALAUNCH_PUBLIC_ORIGIN) || env.VEGALAUNCH_OBJECT_ENDPOINT !== s3Endpoint ||
+      env.VEGALAUNCH_OBJECT_BUCKET !== 'vegalaunch-source' || env.VEGALAUNCH_RESTORE_OBJECT_BUCKET !== 'vegalaunch-restore' ||
+      env.VEGALAUNCH_DATABASE_URL !== env.DATABASE_URL || source.hostname !== '127.0.0.1' || source.port !== '55437' || source.pathname !== '/vegalaunch_c2_source' ||
+      restore.hostname !== '127.0.0.1' || restore.port !== '55437' || !/^\/vegalaunch_restore_c2_[a-f0-9]{8}$/.test(restore.pathname)) throw new Error('Unexpected local hosted configuration');
 }
 function validate(env) {
   validateBase(env);
-  for (const key of ['FIRELAUNCH_OIDC_CLIENT_ID', 'FIRELAUNCH_OIDC_CLIENT_SECRET']) if (!env[key]) throw new Error(`${key} is required in .env.c2-local`);
+  for (const key of ['VEGALAUNCH_OIDC_CLIENT_ID', 'VEGALAUNCH_OIDC_CLIENT_SECRET']) if (!env[key]) throw new Error(`${key} is required in .env.c2-local`);
 }
 async function start() {
   const env = load(); validate(env);
   await startServices(env); await checkBuckets(env);
-  process.stdout.write(`Studio: ${env.FIRELAUNCH_PUBLIC_ORIGIN}\nGoogle redirect URI: ${callback(env)}\n`);
+  process.stdout.write(`Studio: ${env.VEGALAUNCH_PUBLIC_ORIGIN}\nGoogle redirect URI: ${callback(env)}\n`);
   const children = [spawn('node', ['--import', 'tsx', 'apps/server/src/index.ts'], { cwd: root, env: { ...process.env, ...env }, stdio: 'inherit' }),
-    spawn(process.execPath, [join(root, 'node_modules', 'vite', 'bin', 'vite.js'), '--host', new URL(env.FIRELAUNCH_PUBLIC_ORIGIN).hostname, '--port', '4173'],
+    spawn(process.execPath, [join(root, 'node_modules', 'vite', 'bin', 'vite.js'), '--host', new URL(env.VEGALAUNCH_PUBLIC_ORIGIN).hostname, '--port', '4173'],
       { cwd: join(root, 'apps', 'studio'), env: { ...process.env, ...env }, stdio: 'inherit' })];
   const stop = () => children.forEach(child => child.kill('SIGTERM'));
   process.on('SIGINT', stop); process.on('SIGTERM', stop);

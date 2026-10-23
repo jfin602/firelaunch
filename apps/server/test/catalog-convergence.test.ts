@@ -9,11 +9,11 @@ import { HostedWorkspaceService } from '../src/hosted-workspace.js';
 import { PrivateObjectService, type PrivateObjectStore } from '../src/private-objects.js';
 import { exportAccount } from '../src/operations.js';
 
-const database = process.env.FIRELAUNCH_TEST_DATABASE_URL;
+const database = process.env.VEGALAUNCH_TEST_DATABASE_URL;
 
 (database ? test : test.skip)('video, audio and writing catalog paths retain rights, overrides and isolation across restart and export', async () => {
   const admin = new Pool({ connectionString: database });
-  const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const name = `vegalaunch_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(database!); url.pathname = `/${name}`;
   await admin.query(`CREATE DATABASE ${name}`);
   let repository: HostedProjectRepository | undefined;
@@ -112,7 +112,7 @@ const database = process.env.FIRELAUNCH_TEST_DATABASE_URL;
     const workspace = new HostedWorkspaceService(repository);
     await workspace.generate(owner, project.id);
     const exported = await workspace.exportSource(owner, project.id);
-    assert.equal(exported.format, 'firelaunch-source-export-v1');
+    assert.equal(exported.format, 'vegalaunch-source-export-v1');
     assert.ok(exported.files['manifest.toml']?.includes('com.amazon.category.main'));
     assert.equal(JSON.stringify(exported).includes(uploaded.id), false);
     assert.equal(JSON.stringify(exported).includes(evidence.id), false);

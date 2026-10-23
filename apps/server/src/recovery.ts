@@ -12,7 +12,7 @@ const MAX_ARCHIVE = 800_000_000;
 const sha = (value: Buffer) => createHash('sha256').update(value).digest('hex');
 const itemSchema = z.strictObject({ key: z.string().regex(/^private\/[a-f0-9]{64}$/), size: z.number().int().nonnegative().max(320_000_000), sha256: z.string().regex(/^[a-f0-9]{64}$/), contentType: z.string().max(100), contentBase64: z.string() })
   .refine(item => item.size <= (item.contentType === 'audio/mpeg' ? 320_000_000 : 1_048_576), 'Unsupported recovery object size');
-const archiveSchema = z.strictObject({ format: z.literal('firelaunch-recovery-v1'), createdAt: z.string().datetime(), retainUntil: z.string().datetime(), databaseSha256: z.string().regex(/^[a-f0-9]{64}$/), databaseBase64: z.string(), objects: z.array(itemSchema).max(100_000) });
+const archiveSchema = z.strictObject({ format: z.literal('vegalaunch-recovery-v1'), createdAt: z.string().datetime(), retainUntil: z.string().datetime(), databaseSha256: z.string().regex(/^[a-f0-9]{64}$/), databaseBase64: z.string(), objects: z.array(itemSchema).max(100_000) });
 export type RecoveryManifest = { format: string; createdAt: string; retainUntil: string; databaseSha256: string; objects: { key: string; size: number; sha256: string; contentType: string }[] };
 
 function pgEnv(urlString: string): { env: NodeJS.ProcessEnv; database: string; adminUrl: string } {
@@ -103,7 +103,7 @@ export async function createRecoveryArchive(pool: Pool, databaseUrl: string, sto
       objects.push({ key: row.object_key, contentType: row.content_type, size: content.length, sha256: row.sha256, contentBase64: content.toString('base64') });
     }
     const now = Date.now();
-    const body = Buffer.from(JSON.stringify({ format: 'firelaunch-recovery-v1', createdAt: new Date(now).toISOString(), retainUntil: new Date(now + retentionDays * 86_400_000).toISOString(),
+    const body = Buffer.from(JSON.stringify({ format: 'vegalaunch-recovery-v1', createdAt: new Date(now).toISOString(), retainUntil: new Date(now + retentionDays * 86_400_000).toISOString(),
       databaseSha256: sha(database), databaseBase64: database.toString('base64'), objects }));
     if (body.length > MAX_ARCHIVE - 34) throw new Error('Recovery archive exceeds size limit');
     const encrypted = encrypt(body, keyHex);
@@ -113,7 +113,7 @@ export async function createRecoveryArchive(pool: Pool, databaseUrl: string, sto
   finally { client.release(); }
 }
 
-/** Creates only a new firelaunch_restore_* database. Destination object store must be separately isolated. */
+/** Creates only a new vegalaunch_restore_* database. Destination object store must be separately isolated. */
 export async function restoreRecoveryArchive(raw: Buffer, keyHex: string, destinationUrl: string, destinationStore: PrivateObjectStore): Promise<RecoveryManifest> {
   await audit(undefined, 'recovery_started', 'started');
   let checked: ReturnType<typeof verified>;
@@ -121,7 +121,7 @@ export async function restoreRecoveryArchive(raw: Buffer, keyHex: string, destin
   catch (error) { await audit(undefined, 'recovery_failed', 'failure'); throw error; }
   const { data, database } = checked;
   const { database: name, adminUrl, env } = pgEnv(destinationUrl);
-  if (!/^firelaunch_restore_[a-z0-9_]{1,42}$/.test(name)) throw new Error('Disposable restore database name required');
+  if (!/^vegalaunch_restore_[a-z0-9_]{1,42}$/.test(name)) throw new Error('Disposable restore database name required');
   const admin = new Pool({ connectionString: adminUrl });
   let created = false;
   const uploaded: string[] = [];

@@ -118,21 +118,21 @@ export type PrivateS3Options = { region: string; endpoint?: string; allowLocalHt
 );
 
 export function privateS3OptionsFromEnv(env: NodeJS.ProcessEnv): PrivateS3Options {
-  const region = env.FIRELAUNCH_OBJECT_REGION ?? '';
-  const endpoint = env.FIRELAUNCH_OBJECT_ENDPOINT;
-  const auth = env.FIRELAUNCH_OBJECT_AUTH;
+  const region = env.VEGALAUNCH_OBJECT_REGION ?? '';
+  const endpoint = env.VEGALAUNCH_OBJECT_ENDPOINT;
+  const auth = env.VEGALAUNCH_OBJECT_AUTH;
   if (auth === 'aws-profile') {
     if (endpoint || !env.AWS_PROFILE) throw new Error('Private AWS profile requires native S3 and a named profile');
     return { region, auth, profile: env.AWS_PROFILE };
   }
   if (auth && auth !== 'static') throw new Error('Unsupported private object authentication');
   return { region, ...(endpoint ? { endpoint, allowLocalHttp: localHostedHttp(new URL(endpoint), env) } : {}),
-    accessKeyId: env.FIRELAUNCH_OBJECT_ACCESS_KEY_ID ?? '', secretAccessKey: env.FIRELAUNCH_OBJECT_SECRET_ACCESS_KEY ?? '' };
+    accessKeyId: env.VEGALAUNCH_OBJECT_ACCESS_KEY_ID ?? '', secretAccessKey: env.VEGALAUNCH_OBJECT_SECRET_ACCESS_KEY ?? '' };
 }
 
 export function privateObjectStoreFromEnv(env: NodeJS.ProcessEnv): PrivateObjectStore {
-  if (env.FIRELAUNCH_OBJECT_STORE !== 's3') throw new Error('Hosted private S3 object storage is required');
-  return new S3PrivateObjectStore(env.FIRELAUNCH_OBJECT_BUCKET ?? '', privateS3OptionsFromEnv(env));
+  if (env.VEGALAUNCH_OBJECT_STORE !== 's3') throw new Error('Hosted private S3 object storage is required');
+  return new S3PrivateObjectStore(env.VEGALAUNCH_OBJECT_BUCKET ?? '', privateS3OptionsFromEnv(env));
 }
 
 export type PrivateObjectMetadata = Readonly<{

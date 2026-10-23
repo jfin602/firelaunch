@@ -6,8 +6,8 @@ const hex = 'a'.repeat(32);
 const scope = `media/${hex}/${hex}/${hex}`;
 const expected = {
   awsAccountId: '123456789012', awsRegion: 'us-east-2', awsJobId: '123-job',
-  queueArn: 'arn:aws:mediaconvert:us-east-2:123456789012:queues/firelaunch',
-  mediaConvertRoleArn: 'arn:aws:iam::123456789012:role/firelaunch',
+  queueArn: 'arn:aws:mediaconvert:us-east-2:123456789012:queues/vegalaunch',
+  mediaConvertRoleArn: 'arn:aws:iam::123456789012:role/vegalaunch',
   originalsBucket: 'private-originals', stagingBucket: 'private-delivery',
   originalKey: `${scope}/original/${hex}.mp4`, outputStagingPrefix: `${scope}/staged/${hex}/`,
   intentToken: '00000000-0000-4000-8000-000000000000', profileHash: 'b'.repeat(64)

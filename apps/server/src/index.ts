@@ -16,20 +16,20 @@ import { DraftAudioDelivery } from './draft-audio-delivery.js';
 
 const port = Number(process.env.PORT ?? 4174);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid PORT');
-const hostedRepository = process.env.FIRELAUNCH_MODE === 'hosted'
+const hostedRepository = process.env.VEGALAUNCH_MODE === 'hosted'
   ? await HostedProjectRepository.connect(process.env.DATABASE_URL ?? '') : undefined;
 const mode = serverModeFromEnv(process.env, hostedRepository
   ? principal => hostedRepository.accountForIdentity(principal) : undefined);
-const repository = new ProjectRepository(process.env.FIRELAUNCH_DATA_DIR ?? '.firelaunch-data');
+const repository = new ProjectRepository(process.env.VEGALAUNCH_DATA_DIR ?? '.vegalaunch-data');
 const privateStore = hostedRepository ? privateObjectStoreFromEnv(process.env) : undefined;
 const privateObjects = hostedRepository && privateStore ? new PrivateObjectService(hostedRepository, privateStore) : undefined;
-const mediaStorage = hostedRepository && process.env.FIRELAUNCH_MEDIA_AWS_REGION
+const mediaStorage = hostedRepository && process.env.VEGALAUNCH_MEDIA_AWS_REGION
   ? mediaStorageFromEnv(process.env) : undefined;
-const managedArtwork = hostedRepository && privateStore && mediaStorage && process.env.FIRELAUNCH_PUBLIC_ORIGIN?.startsWith('https://')
-  ? new ManagedArtworkDelivery(hostedRepository.pool, privateStore, process.env.FIRELAUNCH_PUBLIC_ORIGIN, mediaStorage) : undefined;
-const draftAudio = hostedRepository && privateStore && process.env.FIRELAUNCH_PUBLIC_ORIGIN?.startsWith('https://')
-  ? new DraftAudioDelivery(hostedRepository.pool, privateStore, process.env.FIRELAUNCH_PUBLIC_ORIGIN) : undefined;
-const managed = hostedRepository && mediaStorage && process.env.FIRELAUNCH_MEDIACONVERT_ACCOUNT && process.env.FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN
+const managedArtwork = hostedRepository && privateStore && mediaStorage && process.env.VEGALAUNCH_PUBLIC_ORIGIN?.startsWith('https://')
+  ? new ManagedArtworkDelivery(hostedRepository.pool, privateStore, process.env.VEGALAUNCH_PUBLIC_ORIGIN, mediaStorage) : undefined;
+const draftAudio = hostedRepository && privateStore && process.env.VEGALAUNCH_PUBLIC_ORIGIN?.startsWith('https://')
+  ? new DraftAudioDelivery(hostedRepository.pool, privateStore, process.env.VEGALAUNCH_PUBLIC_ORIGIN) : undefined;
+const managed = hostedRepository && mediaStorage && process.env.VEGALAUNCH_MEDIACONVERT_ACCOUNT && process.env.VEGALAUNCH_MEDIA_PUBLISHER_ROLE_ARN
   ? await (async () => {
     const config = mediaConvertConfigFromEnv(process.env);
     const profile = await fixedMediaConvertProfile();
@@ -48,9 +48,9 @@ if (mediaUploads) {
 if (managed) {
   void managed.reconcileDue().catch(() => undefined);
   setInterval(() => { void managed.reconcileDue().catch(() => undefined); }, 60_000).unref();
-  if (process.env.FIRELAUNCH_MEDIACONVERT_EVENT_QUEUE_URL) {
+  if (process.env.VEGALAUNCH_MEDIACONVERT_EVENT_QUEUE_URL) {
     const queue = new MediaConvertEventsQueue(managed,
-      process.env.FIRELAUNCH_MEDIACONVERT_EVENT_QUEUE_URL,
+      process.env.VEGALAUNCH_MEDIACONVERT_EVENT_QUEUE_URL,
       new SQSClient({ region: mediaConvertConfigFromEnv(process.env).awsRegion }));
     void queue.poll().catch(() => undefined);
     setInterval(() => { void queue.poll().catch(() => undefined); }, 10_000).unref();

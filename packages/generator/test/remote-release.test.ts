@@ -19,7 +19,7 @@ test('generated client verifies releases and retains last-known-good across fail
     appName: 'Creator channel', packageId: 'com.creator.channel', releaseControl: 'creator',
     nativeReleaseApproval: 'pending_creator', manifestEndpoint: 'https://resolver.example.org/',
     consoleEvidence: { state: 'none' } });
-  const directory = await mkdtemp(join(process.cwd(), 'node_modules', '.firelaunch-release-test-'));
+  const directory = await mkdtemp(join(process.cwd(), 'node_modules', '.vegalaunch-release-test-'));
   try {
     await mkdir(join(directory, 'src'));
     await writeFile(join(directory, 'package.json'), '{"type":"module"}');

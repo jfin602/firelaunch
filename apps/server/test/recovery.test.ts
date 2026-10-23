@@ -15,7 +15,7 @@ import { createApi } from '../src/api.js';
 import { ProjectRepository } from '../src/repository.js';
 import type { ServerMode } from '../src/auth/config.js';
 
-const base = process.env.FIRELAUNCH_TEST_DATABASE_URL;
+const base = process.env.VEGALAUNCH_TEST_DATABASE_URL;
 const integration = base ? test : test.skip;
 const key = 'a7'.repeat(32);
 
@@ -32,15 +32,15 @@ async function expectedMigrations(): Promise<number[]> {
 }
 
 async function assertAppliedMigrations(pool: Pool, expected: number[]): Promise<void> {
-  const result = await pool.query<{ version: number }>('SELECT version FROM firelaunch_schema_migrations ORDER BY version');
+  const result = await pool.query<{ version: number }>('SELECT version FROM vegalaunch_schema_migrations ORDER BY version');
   assert.deepEqual(result.rows.map(row => row.version), expected, 'every ordered migration was applied');
 }
 
 integration('real Postgres backup, isolated restore, concurrent update, privacy delete and failed object recovery', async () => {
   const admin = new Pool({ connectionString: base });
   const suffix = randomUUID().replaceAll('-', '');
-  const sourceName = `firelaunch_p6_${suffix}`;
-  const restoreName = `firelaunch_restore_${suffix}`;
+  const sourceName = `vegalaunch_p6_${suffix}`;
+  const restoreName = `vegalaunch_restore_${suffix}`;
   const url = new URL(base!); url.pathname = `/${sourceName}`;
   const destination = new URL(base!); destination.pathname = `/${restoreName}`;
   const sourceRoot = await mkdtemp(path.join(tmpdir(), 'fl-p6-source-'));
@@ -120,7 +120,7 @@ integration('real Postgres backup, isolated restore, concurrent update, privacy 
     assert.equal(exportData.objects.length, 1);
     assert.equal(JSON.stringify(exportData).includes('private/'), false);
     assert.equal(JSON.stringify(exportData).includes(capability.capability), false);
-    const sealed = sealPrivatePayload({ format: 'firelaunch-account-export-v1', accountId: aId, data: exportData }, key);
+    const sealed = sealPrivatePayload({ format: 'vegalaunch-account-export-v1', accountId: aId, data: exportData }, key);
     assert.equal(sealed.includes(Buffer.from('a evidence')), false);
     assert.equal((openPrivatePayload(sealed, key) as { accountId: string }).accountId, aId);
     let deletionOutage = true;

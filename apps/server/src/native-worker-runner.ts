@@ -65,7 +65,7 @@ export async function runQualifiedWorkerClaim(claim: WorkerClaim, config: Qualif
   if (JSON.stringify(config.toolchain) !== JSON.stringify(PINNED_TOOLCHAIN) || process.version !== PINNED_TOOLCHAIN.node)
     deny('Worker toolchain differs from pinned image');
   // In particular, refuse an inherited hosted control-plane environment.
-  if (Object.keys(process.env).some(name => /^(?:AWS_|PG|DATABASE_|GOOGLE_|FIRELAUNCH_|OIDC_|SESSION_)/.test(name)))
+  if (Object.keys(process.env).some(name => /^(?:AWS_|PG|DATABASE_|GOOGLE_|VEGALAUNCH_|OIDC_|SESSION_)/.test(name)))
     deny('Credential-bearing worker environment');
   await assertResourceLimits(config.workspaceRoot);
   await config.assertIsolation();

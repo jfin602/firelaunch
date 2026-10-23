@@ -7,11 +7,11 @@ import { CatalogRepository } from '../src/catalog-repository.js';
 import { CatalogProjectionService } from '../src/catalog-projection.js';
 import { MediaPipelineRepository } from '../src/media-pipeline-repository.js';
 
-const base = process.env.FIRELAUNCH_TEST_DATABASE_URL;
+const base = process.env.VEGALAUNCH_TEST_DATABASE_URL;
 
 (base ? test : test.skip)('private video keeps owned catalog, rights and shelf placement across restart', async () => {
   const admin = new Pool({ connectionString: base });
-  const name = `firelaunch_test_${randomUUID().replaceAll('-', '')}`;
+  const name = `vegalaunch_test_${randomUUID().replaceAll('-', '')}`;
   const url = new URL(base!); url.pathname = `/${name}`;
   await admin.query(`CREATE DATABASE ${name}`);
   let first: HostedProjectRepository | undefined;

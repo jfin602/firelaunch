@@ -414,7 +414,7 @@ The original prompt-stack-runner Git ownership contract still applies.`;
 
 const PHASE_RUNNER_EXECUTION_CONTRACT = `PROMPT STACK RUNNER EXECUTION CONTRACT
 
-You are being executed by the FireLaunch Prompt Stack runner.
+You are being executed by the VegaLaunch Prompt Stack runner.
 
 Do not create Git commits.
 

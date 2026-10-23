@@ -9,7 +9,7 @@ import { createApi } from '../src/api.js';
 import { ProjectRepository } from '../src/repository.js';
 
 test('API agent uses persistence and optimistic revisions; deterministic editing still works', async () => {
-  const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-agent-api-'));
+  const directory = await mkdtemp(path.join(tmpdir(), 'vegalaunch-agent-api-'));
   const repository = new ProjectRepository(directory);
   const server = createApi(repository, new MockProvider(), { mode: 'local-legacy' });
   server.listen(0, '127.0.0.1');
@@ -41,7 +41,7 @@ test('API agent uses persistence and optimistic revisions; deterministic editing
 });
 
 test('API refuses unsupported tool calls without mutating persisted project', async () => {
-  const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-agent-refusal-'));
+  const directory = await mkdtemp(path.join(tmpdir(), 'vegalaunch-agent-refusal-'));
   const repository = new ProjectRepository(directory);
   const provider: AgentProvider = { name: 'bedrock', async next() { return { text: '', calls: [{ id: 'bad', name: 'run_shell', input: { command: 'echo no' } }] }; } };
   const server = createApi(repository, provider, { mode: 'local-legacy' });

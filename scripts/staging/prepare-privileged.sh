@@ -5,19 +5,19 @@ set -euo pipefail
 
 [[ "$EUID" = 0 && "$(hostname -s)" = muffinos && $# = 1 ]] || { echo 'Run as root on muffinos with one candidate archive' >&2; exit 1; }
 artifact="$1"
-[[ "$artifact" = /home/deploy/firelaunch-incoming/*.tar.gz && -f "$artifact" && ! -L "$artifact" ]] || { echo 'Expected a regular incoming archive' >&2; exit 1; }
+[[ "$artifact" = /home/deploy/vegalaunch-incoming/*.tar.gz && -f "$artifact" && ! -L "$artifact" ]] || { echo 'Expected a regular incoming archive' >&2; exit 1; }
 
 expected_artifact=672450904c2ae959dbaf4e0c59a0c5ee2014ff066e9e0817ac6b146691453289
 expected_node=d1de76d8edf2fededf6f8b30d244e2c0529ac607923a018283b77e9c74bd932c
-old=/srv/firelaunch/releases/20261011T163833Z
+old=/srv/vegalaunch/releases/20261011T163833Z
 node_source=/home/deploy/.nvm/versions/node/v24.15.0/bin/node
-prep=/srv/firelaunch/recovery-prep
-ops=/opt/firelaunch-staging-ops
-runtime=/opt/firelaunch-staging-runtime/node24/bin
-active_pid="$(systemctl show firelaunch-staging.service -p MainPID --value)"
-[[ "$active_pid" =~ ^[1-9][0-9]*$ && "$(systemctl show firelaunch-staging.service -p ActiveState --value)" = active &&
-   "$(readlink -f /srv/firelaunch/current)" = "$old" && -d "$old" && ! -L "$old" ]] || { echo 'Live staging identity changed' >&2; exit 1; }
-[[ "$(stat -c '%U:%G %a' /etc/firelaunch/staging.env)" = 'root:root 600' ]] || { echo 'Protected environment changed' >&2; exit 1; }
+prep=/srv/vegalaunch/recovery-prep
+ops=/opt/vegalaunch-staging-ops
+runtime=/opt/vegalaunch-staging-runtime/node24/bin
+active_pid="$(systemctl show vegalaunch-staging.service -p MainPID --value)"
+[[ "$active_pid" =~ ^[1-9][0-9]*$ && "$(systemctl show vegalaunch-staging.service -p ActiveState --value)" = active &&
+   "$(readlink -f /srv/vegalaunch/current)" = "$old" && -d "$old" && ! -L "$old" ]] || { echo 'Live staging identity changed' >&2; exit 1; }
+[[ "$(stat -c '%U:%G %a' /etc/vegalaunch/staging.env)" = 'root:root 600' ]] || { echo 'Protected environment changed' >&2; exit 1; }
 [[ "$(sha256sum "$artifact" | cut -d' ' -f1)" = "$expected_artifact" &&
    "$(sha256sum "$node_source" | cut -d' ' -f1)" = "$expected_node" ]] || { echo 'Artifact or Node hash changed' >&2; exit 1; }
 
@@ -41,7 +41,7 @@ with tarfile.open(sys.argv[1], 'r:gz') as archive:
                 raise SystemExit('Release archive link escapes destination')
 PY
 
-install -d -o root -g root -m 0700 "$prep" /var/backups/firelaunch-staging "$ops"
+install -d -o root -g root -m 0700 "$prep" /var/backups/vegalaunch-staging "$ops"
 install -d -o root -g root -m 0755 "$runtime"
 install -o root -g root -m 0755 "$node_source" "$runtime/node"
 [[ "$(sha256sum "$runtime/node" | cut -d' ' -f1)" = "$expected_node" && "$("$runtime/node" -v)" = v24.15.0 ]] || { echo 'Root-owned Node verification failed' >&2; exit 1; }
@@ -81,6 +81,6 @@ stage "0.6.7-${expected_artifact:0:12}" "$artifact"
 for helper in lib.sh backup.sh backup-preflight.mjs inspect-archive.mjs schema-version.mjs deploy-release.sh rollback.sh; do
   install -o root -g root -m 0755 "$prep/0.6.7-${expected_artifact:0:12}/scripts/staging/$helper" "$ops/$helper"
 done
-[[ "$(systemctl show firelaunch-staging.service -p MainPID --value)" = "$active_pid" &&
-   "$(readlink -f /srv/firelaunch/current)" = "$old" ]] || { echo 'Live service changed during preparation' >&2; exit 1; }
+[[ "$(systemctl show vegalaunch-staging.service -p MainPID --value)" = "$active_pid" &&
+   "$(readlink -f /srv/vegalaunch/current)" = "$old" ]] || { echo 'Live service changed during preparation' >&2; exit 1; }
 printf 'Prepared root-owned runtime, two release copies, operator and backup directories. Live PID and release link unchanged.\n'

@@ -16,7 +16,7 @@ Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.
 const { cleanup, fireEvent, render, screen } = await import('@testing-library/react');
 
 test('new channel opens its private default editor without an initial agent request', async () => {
-  const directory = await mkdtemp(path.join(tmpdir(), 'firelaunch-studio-agent-'));
+  const directory = await mkdtemp(path.join(tmpdir(), 'vegalaunch-studio-agent-'));
   const server = createApi(new ProjectRepository(directory), new MockProvider(), { mode: 'local-legacy' });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();

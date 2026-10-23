@@ -64,7 +64,7 @@ function correctionPrompt(
 }
 
 
-test('FireLaunch keeps legacy model configuration validation fail-closed', () => {
+test('VegaLaunch keeps legacy model configuration validation fail-closed', () => {
   assert.equal('Luna Low' in MODEL_CONFIGS, false);
   const entry = prompt(1, { config: 'Luna Low' });
   assert.throws(
@@ -716,7 +716,7 @@ test('supported Luna and Medium recommendation labels parse without broadening u
 });
 
 
-test('FireLaunch exposes explicit GPT-6 Sol routing labels', () => {
+test('VegaLaunch exposes explicit GPT-6 Sol routing labels', () => {
   assert.deepEqual(MODEL_CONFIGS['GPT-6 Sol Medium'], {
     model: 'gpt-6-sol',
     reasoning: 'medium',
@@ -731,7 +731,7 @@ test('FireLaunch exposes explicit GPT-6 Sol routing labels', () => {
   });
 });
 
-test('FireLaunch supports Foundation Spike Phase 0 versioning', () => {
+test('VegaLaunch supports Foundation Spike Phase 0 versioning', () => {
   const p1 = prompt(1, {
     config: 'GPT-6 Sol Medium',
     version: '0.0.1',
@@ -754,7 +754,7 @@ test('FireLaunch supports Foundation Spike Phase 0 versioning', () => {
 });
 
 
-test('FireLaunch keeps GPT-6 Astra High as an explicit exceptional configuration', () => {
+test('VegaLaunch keeps GPT-6 Astra High as an explicit exceptional configuration', () => {
   const entry = prompt(1, { config: 'GPT-6 Astra High' });
   const parsed = parsePrompt(entry.filename, entry.text);
   assert.equal(parsed.model, 'gpt-6-astra');

@@ -204,7 +204,7 @@ test('replayed finalize cannot spend a failed managed retry attempt', async () =
 });
 
 test('hosted upload routes require a session and CSRF before invoking storage', async () => {
-  const root = await mkdtemp(path.join(tmpdir(), 'firelaunch-upload-routes-'));
+  const root = await mkdtemp(path.join(tmpdir(), 'vegalaunch-upload-routes-'));
   const { service, calls } = fixture();
   const principal = (cookie: string | undefined) => cookie === 'session=owner' ? owner : cookie === 'session=foreign' ? foreign : null;
   const auth = { publicOrigin: 'http://127.0.0.1', session(request: { headers: Record<string, string> }) {

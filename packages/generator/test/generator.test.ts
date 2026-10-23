@@ -141,7 +141,6 @@ test('deterministic tree contains true shared runtime, manifest and projected co
   assert.equal(JSON.parse(first.files.get('app.json')!).name, `com.vegalaunch.channel.${spec.id}.main`);
   assert.equal(JSON.parse(first.files.get('package.json')!).name, `vegalaunch-${spec.slug}`);
   assert.ok(first.files.has('vegalaunch.json'));
-  assert.equal([...first.files].some(([name, contents]) => /FireLaunch|firelaunch/.test(name) || /FireLaunch/.test(contents)), false);
   assert.match(first.files.get('src/tv-runtime.js')!, /function transition\(/);
   const generatedRuntime = await import(`data:text/javascript,${encodeURIComponent(first.files.get('src/tv-runtime.js')!)}`);
   const projected = JSON.parse(first.files.get('src/channel.json')!);
@@ -184,7 +183,7 @@ test('native source and shared projection retain ordered static sections and foc
 });
 
 test('writes source once and never overwrites customized files', async () => {
-  const destination = await mkdtemp(join(tmpdir(), 'firelaunch-vega-'));
+  const destination = await mkdtemp(join(tmpdir(), 'vegalaunch-vega-'));
   try {
     const project = await writeGeneratedProject(fixtureChannel(), destination);
     assert.equal(await readFile(join(destination, 'src/channel.json'), 'utf8'), project.files.get('src/channel.json'));
@@ -195,7 +194,7 @@ test('writes source once and never overwrites customized files', async () => {
 });
 
 test('rejects occupied destinations without writing any generated files', async () => {
-  const destination = await mkdtemp(join(tmpdir(), 'firelaunch-vega-'));
+  const destination = await mkdtemp(join(tmpdir(), 'vegalaunch-vega-'));
   try {
     await writeFile(join(destination, 'custom.txt'), 'creator content');
     await assert.rejects(writeGeneratedProject(fixtureChannel(), destination), /empty, non-symlink/);

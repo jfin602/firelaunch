@@ -92,7 +92,7 @@ CREATE TABLE media_rendition_sets (
 ALTER TABLE media_processing_jobs ADD CONSTRAINT media_jobs_rendition_owned
   FOREIGN KEY (rendition_set_id) REFERENCES media_rendition_sets(id) DEFERRABLE INITIALLY DEFERRED;
 
-CREATE FUNCTION firelaunch_rendition_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE FUNCTION vegalaunch_rendition_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW.id IS DISTINCT FROM OLD.id OR NEW.job_id IS DISTINCT FROM OLD.job_id OR
      NEW.creator_account_id IS DISTINCT FROM OLD.creator_account_id OR NEW.project_id IS DISTINCT FROM OLD.project_id OR
@@ -105,4 +105,4 @@ BEGIN
   RETURN NEW;
 END $$;
 CREATE TRIGGER media_rendition_immutable BEFORE UPDATE ON media_rendition_sets
-  FOR EACH ROW EXECUTE FUNCTION firelaunch_rendition_immutable();
+  FOR EACH ROW EXECUTE FUNCTION vegalaunch_rendition_immutable();

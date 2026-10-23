@@ -625,7 +625,7 @@ export function stripAnsi(value) {
 }
 
 function colorizeDashboardLine(line) {
-  if (line === 'FIRELAUNCH - CODEX PROMPT STACK RUNNER')
+  if (line === 'VEGALAUNCH - CODEX PROMPT STACK RUNNER')
     return style(line, ANSI.boldCyan);
   if (/^[-=]+$/.test(line)) return style(line, ANSI.dim);
   if (line.startsWith('Agent:')) return style(line, ANSI.magenta);
@@ -739,7 +739,7 @@ export function renderDashboard({
   closeoutAutoRun = false,
 }) {
   const lines = [
-    'FIRELAUNCH - CODEX PROMPT STACK RUNNER',
+    'VEGALAUNCH - CODEX PROMPT STACK RUNNER',
     '-'.repeat(60),
     '',
     ...(plan.mode === 'correction'

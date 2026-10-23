@@ -1,8 +1,8 @@
--- Optional build queue. Apply separately; never insert into firelaunch_schema_migrations.
+-- Optional build queue. Apply separately; never insert into vegalaunch_schema_migrations.
 -- The operator creates dedicated NOLOGIN owner, LOGIN API and LOGIN worker roles first.
 BEGIN;
-CREATE SCHEMA IF NOT EXISTS firelaunch_build;
-CREATE TABLE IF NOT EXISTS firelaunch_build.jobs (
+CREATE SCHEMA IF NOT EXISTS vegalaunch_build;
+CREATE TABLE IF NOT EXISTS vegalaunch_build.jobs (
   id text PRIMARY KEY CHECK (id ~ '^job_[a-f0-9]{32}$'),
   creator_account_id text NOT NULL CHECK (creator_account_id ~ '^cr_[a-f0-9]{32}$'),
   project_id text NOT NULL CHECK (project_id ~ '^ch_[a-f0-9]{32}$'),
@@ -31,9 +31,9 @@ CREATE TABLE IF NOT EXISTS firelaunch_build.jobs (
   CHECK (state <> 'ready' OR (artifact_name IS NOT NULL AND artifact_sha256 IS NOT NULL AND artifact_bytes IS NOT NULL AND evidence IS NOT NULL)),
   CHECK (expires_at > created_at)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS build_jobs_single_running ON firelaunch_build.jobs ((true)) WHERE state = 'running';
-CREATE UNIQUE INDEX IF NOT EXISTS build_jobs_one_active_project ON firelaunch_build.jobs (creator_account_id, project_id)
+CREATE UNIQUE INDEX IF NOT EXISTS build_jobs_single_running ON vegalaunch_build.jobs ((true)) WHERE state = 'running';
+CREATE UNIQUE INDEX IF NOT EXISTS build_jobs_one_active_project ON vegalaunch_build.jobs (creator_account_id, project_id)
   WHERE state IN ('queued','running','ready');
-CREATE INDEX IF NOT EXISTS build_jobs_claim ON firelaunch_build.jobs (created_at, id) WHERE state = 'queued';
-CREATE INDEX IF NOT EXISTS build_jobs_expiry ON firelaunch_build.jobs (expires_at);
+CREATE INDEX IF NOT EXISTS build_jobs_claim ON vegalaunch_build.jobs (created_at, id) WHERE state = 'queued';
+CREATE INDEX IF NOT EXISTS build_jobs_expiry ON vegalaunch_build.jobs (expires_at);
 COMMIT;

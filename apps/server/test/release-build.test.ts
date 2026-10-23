@@ -58,7 +58,7 @@ test('creator build input pins published deployment and preserves safe edited so
   assert.equal(input.packageId, deployment.packageId);
   assert.deepEqual(RELEASE_BUILD_COMMAND, ['./node_modules/.bin/react-native', 'build-vega', '--target', 'x86_64', '--build-type', 'Release']);
   assert.deepEqual(releaseBuildCommand(input), [...RELEASE_BUILD_COMMAND, '--build-number', '1']);
-  const dir = await mkdtemp(join(tmpdir(), 'firelaunch-release-input-'));
+  const dir = await mkdtemp(join(tmpdir(), 'vegalaunch-release-input-'));
   try {
     await materializeReleaseBuildInput(input, dir);
     assert.equal(await readFile(join(dir, 'src/App.js'), 'utf8'), source.files['src/App.js']);
@@ -98,7 +98,7 @@ test('malicious paths, private URLs, credentials and manifest edits are rejected
 
 test('worker verifies fresh x86_64 output and source fingerprint without running in hosted service', async () => {
   const input = await createReleaseBuildInput(project, await stored(), deployment, release, owner.accountId);
-  const dir = await mkdtemp(join(tmpdir(), 'firelaunch-release-build-'));
+  const dir = await mkdtemp(join(tmpdir(), 'vegalaunch-release-build-'));
   try {
     const evidence = await produceIsolatedRelease(input, dir,
       { node: 'v24.21.0', npm: '12.2.0', vegaCli: '1.4.4', vegaSdk: '0.24.12112' }, async (command, cwd) => {
@@ -135,10 +135,10 @@ test('worker verifies fresh x86_64 output and source fingerprint without running
     assert.match(evidence.sha256, /^[a-f0-9]{64}$/);
   } finally { await rm(dir, { recursive: true, force: true }); }
   const tampered = { ...input, files: { ...input.files, 'src/App.js': 'changed' } };
-  const changedDir = await mkdtemp(join(tmpdir(), 'firelaunch-release-changed-'));
+  const changedDir = await mkdtemp(join(tmpdir(), 'vegalaunch-release-changed-'));
   try { await assert.rejects(materializeReleaseBuildInput(tampered, changedDir), { code: 'CONFLICT' }); }
   finally { await rm(changedDir, { recursive: true, force: true }); }
-  const linkDir = await mkdtemp(join(tmpdir(), 'firelaunch-release-link-'));
+  const linkDir = await mkdtemp(join(tmpdir(), 'vegalaunch-release-link-'));
   const link = `${linkDir}-link`;
   try { await symlink(linkDir, link); await assert.rejects(materializeReleaseBuildInput(input, link), { code: 'INVALID_INPUT' }); }
   finally { await rm(link, { force: true }); await rm(linkDir, { recursive: true, force: true }); }
@@ -148,7 +148,7 @@ test('worker accepts pinned SDK manifest autolinks but rejects other manifest ed
   const input = await createReleaseBuildInput(project, await stored(), deployment, release, owner.accountId);
   const moduleBlock = '[[needs.module]]\nid = "/com.amazon.kepler.w3cmedia_2@IW3cmedia_3"\n\n';
   for (const change of ['sdk', 'package', 'extra-module', 'source'] as const) {
-    const dir = await mkdtemp(join(tmpdir(), 'firelaunch-release-manifest-'));
+    const dir = await mkdtemp(join(tmpdir(), 'vegalaunch-release-manifest-'));
     try {
       const run = produceIsolatedRelease(input, dir,
         { node: 'v24.21.0', npm: '12.2.0', vegaCli: '1.4.4', vegaSdk: '0.24.12112' }, async (command, cwd) => {
@@ -179,7 +179,7 @@ test('worker accepts pinned SDK manifest autolinks but rejects other manifest ed
 
 test('worker rejects a VPT-validated package with a different application identity', async () => {
   const input = await createReleaseBuildInput(project, await stored(), deployment, release, owner.accountId);
-  const dir = await mkdtemp(join(tmpdir(), 'firelaunch-release-wrong-id-'));
+  const dir = await mkdtemp(join(tmpdir(), 'vegalaunch-release-wrong-id-'));
   try {
     await assert.rejects(produceIsolatedRelease(input, dir,
       { node: 'v24.21.0', npm: '12.2.0', vegaCli: '1.4.4', vegaSdk: '0.24.12112' }, async (command, cwd) => {

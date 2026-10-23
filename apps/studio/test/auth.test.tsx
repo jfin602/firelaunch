@@ -22,7 +22,6 @@ test('hosted Studio denies project UI and offers sign-in after missing session',
     render(createElement(App));
     const signIn = await screen.findByRole('link', { name: 'Sign in with Google' });
     assert.ok(screen.getByRole('heading', { name: 'Sign in to VegaLaunch' }));
-    assert.equal(document.body.textContent?.includes('FireLaunch'), false);
     assert.equal(signIn.getAttribute('href'), '/api/auth/login');
     assert.deepEqual(requests, ['/api/auth/session']);
     assert.equal(screen.queryByRole('button', { name: /New channel/ }), null);

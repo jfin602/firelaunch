@@ -2,7 +2,7 @@ export const videoPages = ['video', 'details', 'channel', 'publish'] as const;
 export type VideoPage = typeof videoPages[number];
 
 export function videoPageKey(accountId: string, projectId: string, itemId?: string): string {
-  return `firelaunch-video-page:${accountId}:${projectId}:${itemId ?? 'new'}`;
+  return `vegalaunch-video-page:${accountId}:${projectId}:${itemId ?? 'new'}`;
 }
 
 export function savedVideoPage(key: string): VideoPage {

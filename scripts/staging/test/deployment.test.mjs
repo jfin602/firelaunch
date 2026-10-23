@@ -13,11 +13,11 @@ const run = (command, args = []) => spawnSync('bash', ['-c', `source "$1"; shift
 test('privileged helpers require the root-owned Node runtime', () => {
   const result = run('printf "%s" "$node_bin"');
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout, '/opt/firelaunch-staging-runtime/node24/bin/node');
+  assert.equal(result.stdout, '/opt/vegalaunch-staging-runtime/node24/bin/node');
 });
 
 test('release permission check ignores link mode but catches writable files', () => {
-  const root = mkdtempSync(path.join(tmpdir(), 'firelaunch-permissions-'));
+  const root = mkdtempSync(path.join(tmpdir(), 'vegalaunch-permissions-'));
   try {
     const file = path.join(root, 'runtime.js');
     writeFileSync(file, 'safe', { mode: 0o644 });
@@ -35,7 +35,7 @@ test('schema inspection rejects gaps and sees the candidate migration ceiling', 
   const actual = run('schema_max "$1"', [repo]);
   assert.equal(actual.status, 0, actual.stderr);
   assert.equal(actual.stdout.trim(), '15');
-  const root = mkdtempSync(path.join(tmpdir(), 'firelaunch-schema-'));
+  const root = mkdtempSync(path.join(tmpdir(), 'vegalaunch-schema-'));
   try {
     const migrations = path.join(root, 'apps/server/migrations');
     mkdirSync(migrations, { recursive: true });
@@ -52,7 +52,7 @@ test('rollback gate refuses the observed migration 13 to binary ceiling 10', () 
 });
 
 test('release link switch is confined to versioned staging releases', () => {
-  const root = mkdtempSync(path.join(tmpdir(), 'firelaunch-links-'));
+  const root = mkdtempSync(path.join(tmpdir(), 'vegalaunch-links-'));
   const oldName = '20261011T163833Z-aaaaaaaaaaaa';
   const newName = '20261016T120000Z-bbbbbbbbbbbb';
   const old = path.join(root, 'releases', oldName);
@@ -76,7 +76,7 @@ test('release link switch is confined to versioned staging releases', () => {
 });
 
 test('archive validation rejects traversal and escaping links', () => {
-  const root = mkdtempSync(path.join(tmpdir(), 'firelaunch-archive-'));
+  const root = mkdtempSync(path.join(tmpdir(), 'vegalaunch-archive-'));
   try {
     const bad = path.join(root, 'bad.tar.gz');
     execFileSync('python3', ['-c', `import io,tarfile,sys
