@@ -239,6 +239,8 @@ function Playback({ item, muted, controls, activity, onBack, typography }) {
   const font = { fontFamily: typography === 'serif' ? 'serif' : 'sans-serif' };
   const progress = position.duration > 0 ? Math.min(100, position.currentTime / position.duration * 100) : 0;
   return <View style={styles.playerScreen}>
+    {audio && item.artwork.startsWith('https://') && <Image pointerEvents="none" source={{ uri: item.artwork }}
+      resizeMode="cover" style={styles.audioFullScreenCover} />}
     {audio && <View pointerEvents="none" style={[styles.audioArtworkStage,
       { top: artworkFrame.top, bottom: artworkFrame.bottom }]}>
       {item.artwork.startsWith('https://')
@@ -616,6 +618,7 @@ const styles = StyleSheet.create({
   speakerWaveOuter: { position: 'absolute', left: 19, top: 2, width: 13, height: 20, borderWidth: 2,
     borderColor: 'transparent', borderRightColor: '#D7D7D7', borderRadius: 12 },
   speakerOff: { position: 'absolute', left: 19, top: -4, color: '#D7D7D7', fontSize: 25 },
+  audioFullScreenCover: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, width: '100%', height: '100%', opacity: 0.28 },
   audioArtworkStage: { position: 'absolute', left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   audioSurface: { width: 1, height: 1, opacity: 0 }
 });

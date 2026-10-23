@@ -29,6 +29,7 @@ import { PrivateVideoPreview } from './private-video-preview.js';
 import { VideoSubtitles } from './video-subtitles.js';
 import { NativeBuildQueue } from './native-build-queue.js';
 import { nativeExportForOwner } from './native-export-delivery.js';
+import type { DraftAudioDelivery } from './draft-audio-delivery.js';
 import type { ReleaseBuildInput } from './release-build.js';
 
 const mutationRequestSchema = z.strictObject({ expectedRevision: z.number().int().positive(), mutation: mutationSchema });
@@ -145,14 +146,14 @@ function nativeExportJobStatus(job: NonNullable<Awaited<ReturnType<NativeBuildQu
     downloadReady: !!verified };
 }
 
-export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository, privateObjects?: PrivateObjectService, mediaUploads?: MediaUploadService, mediaPublisher?: S3MediaStorage, managedArtwork?: ManagedArtworkDelivery) {
+export function createApi(repository: ProjectRepository, selectedProvider?: AgentProvider, mode?: ServerMode, hostedRepository?: HostedProjectRepository, privateObjects?: PrivateObjectService, mediaUploads?: MediaUploadService, mediaPublisher?: S3MediaStorage, managedArtwork?: ManagedArtworkDelivery, draftAudio?: DraftAudioDelivery) {
   const status = selectedProvider ? selectedProvider.name === 'mock' ? providerStatus({ FIRELAUNCH_AGENT_PROVIDER: 'mock' }) : { provider: selectedProvider.name, configured: true, message: `${selectedProvider.name} injected for this server; this status does not verify provider availability or request success.` } : providerStatus(process.env);
   const agent = status.configured ? new ChannelAgent(selectedProvider ?? (status.provider === 'mock' ? new MockProvider() : status.provider === 'bedrock' ? new BedrockProvider(process.env.BEDROCK_MODEL_ID!) : new OpenAIProvider(process.env.OPENAI_MODEL!, process.env.OPENAI_API_KEY!))) : null;
   const workspace = mode?.mode === 'local-legacy' ? new WorkspaceService(repository) : null;
   const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository) : null;
   const nativeBuildQueue = mode?.mode === 'hosted' && hostedRepository ? new NativeBuildQueue(hostedRepository.pool) : null;
   const catalog = hostedRepository ? new CatalogRepository(hostedRepository) : null;
-  const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog, mediaPublisher) : null;
+  const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog, mediaPublisher, draftAudio) : null;
   const publication = hostedRepository ? new PublicationRepository(hostedRepository, mediaPublisher, managedArtwork) : null;
   const publicResolver = mode?.mode === 'hosted' && hostedRepository ? new PublicReleaseResolver(hostedRepository, managedArtwork) : null;
   const assertNativeRights = async (input: ReleaseBuildInput) => {
@@ -170,6 +171,27 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
       if (request.url?.startsWith('/api/public-artwork/') || request.url === '/api/public-artwork') {
         if (!publicResolver) throw new RepositoryError('NOT_FOUND', 'Route not found');
         await publicArtworkRoute(request, response, publicResolver); return;
+      }
+      if (request.url?.startsWith('/api/draft-audio/') || request.url === '/api/draft-audio') {
+        if (!draftAudio || request.method !== 'GET') throw new RepositoryError('NOT_FOUND', 'Route not found');
+        const url = new URL(request.url, 'http://localhost');
+        const parts = url.pathname.split('/').filter(Boolean);
+        if (parts.length !== 6 || parts[0] !== 'api' || parts[1] !== 'draft-audio' || url.search ||
+          (parts[5] !== 'audio' && parts[5] !== 'cover')) throw new RepositoryError('NOT_FOUND', 'Route not found');
+        const range = request.headers.range;
+        const match = range ? /^bytes=(\d+)-(\d*)$/.exec(range) : null;
+        if (range && !match) throw new RepositoryError('INVALID_INPUT', 'Unsupported audio range');
+        const kind = parts[5] as 'audio' | 'cover';
+        if (kind === 'cover' && range) throw new RepositoryError('INVALID_INPUT', 'Artwork range unavailable');
+        const part = await draftAudio.read(parts[2]!, parts[3]!, parts[4]!, kind,
+          match ? Number(match[1]) : 0, match?.[2] ? Number(match[2]) : undefined);
+        response.writeHead(kind === 'audio' ? 206 : 200, { 'content-type': part.contentType,
+          'content-length': part.content.length,
+          ...(kind === 'audio' ? { 'content-range': `bytes ${part.start}-${part.end}/${part.size}`,
+            'accept-ranges': 'bytes' } : {}), 'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff', 'access-control-allow-origin': '*',
+          'cross-origin-resource-policy': 'cross-origin' });
+        response.end(part.content); return;
       }
       if (request.url?.startsWith('/public/') || request.url === '/public') {
         if (!publicResolver) throw new RepositoryError('NOT_FOUND', 'Route not found');

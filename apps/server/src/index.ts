@@ -12,6 +12,7 @@ import { ManagedMediaCoordinator } from './managed-media-coordinator.js';
 import { MediaConvertEventsQueue } from './media-convert-events-queue.js';
 import { SQSClient } from '@aws-sdk/client-sqs';
 import { ManagedArtworkDelivery } from './managed-artwork.js';
+import { DraftAudioDelivery } from './draft-audio-delivery.js';
 
 const port = Number(process.env.PORT ?? 4174);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid PORT');
@@ -26,6 +27,8 @@ const mediaStorage = hostedRepository && process.env.FIRELAUNCH_MEDIA_AWS_REGION
   ? mediaStorageFromEnv(process.env) : undefined;
 const managedArtwork = hostedRepository && privateStore && mediaStorage && process.env.FIRELAUNCH_PUBLIC_ORIGIN?.startsWith('https://')
   ? new ManagedArtworkDelivery(hostedRepository.pool, privateStore, process.env.FIRELAUNCH_PUBLIC_ORIGIN, mediaStorage) : undefined;
+const draftAudio = hostedRepository && privateStore && process.env.FIRELAUNCH_PUBLIC_ORIGIN?.startsWith('https://')
+  ? new DraftAudioDelivery(hostedRepository.pool, privateStore, process.env.FIRELAUNCH_PUBLIC_ORIGIN) : undefined;
 const managed = hostedRepository && mediaStorage && process.env.FIRELAUNCH_MEDIACONVERT_ACCOUNT && process.env.FIRELAUNCH_MEDIA_PUBLISHER_ROLE_ARN
   ? await (async () => {
     const config = mediaConvertConfigFromEnv(process.env);
@@ -53,4 +56,4 @@ if (managed) {
     setInterval(() => { void queue.poll().catch(() => undefined); }, 10_000).unref();
   }
 }
-createApi(repository, undefined, mode, hostedRepository, privateObjects, mediaUploads, mediaStorage, managedArtwork).listen(port, '127.0.0.1', () => console.log(`FireLaunch API listening on 127.0.0.1:${port} (${mode.mode})`));
+createApi(repository, undefined, mode, hostedRepository, privateObjects, mediaUploads, mediaStorage, managedArtwork, draftAudio).listen(port, '127.0.0.1', () => console.log(`FireLaunch API listening on 127.0.0.1:${port} (${mode.mode})`));

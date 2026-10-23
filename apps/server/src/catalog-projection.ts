@@ -7,6 +7,7 @@ import { CatalogRepository } from './catalog-repository.js';
 import { RepositoryError } from './repository.js';
 import { publicMediaUrl } from './hosted-media-policy.js';
 import type { S3MediaStorage } from './media-storage.js';
+import type { DraftAudioDelivery } from './draft-audio-delivery.js';
 
 const selectionSchema = z.strictObject({
   expectedProjectRevision: z.number().int().positive(),
@@ -66,7 +67,7 @@ export type CatalogProjection = Readonly<{
 export class CatalogProjectionService {
   private readonly catalog: CatalogRepository;
   constructor(private readonly projects: HostedProjectRepository, catalog?: CatalogRepository,
-    private readonly mediaStorage?: S3MediaStorage) {
+    private readonly mediaStorage?: S3MediaStorage, private readonly draftAudio?: DraftAudioDelivery) {
     this.catalog = catalog ?? new CatalogRepository(projects);
   }
 
@@ -146,11 +147,19 @@ export class CatalogProjectionService {
       });
       // The private thumbnail resolves only during explicit publication. A draft keeps
       // the safe placeholder, even when an older external artwork URL also exists.
+      const privateCover = item.kind === 'audio' && this.draftAudio ? (await Promise.all(item.mediaAssetIds.map(assetId => {
+        const asset = assets.get(assetId);
+        return asset ? this.draftAudio!.candidate(principal.accountId, projectId, item, source, asset, 'cover') : undefined;
+      }))).find(Boolean) : undefined;
       const artwork = managedThumbnail ? 'assets/catalog-placeholder.png' :
-        eligibleAsset(item, assets, 'artwork', 'television_display') ?? 'assets/catalog-placeholder.png';
+        eligibleAsset(item, assets, 'artwork', 'television_display') ?? privateCover ?? 'assets/catalog-placeholder.png';
+      const privateAudio = item.kind === 'audio' && this.draftAudio ? (await Promise.all(item.mediaAssetIds.map(assetId => {
+        const asset = assets.get(assetId);
+        return asset ? this.draftAudio!.candidate(principal.accountId, projectId, item, source, asset, 'audio') : undefined;
+      }))).find(Boolean) : undefined;
       const mediaUrl = item.kind === 'video' || item.kind === 'audio'
         ? eligibleAsset(item, assets, item.kind, 'television_playback') ??
-          (item.kind === 'video' ? await this.managedVideoUrl(principal.accountId, projectId, item, assets) : undefined)
+          (item.kind === 'video' ? await this.managedVideoUrl(principal.accountId, projectId, item, assets) : privateAudio)
         : undefined;
       if (!blockedReason && item.kind !== 'book' && !mediaUrl) blockedReason = 'playback_rights_or_delivery_missing';
       const title = (item.creatorOverrides?.title ?? item.sourceRecord.metadata.title).trim().slice(0, 120).trim();
