@@ -13,7 +13,7 @@ import { ManagedArtworkDelivery } from '../src/managed-artwork.js';
 import { PublicReleaseResolver } from '../src/public-resolver.js';
 import type { S3MediaStorage } from '../src/media-storage.js';
 import type { PrivateObjectStore } from '../src/private-objects.js';
-import { catalogItemSchema, catalogSourceSchema, mediaAssetSchema, publishedManifestSchema } from '@firelaunch/contracts';
+import { catalogItemSchema, catalogSourceSchema, mediaAssetSchema, publishedManifestSchema } from '@vegalaunch/contracts';
 
 const hex = (digit: string) => digit.repeat(32);
 const deploymentId = `dep_${hex('a')}`;

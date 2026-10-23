@@ -1,4 +1,4 @@
-import type { ChannelSpec, ContentItem, Brand } from '@firelaunch/contracts';
+import type { ChannelSpec, ContentItem, Brand } from '@vegalaunch/contracts';
 
 function isPlayableContent(item: ContentItem): boolean {
   return (item.presentation !== 'information' && typeof item.mediaUrl === 'string') || !!item.audiobook?.mediaUrl;

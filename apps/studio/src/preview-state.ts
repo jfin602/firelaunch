@@ -1,5 +1,5 @@
-import { focusRows, heroActionFocusId, heroSelector, initialState, itemFocusId, navFocusId, transition, type Television, type TvCommand, type TvState } from '@firelaunch/tv';
-import { isPlayableContent } from '@firelaunch/contracts';
+import { focusRows, heroActionFocusId, heroSelector, initialState, itemFocusId, navFocusId, transition, type Television, type TvCommand, type TvState } from '@vegalaunch/tv';
+import { isPlayableContent } from '@vegalaunch/contracts';
 
 export function reconcile(tv: Television, state: TvState | null): TvState {
   if (!state) return initialState(tv);

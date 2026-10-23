@@ -4,8 +4,8 @@ import { createReadStream } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { isIP } from 'node:net';
-import { generateProject } from '@firelaunch/generator';
-import type { ChannelDeployment, ChannelProject } from '@firelaunch/contracts';
+import { generateProject } from '@vegalaunch/generator';
+import type { ChannelDeployment, ChannelProject } from '@vegalaunch/contracts';
 import { RepositoryError } from './repository.js';
 import { isTrustedVegaAsset, isTrustedVegaAssetPath, TRUSTED_VEGA_ASSET_MAX_BYTES } from './trusted-vega-assets.js';
 

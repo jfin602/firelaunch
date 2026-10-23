@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" role="img" aria-label="Abstract red sandstone canyon">
-  <!-- Original FireLaunch illustration drawn from SVG paths for this Studio theme; no third-party image or composite screenshot. -->
+  <!-- Original VegaLaunch illustration drawn from SVG paths for this Studio theme; no third-party image or composite screenshot. -->
   <defs>
     <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#29191b"/><stop offset=".52" stop-color="#9c4330"/><stop offset="1" stop-color="#251619"/></linearGradient>
     <linearGradient id="left" x2="1" y2=".55"><stop stop-color="#170e12"/><stop offset=".6" stop-color="#703026"/><stop offset="1" stop-color="#b05232"/></linearGradient>

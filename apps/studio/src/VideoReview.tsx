@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
-import { sourceUseEligible, type ChannelProject, type CatalogItem } from '@firelaunch/contracts';
+import { sourceUseEligible, type ChannelProject, type CatalogItem } from '@vegalaunch/contracts';
 import { ApiError, readVideoAssetStatus, setVideoInclusion, writeCatalog, type CatalogSnapshot, type VideoAssetStatus } from './api.js';
 import type { VideoPage } from './video-pages.js';
 

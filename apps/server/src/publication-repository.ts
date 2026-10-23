@@ -6,7 +6,7 @@ import {
   assertInstalledLayoutCompatible, catalogInventorySchema, channelDeploymentSchema, channelSpecSchema, mediaUseEligible, projectApprovedManifest,
   mediaRenditionSetSchema, publicationApprovalSchema, publicationBindingsSchema, publishedManifestSchema,
   type CatalogInventory, type ChannelSpec, type PublicationBindings, type PublishedManifest
-} from '@firelaunch/contracts';
+} from '@vegalaunch/contracts';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { RepositoryError } from './repository.js';

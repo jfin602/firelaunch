@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
-import { MockProvider } from '@firelaunch/agent';
+import { MockProvider } from '@vegalaunch/agent';
 import { createApi } from '../../server/src/api.js';
 import { ProjectRepository } from '../../server/src/repository.js';
 import App from '../src/App.js';

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { PoolClient } from 'pg';
-import { mediaRenditionSetSchema, type MediaRenditionSet } from '@firelaunch/contracts';
+import { mediaRenditionSetSchema, type MediaRenditionSet } from '@vegalaunch/contracts';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { RepositoryError } from './repository.js';

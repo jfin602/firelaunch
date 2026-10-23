@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
 import { managedJobIdentitySchema, managedJobObservationSchema, mediaRenditionSetSchema,
-  type ManagedJobObservation } from '@firelaunch/contracts';
+  type ManagedJobObservation } from '@vegalaunch/contracts';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import { RepositoryError } from './repository.js';
 

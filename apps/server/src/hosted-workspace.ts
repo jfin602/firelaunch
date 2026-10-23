@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { generateProject } from '@firelaunch/generator';
-import type { ChannelProject, ChannelDeployment } from '@firelaunch/contracts';
+import { generateProject } from '@vegalaunch/generator';
+import type { ChannelProject, ChannelDeployment } from '@vegalaunch/contracts';
 import { RepositoryError } from './repository.js';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
@@ -193,7 +193,7 @@ export class HostedWorkspaceService {
     const manifest = code.generated ? (await this.read(principal, id, 'manifest.toml')).content : '';
     const manifestReady = /^\[\[components\.interactive\]\]$/m.test(manifest) &&
       /^\s*categories\s*=\s*\[[^\]]*"com\.amazon\.category\.main"[^\]]*\]/m.test(manifest) &&
-      !code.changed.some(name => ['manifest.toml', 'package.json', 'firelaunch.json'].includes(name));
+      !code.changed.some(name => ['manifest.toml', 'package.json', 'vegalaunch.json'].includes(name));
     const sections = spec.pages.map(page => page.title).join(', ');
     const featuredVideos = spec.content.filter(item => item.presentation === 'video').slice(0, 3).map(item => item.title).join(', ');
     const videoCount = spec.content.filter(item => item.presentation === 'video').length;

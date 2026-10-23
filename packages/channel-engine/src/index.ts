@@ -4,7 +4,7 @@ import {
   brandSchema, channelSpecSchema, contentSchema, createPageFromTemplate, idSchema, moduleSchema, pageSchema,
   SCHEMA_VERSION, slugSchema,
   type ChannelSpec, type Page, type ContentItem
-} from '@firelaunch/contracts';
+} from '@vegalaunch/contracts';
 
 export function newId(kind: 'ch' | 'page' | 'mod' | 'item'): string {
   return `${kind}_${randomUUID().replaceAll('-', '')}`;

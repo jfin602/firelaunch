@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 import { HostedProjectRepository } from '../src/hosted-repository.js';
 import { CatalogRepository } from '../src/catalog-repository.js';
 import { PrivateObjectService, type PrivateObjectStore } from '../src/private-objects.js';
-import { mediaUseEligible } from '@firelaunch/contracts';
+import { mediaUseEligible } from '@vegalaunch/contracts';
 
 const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;
 const databaseTest = baseUrl ? test : test.skip;

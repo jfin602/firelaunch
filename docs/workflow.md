@@ -1,4 +1,4 @@
-# FireLaunch Engineering Workflow
+# VegaLaunch Engineering Workflow
 
 Adapted from the current Dope repository process.
 

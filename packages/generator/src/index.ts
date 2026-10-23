@@ -3,8 +3,8 @@ import { readFile, readdir, mkdir, writeFile, lstat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { isIP } from 'node:net';
-import { channelDeploymentSchema, channelSpecSchema, type ChannelSpec, type ChannelDeployment } from '@firelaunch/contracts';
-import { televisionFromSpec } from '@firelaunch/tv';
+import { channelDeploymentSchema, channelSpecSchema, type ChannelSpec, type ChannelDeployment } from '@vegalaunch/contracts';
+import { televisionFromSpec } from '@vegalaunch/tv';
 
 export const TEMPLATE_VERSION = '0.0.4';
 const templateRoot = fileURLToPath(new URL('../../../templates/vega-channel/', import.meta.url));
@@ -58,8 +58,8 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
   const fingerprint = createHash('sha256').update(TEMPLATE_VERSION).update('\0')
     .update(templateFingerprint).update('\0').update(JSON.stringify(valid)).update('\0')
     .update(JSON.stringify(publicBinding)).update('\0').update(appName).digest('hex');
-  const packageName = `firelaunch-${valid.slug}`;
-  const applicationId = bound?.packageId ?? `com.firelaunch.channel.${valid.id}`;
+  const packageName = `vegalaunch-${valid.slug}`;
+  const applicationId = bound?.packageId ?? `com.vegalaunch.channel.${valid.id}`;
   files.set('package.json', json({ name: packageName, version: TEMPLATE_VERSION, private: true, scripts: {
     start: 'react-native start', 'build:release': 'react-native build-vega --build-type Release'
   }, dependencies: { 'react-native': '0.83.0', '@amazon-devices/react-native-kepler': '~4.0.0',
@@ -77,9 +77,9 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
   kepler: { projectType: 'application', appName: packageName, targets: ['tv'] } }));
   files.set('app.json', json({ name: `${applicationId}.main`, displayName: appName }));
   files.set('manifest.toml', files.get('manifest.toml')!
-    .replaceAll('FIRELAUNCH_APP_ID', JSON.stringify(applicationId))
-    .replaceAll('FIRELAUNCH_COMPONENT_ID', JSON.stringify(`${applicationId}.main`))
-    .replaceAll('FIRELAUNCH_APP_NAME', JSON.stringify(appName)));
+    .replaceAll('VEGALAUNCH_APP_ID', JSON.stringify(applicationId))
+    .replaceAll('VEGALAUNCH_COMPONENT_ID', JSON.stringify(`${applicationId}.main`))
+    .replaceAll('VEGALAUNCH_APP_NAME', JSON.stringify(appName)));
   files.set('src/tv-runtime.js', runtime);
   files.set('src/hero-image-queue.js', heroQueue);
   files.set('src/channel.json', json(tv));
@@ -88,7 +88,7 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
     files.set('src/release-config.json', json(publicBinding));
     files.set('src/release-client.js', `import AsyncStorage from '@react-native-async-storage/async-storage';\nimport config from './release-config.json';\nimport { createChannelLoader } from './remote-release';\n\nexport function installRelease(bundled, onChannel) {\n  const loader = createChannelLoader(config, bundled, { storage: AsyncStorage, onChannel });\n  loader.start();\n  const interval = setInterval(() => loader.refresh(), 60_000);\n  return () => clearInterval(interval);\n}\n`);
   } else for (const name of ['src/release-config.json', 'src/remote-release.js', 'src/sha256.js']) files.delete(name);
-  files.set('firelaunch.json', json({ generatorVersion: TEMPLATE_VERSION, schemaVersion: valid.schemaVersion,
+  files.set('vegalaunch.json', json({ generatorVersion: TEMPLATE_VERSION, schemaVersion: valid.schemaVersion,
     channelId: valid.id, fingerprint, templateFingerprint,
     unresolvedAssets: [...new Set([bundled.brand.logo, bundled.brand.heroArtwork, ...bundled.content.map(item => item.artwork)]
       .filter((asset): asset is string => typeof asset === 'string' && asset.startsWith('assets/')))].sort() }));

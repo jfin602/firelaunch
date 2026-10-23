@@ -1,6 +1,6 @@
-import { applyMutation } from '@firelaunch/channel-engine';
-import { AgentToolError, type CatalogGrounding } from '@firelaunch/agent';
-import type { ChannelSpec } from '@firelaunch/contracts';
+import { applyMutation } from '@vegalaunch/channel-engine';
+import { AgentToolError, type CatalogGrounding } from '@vegalaunch/agent';
+import type { ChannelSpec } from '@vegalaunch/contracts';
 import type { CatalogProjection } from './catalog-projection.js';
 
 // The projection has already checked the authenticated owner, explicit selection,

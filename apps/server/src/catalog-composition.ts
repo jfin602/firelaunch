@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { channelSpecSchema, createPageFromTemplate, type ChannelSpec, type ContentItem, type Module, type Page } from '@firelaunch/contracts';
-import { starterChannel } from '@firelaunch/channel-engine';
+import { channelSpecSchema, createPageFromTemplate, type ChannelSpec, type ContentItem, type Module, type Page } from '@vegalaunch/contracts';
+import { starterChannel } from '@vegalaunch/channel-engine';
 import type { CatalogProjection } from './catalog-projection.js';
 
 export type CompositionKind = 'video' | 'audio' | 'writing';

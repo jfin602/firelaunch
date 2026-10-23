@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { channelSpecSchema } from '@firelaunch/contracts';
+import { channelSpecSchema } from '@vegalaunch/contracts';
 import { Preview } from './src/Preview.js';
 import './src/style.css';
 import './hero-demo.css';

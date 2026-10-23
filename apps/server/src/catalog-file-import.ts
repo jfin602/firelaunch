@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { TextDecoder, TextEncoder } from 'node:util';
-import { catalogMetadataSchema, type CatalogItem, type CatalogMetadata } from '@firelaunch/contracts';
+import { catalogMetadataSchema, type CatalogItem, type CatalogMetadata } from '@vegalaunch/contracts';
 import { RepositoryError } from './repository.js';
 
 export type FileFormat = 'csv' | 'json';

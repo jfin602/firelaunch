@@ -1,4 +1,4 @@
-# FireLaunch Boot Context
+# VegaLaunch Boot Context
 
 ## Current execution: c8-ui3 true fullscreen and Clean View (2026-10-21)
 

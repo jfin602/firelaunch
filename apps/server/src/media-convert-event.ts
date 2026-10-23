@@ -1,4 +1,4 @@
-import { managedJobObservationSchema, type ManagedJobObservation } from '@firelaunch/contracts';
+import { managedJobObservationSchema, type ManagedJobObservation } from '@vegalaunch/contracts';
 
 type RecordValue = Record<string, unknown>;
 const object = (value: unknown): RecordValue | null => value && typeof value === 'object' && !Array.isArray(value)

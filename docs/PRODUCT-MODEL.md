@@ -1,4 +1,4 @@
-# FireLaunch Product Model
+# VegaLaunch Product Model
 
 ## OWNER-ACCEPTED 0.9.0 BASELINE — Phase 9 MVP Polish (2026-10-22)
 
@@ -11,7 +11,7 @@ Phase 8 CLOSED BY OWNER with dated NOT GREEN qualification exceptions retained i
 
 ## CURRENT OWNER HERO BEHAVIOR — c8-hero-multimedia (2026-10-22)
 
-[Focus-driven hero design](design/c8-hero-multimedia.md) replaces the *presentation* of eligible existing Hero + first associated rail/grid in the original TV app, not the stored `ChannelSpec` structure. **Top featured display changes to match FOCUSED bottom card**; Select enters existing detail and Back restores card/spotlight. Exactly one first row is visible below hero at 1280x720 and 1920x1080 without forced vertical scroll; later authored sections aren't deleted or made unreachable. Safe video/album/book cover ratios keep crisp uncropped foreground and controlled dim/blur/fade backdrop derived from the SAME rights-approved asset. No automatic video/audio playback on focus, no second hero editor, no proprietary generated artwork or data/schema migration. Creator branding is independent of FireLaunch's own Studio theme.
+[Focus-driven hero design](design/c8-hero-multimedia.md) replaces the *presentation* of eligible existing Hero + first associated rail/grid in the original TV app, not the stored `ChannelSpec` structure. **Top featured display changes to match FOCUSED bottom card**; Select enters existing detail and Back restores card/spotlight. Exactly one first row is visible below hero at 1280x720 and 1920x1080 without forced vertical scroll; later authored sections aren't deleted or made unreachable. Safe video/album/book cover ratios keep crisp uncropped foreground and controlled dim/blur/fade backdrop derived from the SAME rights-approved asset. No automatic video/audio playback on focus, no second hero editor, no proprietary generated artwork or data/schema migration. Creator branding is independent of VegaLaunch's own Studio theme.
 
 [c8-hero-multimedia prompts](tasks/c8-hero-multimedia/README.md) P1–P3 runner implementation, P4 manual authenticated browser + attached owner mock artwork and real Vega device visual acceptance, all **0.8.17 unchanged**. Historical Phase 8 [NOT GREEN](tasks/p8/closeout.md) persists; visual correction does not independently qualify mixed-media publication or launch P9.
 
@@ -74,7 +74,7 @@ Developers are also users, but the default workflow must not require TV-platform
 
 ### ChannelProject
 
-The creator-owned FireLaunch workspace.
+The creator-owned VegaLaunch workspace.
 
 Contains:
 - ChannelSpec
@@ -137,7 +137,7 @@ The preview is not allowed to be a static screenshot.
 
 Self-contained source project produced from a checked-in template/runtime plus ChannelSpec.
 
-It must be inspectable in the Code surface and usable independently from FireLaunch after export.
+It must be inspectable in the Code surface and usable independently from VegaLaunch after export.
 
 ### BuildArtifact
 
@@ -149,7 +149,7 @@ No artifact record exists merely because generation succeeded.
 
 ### SubmissionBundle
 
-FireLaunch-prepared Appstore materials:
+VegaLaunch-prepared Appstore materials:
 - VPKG reference when actually built
 - app/store copy
 - app icon/artwork checklist
@@ -165,7 +165,7 @@ P0 does not automate credentialed Developer Console submission.
 
 1. New Channel.
 2. Enter title and short intent, optionally add logo/content.
-3. FireLaunch creates a valid starter ChannelSpec.
+3. VegaLaunch creates a valid starter ChannelSpec.
 4. Agent produces/refines the first channel composition.
 5. TV Preview becomes immediately navigable.
 6. Creator asks for changes or uses Design/Content controls.
@@ -214,7 +214,7 @@ The preceding P0 nouns, local storage, golden path and deferrals are historical,
 - **CreatorAccount:** login, customer/service entitlement, privacy/export/deletion and ownership principal.
 - **CreatorProfile:** public brand and contact/media attribution, separate from private account data.
 - **ChannelProject:** creator-scoped workspace containing one channel and its catalog configuration; no shared team access in MVP.
-- **ChannelDeployment:** one independent Fire TV application identity, package identifier, manifest endpoint, artifact/release lineage and Amazon Developer Console listing status. Each creator owns the app/account/listing, not FireLaunch. One account may own multiple independently published projects.
+- **ChannelDeployment:** one independent Fire TV application identity, package identifier, manifest endpoint, artifact/release lineage and Amazon Developer Console listing status. Each creator owns the app/account/listing, not VegaLaunch. One account may own multiple independently published projects.
 
 ### Catalog, media and creator-reviewed updates
 
@@ -292,7 +292,7 @@ The minimal Add Video form and actual authenticated, owner/project-scoped privat
 
 ## Accepted managed VOD media lifecycle (2026-10-14, ADR 0011)
 
-The historical P6 FFmpeg-job paragraphs above describe the initial implementation, not the currently approved future encoder. New FireLaunch-managed creator-uploaded videos depend on **AWS Video on Demand on AWS Foundation / MediaConvert** rather than a FireLaunch FFmpeg worker. The creator's existing MediaAsset/CatalogItem identity, upload ownership/rights and immutable rendition/publication linkage remain canonical. A managed job identity binds an owner-approved verified original to AWS account/region/job ID, immutable profile/version, private staging output, attempt/status/error and reconciliation state. READY requires trusted provider result and complete HLS verification; it is not a rights grant. Only a distinct explicit approved P5 publication may expose delivery URLs. Existing client ChannelSpec and public manifest playback contracts do not change. Legacy READY media and job records must survive correction; live cloud, playback and production qualification remain open. See ADR 0011 and c6-aws-vod.
+The historical P6 FFmpeg-job paragraphs above describe the initial implementation, not the currently approved future encoder. New VegaLaunch-managed creator-uploaded videos depend on **AWS Video on Demand on AWS Foundation / MediaConvert** rather than a VegaLaunch FFmpeg worker. The creator's existing MediaAsset/CatalogItem identity, upload ownership/rights and immutable rendition/publication linkage remain canonical. A managed job identity binds an owner-approved verified original to AWS account/region/job ID, immutable profile/version, private staging output, attempt/status/error and reconciliation state. READY requires trusted provider result and complete HLS verification; it is not a rights grant. Only a distinct explicit approved P5 publication may expose delivery URLs. Existing client ChannelSpec and public manifest playback contracts do not change. Legacy READY media and job records must survive correction; live cloud, playback and production qualification remain open. See ADR 0011 and c6-aws-vod.
 ## Creator Studio presentation target — Desert Heat (2026-10-17 UTC)
 
 The owner-approved [visual baseline](design/studio-visual-baseline.md), [ADR 0012](decisions/0012-studio-visual-identity.md) and [original image provenance](design/references/README.md) establish a **future** full-viewport dark charcoal Studio with persistent project/sidebar and topbar, flexible central workspace and darkened red slot-canyon on contextual hero areas, contextual right action/inspector controls, restrained translucent elevated cards, readable typography/spacing, warm orange-to-red primary actions, and colorful media thumbnails retaining their own genre palettes. The dark outer frame in the screenshot is an illustration artifact, not a margin for the real app.
@@ -318,6 +318,6 @@ Restore the supported media-duration admission target to 1-7200 seconds (two hou
 
 A creator's video groups its privately stored MP4, MediaConvert HLS, independently identified thumbnail versions and optional language-tagged subtitle tracks under one owned CatalogItem/video association. No separate supporting-media bucket is required. Legacy opaque private objects remain valid; group metadata and safe paths without bulk migration. Thumbnail rendering does not wait for video upload completion or encoding: selected custom JPEG/PNG (preferred) or a successfully extracted still appears immediately, persists as soon as safely possible, and replaces placeholders across Add Video, upload/progress, processing, Home, Catalog, video editor and private TV Preview. Stored thumbnails reload through an authenticated creator-scoped private-object fetch; an unavailable image falls back honestly. Private draft artwork is never made public just for Studio display.
 
-On explicit creator-approved free publication, FireLaunch reviews display rights/provenance, verifies immutable selected artwork bytes and copies them into approved versioned delivery-only paths; it resolves a stable CloudFront URL into the existing PublishedManifest v1 artwork/media binding without changing the native wire contract. Editing the private artwork does not rewrite a currently live release. No external public HTTPS image URL is required for directly uploaded videos; legacy public URLs may remain an advanced compatibility option. The public CloudFront path policy must permit only approved precise image paths after separate operator authorization.
+On explicit creator-approved free publication, VegaLaunch reviews display rights/provenance, verifies immutable selected artwork bytes and copies them into approved versioned delivery-only paths; it resolves a stable CloudFront URL into the existing PublishedManifest v1 artwork/media binding without changing the native wire contract. Editing the private artwork does not rewrite a currently live release. No external public HTTPS image URL is required for directly uploaded videos; legacy public URLs may remain an advanced compatibility option. The public CloudFront path policy must permit only approved precise image paths after separate operator authorization.
 
 Subtitles are *optional* video supporting tracks (owner, video, normalized BCP 47 language, validated UTF-8 WebVTT, private object, checksum, version and rights/retirement semantics). A missing subtitle never blocks private or public video workflow. A private VTT track is not a qualified public or native caption feature. Public subtitle delivery/manifest changes and Vega device captions are deferred to a separately qualified compatibility step. See [ADR 0014](decisions/0014-video-supporting-media.md) and [c6-supporting-media](tasks/c6-supporting-media/README.md).

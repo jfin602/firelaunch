@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
-import { starterChannel } from '@firelaunch/channel-engine';
-import type { ChannelProject } from '@firelaunch/contracts';
+import { starterChannel } from '@vegalaunch/channel-engine';
+import type { ChannelProject } from '@vegalaunch/contracts';
 import App from '../src/App.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://studio.example/' });
@@ -21,6 +21,8 @@ test('hosted Studio denies project UI and offers sign-in after missing session',
   try {
     render(createElement(App));
     const signIn = await screen.findByRole('link', { name: 'Sign in with Google' });
+    assert.ok(screen.getByRole('heading', { name: 'Sign in to VegaLaunch' }));
+    assert.equal(document.body.textContent?.includes('FireLaunch'), false);
     assert.equal(signIn.getAttribute('href'), '/api/auth/login');
     assert.deepEqual(requests, ['/api/auth/session']);
     assert.equal(screen.queryByRole('button', { name: /New channel/ }), null);

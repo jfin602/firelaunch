@@ -1,4 +1,4 @@
-import { channelSpecSchema, type ChannelSpec } from '@firelaunch/contracts';
+import { channelSpecSchema, type ChannelSpec } from '@vegalaunch/contracts';
 import { projectTelevision } from './runtime.js';
 
 export * from './runtime.js';

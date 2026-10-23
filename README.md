@@ -1,4 +1,6 @@
-# FireLaunch
+# VegaLaunch
+
+VegaLaunch is the current product name. The dated phase notes below are historical execution records; see [current state](docs/CURRENT-STATE.md) for current work. Existing `firelaunch` service, storage, database, and public app identifiers are retained for compatibility.
 
 ## Current creative UX direction — Phase 8 Wave 2 (2026-10-21)
 
@@ -15,7 +17,7 @@
 
 The recorded protected staging release is 20261020T233126Z-d375ee6f1709 (2026-10-20 23:39 UTC readback), not a new live host inspection. C7 closeout source is committed at c5a4421, distinct from tested archive provenance.
 
-FireLaunch is a creator-owned Fire TV channel studio with authenticated hosted creator workspaces, catalog, private video uploads, managed HLS processing, explicit free-video channel publication, and React Native for Vega source/build infrastructure. **As of the dated October 20 evidence**, the `0.6.7` staging Studio has a closeable/reopenable progressive video workspace and AWS ingest configuration ACTIVE; earlier Q1/F7 work completed real MediaConvert HLS and an explicit creator-approved FREE CloudFront release #1. **Q2 F7 remains PARTIAL/NOT GREEN; native creator-bound Vega export/download and independent installed VirtualDevice playback remain UNQUALIFIED.** No new paid job was run in the c6-usability P6 deployment. Latest `main` source at `b0d2897` has newer creative/video artwork integration that is **not automatically confirmed deployed**. See [current state](docs/CURRENT-STATE.md) and the [October 20–23 delivery override](docs/roadmap/mvp-roadmap.md).
+VegaLaunch is a creator-owned Fire TV channel studio with authenticated hosted creator workspaces, catalog, private video uploads, managed HLS processing, explicit free-video channel publication, and React Native for Vega source/build infrastructure. **As of the dated October 20 evidence**, the `0.6.7` staging Studio has a closeable/reopenable progressive video workspace and AWS ingest configuration ACTIVE; earlier Q1/F7 work completed real MediaConvert HLS and an explicit creator-approved FREE CloudFront release #1. **Q2 F7 remains PARTIAL/NOT GREEN; native creator-bound Vega export/download and independent installed VirtualDevice playback remain UNQUALIFIED.** No new paid job was run in the c6-usability P6 deployment. Latest `main` source at `b0d2897` has newer creative/video artwork integration that is **not automatically confirmed deployed**. See [current state](docs/CURRENT-STATE.md) and the [October 20–23 delivery override](docs/roadmap/mvp-roadmap.md).
 
 **Start here:** [Current State](docs/CURRENT-STATE.md) (dated evidence, deployment, risks), [October 20–23 delivery roadmap](docs/roadmap/mvp-roadmap.md), [c6-usability P6 closeout](docs/tasks/c6-usability/closeout.md), [supporting-media reconciliation](docs/tasks/c6-supporting-media/README.md), [p6-live-vod Q1-Q3](docs/tasks/p6-live-vod/README.md) (historic manual gates and current device routing), [ADR 0011](docs/decisions/0011-aws-vod-foundation.md) and [ADR 0013](docs/decisions/0013-hybrid-video-access.md).
 
@@ -86,4 +88,4 @@ For a real Bedrock request set `FIRELAUNCH_AGENT_PROVIDER=bedrock`, an accessibl
 
 ## Submission boundary
 
-The creator must replace local sample media/artwork, provide store icon/screenshots, support/privacy details and content-rights declarations, perform a real Vega release build, test on simulator/device (and physical Fire TV before production), then sign into their own Amazon Developer Console to upload, select targets, review and submit. FireLaunch does not automate credentials or submission. See `docs/publishing.md`, `docs/demo-plan.md`, `docs/hackathon-requirements.md`, and `MODULES.md`.
+The creator must replace local sample media/artwork, provide store icon/screenshots, support/privacy details and content-rights declarations, perform a real Vega release build, test on simulator/device (and physical Fire TV before production), then sign into their own Amazon Developer Console to upload, select targets, review and submit. VegaLaunch does not automate credentials or submission. See `docs/publishing.md`, `docs/demo-plan.md`, `docs/hackathon-requirements.md`, and `MODULES.md`.

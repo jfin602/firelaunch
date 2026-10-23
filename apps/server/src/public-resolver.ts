@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
-import { catalogItemSchema, catalogSourceSchema, mediaAssetSchema, mediaUseEligible, sourceUseEligible, publishedManifestSchema } from '@firelaunch/contracts';
+import { catalogItemSchema, catalogSourceSchema, mediaAssetSchema, mediaUseEligible, sourceUseEligible, publishedManifestSchema } from '@vegalaunch/contracts';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { canonicalBytes } from './publication-repository.js';
 import { RepositoryError } from './repository.js';

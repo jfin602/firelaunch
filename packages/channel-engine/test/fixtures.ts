@@ -1,4 +1,4 @@
-import { channelSpecSchema, type ChannelSpec } from '@firelaunch/contracts';
+import { channelSpecSchema, type ChannelSpec } from '@vegalaunch/contracts';
 
 export function fixtureChannel(): ChannelSpec {
   return channelSpecSchema.parse({

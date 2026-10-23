@@ -1,4 +1,4 @@
-# FireLaunch Current State
+# VegaLaunch Current State
 
 ## Latest owner-approved P9 issue correction — P9-011 (2026-10-22 local)
 

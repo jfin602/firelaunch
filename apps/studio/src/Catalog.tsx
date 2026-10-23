@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, type FormEvent } from 'react';
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
-import { sourceUseEligible, type CatalogItem, type Collection, type MediaAsset, type ChannelProject } from '@firelaunch/contracts';
+import { sourceUseEligible, type CatalogItem, type Collection, type MediaAsset, type ChannelProject } from '@vegalaunch/contracts';
 import { approveCatalogImport, deletePrivateObject, previewCatalogImport, readCatalog, readVideoAssetStatus, revokeVideoAsset, setMediaInclusion, uploadPrivateEvidence, uploadPrivateMedia, writeCatalog, type CatalogSnapshot, type ImportPreview, type VideoAssetStatus } from './api.js';
 import { VideoLibraryStatus } from './VideoUpload.js';
 import { safeArtwork } from './artwork-url.js';

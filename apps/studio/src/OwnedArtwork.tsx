@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import type { CatalogItem, MediaAsset } from '@firelaunch/contracts';
+import type { CatalogItem, MediaAsset } from '@vegalaunch/contracts';
 import { readPrivateThumbnail } from './api.js';
 import { safeArtwork } from './artwork-url.js';
 

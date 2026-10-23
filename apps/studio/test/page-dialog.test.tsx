@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
-import { applyMutation, starterChannel } from '@firelaunch/channel-engine';
-import type { ChannelProject } from '@firelaunch/contracts';
+import { applyMutation, starterChannel } from '@vegalaunch/channel-engine';
+import type { ChannelProject } from '@vegalaunch/contracts';
 import App from '../src/App.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://studio.example/' });

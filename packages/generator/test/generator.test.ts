@@ -5,8 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fixtureChannel } from '../../channel-engine/test/fixtures.js';
 import { generateProject, writeGeneratedProject } from '../src/index.js';
-import { televisionFromSpec } from '@firelaunch/tv';
-import type { ChannelDeployment } from '@firelaunch/contracts';
+import { televisionFromSpec } from '@vegalaunch/tv';
+import type { ChannelDeployment } from '@vegalaunch/contracts';
 import { parse } from '@babel/parser';
 
 test('native hero stays bounded at HD and Full HD without a bottom gutter', async () => {
@@ -138,7 +138,10 @@ test('deterministic tree contains true shared runtime, manifest and projected co
   assert.equal(JSON.parse(first.files.get('package.json')!).dependencies['react-native'], '0.83.0');
   assert.equal(JSON.parse(first.files.get('package.json')!).devDependencies['@babel/plugin-transform-export-namespace-from'], undefined);
   assert.doesNotMatch(first.files.get('babel.config.js')!, /@babel\/plugin-transform-export-namespace-from/);
-  assert.equal(JSON.parse(first.files.get('app.json')!).name, `com.firelaunch.channel.${spec.id}.main`);
+  assert.equal(JSON.parse(first.files.get('app.json')!).name, `com.vegalaunch.channel.${spec.id}.main`);
+  assert.equal(JSON.parse(first.files.get('package.json')!).name, `vegalaunch-${spec.slug}`);
+  assert.ok(first.files.has('vegalaunch.json'));
+  assert.equal([...first.files].some(([name, contents]) => /FireLaunch|firelaunch/.test(name) || /FireLaunch/.test(contents)), false);
   assert.match(first.files.get('src/tv-runtime.js')!, /function transition\(/);
   const generatedRuntime = await import(`data:text/javascript,${encodeURIComponent(first.files.get('src/tv-runtime.js')!)}`);
   const projected = JSON.parse(first.files.get('src/channel.json')!);
@@ -147,7 +150,7 @@ test('deterministic tree contains true shared runtime, manifest and projected co
   assert.equal(generatedRuntime.transition(projected, generatedRuntime.initialState(projected), 'down').focusId,
     `item:${spec.navigation[0]}:${spec.pages[0]!.modules[0]!.id}:${spec.content[0]!.id}`);
   assert.match(first.files.get('src/App.js')!, /from '\.\/tv-runtime'/);
-  assert.deepEqual(JSON.parse(first.files.get('firelaunch.json')!).unresolvedAssets, ['assets/ocean.jpg']);
+  assert.deepEqual(JSON.parse(first.files.get('vegalaunch.json')!).unresolvedAssets, ['assets/ocean.jpg']);
   assert.notEqual((await generateProject({ ...spec, title: 'Another' })).fingerprint, first.fingerprint);
   const quoted = await generateProject({ ...spec, title: 'A "quoted" channel' });
   assert.match(quoted.files.get('manifest.toml')!, /title = "A \\"quoted\\" channel"/);
@@ -246,7 +249,7 @@ test('bound deployments pin public identity while legacy generation remains stat
   assert.deepEqual(fallback.pages[0].modules[0].items, []);
   assert.deepEqual(fallback.pages[0].modules[0].body, 'Connect to load this channel.');
   assert.equal(generated.files.get('src/channel.json')!.includes(spec.content[0]!.mediaUrl!), false);
-  assert.deepEqual(JSON.parse(generated.files.get('firelaunch.json')!).unresolvedAssets, []);
+  assert.deepEqual(JSON.parse(generated.files.get('vegalaunch.json')!).unresolvedAssets, []);
   assert.notEqual(generated.fingerprint, (await generateProject(spec)).fingerprint);
   assert.equal((await generateProject(spec)).files.has('src/release-config.json'), false);
   assert.equal(JSON.parse((await generateProject(spec)).files.get('package.json')!).dependencies['@react-native-async-storage/async-storage'], undefined);

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { CatalogInventory, ChannelSpec } from '@firelaunch/contracts';
+import type { CatalogInventory, ChannelSpec } from '@vegalaunch/contracts';
 
 type Selection = { itemIds: string[]; collectionIds: string[] };
 

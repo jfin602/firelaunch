@@ -1,4 +1,4 @@
-import type { CatalogItem } from '@firelaunch/contracts';
+import type { CatalogItem } from '@vegalaunch/contracts';
 
 // Catalog artwork is a creator/source URL, never a private object capability.
 export function safeArtwork(item: CatalogItem): string | null {

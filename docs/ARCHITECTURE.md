@@ -1,4 +1,4 @@
-# FireLaunch Architecture
+# VegaLaunch Architecture
 
 ## 2026-10-22 POST-P8 ARCHITECTURE BASELINE — 0.9.0 Polish entry
 
@@ -358,7 +358,7 @@ P6 owns this delivery slice; future catalog sync is P7, creator-owned console an
 
 ## Current creator VOD architecture (ADR 0011, 2026-10-14)
 
-The original P6 FFmpeg architecture and implemented code at root 0.6.7 are historical starting points. **For new FireLaunch-managed creator uploads, the accepted target encoding provider is AWS Video on Demand on AWS Foundation (MediaConvert)**, NOT a local/VPS/laptop FFmpeg worker. FireLaunch Studio/API/Postgres remains owner-scoped control plane; creator-authenticated S3 direct multipart remains the ingest path. A verified source creates one owned correlated MediaConvert job through the reviewed Foundation ingest workflow. Cloud events are idempotent observations that cannot alone grant READY/publication; reconcile missing results and verify the complete private staged HLS master/variants/segments. Publication rechecks rights/current revisions and promotes immutable output into delivery-only private S3 + CloudFront OAC. PublishedManifest v1 stays a stable approved HTTPS URL; no raw S3 or expiring secrets in clients. Default Foundation CloudFront behavior must be customized so unfinished transcoded output is inaccessible publicly.
+The original P6 FFmpeg architecture and implemented code at root 0.6.7 are historical starting points. **For new VegaLaunch-managed creator uploads, the accepted target encoding provider is AWS Video on Demand on AWS Foundation (MediaConvert)**, NOT a local/VPS/laptop FFmpeg worker. VegaLaunch Studio/API/Postgres remains owner-scoped control plane; creator-authenticated S3 direct multipart remains the ingest path. A verified source creates one owned correlated MediaConvert job through the reviewed Foundation ingest workflow. Cloud events are idempotent observations that cannot alone grant READY/publication; reconcile missing results and verify the complete private staged HLS master/variants/segments. Publication rechecks rights/current revisions and promotes immutable output into delivery-only private S3 + CloudFront OAC. PublishedManifest v1 stays a stable approved HTTPS URL; no raw S3 or expiring secrets in clients. Default Foundation CloudFront behavior must be customized so unfinished transcoded output is inaccessible publicly.
 
 Current migration authority: [ADR 0011](decisions/0011-aws-vod-foundation.md), [managed integration runbook](integrations/aws-vod-foundation.md), [c6-aws-vod correction](tasks/c6-aws-vod/README.md). Local code and actual AWS/Vega qualification are NOT completed by documentation. Preserve historical P6 P1-P7 and P5/c5 evidence, and retain real P6 P8 qualification. Never deploy/delete AWS resources automatically.
 

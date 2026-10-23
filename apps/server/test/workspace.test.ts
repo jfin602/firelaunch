@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promis
 import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
-import { doctor } from '@firelaunch/generator/doctor';
+import { doctor } from '@vegalaunch/generator/doctor';
 import { ProjectRepository } from '../src/repository.js';
 import { WorkspaceService } from '../src/workspace.js';
 import { createApi } from '../src/api.js';

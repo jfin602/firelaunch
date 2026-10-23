@@ -6,7 +6,7 @@ import { createServer } from 'node:http';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join, extname } from 'node:path';
-import { starterChannel } from '@firelaunch/channel-engine';
+import { starterChannel } from '@vegalaunch/channel-engine';
 
 const dist = resolve(process.argv[2] ?? 'apps/studio/dist');
 const entry = resolve(process.argv[3] ?? join(dist, 'index.html'));

@@ -56,4 +56,4 @@ if (managed) {
     setInterval(() => { void queue.poll().catch(() => undefined); }, 10_000).unref();
   }
 }
-createApi(repository, undefined, mode, hostedRepository, privateObjects, mediaUploads, mediaStorage, managedArtwork, draftAudio).listen(port, '127.0.0.1', () => console.log(`FireLaunch API listening on 127.0.0.1:${port} (${mode.mode})`));
+createApi(repository, undefined, mode, hostedRepository, privateObjects, mediaUploads, mediaStorage, managedArtwork, draftAudio).listen(port, '127.0.0.1', () => console.log(`VegaLaunch API listening on 127.0.0.1:${port} (${mode.mode})`));

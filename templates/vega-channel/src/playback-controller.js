@@ -74,7 +74,7 @@ export function createPlaybackController({ createVideo, createHls, installPolyfi
           const adaptive = createHls();
           hls = adaptive;
           adaptive.on(adaptive.Events.ERROR, (_, detail) => {
-            console.warn('FireLaunch HLS error', detail?.type, detail?.details, detail?.fatal === true);
+            console.warn('VegaLaunch HLS error', detail?.type, detail?.details, detail?.fatal === true);
             if (detail?.fatal && detail?.details === 'bufferStalledError' && atEnd()) onEnded();
             else if (detail?.fatal) onError();
           });
@@ -93,7 +93,7 @@ export function createPlaybackController({ createVideo, createHls, installPolyfi
             })();
           });
           startupTimer = setTimeout(() => {
-            console.warn('FireLaunch HLS startup timed out');
+            console.warn('VegaLaunch HLS startup timed out');
             onError();
           }, 30_000);
           adaptive.loadSource(item.mediaUrl);

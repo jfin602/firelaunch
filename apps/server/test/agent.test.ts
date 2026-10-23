@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
-import { MockProvider, type AgentProvider } from '@firelaunch/agent';
+import { MockProvider, type AgentProvider } from '@vegalaunch/agent';
 import { createApi } from '../src/api.js';
 import { ProjectRepository } from '../src/repository.js';
 

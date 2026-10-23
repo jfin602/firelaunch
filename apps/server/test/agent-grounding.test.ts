@@ -3,7 +3,7 @@ import test from 'node:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { ChannelAgent, executeTool, type AgentProvider } from '@firelaunch/agent';
+import { ChannelAgent, executeTool, type AgentProvider } from '@vegalaunch/agent';
 import { ProjectRepository } from '../src/repository.js';
 import { agentCatalogGrounding } from '../src/agent-grounding.js';
 import { CatalogProjectionService, type CatalogProjection } from '../src/catalog-projection.js';

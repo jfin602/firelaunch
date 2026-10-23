@@ -1,6 +1,6 @@
 import React, { useEffect, useState, type FormEvent } from 'react';
-import type { AgentEvent } from '@firelaunch/agent';
-import type { ChannelProject } from '@firelaunch/contracts';
+import type { AgentEvent } from '@vegalaunch/agent';
+import type { ChannelProject } from '@vegalaunch/contracts';
 import { agentStatus, askAgent, getProject, type CatalogSelection } from './api.js';
 
 export function AgentPanel({ project, onUpdate, events, onEvents, catalogSelection }: { project: ChannelProject; onUpdate: (project: ChannelProject) => void; events: AgentEvent[]; onEvents: (entries: AgentEvent[]) => void; catalogSelection?: CatalogSelection }) {

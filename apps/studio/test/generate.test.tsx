@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
-import { starterChannel } from '@firelaunch/channel-engine';
+import { starterChannel } from '@vegalaunch/channel-engine';
 import { Catalog } from '../src/Catalog.js';
 import { AgentPanel } from '../src/AgentPanel.js';
 

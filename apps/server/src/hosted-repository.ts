@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { Pool, type PoolClient } from 'pg';
-import { channelDeploymentSchema, channelSpecSchema, createProjectSchema, projectSchema, type ChannelDeployment, type ChannelProject, type ChannelSpec } from '@firelaunch/contracts';
-import { newId, starterChannel } from '@firelaunch/channel-engine';
+import { channelDeploymentSchema, channelSpecSchema, createProjectSchema, projectSchema, type ChannelDeployment, type ChannelProject, type ChannelSpec } from '@vegalaunch/contracts';
+import { newId, starterChannel } from '@vegalaunch/channel-engine';
 import { z } from 'zod';
 import { RepositoryError } from './repository.js';
 import { sourceMatchesBaseline } from './hosted-workspace.js';

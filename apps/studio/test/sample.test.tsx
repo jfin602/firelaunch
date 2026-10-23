@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { applyMutation, starterChannel } from '@firelaunch/channel-engine';
-import { projectSchema } from '@firelaunch/contracts';
+import { applyMutation, starterChannel } from '@vegalaunch/channel-engine';
+import { projectSchema } from '@vegalaunch/contracts';
 import { newFilmMediaUrl, sampleMutations, SAMPLE_MEDIA } from '../src/sample.js';
-import { televisionFromSpec, focusRows, transition, initialState } from '@firelaunch/tv';
+import { televisionFromSpec, focusRows, transition, initialState } from '@vegalaunch/tv';
 
 test('sample fills the starter Hero and row without adding sections or changing starter IDs', () => {
   assert.equal(newFilmMediaUrl(true), '');

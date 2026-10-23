@@ -15,7 +15,7 @@ import { OidcVerifier } from '../src/auth/oidc.js';
 import { HostedAuth } from '../src/auth/sessions.js';
 import { ProjectRepository } from '../src/repository.js';
 import { createApi } from '../src/api.js';
-import { MockProvider, type AgentProvider } from '@firelaunch/agent';
+import { MockProvider, type AgentProvider } from '@vegalaunch/agent';
 import { IsolatedObjectStore, PrivateObjectService } from '../src/private-objects.js';
 
 const baseUrl = process.env.FIRELAUNCH_TEST_DATABASE_URL;

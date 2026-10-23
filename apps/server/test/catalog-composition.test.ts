@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { starterChannel } from '@firelaunch/channel-engine';
-import { isPlayableContent, type ContentItem } from '@firelaunch/contracts';
-import { initialState, itemFocusId, projectTelevision, transition } from '@firelaunch/tv';
+import { starterChannel } from '@vegalaunch/channel-engine';
+import { isPlayableContent, type ContentItem } from '@vegalaunch/contracts';
+import { initialState, itemFocusId, projectTelevision, transition } from '@vegalaunch/tv';
 import { composeCatalogDraft } from '../src/catalog-composition.js';
 import type { CatalogProjection } from '../src/catalog-projection.js';
 

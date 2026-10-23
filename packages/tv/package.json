@@ -1,9 +1,9 @@
 {
-  "name": "@firelaunch/tv",
+  "name": "@vegalaunch/tv",
   "version": "0.0.2",
   "private": true,
   "type": "module",
   "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }, "./runtime": { "types": "./dist/runtime.d.ts", "default": "./dist/runtime.js" }, "./hero-image-queue": { "types": "./dist/hero-image-queue.d.ts", "default": "./dist/hero-image-queue.js" } },
   "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit" },
-  "dependencies": { "@firelaunch/contracts": "0.0.1" }
+  "dependencies": { "@vegalaunch/contracts": "0.0.1" }
 }

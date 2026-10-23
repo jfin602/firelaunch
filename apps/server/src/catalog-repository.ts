@@ -5,7 +5,7 @@ import type { PoolClient } from 'pg';
 import {
   catalogInventorySchema, catalogSourceSchema, catalogItemSchema, mediaAssetSchema, collectionSchema,
   type CatalogInventory, type CatalogSource, type CatalogItem, type MediaAsset, type Collection
-} from '@firelaunch/contracts';
+} from '@vegalaunch/contracts';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { RepositoryError } from './repository.js';

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { projectSchema, type ChannelProject } from '@firelaunch/contracts';
+import { projectSchema, type ChannelProject } from '@vegalaunch/contracts';
 import { AgentToolError, executeTool } from './tools.js';
 
 export { AgentToolError, executeTool, toolSchemas } from './tools.js';

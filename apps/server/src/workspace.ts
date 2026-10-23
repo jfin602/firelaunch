@@ -3,9 +3,9 @@ import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { lstat, mkdir, open, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { channelSpecSchema, type ChannelProject } from '@firelaunch/contracts';
-import { doctor, type ToolchainReport } from '@firelaunch/generator/doctor';
-import { generateProject, writeGeneratedProject } from '@firelaunch/generator';
+import { channelSpecSchema, type ChannelProject } from '@vegalaunch/contracts';
+import { doctor, type ToolchainReport } from '@vegalaunch/generator/doctor';
+import { generateProject, writeGeneratedProject } from '@vegalaunch/generator';
 import { ProjectRepository, RepositoryError } from './repository.js';
 import { isTrustedVegaAsset, isTrustedVegaAssetPath, TRUSTED_VEGA_ASSET_MAX_BYTES } from './trusted-vega-assets.js';
 
@@ -267,7 +267,7 @@ export class WorkspaceService {
     const assets = { artwork, unresolvedLocal: artwork.filter(value => value.startsWith('assets/')), screenshots: [] as string[] };
     const manifest = code.generated ? (await this.read(id, 'manifest.toml')).content : '';
     const manifestReady = /^\[\[components\.interactive\]\]$/m.test(manifest) && /^\s*categories\s*=\s*\[[^\]]*"com\.amazon\.category\.main"[^\]]*\]/m.test(manifest) &&
-      !code.changed.some(name => ['manifest.toml', 'package.json', 'firelaunch.json'].includes(name));
+      !code.changed.some(name => ['manifest.toml', 'package.json', 'vegalaunch.json'].includes(name));
     const checks = [
       { group: 'Channel/schema', ready: true, detail: `ChannelSpec revision ${project.revision} validates` },
       { group: 'TV experience', ready: false, detail: 'Preview is not simulator/device navigation and playback evidence; verify on Vega hardware' },

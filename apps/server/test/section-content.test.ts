@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { applyMutation, starterChannel } from '@firelaunch/channel-engine';
-import type { ContentItem } from '@firelaunch/contracts';
+import { applyMutation, starterChannel } from '@vegalaunch/channel-engine';
+import type { ContentItem } from '@vegalaunch/contracts';
 import { changeSectionContent } from '../src/section-content.js';
 
 const id = (prefix: string, digit: string) => `${prefix}_${digit.repeat(32)}`;

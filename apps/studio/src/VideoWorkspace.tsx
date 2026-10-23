@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StudioModal, ModalHeader } from './StudioModal.js';
-import type { ChannelProject } from '@firelaunch/contracts';
+import type { ChannelProject } from '@vegalaunch/contracts';
 import { readCatalog, type CatalogSnapshot } from './api.js';
 import { NewVideoUpload, VideoLibraryStatus } from './VideoUpload.js';
 import { VideoReview } from './VideoReview.js';

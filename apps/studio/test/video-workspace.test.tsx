@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
-import { starterChannel } from '@firelaunch/channel-engine';
+import { starterChannel } from '@vegalaunch/channel-engine';
 import { VideoWorkspace } from '../src/VideoWorkspace.js';
 
 const dom = new JSDOM('<!doctype html><html><body><main class="app-shell"></main></body></html>', { url: 'https://studio.example/' });

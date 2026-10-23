@@ -75,8 +75,8 @@ export function createNativeExport(input: ReleaseBuildInput, evidence: NativeBui
     !Buffer.isBuffer(vpkg) || vpkg.length < 1024 || vpkg.length > MAX_VPKG_BYTES ||
     evidence.bytes !== vpkg.length || evidence.sha256 !== sha256(vpkg)) fail('Native worker artifact identity or checksum differs from build input');
   const vpkgName = `${input.packageId}_x86_64.vpkg`;
-  const readme = Buffer.from(`# ${input.packageId} Vega release\n\nThis ZIP contains the native x86_64 Release package. Verify SHA256SUMS before installing.\n\n1. Start Vega VirtualDevice and run \`vega device list\` to find its serial.\n2. Run \`vega device install-app --device <serial> --packagePath ${vpkgName}\`.\n3. Run \`vega device launch-app --device <serial> --appName ${input.packageId}.main\`.\n\nThe app reads its creator-approved published release from ${input.manifestEndpoint}. Device playback and Amazon submission require separate qualification.\n`);
-  const info = Buffer.from(`${JSON.stringify({ format: 'firelaunch-vega-export-v1', projectId: input.projectId,
+  const readme = Buffer.from(`# VegaLaunch Vega release\n\nPackage ID: ${input.packageId}\n\nThis ZIP contains the native x86_64 Release package. Verify SHA256SUMS before installing.\n\n1. Start Vega VirtualDevice and run \`vega device list\` to find its serial.\n2. Run \`vega device install-app --device <serial> --packagePath ${vpkgName}\`.\n3. Run \`vega device launch-app --device <serial> --appName ${input.packageId}.main\`.\n\nThe app reads its creator-approved published release from ${input.manifestEndpoint}. Device playback and Amazon submission require separate qualification.\n`);
+  const info = Buffer.from(`${JSON.stringify({ format: 'firelaunch-vega-export-v1', product: 'VegaLaunch', projectId: input.projectId,
     specRevision: input.specRevision, deploymentId: input.deploymentId, packageId: input.packageId,
     manifestEndpoint: input.manifestEndpoint, publishedRelease: input.publishedRelease,
     sourceHash: input.sourceHash, inputFingerprint: input.fingerprint,

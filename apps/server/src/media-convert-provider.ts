@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { CancelJobCommand, CreateJobCommand, GetJobCommand, ListJobsCommand, MediaConvertClient,
   type Job, type JobSettings } from '@aws-sdk/client-mediaconvert';
 import { z } from 'zod';
-import type { ManagedJobIdentity, ManagedMediaProvider } from '@firelaunch/contracts';
+import type { ManagedJobIdentity, ManagedMediaProvider } from '@vegalaunch/contracts';
 import type { TrustedManagedJob } from './media-convert-event.js';
 
 const configSchema = z.strictObject({

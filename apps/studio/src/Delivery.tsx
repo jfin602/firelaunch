@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { ChannelProject } from '@firelaunch/contracts';
+import type { ChannelProject } from '@vegalaunch/contracts';
 import { ApiError, buildStatus, codeOverview, createBundle, generateCode, nativeExportStatus, readSource, readiness, requestNativeBuild, runBuild, saveSource, type BuildEvidence, type CodeOverview, type NativeExportStatus, type Readiness, type SourceFile } from './api.js';
 import { LivePublication } from './LivePublication.js';
 import { NativeExportWorkspace } from './NativeExportWorkspace.js';

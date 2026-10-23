@@ -3,7 +3,7 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
-import type { ChannelProject } from '@firelaunch/contracts';
+import type { ChannelProject } from '@vegalaunch/contracts';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
 import App from '../src/App.js';
 
@@ -193,7 +193,7 @@ test('local project switch keeps the creator in Studio', async () => {
     fireEvent.click(screen.getByRole('button', { name: /Switch workspace, current channel/ }));
     fireEvent.click(screen.getByRole('button', { name: second.spec.title }));
     await screen.findByRole('button', { name: `Switch workspace, current channel Second channel` });
-    assert.equal(screen.queryByRole('heading', { name: 'Sign in to FireLaunch' }), null);
+    assert.equal(screen.queryByRole('heading', { name: 'Sign in to VegaLaunch' }), null);
     assert.equal(dom.window.location.search, `?project=${second.id}`);
   } finally { restore(); }
 });

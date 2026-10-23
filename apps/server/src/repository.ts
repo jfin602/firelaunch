@@ -2,8 +2,8 @@ import { constants } from 'node:fs';
 import { lstat, mkdir, open, readdir, realpath, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { channelSpecSchema, createProjectSchema, idSchema, projectSchema, type ChannelProject, type ChannelSpec } from '@firelaunch/contracts';
-import { migrateChannel, newId, starterChannel } from '@firelaunch/channel-engine';
+import { channelSpecSchema, createProjectSchema, idSchema, projectSchema, type ChannelProject, type ChannelSpec } from '@vegalaunch/contracts';
+import { migrateChannel, newId, starterChannel } from '@vegalaunch/channel-engine';
 import { z } from 'zod';
 
 export class RepositoryError extends Error {

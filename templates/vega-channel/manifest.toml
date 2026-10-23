@@ -1,9 +1,9 @@
 schema-version = 1
 
 [package]
-id = FIRELAUNCH_APP_ID
+id = VEGALAUNCH_APP_ID
 version = "0.0.4"
-title = FIRELAUNCH_APP_NAME
+title = VEGALAUNCH_APP_NAME
 
 [os.version]
 min = "1.2"
@@ -38,7 +38,7 @@ id = "com.amazon.gipc.uuid.*"
 id = "com.amazon.gipc.uuid.*"
 
 [[components.interactive]]
-id = FIRELAUNCH_COMPONENT_ID
+id = VEGALAUNCH_COMPONENT_ID
 runtime-module = "/com.amazon.kepler.runtime.react_native_kepler_4@IReactNativeKepler_0"
 launch-type = "singleton"
 categories = ["com.amazon.category.main"]

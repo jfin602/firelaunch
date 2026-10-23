@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { CatalogItem, Collection } from '@firelaunch/contracts';
+import type { CatalogItem, Collection } from '@vegalaunch/contracts';
 import { ApiError, deletePrivateObject, readVideoAssetStatus, readVideoUpload, retryVideoProcessing, uploadPrivateMedia, writeCatalog, type CatalogSnapshot, type VideoUploadStatus } from './api.js';
 import { OwnedArtwork, ownedArtworkObject } from './OwnedArtwork.js';
 import { extractVideoThumbnail, hashVideoFile, readVideoDuration, titleFromFilename, validateVideoFile } from './video-upload.js';

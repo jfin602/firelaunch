@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, type FormEvent } from 'react';
 import { StudioModal, ModalHeader, ModalFooter } from './StudioModal.js';
-import { resolvedCatalogMetadata, type MediaAsset } from '@firelaunch/contracts';
+import { resolvedCatalogMetadata, type MediaAsset } from '@vegalaunch/contracts';
 import { ApiError, deleteCatalogRecord, deletePrivateObject, readCatalog, readPrivateObjectMetadata, uploadPrivateAudio, uploadPrivateMedia,
   writeCatalog, type CatalogSnapshot } from './api.js';
 import { AudioPlayer } from './AudioPlayer.js';

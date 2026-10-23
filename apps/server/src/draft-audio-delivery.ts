@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { Pool } from 'pg';
 import { catalogItemSchema, catalogSourceSchema, channelSpecSchema, mediaAssetSchema,
-  sourceUseEligible, type CatalogItem, type CatalogSource, type MediaAsset } from '@firelaunch/contracts';
+  sourceUseEligible, type CatalogItem, type CatalogSource, type MediaAsset } from '@vegalaunch/contracts';
 import type { PrivateObjectStore } from './private-objects.js';
 import { RepositoryError } from './repository.js';
 

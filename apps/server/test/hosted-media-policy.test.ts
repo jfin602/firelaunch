@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { starterChannel } from '@firelaunch/channel-engine';
+import { starterChannel } from '@vegalaunch/channel-engine';
 import { assertEditableDraftMedia, assertExportableMedia, publicMediaUrl } from '../src/hosted-media-policy.js';
 import { HostedWorkspaceService } from '../src/hosted-workspace.js';
 import type { HostedProjectRepository } from '../src/hosted-repository.js';

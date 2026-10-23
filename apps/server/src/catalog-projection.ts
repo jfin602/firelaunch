@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { contentSchema, mediaRenditionSetSchema, mediaUseEligible, type CatalogItem, type ContentItem, type MediaAsset } from '@firelaunch/contracts';
+import { contentSchema, mediaRenditionSetSchema, mediaUseEligible, type CatalogItem, type ContentItem, type MediaAsset } from '@vegalaunch/contracts';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { CatalogRepository } from './catalog-repository.js';

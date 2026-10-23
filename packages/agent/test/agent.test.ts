@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BedrockRuntimeClient, ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
-import { applyMutation, starterChannel } from '@firelaunch/channel-engine';
+import { applyMutation, starterChannel } from '@vegalaunch/channel-engine';
 import type { AgentProvider, AgentTurn } from '../src/index.js';
 import { BedrockProvider, ChannelAgent, MockProvider, OpenAIProvider, providerStatus, agentRequestSchema, agentResponseSchema } from '../src/index.js';
 import { executeTool, toolSchemas } from '../src/tools.js';

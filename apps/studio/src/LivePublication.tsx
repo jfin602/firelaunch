@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import type { ChannelProject, CatalogItem, MediaAsset, PublicationBindings } from '@firelaunch/contracts';
+import type { ChannelProject, CatalogItem, MediaAsset, PublicationBindings } from '@vegalaunch/contracts';
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
 import { ApiError, approveLive, checkLiveReadiness, createDeployment, publishLive, readCatalog, readDeployment, readLiveStatus, readReleaseHistory, readVideoAssetStatus, type CatalogSnapshot, type LiveStatus, type PublicationReview, type ReleaseHistory, type VideoAssetStatus } from './api.js';

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import type { ChannelMutation } from '@firelaunch/channel-engine';
-import { createPageFromTemplate, type ChannelProject, type ContentItem, type Module, type PageTemplate } from '@firelaunch/contracts';
+import type { ChannelMutation } from '@vegalaunch/channel-engine';
+import { createPageFromTemplate, type ChannelProject, type ContentItem, type Module, type PageTemplate } from '@vegalaunch/contracts';
 import { ApiError, askAgent, createProject, getProject, getSession, listProjects, logout, mutateProject, readCatalog, readSectionCandidates, setSectionContent, type CatalogSnapshot, type SectionCandidates, type SectionCandidate, type StudioSession } from './api.js';
 import { Preview, PreviewArtwork, eligibleStaticImageContent } from './Preview.js';
 import { Delivery } from './Delivery.js';
@@ -433,7 +433,7 @@ export default function App() {
       if (!active || active.accountId !== accountRef.current) { expired(); return; }
       setSession(active);
     }).catch(reason => { if (reason instanceof ApiError && reason.status === 401) expired(); else setError('Could not verify the current session'); }); };
-    window.addEventListener('firelaunch-session-expired', expired);
+    window.addEventListener('vegalaunch-session-expired', expired);
     window.addEventListener('focus', checkSession);
     const interval = window.setInterval(checkSession, 60_000);
     const generation = identityGeneration.current;
@@ -445,7 +445,7 @@ export default function App() {
       if (choice) select(choice);
       else window.history.replaceState(null, '', window.location.pathname);
     }).catch(reason => { if (reason instanceof ApiError && reason.status === 401) expired(); else setError(String(reason)); }).finally(() => setLoading(false));
-    return () => { window.removeEventListener('firelaunch-session-expired', expired); window.removeEventListener('focus', checkSession); window.clearInterval(interval); };
+    return () => { window.removeEventListener('vegalaunch-session-expired', expired); window.removeEventListener('focus', checkSession); window.clearInterval(interval); };
   }, []);
   const switchProject = async (id: string) => {
     if (!leaveSectionDraft()) return;
@@ -456,7 +456,7 @@ export default function App() {
     try {
       const active = await getSession();
       if (generation !== switchGeneration.current || identity !== identityGeneration.current) return;
-      if ((active?.accountId ?? null) !== accountRef.current) { window.dispatchEvent(new window.Event('firelaunch-session-expired')); return; }
+      if ((active?.accountId ?? null) !== accountRef.current) { window.dispatchEvent(new window.Event('vegalaunch-session-expired')); return; }
       const next = await getProject(id);
       if (generation !== switchGeneration.current || identity !== identityGeneration.current || (active?.accountId ?? null) !== accountRef.current || next.id !== id) return;
       select(next);
@@ -515,8 +515,8 @@ export default function App() {
     setWorkspaceMenuOpen(false);
     setNewChannel(true);
   };
-  if (signedOut) return <div className="welcome"><h1>Sign in to FireLaunch</h1><p>Your session has ended or you have not signed in.</p><a className="primary" href="/api/auth/login">Sign in with Google</a></div>;
-  return <div className="app-shell"><aside className="sidebar" aria-label="Studio navigation"><div className="sidebar-head"><div className="wordmark"><span className="mark">✳</span><span>firelaunch<small>CREATOR STUDIO</small></span></div>{session && <div className="sidebar-account"><span title={session.email}>{session.email}</span><button onClick={() => void logout().then(() => window.dispatchEvent(new window.Event('firelaunch-session-expired'))).catch(reason => setError(String(reason)))}>Sign out</button></div>}</div><div className="sidebar-project" ref={workspaceCard}><div className="sidebar-label">WORKSPACE</div><div className="project-switch"><button type="button" className="project-switch-current" aria-label={`Switch workspace, current channel ${project?.spec.title ?? 'New channel'}`} aria-expanded={workspaceMenuOpen} aria-controls={workspaceMenuOpen ? 'workspace-menu' : undefined} disabled={projects.length < 2} onClick={() => setWorkspaceMenuOpen(open => !open)}><span className="project-avatar">{project?.spec.title[0] ?? '+'}</span><span className="project-switch-copy">{project?.spec.title ?? 'New channel'}<small>{project ? `REV ${project.revision} · ${session ? 'PRIVATE' : 'LOCAL'}` : 'GET STARTED'}</small>{project && <small aria-live="polite">{busy ? 'SAVING' : sectionDraftPending || appearanceDraftPending ? 'UNSAVED EDITS' : session ? 'SAVED PRIVATELY' : 'SAVED LOCALLY'}</small>}</span></button><button type="button" className="project-switch-add" aria-label="New channel" onClick={openNewChannel}>＋</button></div>{workspaceMenuOpen && projects.length > 1 && <div id="workspace-menu" className="workspace-menu" aria-label="Workspaces">{projects.map(item => <button key={item.id} type="button" aria-current={item.id === project?.id ? 'true' : undefined} onClick={() => { setWorkspaceMenuOpen(false); if (item.id !== project?.id) void switchProject(item.id); }}>{item.spec.title}</button>)}</div>}</div>
+  if (signedOut) return <div className="welcome"><h1>Sign in to VegaLaunch</h1><p>Your session has ended or you have not signed in.</p><a className="primary" href="/api/auth/login">Sign in with Google</a></div>;
+  return <div className="app-shell"><aside className="sidebar" aria-label="Studio navigation"><div className="sidebar-head"><div className="wordmark"><span className="mark">✳</span><span>VegaLaunch<small>CREATOR STUDIO</small></span></div>{session && <div className="sidebar-account"><span title={session.email}>{session.email}</span><button onClick={() => void logout().then(() => window.dispatchEvent(new window.Event('vegalaunch-session-expired'))).catch(reason => setError(String(reason)))}>Sign out</button></div>}</div><div className="sidebar-project" ref={workspaceCard}><div className="sidebar-label">WORKSPACE</div><div className="project-switch"><button type="button" className="project-switch-current" aria-label={`Switch workspace, current channel ${project?.spec.title ?? 'New channel'}`} aria-expanded={workspaceMenuOpen} aria-controls={workspaceMenuOpen ? 'workspace-menu' : undefined} disabled={projects.length < 2} onClick={() => setWorkspaceMenuOpen(open => !open)}><span className="project-avatar">{project?.spec.title[0] ?? '+'}</span><span className="project-switch-copy">{project?.spec.title ?? 'New channel'}<small>{project ? `REV ${project.revision} · ${session ? 'PRIVATE' : 'LOCAL'}` : 'GET STARTED'}</small>{project && <small aria-live="polite">{busy ? 'SAVING' : sectionDraftPending || appearanceDraftPending ? 'UNSAVED EDITS' : session ? 'SAVED PRIVATELY' : 'SAVED LOCALLY'}</small>}</span></button><button type="button" className="project-switch-add" aria-label="New channel" onClick={openNewChannel}>＋</button></div>{workspaceMenuOpen && projects.length > 1 && <div id="workspace-menu" className="workspace-menu" aria-label="Workspaces">{projects.map(item => <button key={item.id} type="button" aria-current={item.id === project?.id ? 'true' : undefined} onClick={() => { setWorkspaceMenuOpen(false); if (item.id !== project?.id) void switchProject(item.id); }}>{item.spec.title}</button>)}</div>}</div>
     <div className="sidebar-label sidebar-sections-label">CHANNEL WORKSPACE</div><nav className="sidebar-nav" aria-label="Studio surfaces">{surfaces.map(target => <button key={target} disabled={!project} aria-current={surface === target && project && !newChannel ? 'page' : undefined} className={surface === target && project && !newChannel ? 'active' : ''} onClick={() => navigate(target)}><span aria-hidden="true">{icons[target]}</span>{target}</button>)}</nav><div className="sidebar-footer">✧ &nbsp; Vega-first creation<br/><small>{session ? 'Hosted studio' : 'Local studio'}</small></div></aside>
     <main className="studio-main">
       {session && project && <VideoTransferNotice accountId={session.accountId} projectId={project.id} onOpen={openVideo}/>}

@@ -7,7 +7,7 @@ import {
 import type { Readable } from 'node:stream';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { fromTemporaryCredentials, type FromTemporaryCredentialsOptions } from '@aws-sdk/credential-providers';
-import { mediaRenditionSetSchema, type MediaRenditionSet } from '@firelaunch/contracts';
+import { mediaRenditionSetSchema, type MediaRenditionSet } from '@vegalaunch/contracts';
 
 /** Storage primitives only. Auth, rights, upload quotas and release approval belong to the caller. */
 export type MediaScope = Readonly<{ creatorAccountId: string; projectId: string; mediaAssetId: string }>;

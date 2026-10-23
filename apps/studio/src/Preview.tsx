@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { contentPresentation, isPlayableContent, mediaUseEligible, sourceUseEligible, type ChannelSpec, type ContentItem } from '@firelaunch/contracts';
-import { accentTextColor, activeItem, heroActionFocusId, heroSelector, heroSpotlight, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@firelaunch/tv';
+import { contentPresentation, isPlayableContent, mediaUseEligible, sourceUseEligible, type ChannelSpec, type ContentItem } from '@vegalaunch/contracts';
+import { accentTextColor, activeItem, heroActionFocusId, heroSelector, heroSpotlight, itemFocusId, navFocusId, televisionFromSpec, transition, type TvCommand, type TvState } from '@vegalaunch/tv';
 import { keyboardCommand, navigate, reconcile } from './preview-state.js';
 import { VideoPlayer } from './VideoPlayer.js';
 import { AudioPlayer, type AudioPlayerHandle } from './AudioPlayer.js';
@@ -8,7 +8,7 @@ import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
 import { readCatalog, type CatalogSnapshot } from './api.js';
 import { ownedArtworkObject, retainOwnedArtworkUrl, useOwnedArtwork } from './OwnedArtwork.js';
-import { HeroImageQueue, heroArtworkGroups } from '@firelaunch/tv/hero-image-queue';
+import { HeroImageQueue, heroArtworkGroups } from '@vegalaunch/tv/hero-image-queue';
 
 function artwork(url: string): string {
   return url.startsWith('assets/') ? `/media/${url.slice(7)}` : url;

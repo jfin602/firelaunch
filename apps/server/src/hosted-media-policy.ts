@@ -1,5 +1,5 @@
 import { isIP } from 'node:net';
-import type { ChannelSpec } from '@firelaunch/contracts';
+import type { ChannelSpec } from '@vegalaunch/contracts';
 import { RepositoryError } from './repository.js';
 
 // ChannelSpec is exportable. A draft capability, signed URL, loopback address or

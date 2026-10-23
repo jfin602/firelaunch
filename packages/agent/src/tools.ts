@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { applyMutation, newId, type ChannelMutation } from '@firelaunch/channel-engine';
-import { brandSchema, contentSchema, contentShapeSchema, idSchema, moduleSchema, type ChannelSpec } from '@firelaunch/contracts';
+import { applyMutation, newId, type ChannelMutation } from '@vegalaunch/channel-engine';
+import { brandSchema, contentSchema, contentShapeSchema, idSchema, moduleSchema, type ChannelSpec } from '@vegalaunch/contracts';
 import type { CatalogGrounding } from './index.js';
 
 const title = z.string().trim().min(1).max(120);

@@ -30,6 +30,8 @@ test('native ZIP has four bounded verified entries and two SHA-256 identities', 
   assert.ok(result.zip.includes(Buffer.from('vega device install-app')));
   assert.ok(result.zip.includes(Buffer.from('vega device launch-app')));
   assert.ok(result.zip.includes(Buffer.from(input.manifestEndpoint)));
+  assert.ok(result.zip.includes(Buffer.from('VegaLaunch Vega release')));
+  assert.ok(result.zip.includes(Buffer.from('"product": "VegaLaunch"')));
 });
 
 test('changed identity, stale input, wrong bytes and unsafe artifact path never create ZIP', () => {

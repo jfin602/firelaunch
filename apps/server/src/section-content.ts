@@ -1,5 +1,5 @@
-import { applyMutation } from '@firelaunch/channel-engine';
-import type { ChannelSpec, ContentItem } from '@firelaunch/contracts';
+import { applyMutation } from '@vegalaunch/channel-engine';
+import type { ChannelSpec, ContentItem } from '@vegalaunch/contracts';
 import { RepositoryError } from './repository.js';
 
 /** Bind one catalog projection to one authored section without changing other placements. */

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StudioModal, ModalHeader, ModalFooter } from './StudioModal.js';
-import type { ChannelProject } from '@firelaunch/contracts';
+import type { ChannelProject } from '@vegalaunch/contracts';
 import { downloadNativeExport, nativeExportStatus, readDeployment, readLiveSummary,
   requestNativeBuild, type NativeExportStatus } from './api.js';
 

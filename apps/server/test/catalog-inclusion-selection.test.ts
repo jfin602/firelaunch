@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
-import { starterChannel } from '@firelaunch/channel-engine';
-import type { CatalogInventory } from '@firelaunch/contracts';
+import { starterChannel } from '@vegalaunch/channel-engine';
+import type { CatalogInventory } from '@vegalaunch/contracts';
 import { selectionAfterVideoRemoval } from '../src/catalog-inclusion-selection.js';
 
 const id = (prefix: string, digit: string) => `${prefix}_${digit.repeat(32)}`;

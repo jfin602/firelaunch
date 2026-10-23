@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
-import { mediaUseEligible } from '@firelaunch/contracts';
+import { mediaUseEligible } from '@vegalaunch/contracts';
 import { HostedProjectRepository } from '../src/hosted-repository.js';
 import { CatalogRepository } from '../src/catalog-repository.js';
 import { HostedWorkspaceService } from '../src/hosted-workspace.js';

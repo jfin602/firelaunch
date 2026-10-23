@@ -1,10 +1,10 @@
-# FireLaunch Publishing Model
+# VegaLaunch Publishing Model
 
 ## Goal
 
 Publishing should feel like the continuation of building, not a separate consulting project.
 
-FireLaunch P0 prepares a creator-owned Vega application for Amazon submission. It does not capture Amazon credentials or falsely claim that a Developer Console submission occurred.
+VegaLaunch P0 prepares a creator-owned Vega application for Amazon submission. It does not capture Amazon credentials or falsely claim that a Developer Console submission occurred.
 
 ## Current Amazon path
 
@@ -89,7 +89,7 @@ The preceding P0 local build/Console sequence remains historical. Production add
 
 ### Creator app ownership and independence
 
-Each ChannelDeployment retains its own app/package identifier, release lineage, store copy/assets, verified artifact/hash, signed build metadata and manifest endpoint. The creator owns their Amazon Developer account, listing, source, content rights and final release decisions. FireLaunch must never silently combine creator channels inside one FireLaunch viewer app or request developer passwords/automate undocumented Console browser behavior.
+Each ChannelDeployment retains its own app/package identifier, release lineage, store copy/assets, verified artifact/hash, signed build metadata and manifest endpoint. The creator owns their Amazon Developer account, listing, source, content rights and final release decisions. VegaLaunch must never silently combine creator channels inside one VegaLaunch viewer app or request developer passwords/automate undocumented Console browser behavior.
 
 ### Publish data versus release a binary
 
@@ -122,9 +122,9 @@ At least one creator-owned Appstore **approval**, verified physical Fire TV pack
 
 ## Phase 9 — updates after initial app deployment (approved plan 2026-10-21)
 
-**Publish** creates an explicit owner/rights/revision-approved, immutable compatible PublishedManifest. The installed native client validates pinned HTTPS, deployment/schema/digest/sequence and persists last-known-good; compatible videos/artwork/collections/shelves/brand and already-supported layout options update **without another binary**. An unknown/unsupported component, new native UI/player/runtime/permissions/dependencies or incompatible schema **Requires App Update**: a new verified VPKG retaining the existing app/package identity, incremented native version/build and manual creator Amazon Developer Console existing-listing submission/review. Updating FireLaunch Studio's website is separate.
+**Publish** creates an explicit owner/rights/revision-approved, immutable compatible PublishedManifest. The installed native client validates pinned HTTPS, deployment/schema/digest/sequence and persists last-known-good; compatible videos/artwork/collections/shelves/brand and already-supported layout options update **without another binary**. An unknown/unsupported component, new native UI/player/runtime/permissions/dependencies or incompatible schema **Requires App Update**: a new verified VPKG retaining the existing app/package identity, incremented native version/build and manual creator Amazon Developer Console existing-listing submission/review. Updating VegaLaunch Studio's website is separate.
 
-Draft edits never publish automatically; private S3 originals/staged media, foreign/revoked rights and executable JS/code never belong in public manifests. Rollback is a rights-rechecked **new higher-sequence** manifest and offline clients can retain old content. FireLaunch does not remotely replace native React Native code, automatically submit apps, guarantee Amazon approval or claim physical Fire TV testing. Historical installed-app update proof remains NOT GREEN until [P9 manual device qualification](tasks/p9/README.md); see [ADR 0009](decisions/0009-live-channel-delivery.md).
+Draft edits never publish automatically; private S3 originals/staged media, foreign/revoked rights and executable JS/code never belong in public manifests. Rollback is a rights-rechecked **new higher-sequence** manifest and offline clients can retain old content. VegaLaunch does not remotely replace native React Native code, automatically submit apps, guarantee Amazon approval or claim physical Fire TV testing. Historical installed-app update proof remains NOT GREEN until [P9 manual device qualification](tasks/p9/README.md); see [ADR 0009](decisions/0009-live-channel-delivery.md).
 
 ## Initial free-video and future paid-video publication policy (ADR 0013, 2026-10-17)
 

@@ -59,7 +59,7 @@ cp -a "$repo/templates" "$tmp/release/"
 (
   cd "$tmp/release"
   npm ci --omit=dev --ignore-scripts --no-audit --no-fund
-  node --input-type=module -e "import('@firelaunch/generator').then(() => console.log('Runtime workspace imports OK'))"
+  node --input-type=module -e "import('@vegalaunch/generator').then(() => console.log('Runtime workspace imports OK'))"
 )
 mkdir -p "$(dirname "$output")"
 mkdir -p "$tmp/release/infra/aws-media" "$tmp/release/scripts"

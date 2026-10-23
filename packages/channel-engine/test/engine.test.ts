@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { applyMutation, migrateChannel, navigationPages, resolveContent, starterChannel } from '../src/index.js';
 import { fixtureChannel } from './fixtures.js';
-import { createPageFromTemplate } from '@firelaunch/contracts';
+import { createPageFromTemplate } from '@vegalaunch/contracts';
 
 test('new channels start with the featured TV layout and creator-editable colors', () => {
   const spec = starterChannel('Wild Earth', fixtureChannel().id, fixtureChannel().pages[0]!.id);

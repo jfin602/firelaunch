@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { ChannelProject } from '@firelaunch/contracts';
+import type { ChannelProject } from '@vegalaunch/contracts';
 import { ApiError, readCatalog, type CatalogSnapshot } from './api.js';
 import { VideoLibraryStatus } from './VideoUpload.js';
 import { OwnedArtwork } from './OwnedArtwork.js';

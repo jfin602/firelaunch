@@ -1,4 +1,4 @@
-# FireLaunch Principles
+# VegaLaunch Principles
 
 1. Ship to the television, not just the browser.
 A browser preview is valuable but never substitutes for Vega build/runtime evidence.
@@ -10,7 +10,7 @@ The common path uses a small explicit model that can be validated, previewed, di
 Studio forms, agent actions, preview and generated source must not drift into competing channel definitions.
 
 4. Code remains real.
-The user can inspect, export and edit an ordinary generated project. FireLaunch must not become a proprietary dead end.
+The user can inspect, export and edit an ordinary generated project. VegaLaunch must not become a proprietary dead end.
 
 5. TV interaction is a first-class requirement.
 Directional focus, back behavior, readable scale and predictable playback are product requirements, not polish.
@@ -39,7 +39,7 @@ Structured regeneration must not silently destroy deliberate code customization.
 ## Post-P0 launch-MVP principles (accepted 2026-10-09)
 
 13. Individual creator app ownership.
-Every creator's channel has an independent application identity, developer account/listing, artifacts and exportable source. FireLaunch is not a shared creator viewer app.
+Every creator's channel has an independent application identity, developer account/listing, artifacts and exportable source. VegaLaunch is not a shared creator viewer app.
 
 14. Catalog-first, never connector-dependent.
 The normal journey starts from an authorized content catalog; blank/prompt-first creation remains available. A creator-controlled import must work when Amazon API access is unavailable.
@@ -69,7 +69,7 @@ No Amazon connector, real-TV execution, remote sync, Appstore approval or VPKG i
 ## AWS media foundation principles (post-P5)
 
 22. Store and stream separately from the control plane.
-FireLaunch owns catalog identity, publishing approval and rights; private originals and verified HLS media live in S3, delivery goes through CloudFront, and muffinos never serves bulk video or runs untrusted encoders.
+VegaLaunch owns catalog identity, publishing approval and rights; private originals and verified HLS media live in S3, delivery goes through CloudFront, and muffinos never serves bulk video or runs untrusted encoders.
 
 23. Transcode only as needed and qualify playback.
 Probe first, reuse compatible encoded streams only when keyframes/timestamps are safe, otherwise create a bounded adaptive HLS ladder. Device support is proven on the device, not inferred from an MP4 extension.

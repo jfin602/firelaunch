@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
 import test from 'node:test';
 import { HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { assertClientCompatible, projectApprovedManifest } from '@firelaunch/contracts';
+import { assertClientCompatible, projectApprovedManifest } from '@vegalaunch/contracts';
 import { fixtureChannel } from '../../../packages/channel-engine/test/fixtures.js';
 import { canonicalBytes } from '../src/publication-repository.js';
 import { mediaStorageConfigFromEnv, mediaStorageFromEnv, publisherCredentialsFromEnv, publisherRoleConfigFromEnv, S3MediaStorage,

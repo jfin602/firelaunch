@@ -1,6 +1,6 @@
-import { channelDeploymentSchema, projectSchema, type ChannelProject, type PublicationBindings } from '@firelaunch/contracts';
-import type { ChannelMutation } from '@firelaunch/channel-engine';
-import type { AgentResponse } from '@firelaunch/agent';
+import { channelDeploymentSchema, projectSchema, type ChannelProject, type PublicationBindings } from '@vegalaunch/contracts';
+import type { ChannelMutation } from '@vegalaunch/channel-engine';
+import type { AgentResponse } from '@vegalaunch/agent';
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) { super(message); }
@@ -12,7 +12,7 @@ let csrfToken: string | null = null;
 export async function getSession(): Promise<StudioSession | null> {
   const response = await fetch('/api/auth/session', { credentials: 'same-origin' });
   if (response.status === 404) return null; // Explicit local legacy server.
-  if (response.status === 401) { csrfToken = null; window.dispatchEvent(new window.Event('firelaunch-session-expired')); throw new ApiError('Sign in required', 401); }
+  if (response.status === 401) { csrfToken = null; window.dispatchEvent(new window.Event('vegalaunch-session-expired')); throw new ApiError('Sign in required', 401); }
   if (!response.ok) throw new ApiError('Session unavailable', response.status);
   const session = await response.json() as StudioSession;
   csrfToken = session.csrfToken;
@@ -29,7 +29,7 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
   const response = await fetch(`/api/projects${path}`, { ...init, credentials: 'same-origin', headers: { ...init?.headers, ...(csrfToken && init?.method && init.method !== 'GET' ? { 'x-csrf-token': csrfToken } : {}) } });
   const data: unknown = await response.json();
   if (!response.ok) {
-    if (response.status === 401) { csrfToken = null; window.dispatchEvent(new window.Event('firelaunch-session-expired')); }
+    if (response.status === 401) { csrfToken = null; window.dispatchEvent(new window.Event('vegalaunch-session-expired')); }
     const error = data as { error?: { message?: string } };
     throw new ApiError(error.error?.message ?? `Request failed (${response.status})`, response.status);
   }
@@ -111,7 +111,7 @@ export async function downloadNativeExport(projectId: string, jobId: string): Pr
   }
   if (response.headers.get('content-type')?.split(';')[0] !== 'application/zip')
     throw new ApiError('The server did not return a Vega ZIP.', 502);
-  const filename = response.headers.get('content-disposition')?.match(/filename="([a-zA-Z0-9._-]+\.zip)"/)?.[1] ?? 'firelaunch-vega-release.zip';
+  const filename = response.headers.get('content-disposition')?.match(/filename="([a-zA-Z0-9._-]+\.zip)"/)?.[1] ?? 'vegalaunch-vega-release.zip';
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a'); link.href = url; link.download = filename;
@@ -121,7 +121,7 @@ export async function downloadNativeExport(projectId: string, jobId: string): Pr
 export const readiness = (id: string) => request(`/${id}/readiness`) as Promise<Readiness>;
 export const createBundle = (id: string) => request(`/${id}/bundle`, json({})) as Promise<{ path?: string; files?: string[]; status?: 'blocked'; reason?: string; submitted: false }>;
 
-import { catalogInventorySchema, type CatalogSource, type CatalogItem, type Collection, type MediaAsset } from '@firelaunch/contracts';
+import { catalogInventorySchema, type CatalogSource, type CatalogItem, type Collection, type MediaAsset } from '@vegalaunch/contracts';
 export type CatalogSnapshot = ReturnType<typeof catalogInventorySchema.parse> & { revision: number };
 export type CatalogSelection = { expectedCatalogRevision: number; itemIds: string[]; collectionIds: string[] };
 export type ImportPreview = { sourceId: string; format: 'csv' | 'json' | 'feed'; revision: number; fingerprint: string; content?: string; rows: { line: number; externalId: string; kind: CatalogItem['kind']; metadata: { title: string }; action: 'create' | 'update' | 'unchanged' | 'ambiguous' }[]; issues: { line: number; code: string; message: string }[] };

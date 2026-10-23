@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { fixtureChannel } from '../../channel-engine/test/fixtures.js';
 import { generateProject } from '../src/index.js';
-import { publishedManifestSchema } from '@firelaunch/contracts';
+import { publishedManifestSchema } from '@vegalaunch/contracts';
 import { canonicalBytes } from '../../../apps/server/src/publication-repository.js';
 
 const id = (prefix: string, digit: string) => `${prefix}_${digit.repeat(32)}`;

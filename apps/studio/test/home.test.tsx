@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
 import { createElement } from 'react';
-import { starterChannel } from '@firelaunch/channel-engine';
-import type { ChannelProject } from '@firelaunch/contracts';
+import { starterChannel } from '@vegalaunch/channel-engine';
+import type { ChannelProject } from '@vegalaunch/contracts';
 import App from '../src/App.js';
 import { clearVideoTransfers, startVideoTransfer, videoTransfer } from '../src/video-transfer.js';
 
@@ -228,7 +228,7 @@ test('session loss clears the selected video and its private workspace', async (
     render(createElement(App));
     fireEvent.click(await screen.findByRole('button', { name: 'Open Director Cut video' }));
     await screen.findByRole('dialog', { name: 'Director Cut' });
-    fireEvent(dom.window as unknown as Window, new dom.window.Event('firelaunch-session-expired'));
+    fireEvent(dom.window as unknown as Window, new dom.window.Event('vegalaunch-session-expired'));
     await screen.findByRole('link', { name: 'Sign in with Google' });
     assert.equal(screen.queryByRole('dialog'), null);
     assert.equal(screen.queryByText('Director Cut'), null);
@@ -314,7 +314,7 @@ test('session expiry removes Home and late library data cannot return', async ()
   try {
     render(createElement(App));
     await screen.findByRole('heading', { name: 'Your channels' });
-    fireEvent(dom.window as unknown as Window, new dom.window.Event('firelaunch-session-expired'));
+    fireEvent(dom.window as unknown as Window, new dom.window.Event('vegalaunch-session-expired'));
     await screen.findByRole('link', { name: 'Sign in with Google' });
     resolveCatalog(json({ ...empty(firstId), sources: [source], items: [film(firstId)] }));
     await waitFor(() => assert.equal(screen.queryByText('Director Cut'), null));

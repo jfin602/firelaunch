@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mediaRenditionSetSchema, mediaUseEligible, sourceUseEligible } from '@firelaunch/contracts';
+import { mediaRenditionSetSchema, mediaUseEligible, sourceUseEligible } from '@vegalaunch/contracts';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
 import { CatalogRepository } from './catalog-repository.js';

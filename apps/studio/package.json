@@ -1,5 +1,5 @@
 {
-  "name": "@firelaunch/studio",
+  "name": "@vegalaunch/studio",
   "version": "0.0.7",
   "private": true,
   "type": "module",
@@ -10,10 +10,10 @@
     "test": "node --import tsx --test test/*.test.tsx"
   },
   "dependencies": {
-    "@firelaunch/agent": "0.0.4",
-    "@firelaunch/channel-engine": "0.0.1",
-    "@firelaunch/contracts": "0.0.1",
-    "@firelaunch/tv": "0.0.2",
+    "@vegalaunch/agent": "0.0.4",
+    "@vegalaunch/channel-engine": "0.0.1",
+    "@vegalaunch/contracts": "0.0.1",
+    "@vegalaunch/tv": "0.0.2",
     "@noble/hashes": "^1.8.0",
     "hls.js": "^1.7.3",
     "react": "^19.0.0",
