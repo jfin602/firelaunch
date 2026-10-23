@@ -34,7 +34,7 @@ test('schema inspection rejects gaps and sees the candidate migration ceiling', 
   const repo = path.resolve(scriptDir, '..', '..');
   const actual = run('schema_max "$1"', [repo]);
   assert.equal(actual.status, 0, actual.stderr);
-  assert.equal(actual.stdout.trim(), '13');
+  assert.equal(actual.stdout.trim(), '15');
   const root = mkdtempSync(path.join(tmpdir(), 'firelaunch-schema-'));
   try {
     const migrations = path.join(root, 'apps/server/migrations');
