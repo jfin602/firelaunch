@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, rm, mkdir, writeFile, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -88,6 +89,33 @@ test('draft build pins current bundled content and has no published release iden
     privateDeployment, owner.accountId), { code:'CONFLICT' });
   source.files['src/channel.json'] = source.files['src/channel.json']!.replace(spec.content[0]!.title, 'Wrong title');
   await assert.rejects(createDraftBuildInput(project, source, privateDeployment, owner.accountId), { code:'CONFLICT' });
+});
+
+test('draft build carries private image bytes into a verified offline asset', async () => {
+  const image = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==', 'base64');
+  const digest = createHash('sha256').update(image).digest('hex');
+  const path = `assets/draft-artwork/${digest}.png`;
+  const draftSpec = { ...spec, content: spec.content.map((item, index) =>
+    index === 0 ? { ...item, artwork: path } : item) };
+  const draftProject = { ...project, spec: draftSpec };
+  const generated = await generateProject(draftSpec, deployment, 'draft');
+  const files = Object.fromEntries(generated.files);
+  const source = { specRevision: project.revision, fingerprint: generated.fingerprint,
+    files, baseline: { ...files } };
+  const input = await createDraftBuildInput(draftProject, source, deployment, owner.accountId, [], { [path]: image });
+  assert.equal(input.binaryFileSha256?.[path], digest);
+  assert.match(input.files['src/bundled-artwork.js']!, /require\("\.\.\/assets\/draft-artwork\//);
+  assert.equal(input.files['src/channel.json']!.includes(path), true);
+  const dir = await mkdtemp(join(tmpdir(), 'vegalaunch-private-artwork-'));
+  try {
+    await materializeReleaseBuildInput(input, dir);
+    assert.deepEqual(await readFile(join(dir, path)), image);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+  await assert.rejects(createDraftBuildInput(draftProject, source, deployment, owner.accountId), { code: 'CONFLICT' });
+  const tampered = { ...input, binaryFiles: { ...input.binaryFiles, [path]: Buffer.from('different').toString('base64') } };
+  const badDir = await mkdtemp(join(tmpdir(), 'vegalaunch-private-artwork-tamper-'));
+  try { await assert.rejects(materializeReleaseBuildInput(tampered, badDir), { code: 'INVALID_INPUT' }); }
+  finally { await rm(badDir, { recursive: true, force: true }); }
 });
 
 test('stale, missing, foreign binding and absent publication fail closed', async () => {

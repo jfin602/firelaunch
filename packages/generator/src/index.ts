@@ -86,6 +86,13 @@ export async function generateProject(spec: ChannelSpec, deployment?: ChannelDep
   files.set('src/tv-runtime.js', runtime);
   files.set('src/hero-image-queue.js', heroQueue);
   files.set('src/channel.json', json(tv));
+  const bundledArtwork = [...new Set([bundled.brand.logo, bundled.brand.heroArtwork,
+    ...bundled.content.map(item => item.artwork)].filter((value): value is string =>
+      typeof value === 'string' && /^assets\/draft-artwork\/[a-f0-9]{64}\.(?:png|jpg)$/.test(value)))].sort();
+  files.set('src/bundled-artwork.js', `const images = {\n${bundledArtwork.map(value =>
+    `  ${JSON.stringify(value)}: require(${JSON.stringify(`../${value}`)}),`).join('\n')}\n};\n` +
+    `export const imageSource = value => images[value] ?? (value?.startsWith('https://') ? { uri: value } : null);\n` +
+    `export const isRemoteArtwork = value => !!value?.startsWith('https://');\n`);
   if (remote) {
     files.set('babel.config.js', `module.exports = {\n  presets: ['module:@react-native/babel-preset'],\n  plugins: ['@babel/plugin-transform-export-namespace-from']\n};\n`);
     files.set('src/release-config.json', json(publicBinding));

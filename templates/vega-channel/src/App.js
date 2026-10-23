@@ -8,6 +8,7 @@ import { createPlaybackController } from './playback-controller';
 import { createHlsPlayer, installHlsPolyfills } from './hlsjs/adapter';
 import { audioArtworkFrame, featureArtworkFrame, featureScrollTarget, tvLayout } from './tv-layout';
 import { HeroImageQueue, heroArtworkGroups } from './hero-image-queue';
+import { imageSource, isRemoteArtwork } from './bundled-artwork';
 
 function formatTime(seconds) {
   const value = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
@@ -31,7 +32,7 @@ function StaticArtwork({ source, crop, banner, font, color, layout }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [source]);
   const artStyle = [styles.staticArt, banner && styles.bannerArt, { height: Math.min(160, layout.cardArtworkHeight * 1.8) }];
-  if (source?.startsWith('https://') && !failed) return <Image source={{ uri: source }}
+  if (imageSource(source) && !failed) return <Image source={imageSource(source)}
     resizeMode={crop === 'contain' ? 'contain' : 'cover'} onError={() => setFailed(true)} style={artStyle} />;
   return <View style={[artStyle, styles.missingArt]}><Text style={[font, color]}>Artwork unavailable</Text></View>;
 }
@@ -54,8 +55,8 @@ function HeroBackdrop({ source, outgoingSource, backgroundColor, reduceMotion })
     return () => animation.stop();
   }, [source, outgoingSource, reduceMotion]);
   return <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-    {outgoingSource?.startsWith('https://') && <Image source={{ uri: outgoingSource }} resizeMode="cover" style={styles.heroBackdropImage} />}
-    {source?.startsWith('https://') && <Animated.Image source={{ uri: source }} resizeMode="cover"
+    {imageSource(outgoingSource) && <Image source={imageSource(outgoingSource)} resizeMode="cover" style={styles.heroBackdropImage} />}
+    {imageSource(source) && <Animated.Image source={imageSource(source)} resizeMode="cover"
       style={[styles.heroBackdropImage, { opacity: fade }]} />}
     <View style={[styles.featureDim, { backgroundColor }]} />
     {Array.from({ length: 24 }, (_, index) => <React.Fragment key={`edge:${index}`}>
@@ -79,13 +80,13 @@ function PendingHero({ content, layout, queue, onReady }) {
   useEffect(() => {
     loaded.current = { back: false, front: !needsForeground, done: false };
     setWarmed(false);
-    if (!source?.startsWith('https://')) { onReady(false); return; }
+    if (!isRemoteArtwork(source)) { onReady(!!imageSource(source)); return; }
     let active = true;
     // The installed RN 0.83 Image API exposes prefetch; the hidden Image then confirms decode.
     void queue.request(source, 0).then(() => { if (active) setWarmed(true); });
     return () => { active = false; };
   }, [source, needsForeground]);
-  if (!source?.startsWith('https://') || !warmed) return null;
+  if (!isRemoteArtwork(source) || !warmed) return null;
   const fail = () => { if (!loaded.current.done) { loaded.current.done = true; onReady(false); } };
   const complete = (part, event) => {
     const image = event?.nativeEvent?.source;
@@ -108,7 +109,7 @@ function PendingHero({ content, layout, queue, onReady }) {
 
 function Feature({ content, brand, font, layout, actionFocused, focusStyle, onAction, artPending = false }) {
   const [failedSource, setFailedSource] = useState(null);
-  const source = content.artwork?.startsWith('https://') ? content.artwork : null;
+  const source = imageSource(content.artwork) ? content.artwork : null;
   useEffect(() => setFailedSource(null), [source]);
   const visible = source && source !== failedSource;
   const frame = featureArtworkFrame(layout, content.presentation);
@@ -126,7 +127,7 @@ function Feature({ content, brand, font, layout, actionFocused, focusStyle, onAc
       </Pressable>
     </View>
     {content.presentation !== 'video' && <View style={[styles.featureFrame, { width: layout.contentWidth * 0.42 }]}>
-      {visible ? <Image source={{ uri: source }} resizeMode="contain"
+      {visible ? <Image source={imageSource(source)} resizeMode="contain"
         onError={() => setFailedSource(source)} style={{ width: frame.width, height: frame.height }} />
         : artPending ? null : <Text style={[font, styles.featureFallback]}>Artwork unavailable</Text>}
     </View>}
@@ -135,9 +136,9 @@ function Feature({ content, brand, font, layout, actionFocused, focusStyle, onAc
 
 function ItemArtwork({ source, resizeMode, height, font, color }) {
   const [failedSource, setFailedSource] = useState(null);
-  const visible = source?.startsWith('https://') && source !== failedSource;
+  const visible = !!imageSource(source) && source !== failedSource;
   const style = [styles.artwork, { height }];
-  return visible ? <Image key={source} source={{ uri: source }} resizeMode={resizeMode}
+  return visible ? <Image key={source} source={imageSource(source)} resizeMode={resizeMode}
     onError={() => setFailedSource(source)} style={style} />
     : <View style={[style, styles.missingArt]}><Text numberOfLines={1}
       style={[font, color]}>Artwork unavailable</Text></View>;
@@ -239,12 +240,12 @@ function Playback({ item, muted, controls, activity, onBack, typography }) {
   const font = { fontFamily: typography === 'serif' ? 'serif' : 'sans-serif' };
   const progress = position.duration > 0 ? Math.min(100, position.currentTime / position.duration * 100) : 0;
   return <View style={styles.playerScreen}>
-    {audio && item.artwork.startsWith('https://') && <Image pointerEvents="none" source={{ uri: item.artwork }}
+    {audio && imageSource(item.artwork) && <Image pointerEvents="none" source={imageSource(item.artwork)}
       resizeMode="cover" style={styles.audioFullScreenCover} />}
     {audio && <View pointerEvents="none" style={[styles.audioArtworkStage,
       { top: artworkFrame.top, bottom: artworkFrame.bottom }]}>
-      {item.artwork.startsWith('https://')
-        ? <Image source={{ uri: item.artwork }} resizeMode="contain"
+      {imageSource(item.artwork)
+        ? <Image source={imageSource(item.artwork)} resizeMode="contain"
           style={{ width: artworkFrame.width, height: artworkFrame.height }} />
         : <View style={{ width: artworkFrame.width, height: artworkFrame.height }} />}
     </View>}
@@ -411,12 +412,12 @@ export default function App() {
   }, [channel, state.pageId]);
   useEffect(() => {
     if (!page || !spotlight || !heroPair || state.screen !== 'page') return;
-    const row = heroPair.selector.items.map(item => item.artwork).filter(url => url?.startsWith('https://'));
+    const row = heroPair.selector.items.map(item => item.artwork).filter(isRemoteArtwork);
     const remaining = [...page.modules.filter(module => module !== heroPair.hero && module !== heroPair.selector)
       .flatMap(module => [...module.items.map(item => item.artwork), module.image?.artwork]),
       ...channel.pages.filter(other => other.id !== page.id).flatMap(other => other.modules.flatMap(module =>
         [...module.items.map(item => item.artwork), module.image?.artwork]))]
-      .filter(url => url?.startsWith('https://'));
+      .filter(isRemoteArtwork);
     artQueue.current.schedule(heroArtworkGroups(spotlight.artwork, row, remaining));
   }, [channel, state.pageId, state.screen, spotlight?.id, spotlight?.artwork]);
   useEffect(() => {
@@ -439,13 +440,13 @@ export default function App() {
     {state.screen === 'page' && heroPair && spotlight && presented?.key !== selectedHeroKey &&
       <PendingHero key={selectedHeroKey} content={spotlight} layout={layout} queue={artQueue.current} onReady={ready => {
         if (selectedRef.current !== selectedHeroKey) return;
-        setOutgoingArt(ready && presented?.content.artwork?.startsWith('https://') ? presented.content.artwork : null);
+        setOutgoingArt(ready && imageSource(presented?.content.artwork) ? presented.content.artwork : null);
         setPresentedHero({ scope: heroScope, key: selectedHeroKey,
           content: ready ? spotlight : { ...spotlight, artwork: '' } });
       }} />}
     {state.screen === 'page' ? <>
       <View style={[styles.header, { minHeight: 58 * layout.scale, marginBottom: 12 * layout.scale }]}>
-        {brand.logo?.startsWith('https://') && <Image source={{ uri: brand.logo }}
+        {imageSource(brand.logo) && <Image source={imageSource(brand.logo)}
           style={[styles.brandLogo, { width: 120 * layout.scale, height: 58 * layout.scale }]} />}
         {brand.showTitle !== false && <Text numberOfLines={1} style={[styles.heading,
           { fontSize: 42 * layout.scale, marginRight: 24 * layout.scale }, font,
@@ -532,7 +533,7 @@ export default function App() {
       <Text style={[styles.heading, font, { color: brand.textColor }]}>{item?.title}</Text>
       {state.screen === 'detail' ? <>
         <ScrollView ref={detailScroll} style={styles.detailScroll}>
-          {item?.artwork?.startsWith('https://') && <Image source={{ uri: item.artwork }}
+          {imageSource(item?.artwork) && <Image source={imageSource(item.artwork)}
             style={item.presentation === 'information' ? styles.bookDetailArtwork : styles.detailArtwork} />}
           {item?.author && <Text style={[styles.detailMeta, font, { color: brand.textColor }]}>By {item.author}</Text>}
           {item?.series && <Text style={[styles.detailMeta, font, { color: brand.textColor }]}>{item.series}</Text>}

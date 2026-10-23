@@ -9,6 +9,7 @@ import { HostedWorkspaceService, selectedDraftChannel } from '../src/hosted-work
 import { assertExportableMedia } from '../src/hosted-media-policy.js';
 import type { HostedProjectRepository } from '../src/hosted-repository.js';
 import type { AuthenticatedPrincipal } from '../src/auth/oidc.js';
+import type { PrivateObjectService } from '../src/private-objects.js';
 
 test('draft snapshot excludes content removed from every section while preserving selected content', () => {
   const spec = {
@@ -42,6 +43,12 @@ test('owned draft snapshot builds without publication and omits unresolved selec
     modules: [...page.modules.map(module => module.kind === 'hero' ? { ...module, contentIds: [contentIds[0]!] } : module),
       { id: `mod_${'5'.repeat(32)}`, kind: 'rail' as const, title: 'Films', contentIds }] })) };
   const owner = { accountId: `cr_${'a'.repeat(32)}` } as AuthenticatedPrincipal;
+  const image = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==', 'base64');
+  const imageHash = createHash('sha256').update(image).digest('hex');
+  const artId = `ma_${'b'.repeat(32)}`;
+  const sourceId = `src_${'c'.repeat(32)}`;
+  const claim = { status: 'cleared', permittedUse: 'television_display', basis: 'creator_asserted',
+    attestationVersion: 'channel-media-v1', assertedAt: '2026-10-23T00:00:00.000Z' };
   const project = { id: spec.id, spec, revision: 2 };
   const deployment = { schemaVersion: 1, id: `dep_${'a'.repeat(32)}`, creatorAccountId: owner.accountId,
     projectId: spec.id, channelId: spec.id, appName: spec.title, packageId: `com.vegalaunch.channel.${spec.id}`,
@@ -50,12 +57,20 @@ test('owned draft snapshot builds without publication and omits unresolved selec
     assert.equal(principal.accountId, owner.accountId); assert.equal(id, spec.id); return project;
   }, async readDeployment() { return deployment; }, async source() { return null; } } as unknown as HostedProjectRepository;
   t.mock.method(CatalogRepository.prototype, 'read', async () => ({ revision: 1,
-    items: itemIds.map(id => ({ id, kind: 'video', mediaAssetIds: [] })) }));
+    items: itemIds.map((id, index) => ({ id, kind: 'video', mediaAssetIds: index === 0 ? [artId] : [],
+      sourceRecord: { sourceId } })),
+    mediaAssets: [{ id: artId, kind: 'artwork', catalogItemId: itemIds[0],
+      creatorAccountId: owner.accountId, projectId: spec.id, location: { type: 'private_object', objectId: artId },
+      tvDisplayRights: claim, deliveryEligible: false }],
+    sources: [{ id: sourceId, creatorAccountId: owner.accountId, projectId: spec.id,
+      type: 'creator_upload', state: 'discovered', permission: { retrieval: 'unknown', tvDisplay: 'unknown' } }] }));
   const projection = { async project() { return { bindings: [
     { contentId: contentIds[0], baseline: null, blockedReason: 'playback_rights_or_delivery_missing' },
     { contentId: contentIds[1], baseline: items[1] }
   ] }; } } as unknown as CatalogProjectionService;
-  const workspace = new HostedWorkspaceService(repository, undefined, projection);
+  const privateObjects = { async readArtwork() { return { content: image, contentType: 'image/png', sha256: imageHash }; }
+  } as unknown as Pick<PrivateObjectService, 'readArtwork'>;
+  const workspace = new HostedWorkspaceService(repository, undefined, projection, privateObjects);
   const first = await workspace.draftBuildInput(owner, spec.id);
   const again = await workspace.draftBuildInput(owner, spec.id);
   assert.equal(first.mode, 'draft');
@@ -68,6 +83,8 @@ test('owned draft snapshot builds without publication and omits unresolved selec
   assert.equal(exported.length, 2);
   assert.equal(exported[0].mediaUrl, undefined);
   assert.equal(exported[1].mediaUrl, items[1]!.mediaUrl);
+  assert.equal(exported[0].artwork, `assets/draft-artwork/${imageHash}.png`);
+  assert.equal(first.binaryFileSha256?.[`assets/draft-artwork/${imageHash}.png`], imageHash);
   assert.equal(JSON.stringify(first).includes(unsafe), false);
   assert.ok(first.warnings?.some(warning => warning.contentId === contentIds[0] && warning.field === 'playback'));
 });

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { generateProject } from '@vegalaunch/generator';
-import type { ChannelProject, ChannelDeployment, ChannelSpec } from '@vegalaunch/contracts';
+import { sourceUseEligible, type ChannelProject, type ChannelDeployment, type ChannelSpec } from '@vegalaunch/contracts';
 import { RepositoryError } from './repository.js';
 import type { AuthenticatedPrincipal } from './auth/oidc.js';
 import type { HostedProjectRepository } from './hosted-repository.js';
@@ -10,6 +10,7 @@ import { createDraftBuildInput, createReleaseBuildInput, type ReleaseBuildInput,
 import { CatalogRepository } from './catalog-repository.js';
 import type { CatalogProjectionService } from './catalog-projection.js';
 import { isTrustedVegaAsset, isTrustedVegaAssetPath, TRUSTED_VEGA_ASSET_MAX_BYTES } from './trusted-vega-assets.js';
+import type { PrivateObjectService } from './private-objects.js';
 
 const textName = /\.(?:js|jsx|ts|tsx|json|toml|md|txt)$|^(?:README|LICENSE)$/i;
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -83,7 +84,8 @@ export function selectedDraftChannel(spec: ChannelSpec): ChannelSpec {
 export class HostedWorkspaceService {
   constructor(private readonly repository: HostedProjectRepository,
     private readonly publication: Pick<PublicationRepository, 'currentSummary' | 'currentBuildSnapshot'> = new PublicationRepository(repository),
-    private readonly projection?: CatalogProjectionService) {}
+    private readonly projection?: CatalogProjectionService,
+    private readonly privateObjects?: Pick<PrivateObjectService, 'readArtwork'>) {}
 
   async draftBuildInput(principal: AuthenticatedPrincipal, id: string): Promise<ReleaseBuildInput> {
     const projection = this.projection;
@@ -116,7 +118,24 @@ export class HostedWorkspaceService {
             throw new RepositoryError('CONFLICT', 'Draft content presentation differs from catalog');
         }
       }
-      const prepared = prepareDraftMedia(project.spec, bindings);
+      const assets = new Map(inventory.mediaAssets.map(asset => [asset.id, asset]));
+      const sources = new Map(inventory.sources.map(source => [source.id, source]));
+      const binaryFiles: Record<string, Buffer> = {};
+      const content = await Promise.all(project.spec.content.map(async (content, index) => {
+        const item = inventory.items.find(candidate => candidate.id === ids[index]);
+        const source = item?.sourceRecord && sources.get(item.sourceRecord.sourceId);
+        const asset = item && source && [...item.mediaAssetIds].reverse().map(assetId => assets.get(assetId))
+          .find(candidate => candidate?.kind === 'artwork' && candidate.location.type === 'private_object' &&
+            candidate.catalogItemId === item.id && candidate.creatorAccountId === principal.accountId &&
+            candidate.projectId === id && sourceUseEligible(source, candidate, 'television_display'));
+        if (!asset || asset.location.type !== 'private_object') return content;
+        if (!this.privateObjects) throw new RepositoryError('CONFLICT', 'Private artwork bundling unavailable');
+        const image = await this.privateObjects.readArtwork(principal, id, asset.location.objectId);
+        const path = `assets/draft-artwork/${image.sha256}.${image.contentType === 'image/png' ? 'png' : 'jpg'}`;
+        binaryFiles[path] = image.content;
+        return { ...content, artwork: path };
+      }));
+      const prepared = prepareDraftMedia({ ...project.spec, content }, bindings);
       const buildProject = { ...project, spec: prepared.spec };
       const saved = await this.repository.source(principal, id);
       if (saved && [...new Set([...Object.keys(saved.files), ...Object.keys(saved.baseline)])]
@@ -126,7 +145,8 @@ export class HostedWorkspaceService {
       const files = Object.fromEntries(generated.files);
       const source = { specRevision: project.revision, fingerprint: generated.fingerprint,
         files, baseline: { ...files } };
-      return { input: await createDraftBuildInput(buildProject, source, deployment, principal.accountId, prepared.warnings),
+      return { input: await createDraftBuildInput(buildProject, source, deployment, principal.accountId,
+        prepared.warnings, binaryFiles),
         catalogRevision: inventory.revision };
     };
     const first = await assemble();

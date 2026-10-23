@@ -161,7 +161,8 @@ export function createApi(repository: ProjectRepository, selectedProvider?: Agen
   const nativeBuildQueue = mode?.mode === 'hosted' && hostedRepository ? new NativeBuildQueue(hostedRepository.pool) : null;
   const catalog = hostedRepository ? new CatalogRepository(hostedRepository) : null;
   const projection = hostedRepository && catalog ? new CatalogProjectionService(hostedRepository, catalog, mediaPublisher) : null;
-  const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository, undefined, projection ?? undefined) : null;
+  const hostedWorkspace = hostedRepository ? new HostedWorkspaceService(hostedRepository, undefined,
+    projection ?? undefined, privateObjects) : null;
   const publication = hostedRepository ? new PublicationRepository(hostedRepository, mediaPublisher, managedArtwork) : null;
   const publicResolver = mode?.mode === 'hosted' && hostedRepository ? new PublicReleaseResolver(hostedRepository, managedArtwork) : null;
   const assertNativeRights = async (input: ReleaseBuildInput) => {

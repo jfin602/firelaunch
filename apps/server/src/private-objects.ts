@@ -218,6 +218,25 @@ export class PrivateObjectService {
     return publicMetadata(await this.owned(principal, projectId, objectId));
   }
 
+  /** Owner-scoped build input only. Never issue a browser capability or public URL. */
+  async readArtwork(principal: AuthenticatedPrincipal, projectId: string, objectId: string): Promise<{
+    content: Buffer; contentType: 'image/png' | 'image/jpeg'; sha256: string
+  }> {
+    const row = await this.owned(principal, projectId, objectId);
+    if (row.kind !== 'media' || !['image/png', 'image/jpeg'].includes(row.content_type) ||
+      row.byte_size < 12 || row.byte_size > maximumBytes) throw missing();
+    let content: Buffer;
+    try { content = await this.store.get(row.object_key); }
+    catch { await audit(this.pool, 'storage_failed', 'failure', principal.accountId);
+      throw new RepositoryError('STORAGE_ERROR', 'Private artwork read failed'); }
+    if (content.length !== row.byte_size || digest(content) !== row.sha256 ||
+      !matchesContentType(row.content_type, content) ||
+      (row.content_type === 'image/png' && content.subarray(-8, -4).toString('ascii') !== 'IEND') ||
+      (row.content_type === 'image/jpeg' && !content.subarray(-2).equals(Buffer.from([0xff, 0xd9]))))
+      throw new RepositoryError('STORAGE_ERROR', 'Private artwork changed or is invalid');
+    return { content, contentType: row.content_type as 'image/png' | 'image/jpeg', sha256: row.sha256 };
+  }
+
   async issueDownload(principal: AuthenticatedPrincipal, projectId: string, objectId: string): Promise<{ capability: string; expiresAt: string }> {
     await this.owned(principal, projectId, objectId);
     const capability = randomBytes(32).toString('base64url');

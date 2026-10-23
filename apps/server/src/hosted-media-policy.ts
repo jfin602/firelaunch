@@ -35,7 +35,7 @@ export function prepareDraftMedia(spec: ChannelSpec, bindings: readonly CatalogB
   const warnings: DraftMediaWarning[] = [];
   const safeArtwork = (value: string | undefined, field: 'logo' | 'heroArtwork' | 'artwork', contentId?: string) => {
     if (!value) return undefined;
-    if (publicMediaUrl(value)) return value;
+    if (publicMediaUrl(value) || /^assets\/draft-artwork\/[a-f0-9]{64}\.(?:png|jpg)$/.test(value)) return value;
     warnings.push({ ...(contentId ? { contentId } : {}), field,
       message: `${field === 'artwork' ? 'Content artwork' : field === 'logo' ? 'Channel logo' : 'Hero artwork'} is unavailable in this package.` });
     return undefined;

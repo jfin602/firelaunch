@@ -41,6 +41,9 @@ export type ReleaseBuildInput = Readonly<{
   deploymentId: string; packageId: string; manifestEndpoint: string;
   warnings?: readonly DraftMediaWarning[];
   files: Readonly<Record<string, string>>;
+  /** Base64 image bytes are carried only to the isolated worker, never as URLs. */
+  binaryFiles?: Readonly<Record<string, string>>;
+  binaryFileSha256?: Readonly<Record<string, string>>;
   fileSha256: Readonly<Record<string, string>>; sourceHash: string; fingerprint: string;
 }> & BuildIdentity;
 export type StoredSource = { specRevision: number; fingerprint: string; files: Record<string, string>; baseline: Record<string, string> };
@@ -91,9 +94,37 @@ function validFiles(files: Record<string, string>): Record<string, string> {
   return Object.freeze(Object.fromEntries(names.map(name => [name, files[name]!])));
 }
 
+const draftArtworkPath = /^assets\/draft-artwork\/([a-f0-9]{64})\.(png|jpg)$/;
+const MAX_DRAFT_ARTWORK_BYTES = 32_000_000;
+function checkedDraftArtwork(name: string, body: Buffer): string {
+  const match = draftArtworkPath.exec(name);
+  const hash = sha256(body);
+  if (!match || body.length < 12 || body.length > 1_000_000 || match[1] !== hash ||
+    (match[2] === 'png' ? !(body.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) &&
+      body.subarray(-8, -4).toString('ascii') === 'IEND') :
+      !(body[0] === 0xff && body[1] === 0xd8 && body[2] === 0xff &&
+        body.subarray(-2).equals(Buffer.from([0xff, 0xd9]))))) invalid('Invalid bundled draft artwork');
+  return hash;
+}
+function draftArtworkReferences(channel: string): Set<string> {
+  let value: unknown;
+  try { value = JSON.parse(channel); } catch { return invalid('Invalid draft channel artwork'); }
+  const paths = new Set<string>();
+  const visit = (node: unknown): void => {
+    if (Array.isArray(node)) { node.forEach(visit); return; }
+    if (!node || typeof node !== 'object') return;
+    for (const [key, child] of Object.entries(node)) {
+      if (key === 'artwork' && typeof child === 'string' && draftArtworkPath.test(child)) paths.add(child);
+      else visit(child);
+    }
+  };
+  visit(value);
+  return paths;
+}
+
 async function createBuildInput(project: ChannelProject, source: StoredSource | null,
   deployment: ChannelDeployment, identity: BuildIdentity | null, creatorAccountId: string,
-  warnings: readonly DraftMediaWarning[] = []): Promise<ReleaseBuildInput> {
+  warnings: readonly DraftMediaWarning[] = [], artwork: Readonly<Record<string, Buffer>> = {}): Promise<ReleaseBuildInput> {
   if (!source) throw new RepositoryError('CONFLICT', 'Generate deployment-bound source before building');
   if (!identity || (identity.mode === 'draft' ?
     !Number.isSafeInteger(identity.draft.revision) || identity.draft.revision < 1 ||
@@ -108,8 +139,25 @@ async function createBuildInput(project: ChannelProject, source: StoredSource | 
   if (source.specRevision !== project.revision || source.fingerprint !== generated.fingerprint)
     conflict('Generated source is stale for channel or deployment');
   const files = validFiles(source.files);
+  const binaryNames = Object.keys(artwork).sort();
+  if (binaryNames.length > 64 || identity.mode !== 'draft' && binaryNames.length)
+    invalid('Invalid bundled draft artwork count');
+  let artworkBytes = 0;
+  const binaryFileSha256: Record<string, string> = {};
+  const binaryFiles: Record<string, string> = {};
+  for (const name of binaryNames) {
+    const body = artwork[name]!;
+    if (!Buffer.isBuffer(body) || Object.hasOwn(files, name)) invalid('Invalid bundled draft artwork');
+    artworkBytes += body.length;
+    if (artworkBytes > MAX_DRAFT_ARTWORK_BYTES) invalid('Bundled draft artwork exceeds size limit');
+    binaryFileSha256[name] = checkedDraftArtwork(name, body);
+    binaryFiles[name] = body.toString('base64');
+  }
   if (Object.keys(source.baseline).some(name => !Object.hasOwn(files, name))) conflict('Generated source file is missing');
   if (identity.mode === 'draft') {
+    const references = draftArtworkReferences(files['src/channel.json'] ?? '');
+    if (references.size !== binaryNames.length || binaryNames.some(name => !references.has(name)))
+      conflict('Draft artwork bytes differ from channel references');
     if (files['src/release-config.json'] || files['src/remote-release.js'] ||
       files['src/channel.json'] !== generated.files.get('src/channel.json') ||
       identity.draft.snapshotSha256 !== sha256(files['src/channel.json'] ?? ''))
@@ -132,14 +180,15 @@ async function createBuildInput(project: ChannelProject, source: StoredSource | 
     JSON.parse(files['app.json'] ?? 'null')?.name !== `${deployment.packageId}.main`)
     conflict('Unsupported Vega package or app identity');
   const fileSha256 = Object.freeze(Object.fromEntries(Object.entries(files).map(([name, body]) => [name, sha256(body)])));
-  const sourceHash = sha256(JSON.stringify(fileSha256));
+  const sourceHash = sha256(JSON.stringify(binaryNames.length ? { fileSha256, binaryFileSha256 } : fileSha256));
   const snapshot = { format: 'vegalaunch-vega-build-input-v1' as const, projectId: project.id,
     creatorAccountId: deployment.creatorAccountId, specRevision: project.revision,
     generatorFingerprint: generated.fingerprint, sourceRevision: source.specRevision,
     deploymentId: deployment.id, packageId: deployment.packageId, manifestEndpoint: endpoint,
     ...(identity.mode === 'draft' ? { warnings } : {}),
-    ...identity, files, fileSha256, sourceHash };
-  return Object.freeze({ ...snapshot, fingerprint: sha256(JSON.stringify({ ...snapshot, files: undefined })) }) as ReleaseBuildInput;
+    ...identity, files, ...(binaryNames.length ? { binaryFiles, binaryFileSha256 } : {}), fileSha256, sourceHash };
+  return Object.freeze({ ...snapshot, fingerprint: sha256(JSON.stringify({ ...snapshot, files: undefined,
+    binaryFiles: undefined })) }) as ReleaseBuildInput;
 }
 
 export async function createReleaseBuildInput(project: ChannelProject, source: StoredSource | null,
@@ -148,10 +197,10 @@ export async function createReleaseBuildInput(project: ChannelProject, source: S
 }
 export async function createDraftBuildInput(project: ChannelProject, source: StoredSource | null,
   deployment: ChannelDeployment, creatorAccountId: string,
-  warnings: readonly DraftMediaWarning[] = []): Promise<ReleaseBuildInput> {
+  warnings: readonly DraftMediaWarning[] = [], artwork: Readonly<Record<string, Buffer>> = {}): Promise<ReleaseBuildInput> {
   const digest = sha256(source?.files['src/channel.json'] ?? '');
   return createBuildInput(project, source, deployment,
-    { mode: 'draft', draft: { revision: project.revision, snapshotSha256: digest } }, creatorAccountId, warnings);
+    { mode: 'draft', draft: { revision: project.revision, snapshotSha256: digest } }, creatorAccountId, warnings, artwork);
 }
 
 /** The isolated worker calls this in its empty disposable directory. The hosted API never calls it. */
@@ -170,8 +219,14 @@ export async function materializeReleaseBuildInput(input: ReleaseBuildInput, des
   }
   await mkdir(destination, { recursive: true });
   if ((await readdir(destination)).length) conflict('Worker destination must be empty');
-  if (sha256(JSON.stringify(input.fileSha256)) !== input.sourceHash ||
-    sha256(JSON.stringify({ ...input, files: undefined, fingerprint: undefined })) !== input.fingerprint)
+  const binaryNames = Object.keys(input.binaryFiles ?? {}).sort();
+  const binaryHashes = input.binaryFileSha256 ?? {};
+  if (binaryNames.length > 64 || binaryNames.length !== Object.keys(binaryHashes).length ||
+    input.mode !== 'draft' && binaryNames.length ||
+    sha256(JSON.stringify(binaryNames.length ? { fileSha256: input.fileSha256,
+      binaryFileSha256: binaryHashes } : input.fileSha256)) !== input.sourceHash ||
+    sha256(JSON.stringify({ ...input, files: undefined, binaryFiles: undefined,
+      fingerprint: undefined })) !== input.fingerprint)
     conflict('Build input fingerprint changed');
   if (input.format !== 'vegalaunch-vega-build-input-v1' || !/^ch_[a-f0-9]{32}$/.test(input.projectId) ||
     !/^cr_[a-f0-9]{32}$/.test(input.creatorAccountId) || !/^dep_[a-f0-9]{32}$/.test(input.deploymentId) ||
@@ -183,7 +238,23 @@ export async function materializeReleaseBuildInput(input: ReleaseBuildInput, des
       validEndpoint(input.manifestEndpoint, input.deploymentId) !== input.manifestEndpoint))
     invalid('Invalid build input identity');
   const files = validFiles({ ...input.files });
+  const binaryFiles: Record<string, Buffer> = {};
+  let artworkBytes = 0;
+  for (const name of binaryNames) {
+    const encoded = input.binaryFiles?.[name];
+    if (typeof encoded !== 'string' || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded))
+      invalid('Invalid bundled draft artwork encoding');
+    const body = Buffer.from(encoded!, 'base64');
+    artworkBytes += body.length;
+    if (artworkBytes > MAX_DRAFT_ARTWORK_BYTES || body.toString('base64') !== encoded ||
+      checkedDraftArtwork(name, body) !== binaryHashes[name] || Object.hasOwn(files, name))
+      invalid('Bundled draft artwork changed');
+    binaryFiles[name] = body;
+  }
   if (input.mode === 'draft') {
+    const references = draftArtworkReferences(files['src/channel.json'] ?? '');
+    if (references.size !== binaryNames.length || binaryNames.some(name => !references.has(name)))
+      conflict('Draft artwork bytes differ from channel references');
     if (input.warnings && (input.warnings.length > 1002 || input.warnings.some(warning =>
       !warning || !['logo', 'heroArtwork', 'artwork', 'playback', 'audiobook'].includes(warning.field) ||
       typeof warning.message !== 'string' || warning.message.length > 250 ||
@@ -207,6 +278,12 @@ export async function materializeReleaseBuildInput(input: ReleaseBuildInput, des
   for (const [name, body] of Object.entries(files)) {
     const file = resolve(destination, name);
     if (relative(destination, file).startsWith('..') || relative(destination, file).startsWith(sep)) invalid('Unsafe worker source path');
+    await mkdir(dirname(file), { recursive: true });
+    await writeFile(file, body, { flag: 'wx' });
+  }
+  for (const [name, body] of Object.entries(binaryFiles)) {
+    const file = resolve(destination, name);
+    if (relative(destination, file).startsWith('..') || relative(destination, file).startsWith(sep)) invalid('Unsafe worker artwork path');
     await mkdir(dirname(file), { recursive: true });
     await writeFile(file, body, { flag: 'wx' });
   }
@@ -247,7 +324,7 @@ function sdkManifestOnlyAddedModules(original: string, built: string): boolean {
 
 async function verifyMaterializedSource(input: ReleaseBuildInput, destination: string, rejectUnknown: boolean,
   allowSdkManifest = false): Promise<void> {
-  const expected = new Set(Object.keys(input.files));
+  const expected = new Set([...Object.keys(input.files), ...Object.keys(input.binaryFiles ?? {})]);
   async function visit(directory: string, prefix: string): Promise<void> {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       if (!prefix && ['node_modules', 'build', 'package-lock.json'].includes(entry.name)) continue;
@@ -273,6 +350,13 @@ async function verifyMaterializedSource(input: ReleaseBuildInput, destination: s
       (sha256(body) !== expectedHash && !(allowSdkManifest && name === 'manifest.toml' &&
         sdkManifestOnlyAddedModules(input.files[name]!, body.toString('utf8')))))
       conflict(`Worker source changed after dependency or native build: ${name}`);
+  }
+  for (const [name, expectedHash] of Object.entries(input.binaryFileSha256 ?? {})) {
+    const file = join(destination, name);
+    const info = await lstat(file);
+    const body = info.isFile() && !info.isSymbolicLink() ? await readFile(file) : null;
+    if (!body || info.size > 1_000_000 || checkedDraftArtwork(name, body) !== expectedHash)
+      conflict(`Worker artwork changed: ${name}`);
   }
 }
 
