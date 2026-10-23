@@ -1,5 +1,12 @@
 # FireLaunch Current State
 
+## Latest owner-approved P9 issue correction — P9-011 (2026-10-22 local)
+
+**Documentation-only authoring:** [P9-011](tasks/p9-polish/issues/P9-011-mixed-media-sections.md) and [`c9-multimedia-editor` manual prompt](tasks/c9-multimedia-editor/README.md) were assessed, planned and written. Fix the Channel Editor's video-only **Choose content** list by binding eligible owned Audio and Book items into existing Hero/Rows/Grid; preserve P8D typed detail/player and correct rights/export limits. **No code changes, stage deployment, version bump, native proof or user-browser acceptance occurred through authoring.** P9 mainline P1–P11 remain as planned and must report P9-011 at final P11 closeout. Correction defaults to unchanged actual P9 version, subject to executing agent's safe preflight. Public FREE release #1 protected; original live publishing still deferred to Phase 10.
+
+---
+
+
 ## LATEST AUTHORITATIVE — owner-closed Phase 8, clean Phase 9 0.9.0 baseline (2026-10-22)
 
 **Phase 8 LIFECYCLE CLOSED BY OWNER; final measured qualification remains HISTORICAL NOT GREEN with accepted exceptions.** See [canonical Phase 8 evidence and closure](tasks/p8/closeout.md), [C8 Hero evidence and later source note](tasks/c8-hero-multimedia/closeout.md), [P8D appendix](tasks/p8d/closeout.md). Owner approval is a roadmap handoff, not native-device/publication tests having passed retroactively.
